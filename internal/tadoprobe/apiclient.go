@@ -76,8 +76,9 @@ func (client *APIClient) doAuthentication(grantType, credential string) error {
 	)
 	form := url.Values{}
 	form.Add("client_id", "tado-web-app")
-	form.Add("client_secret", client.Secret)
-	if client.Secret == "" {
+	if client.Secret != "" {
+		form.Add("client_secret", client.Secret)
+	} else {
 		form.Add("client_secret", "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc")
 	}
 	form.Add("grant_type", grantType)
