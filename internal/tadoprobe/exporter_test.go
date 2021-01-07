@@ -25,4 +25,8 @@ func TestRunProbe(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, testCase.Value, value, testCase.Metric)
 	}
+
+	value, err := metrics.LoadValue("tado_weather", "CLOUDY_MOSTLY")
+	assert.Nil(t, err)
+	assert.Equal(t, 1.0, value)
 }

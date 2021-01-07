@@ -3,7 +3,6 @@ package tadoprobe
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
@@ -22,44 +21,6 @@ type APIClient struct {
 	Expires      time.Time
 	RefreshToken string
 	HomeID       int
-}
-
-type TadoZone struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-}
-
-type TadoZoneInfo struct {
-	Setting struct {
-		Power       string `json:"power"`
-		Temperature struct {
-			Celsius float64 `json:"celsius"`
-		} `json:"temperature"`
-	} `json:"setting"`
-	OpenWindow         string `json:"openWindow"`
-	ActivityDataPoints struct {
-		HeatingPower struct {
-			Percentage float64 `json:"percentage"`
-		} `json:"heatingPower"`
-	} `json:"activityDataPoints"`
-	SensorDataPoints struct {
-		Temperature struct {
-			Celsius float64 `json:"celsius"`
-		} `json:"insideTemperature"`
-		Humidity struct {
-			Percentage float64 `json:"percentage"`
-		} `json:"humidity"`
-	} `json:"sensorDataPoints"`
-}
-
-func (zoneInfo *TadoZoneInfo) String() string {
-	return fmt.Sprintf("target=%.1f power=%s temp: %.1f, humidity: %.1f, heating=%.1f",
-		zoneInfo.Setting.Temperature.Celsius,
-		zoneInfo.Setting.Power,
-		zoneInfo.SensorDataPoints.Temperature.Celsius,
-		zoneInfo.SensorDataPoints.Humidity.Percentage,
-		zoneInfo.ActivityDataPoints.HeatingPower.Percentage,
-	)
 }
 
 func (client *APIClient) Initialize() error {
@@ -190,4 +151,28 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*TadoZoneInfo, error) {
 		}
 	}
 	return &tadoZoneInfo, err
+}
+
+func (client *APIClient) GetWeatherInfo() (*TadoWeatherInfo, error) {
+	var (
+		err             error
+		resp            *http.Response
+		tadoWeatherInfo TadoWeatherInfo
+	)
+	if err = client.Initialize(); err == nil {
+		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/weather"
+		req, _ := http.NewRequest("GET", apiURL, nil)
+		req.Header.Add("Authorization", "Bearer "+client.AccessToken)
+
+		if resp, err = client.HTTPClient.Do(req); err == nil {
+			if resp.StatusCode == http.StatusOK {
+				body, _ := ioutil.ReadAll(resp.Body)
+				err = json.Unmarshal(body, &tadoWeatherInfo)
+			} else {
+				err = errors.New(resp.Status)
+			}
+		}
+	}
+	return &tadoWeatherInfo, err
+
 }

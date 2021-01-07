@@ -16,6 +16,8 @@ var TestCases = []struct {
 	{"tado_temperature_celsius", 19.94},
 	{"tado_heating_percentage", 11.0},
 	{"tado_humidity_percentage", 37.7},
+	{"tado_outside_temp_celsius", 3.4},
+	{"tado_solar_intensity_percentage", 13.3},
 }
 
 // loopback functions
@@ -59,23 +61,18 @@ var responses = map[string]string{
 	"/api/v2/homes/242/zones/1/state": `{
   "setting": {
     "power": "ON",
-    "temperature": {
-      "celsius": 20.00
-    }
+    "temperature": { "celsius": 20.00 }
   },
   "openWindow": null,
-  "activityDataPoints": {
-    "heatingPower": {
-      "percentage": 11.00
-    }
-  },
+  "activityDataPoints": { "heatingPower": { "percentage": 11.00 } },
   "sensorDataPoints": {
-    "insideTemperature": {
-      "celsius": 19.94
-    },
-    "humidity": {
-      "percentage": 37.70
-    }
+    "insideTemperature": { "celsius": 19.94 },
+    "humidity": { "percentage": 37.70 }
   }
+}`,
+	"/api/v2/homes/242/weather": `{
+  "outsideTemperature": { "celsius": 3.4 },
+  "solarIntensity": { "percentage": 13.3 },
+  "weatherState": { "value": "CLOUDY_MOSTLY" }
 }`,
 }

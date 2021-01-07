@@ -50,7 +50,7 @@ func TestAPIClient_Authentication(t *testing.T) {
 	assert.Equal(t, 242, client.HomeID)
 }
 
-func TestAPIClient_Get(t *testing.T) {
+func TestAPIClient_Zones(t *testing.T) {
 	client := tadoprobe.APIClient{
 		HTTPClient: httpstub.NewTestClient(testtools.APIServer),
 		Username:   "user@examle.com",
@@ -72,4 +72,19 @@ func TestAPIClient_Get(t *testing.T) {
 	assert.Equal(t, 11.0, tadoZoneInfo.ActivityDataPoints.HeatingPower.Percentage)
 	assert.Equal(t, 19.94, tadoZoneInfo.SensorDataPoints.Temperature.Celsius)
 	assert.Equal(t, 37.7, tadoZoneInfo.SensorDataPoints.Humidity.Percentage)
+}
+
+func TestAPIClient_Weather(t *testing.T) {
+	client := tadoprobe.APIClient{
+		HTTPClient: httpstub.NewTestClient(testtools.APIServer),
+		Username:   "user@examle.com",
+		Password:   "some-password",
+	}
+
+	tadoWeatherInfo, err := client.GetWeatherInfo()
+	assert.Nil(t, err)
+	assert.Equal(t, 3.4, tadoWeatherInfo.OutsideTemperature.Celsius)
+	assert.Equal(t, 13.3, tadoWeatherInfo.SolarIntensity.Percentage)
+	assert.Equal(t, "CLOUDY_MOSTLY", tadoWeatherInfo.WeatherState.Value)
+
 }
