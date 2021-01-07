@@ -33,7 +33,7 @@ func (probe *TadoProbe) Run() error {
 					tadoZoneTargetTempCelsius.WithLabelValues(zone.Name).Set(info.Setting.Temperature.Celsius)
 					powerState := 0.0
 					if info.Setting.Power == "ON" {
-						powerState = 100.0
+						powerState = 1.0
 					}
 					tadoZonePowerState.WithLabelValues(zone.Name).Set(powerState)
 					tadoTemperatureCelsius.WithLabelValues(zone.Name).Set(info.SensorDataPoints.Temperature.Celsius)

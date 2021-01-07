@@ -12,7 +12,7 @@ var TestCases = []struct {
 	Value  float64
 }{
 	{"tado_zone_target_temp_celsius", 20.0},
-	{"tado_zone_power_state", 100.0},
+	{"tado_zone_power_state", 1.0},
 	{"tado_temperature_celsius", 19.94},
 	{"tado_heating_percentage", 11.0},
 	{"tado_humidity_percentage", 37.7},
