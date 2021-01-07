@@ -3,20 +3,24 @@ package tadoprobe
 import (
 	"encoding/json"
 	"errors"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type APIClient struct {
-	HTTPClient  *http.Client
-	Username    string
-	Password    string
-	Secret      string
-	AccessToken string
-	HomeID      int
+	HTTPClient   *http.Client
+	Username     string
+	Password     string
+	Secret       string
+	AccessToken  string
+	Expires      time.Time
+	RefreshToken string
+	HomeID       int
 }
 
 type TadoZone struct {
@@ -56,10 +60,16 @@ func (client *APIClient) Initialize() error {
 }
 
 func (client *APIClient) Authenticate() error {
-	if client.AccessToken != "" {
-		return nil
+	var err error
+	if client.AccessToken == "" {
+		err = client.doAuthentication("password", client.Password)
+	} else if time.Now().After(client.Expires) {
+		err = client.doAuthentication("refresh_token", client.RefreshToken)
 	}
+	return err
+}
 
+func (client *APIClient) doAuthentication(grantType, credential string) error {
 	var (
 		err  error
 		resp *http.Response
@@ -71,8 +81,8 @@ func (client *APIClient) Authenticate() error {
 	} else {
 		form.Add("client_secret", "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc")
 	}
-	form.Add("grant_type", "password")
-	form.Add("password", client.Password)
+	form.Add("grant_type", grantType)
+	form.Add(grantType, credential)
 	form.Add("scope", "home.user")
 	form.Add("username", client.Username)
 
@@ -89,11 +99,14 @@ func (client *APIClient) Authenticate() error {
 			if err = json.Unmarshal(body, &resp); err == nil {
 				m := resp.(map[string]interface{})
 				client.AccessToken = m["access_token"].(string)
-				return nil
+				client.RefreshToken = m["refresh_token"].(string)
+				client.Expires = time.Now().Add(time.Second * time.Duration(m["expires_in"].(float64)))
 			}
+		} else {
+			err = errors.New(resp.Status)
 		}
-		err = errors.New(resp.Status)
 	}
+	log.WithFields(log.Fields{"err": err, "expires": client.Expires}).Info("authentication")
 
 	return err
 }
@@ -136,9 +149,10 @@ func (client *APIClient) GetZones() ([]TadoZone, error) {
 		req.Header.Add("Authorization", "Bearer "+client.AccessToken)
 
 		if resp, err = client.HTTPClient.Do(req); err == nil {
-			body, _ := ioutil.ReadAll(resp.Body)
-
-			err = json.Unmarshal(body, &tadoZones)
+			if resp.StatusCode == http.StatusOK {
+				body, _ := ioutil.ReadAll(resp.Body)
+				err = json.Unmarshal(body, &tadoZones)
+			}
 		}
 	}
 	return tadoZones, err
@@ -158,7 +172,6 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*TadoZoneInfo, error) {
 		if resp, err = client.HTTPClient.Do(req); err == nil {
 			if resp.StatusCode == http.StatusOK {
 				body, _ := ioutil.ReadAll(resp.Body)
-
 				err = json.Unmarshal(body, &tadoZoneInfo)
 			} else {
 				err = errors.New(resp.Status)

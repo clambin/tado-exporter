@@ -1,0 +1,25 @@
+package exporter_test
+
+import (
+	"github.com/clambin/gotools/httpstub"
+	"github.com/clambin/gotools/metrics"
+	"github.com/stretchr/testify/assert"
+	"tado-exporter/internal/exporter"
+	"tado-exporter/internal/testtools"
+	"testing"
+	"time"
+)
+
+func TestRunProbe(t *testing.T) {
+	cfg := exporter.Configuration{}
+	probe := exporter.CreateProbe(&cfg)
+	probe.APIClient.HTTPClient = httpstub.NewTestClient(testtools.APIServer)
+	exporter.RunProbe(probe, 5*time.Second)
+
+	testCases := testtools.TestCases
+	for _, testCase := range testCases {
+		value, err := metrics.LoadValue(testCase.Metric, "Living room")
+		assert.Nil(t, err)
+		assert.Equal(t, testCase.Value, value, testCase.Metric)
+	}
+}
