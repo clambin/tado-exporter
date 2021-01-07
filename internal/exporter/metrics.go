@@ -1,4 +1,4 @@
-package tadoprobe
+package exporter
 
 import (
 	"github.com/clambin/gotools/metrics"

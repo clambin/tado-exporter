@@ -1,4 +1,4 @@
-package tadoprobe
+package tado
 
 import (
 	"encoding/json"
@@ -12,6 +12,14 @@ import (
 	"time"
 )
 
+// APIClient structure representing a Tado API client.
+//
+// Basic example to create a Tado API client:
+//     client := tado.APIClient{
+//        HTTPClient: &http.Client{},
+//        Username: "your-tado-username",
+//        Password: "your-tado-password",
+//     }
 type APIClient struct {
 	HTTPClient   *http.Client
 	Username     string
@@ -23,15 +31,25 @@ type APIClient struct {
 	HomeID       int
 }
 
+// Initialize sets up the client to call the various APIs, i.e. authenticates with tado.com,
+// retrieving/updating the Access Token required for the API functions, and retrieving the
+// user's Home ID.
+//
+// Each API function calls this before invoking the API, so normally this doesn't need to be
+// called by the calling application.
 func (client *APIClient) Initialize() error {
 	var err error
-	if err = client.Authenticate(); err == nil {
-		err = client.GetHomeID()
+	if err = client.authenticate(); err == nil {
+		err = client.getHomeID()
 	}
 	return err
 }
 
-func (client *APIClient) Authenticate() error {
+// authenticate logs in to tado.com and gets an Access Token to invoke the API functions.
+// Once logged in, authenticate renews the Access Token if it's expired since the last call.
+//
+// Invoked by each API function, so doesn't need to be called by the calling application.
+func (client *APIClient) authenticate() error {
 	var err error
 	if client.AccessToken == "" {
 		if client.Secret == "" {
@@ -79,12 +97,15 @@ func (client *APIClient) doAuthentication(grantType, credential string) error {
 			err = errors.New(resp.Status)
 		}
 	}
-	log.WithFields(log.Fields{"err": err, "expires": client.Expires}).Info("authentication")
+	log.WithFields(log.Fields{"err": err, "expires": client.Expires}).Debug("authentication")
 
 	return err
 }
 
-func (client *APIClient) GetHomeID() error {
+// getHomeID gets the user's Home ID, used by the GetZones API
+//
+// Called by Initialize, so doesn't need to be called by the calling application.
+func (client *APIClient) getHomeID() error {
 	if client.HomeID > 0 {
 		return nil
 	}
@@ -108,12 +129,14 @@ func (client *APIClient) GetHomeID() error {
 	return err
 }
 
-func (client *APIClient) GetZones() ([]TadoZone, error) {
+// GetZones retrieves the different Zones configured for the user's Home ID.
+//
+func (client *APIClient) GetZones() ([]Zone, error) {
 	var (
 		err  error
 		resp *http.Response
 	)
-	tadoZones := make([]TadoZone, 0)
+	tadoZones := make([]Zone, 0)
 
 	if err = client.Initialize(); err == nil {
 		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones"
@@ -130,11 +153,20 @@ func (client *APIClient) GetZones() ([]TadoZone, error) {
 	return tadoZones, err
 }
 
-func (client *APIClient) GetZoneInfo(zoneID int) (*TadoZoneInfo, error) {
+// GetZoneInfo gets the info for the specified Zone
+//
+// Retrieved information:
+// - Setting.Power:                              power state of the specified zone (0-1)
+// - Temperature.Celsius:                        target temperature for the zone, in degrees Celsius
+// - OpenWindow:                                 TBD
+// - ActivityDataPoints.HeatingPower.Percentage: heating power for the zone (0-100%)
+// - SensorDataPoints.Temperature.Celsius:       current temperature, in degrees Celsius
+// - SensorDataPoints.Humidity.Percentage:       humidity (0-100%)
+func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 	var (
 		err          error
 		resp         *http.Response
-		tadoZoneInfo TadoZoneInfo
+		tadoZoneInfo ZoneInfo
 	)
 	if err = client.Initialize(); err == nil {
 		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones/" + strconv.Itoa(zoneID) + "/state"
@@ -153,11 +185,17 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*TadoZoneInfo, error) {
 	return &tadoZoneInfo, err
 }
 
-func (client *APIClient) GetWeatherInfo() (*TadoWeatherInfo, error) {
+// GetWeatherInfo retrieves weather information for the user's Home.
+//
+// Retrieved information:
+// - OutsideTemperature.Celsius:  outside temperate, in degrees Celsius
+// - SolarIntensity.Percentage:   solar intensity (0-100%)
+// - WeatherState.Value:          string describing current weather (list TBD)
+func (client *APIClient) GetWeatherInfo() (*WeatherInfo, error) {
 	var (
 		err             error
 		resp            *http.Response
-		tadoWeatherInfo TadoWeatherInfo
+		tadoWeatherInfo WeatherInfo
 	)
 	if err = client.Initialize(); err == nil {
 		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/weather"

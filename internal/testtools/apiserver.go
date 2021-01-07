@@ -20,7 +20,7 @@ var TestCases = []struct {
 	{"tado_solar_intensity_percentage", 13.3},
 }
 
-// loopback functions
+// APIServer emulates the Tado API endpoints
 func APIServer(req *http.Request) *http.Response {
 	if response, ok := responses[req.URL.Path]; ok {
 		return &http.Response{

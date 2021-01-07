@@ -1,19 +1,21 @@
-package tadoprobe
+package exporter
 
 import (
 	log "github.com/sirupsen/logrus"
+
+	"tado-exporter/pkg/tado"
 )
 
-type TadoProbe struct {
-	APIClient
+type Probe struct {
+	tado.APIClient
 }
 
-func (probe *TadoProbe) Run() error {
+func (probe *Probe) Run() error {
 	var (
 		err             error
-		zones           []TadoZone
-		info            *TadoZoneInfo
-		tadoWeatherInfo *TadoWeatherInfo
+		zones           []tado.Zone
+		info            *tado.ZoneInfo
+		tadoWeatherInfo *tado.WeatherInfo
 	)
 
 	if tadoWeatherInfo, err = probe.GetWeatherInfo(); err == nil {
