@@ -13,10 +13,13 @@ import (
 )
 
 func main() {
-	cfg := exporter.Configuration{}
+	cfg := exporter.Configuration{
+		Username:     os.Getenv("TADO_USERNAME"),
+		Password:     os.Getenv("TADO_PASSWORD"),
+		ClientSecret: os.Getenv("TADO_CLIENT_SECRET"),
+	}
 
-	a := kingpin.New(filepath.Base(os.Args[0]), "media monitor")
-
+	a := kingpin.New(filepath.Base(os.Args[0]), "tado-exporter")
 	a.Version(version.BuildVersion)
 	a.HelpFlag.Short('h')
 	a.VersionFlag.Short('v')
@@ -24,16 +27,18 @@ func main() {
 	a.Flag("port", "API listener port").Default("8080").IntVar(&cfg.Port)
 	a.Flag("interval", "Scrape interval").Default("1m").DurationVar(&cfg.Interval)
 
-	cfg.Username = os.Getenv("TADO_USERNAME")
-	cfg.Password = os.Getenv("TADO_PASSWORD")
-	cfg.ClientSecret = os.Getenv("TADO_CLIENT_SECRET")
+	_, err := a.Parse(os.Args[1:])
+	if err != nil {
+		a.Usage(os.Args[1:])
+		os.Exit(2)
+	}
 
 	if cfg.Username == "" || cfg.Password == "" {
-		log.Error("TADO_USERNAME and/or TASO_PASSWORD environment variables are missing")
+		log.Error("TADO_USERNAME and/or TADO_PASSWORD environment variables are missing")
 		os.Exit(1)
 	}
 
-	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
+	// log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 	if cfg.Debug {
 		log.SetLevel(log.DebugLevel)
 	}

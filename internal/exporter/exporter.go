@@ -1,6 +1,7 @@
 package exporter
 
 import (
+	"net/http"
 	"tado-exporter/internal/tadoprobe"
 	"time"
 )
@@ -17,9 +18,10 @@ type Configuration struct {
 func CreateProbe(cfg *Configuration) *tadoprobe.TadoProbe {
 	return &tadoprobe.TadoProbe{
 		APIClient: tadoprobe.APIClient{
-			Username: cfg.Username,
-			Password: cfg.Password,
-			Secret:   cfg.ClientSecret,
+			HTTPClient: &http.Client{},
+			Username:   cfg.Username,
+			Password:   cfg.Password,
+			Secret:     cfg.ClientSecret,
 		},
 	}
 }

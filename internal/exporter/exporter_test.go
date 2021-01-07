@@ -13,6 +13,9 @@ import (
 func TestRunProbe(t *testing.T) {
 	cfg := exporter.Configuration{}
 	probe := exporter.CreateProbe(&cfg)
+	assert.NotNil(t, probe)
+	assert.NotNil(t, probe.HTTPClient)
+
 	probe.APIClient.HTTPClient = httpstub.NewTestClient(testtools.APIServer)
 	exporter.RunProbe(probe, 5*time.Second)
 

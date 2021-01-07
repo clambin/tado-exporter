@@ -83,7 +83,9 @@ func (client *APIClient) doAuthentication(grantType, credential string) error {
 	form.Add("grant_type", grantType)
 	form.Add(grantType, credential)
 	form.Add("scope", "home.user")
-	form.Add("username", client.Username)
+	if grantType == "password" {
+		form.Add("username", client.Username)
+	}
 
 	req, _ := http.NewRequest("POST", "https://auth.tado.com/oauth/token", strings.NewReader(form.Encode()))
 	req.Header.Add("Referer", "https://my.tado.com/")
