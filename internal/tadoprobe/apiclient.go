@@ -62,6 +62,9 @@ func (client *APIClient) Initialize() error {
 func (client *APIClient) Authenticate() error {
 	var err error
 	if client.AccessToken == "" {
+		if client.Secret == "" {
+			client.Secret = "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc"
+		}
 		err = client.doAuthentication("password", client.Password)
 	} else if time.Now().After(client.Expires) {
 		err = client.doAuthentication("refresh_token", client.RefreshToken)
@@ -76,11 +79,7 @@ func (client *APIClient) doAuthentication(grantType, credential string) error {
 	)
 	form := url.Values{}
 	form.Add("client_id", "tado-web-app")
-	if client.Secret != "" {
-		form.Add("client_secret", client.Secret)
-	} else {
-		form.Add("client_secret", "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc")
-	}
+	form.Add("client_secret", client.Secret)
 	form.Add("grant_type", grantType)
 	form.Add(grantType, credential)
 	form.Add("scope", "home.user")

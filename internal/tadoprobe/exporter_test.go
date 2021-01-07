@@ -1,23 +1,23 @@
-package exporter_test
+package tadoprobe_test
 
 import (
 	"github.com/clambin/gotools/httpstub"
 	"github.com/clambin/gotools/metrics"
 	"github.com/stretchr/testify/assert"
-	"tado-exporter/internal/exporter"
+	"tado-exporter/internal/tadoprobe"
 	"tado-exporter/internal/testtools"
 	"testing"
 	"time"
 )
 
 func TestRunProbe(t *testing.T) {
-	cfg := exporter.Configuration{}
-	probe := exporter.CreateProbe(&cfg)
+	cfg := tadoprobe.Configuration{}
+	probe := tadoprobe.CreateProbe(&cfg)
 	assert.NotNil(t, probe)
 	assert.NotNil(t, probe.HTTPClient)
 
 	probe.APIClient.HTTPClient = httpstub.NewTestClient(testtools.APIServer)
-	exporter.RunProbe(probe, 5*time.Second)
+	tadoprobe.RunProbe(probe, 5*time.Second)
 
 	testCases := testtools.TestCases
 	for _, testCase := range testCases {

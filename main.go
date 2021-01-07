@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"tado-exporter/internal/exporter"
+	"tado-exporter/internal/tadoprobe"
 	"tado-exporter/internal/version"
 )
 
 func main() {
-	cfg := exporter.Configuration{
+	cfg := tadoprobe.Configuration{
 		Username:     os.Getenv("TADO_USERNAME"),
 		Password:     os.Getenv("TADO_PASSWORD"),
 		ClientSecret: os.Getenv("TADO_CLIENT_SECRET"),
@@ -44,7 +44,7 @@ func main() {
 	}
 
 	go func() {
-		exporter.RunProbe(exporter.CreateProbe(&cfg), cfg.Interval)
+		tadoprobe.RunProbe(tadoprobe.CreateProbe(&cfg), cfg.Interval)
 	}()
 
 	listenAddress := fmt.Sprintf(":%d", cfg.Port)
