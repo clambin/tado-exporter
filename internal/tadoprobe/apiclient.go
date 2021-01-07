@@ -1,0 +1,169 @@
+package tadoprobe
+
+import (
+	"encoding/json"
+	"errors"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+)
+
+type APIClient struct {
+	HTTPClient  *http.Client
+	Username    string
+	Password    string
+	Secret      string
+	AccessToken string
+	HomeID      int
+}
+
+type TadoZone struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type TadoZoneInfo struct {
+	Setting struct {
+		Power       string `json:"power"`
+		Temperature struct {
+			Celsius float64 `json:"celsius"`
+		} `json:"temperature"`
+	} `json:"setting"`
+	OpenWindow         string `json:"openWindow"`
+	ActivityDataPoints struct {
+		HeatingPower struct {
+			Percentage float64 `json:"percentage"`
+		} `json:"heatingPower"`
+	} `json:"activityDataPoints"`
+	SensorDataPoints struct {
+		Temperature struct {
+			Celsius float64 `json:"celsius"`
+		} `json:"insideTemperature"`
+		Humidity struct {
+			Percentage float64 `json:"percentage"`
+		} `json:"humidity"`
+	} `json:"sensorDataPoints"`
+}
+
+func (client *APIClient) Initialize() error {
+	var err error
+	if err = client.Authenticate(); err == nil {
+		err = client.GetHomeID()
+	}
+	return err
+}
+
+func (client *APIClient) Authenticate() error {
+	if client.AccessToken != "" {
+		return nil
+	}
+
+	var (
+		err  error
+		resp *http.Response
+	)
+	form := url.Values{}
+	form.Add("client_id", "tado-web-app")
+	if client.Secret != "" {
+		form.Add("client_secret", client.Secret)
+	} else {
+		form.Add("client_secret", "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc")
+	}
+	form.Add("grant_type", "password")
+	form.Add("password", client.Password)
+	form.Add("scope", "home.user")
+	form.Add("username", client.Username)
+
+	req, _ := http.NewRequest("POST", "https://auth.tado.com/oauth/token", strings.NewReader(form.Encode()))
+	req.Header.Add("Referer", "https://my.tado.com/")
+	req.Header.Add("content-type", "application/x-www-form-urlencoded")
+
+	if resp, err = client.HTTPClient.Do(req); err == nil {
+		defer resp.Body.Close()
+		if resp.StatusCode == 200 {
+			body, _ := ioutil.ReadAll(resp.Body)
+
+			var resp interface{}
+			if err = json.Unmarshal(body, &resp); err == nil {
+				m := resp.(map[string]interface{})
+				client.AccessToken = m["access_token"].(string)
+				return nil
+			}
+		}
+		err = errors.New(resp.Status)
+	}
+
+	return err
+}
+
+func (client *APIClient) GetHomeID() error {
+	if client.HomeID > 0 {
+		return nil
+	}
+
+	var (
+		err  error
+		resp *http.Response
+	)
+	req, _ := http.NewRequest("GET", "https://my.tado.com/api/v1/me", nil)
+	req.Header.Add("Authorization", "Bearer "+client.AccessToken)
+
+	if resp, err = client.HTTPClient.Do(req); err == nil {
+		body, _ := ioutil.ReadAll(resp.Body)
+
+		var resp interface{}
+		if err = json.Unmarshal(body, &resp); err == nil {
+			m := resp.(map[string]interface{})
+			client.HomeID = int(m["homeId"].(float64))
+			return nil
+		}
+	}
+	return err
+}
+
+func (client *APIClient) GetZones() ([]TadoZone, error) {
+	var (
+		err  error
+		resp *http.Response
+	)
+	tadoZones := make([]TadoZone, 0)
+
+	if err = client.Initialize(); err == nil {
+		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones"
+		req, _ := http.NewRequest("GET", apiURL, nil)
+		req.Header.Add("Authorization", "Bearer "+client.AccessToken)
+
+		if resp, err = client.HTTPClient.Do(req); err == nil {
+			body, _ := ioutil.ReadAll(resp.Body)
+
+			err = json.Unmarshal(body, &tadoZones)
+		}
+	}
+	return tadoZones, err
+}
+
+func (client *APIClient) GetZoneInfo(zoneID int) (*TadoZoneInfo, error) {
+	var (
+		err          error
+		resp         *http.Response
+		tadoZoneInfo TadoZoneInfo
+	)
+	if err = client.Initialize(); err == nil {
+		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones/" + strconv.Itoa(zoneID) + "/state"
+		req, _ := http.NewRequest("GET", apiURL, nil)
+		req.Header.Add("Authorization", "Bearer "+client.AccessToken)
+
+		if resp, err = client.HTTPClient.Do(req); err == nil {
+			if resp.StatusCode == http.StatusOK {
+				body, _ := ioutil.ReadAll(resp.Body)
+
+				err = json.Unmarshal(body, &tadoZoneInfo)
+			} else {
+				err = errors.New(resp.Status)
+			}
+		}
+	}
+	return &tadoZoneInfo, err
+}
