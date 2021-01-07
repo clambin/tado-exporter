@@ -1,6 +1,8 @@
 package tadoprobe
 
-import log "github.com/sirupsen/logrus"
+import (
+	log "github.com/sirupsen/logrus"
+)
 
 type TadoProbe struct {
 	APIClient
@@ -15,25 +17,27 @@ func (probe *TadoProbe) Run() error {
 
 	if zones, err = probe.GetZones(); err == nil {
 		for _, zone := range zones {
-			log.Debugf("Querying zone %d (%s)", zone.ID, zone.Name)
+			logger := log.WithFields(log.Fields{"zone.ID": zone.ID, "zone.Name": zone.Name})
 
 			if info, err = probe.GetZoneInfo(zone.ID); err == nil {
 				tadoZoneTargetTempCelsius.WithLabelValues(zone.Name).Set(info.Setting.Temperature.Celsius)
-				log.Debugf("tadoZoneTargetTempCelsius(%s): %f", zone.Name, info.Setting.Temperature.Celsius)
+				logger.Debugf("tadoZoneTargetTempCelsius: %f", info.Setting.Temperature.Celsius)
 				powerState := 0.0
 				if info.Setting.Power == "ON" {
 					powerState = 100.0
 				}
 				tadoZonePowerState.WithLabelValues(zone.Name).Set(powerState)
-				log.Debugf("tadoZonePowerState(%s): %f", zone.Name, powerState)
+				logger.Debugf("tadoZonePowerState: %f", powerState)
 				tadoTemperatureCelsius.WithLabelValues(zone.Name).Set(info.SensorDataPoints.Temperature.Celsius)
-				log.Debugf("tadoTemperatureCelsius(%s): %f", zone.Name, info.SensorDataPoints.Temperature.Celsius)
+				logger.Debugf("tadoTemperatureCelsius: %f", info.SensorDataPoints.Temperature.Celsius)
 				tadoHumidityPercentage.WithLabelValues(zone.Name).Set(info.SensorDataPoints.Humidity.Percentage)
-				log.Debugf("tadoHumidityPercentage(%s): %f", zone.Name, info.SensorDataPoints.Humidity.Percentage)
+				logger.Debugf("tadoHumidityPercentage: %f", info.SensorDataPoints.Humidity.Percentage)
 				tadoHeatingPercentage.WithLabelValues(zone.Name).Set(info.ActivityDataPoints.HeatingPower.Percentage)
-				log.Debugf("tadoHeatingPercentage(%s): %f", zone.Name, info.ActivityDataPoints.HeatingPower.Percentage)
+				logger.Debugf("tadoHeatingPercentage: %f", info.ActivityDataPoints.HeatingPower.Percentage)
 
-				log.Debugf("openWindow(%s): %s", zone.Name, info.OpenWindow)
+				if info.OpenWindow != "" {
+					logger.Infof("openWindow: %s", info.OpenWindow)
+				}
 			} else {
 				break
 			}

@@ -4,6 +4,7 @@ import (
 	"github.com/clambin/gotools/httpstub"
 	"tado-exporter/internal/tadoprobe"
 	"tado-exporter/internal/testtools"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -21,6 +22,28 @@ func TestAPIClient_Initialization(t *testing.T) {
 	err = client.Authenticate()
 	assert.Nil(t, err)
 	assert.Equal(t, "access_token", client.AccessToken)
+
+	err = client.GetHomeID()
+	assert.Nil(t, err)
+	assert.Equal(t, 242, client.HomeID)
+}
+
+func TestAPIClient_Authentication(t *testing.T) {
+	client := tadoprobe.APIClient{
+		HTTPClient: httpstub.NewTestClient(testtools.APIServer),
+		Username:   "user@examle.com",
+		Password:   "some-password",
+	}
+
+	var err error
+	err = client.Authenticate()
+	assert.Nil(t, err)
+	assert.Equal(t, "access_token", client.AccessToken)
+
+	client.Expires = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	err = client.Authenticate()
+	assert.Nil(t, err)
+	assert.Greater(t, client.Expires.Unix(), time.Now().Unix())
 
 	err = client.GetHomeID()
 	assert.Nil(t, err)
