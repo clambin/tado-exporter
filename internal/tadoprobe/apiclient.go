@@ -3,6 +3,7 @@ package tadoprobe
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
@@ -49,6 +50,16 @@ type TadoZoneInfo struct {
 			Percentage float64 `json:"percentage"`
 		} `json:"humidity"`
 	} `json:"sensorDataPoints"`
+}
+
+func (zoneInfo *TadoZoneInfo) String() string {
+	return fmt.Sprintf("target=%.1f power=%s temp: %.1f, humidity: %.1f, heating=%.1f",
+		zoneInfo.Setting.Temperature.Celsius,
+		zoneInfo.Setting.Power,
+		zoneInfo.SensorDataPoints.Temperature.Celsius,
+		zoneInfo.SensorDataPoints.Humidity.Percentage,
+		zoneInfo.ActivityDataPoints.HeatingPower.Percentage,
+	)
 }
 
 func (client *APIClient) Initialize() error {
