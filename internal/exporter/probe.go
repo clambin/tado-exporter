@@ -6,10 +6,12 @@ import (
 	"tado-exporter/pkg/tado"
 )
 
+// Probe structure representing a tado-exporter probe
 type Probe struct {
 	tado.APIClient
 }
 
+// Run a tado-exporter probe once
 func (probe *Probe) Run() error {
 	var (
 		err             error

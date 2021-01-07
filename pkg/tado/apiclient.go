@@ -1,3 +1,21 @@
+// Package tado provides an API Client for the Tadoº smart thermostat devices
+//
+// Using this package typically involves creating an APIClient as follows:
+//
+//     client := tado.APIClient{
+//        HTTPClient: &http.Client{},
+//        Username: "your-tado-username",
+//        Password: "your-tado-password",
+//     }
+//
+// Once a client has been creates, you can query tado.com for information about your different Tado devices.
+// Currently the following three APIs are supported:
+//
+// * GetZones: get the different zones (rooms) defined in your home.
+//
+// * GetZoneInfo: get metrics for a specified zone in your home.
+//
+// * GetWeatherInfo: get overall weather information
 package tado
 
 import (
@@ -20,11 +38,21 @@ import (
 //        Username: "your-tado-username",
 //        Password: "your-tado-password",
 //     }
+//
+// If the default Client Secret does not work, you can provide your own secret:
+//     client := tado.APIClient{
+//        HTTPClient:    &http.Client{},
+//        Username:     "your-tado-username",
+//        Password:     "your-tado-password",
+//        ClientSecret: "your-client-secret",
+//     }
+//
+// where your-client-secret can be found by visiting https://my.tado.com/webapp/env.js after logging in to my.tado.com
 type APIClient struct {
 	HTTPClient   *http.Client
 	Username     string
 	Password     string
-	Secret       string
+	ClientSecret string
 	AccessToken  string
 	Expires      time.Time
 	RefreshToken string
@@ -37,7 +65,7 @@ type APIClient struct {
 //
 // Each API function calls this before invoking the API, so normally this doesn't need to be
 // called by the calling application.
-func (client *APIClient) Initialize() error {
+func (client *APIClient) initialize() error {
 	var err error
 	if err = client.authenticate(); err == nil {
 		err = client.getHomeID()
@@ -52,8 +80,8 @@ func (client *APIClient) Initialize() error {
 func (client *APIClient) authenticate() error {
 	var err error
 	if client.AccessToken == "" {
-		if client.Secret == "" {
-			client.Secret = "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc"
+		if client.ClientSecret == "" {
+			client.ClientSecret = "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc"
 		}
 		err = client.doAuthentication("password", client.Password)
 	} else if time.Now().After(client.Expires) {
@@ -69,7 +97,7 @@ func (client *APIClient) doAuthentication(grantType, credential string) error {
 	)
 	form := url.Values{}
 	form.Add("client_id", "tado-web-app")
-	form.Add("client_secret", client.Secret)
+	form.Add("client_secret", client.ClientSecret)
 	form.Add("grant_type", grantType)
 	form.Add(grantType, credential)
 	form.Add("scope", "home.user")
@@ -138,7 +166,7 @@ func (client *APIClient) GetZones() ([]Zone, error) {
 	)
 	tadoZones := make([]Zone, 0)
 
-	if err = client.Initialize(); err == nil {
+	if err = client.initialize(); err == nil {
 		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones"
 		req, _ := http.NewRequest("GET", apiURL, nil)
 		req.Header.Add("Authorization", "Bearer "+client.AccessToken)
@@ -156,19 +184,25 @@ func (client *APIClient) GetZones() ([]Zone, error) {
 // GetZoneInfo gets the info for the specified Zone
 //
 // Retrieved information:
+//
 // - Setting.Power:                              power state of the specified zone (0-1)
-// - Temperature.Celsius:                        target temperature for the zone, in degrees Celsius
-// - OpenWindow:                                 TBD
-// - ActivityDataPoints.HeatingPower.Percentage: heating power for the zone (0-100%)
-// - SensorDataPoints.Temperature.Celsius:       current temperature, in degrees Celsius
-// - SensorDataPoints.Humidity.Percentage:       humidity (0-100%)
+//
+//- Temperature.Celsius:                        target temperature for the zone, in degrees Celsius
+//
+//- OpenWindow:                                 TBD
+//
+//- ActivityDataPoints.HeatingPower.Percentage: heating power for the zone (0-100%)
+//
+//- SensorDataPoints.Temperature.Celsius:       current temperature, in degrees Celsius
+//
+//- SensorDataPoints.Humidity.Percentage:       humidity (0-100%)
 func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 	var (
 		err          error
 		resp         *http.Response
 		tadoZoneInfo ZoneInfo
 	)
-	if err = client.Initialize(); err == nil {
+	if err = client.initialize(); err == nil {
 		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones/" + strconv.Itoa(zoneID) + "/state"
 		req, _ := http.NewRequest("GET", apiURL, nil)
 		req.Header.Add("Authorization", "Bearer "+client.AccessToken)
@@ -188,16 +222,19 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 // GetWeatherInfo retrieves weather information for the user's Home.
 //
 // Retrieved information:
+//
 // - OutsideTemperature.Celsius:  outside temperate, in degrees Celsius
-// - SolarIntensity.Percentage:   solar intensity (0-100%)
-// - WeatherState.Value:          string describing current weather (list TBD)
+//
+//- SolarIntensity.Percentage:   solar intensity (0-100%)
+//
+//- WeatherState.Value:          string describing current weather (list TBD)
 func (client *APIClient) GetWeatherInfo() (*WeatherInfo, error) {
 	var (
 		err             error
 		resp            *http.Response
 		tadoWeatherInfo WeatherInfo
 	)
-	if err = client.Initialize(); err == nil {
+	if err = client.initialize(); err == nil {
 		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/weather"
 		req, _ := http.NewRequest("GET", apiURL, nil)
 		req.Header.Add("Authorization", "Bearer "+client.AccessToken)

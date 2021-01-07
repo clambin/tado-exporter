@@ -49,7 +49,7 @@ func TestAPIClient_Initialization(t *testing.T) {
 	}
 
 	var err error
-	err = client.Initialize()
+	_, err = client.GetZones()
 	assert.Nil(t, err)
 	assert.Equal(t, "access_token", client.AccessToken)
 	assert.Equal(t, 242, client.HomeID)
@@ -63,12 +63,12 @@ func TestAPIClient_Authentication(t *testing.T) {
 	}
 
 	var err error
-	err = client.Initialize()
+	_, err = client.GetZones()
 	assert.Nil(t, err)
 	assert.Equal(t, "access_token", client.AccessToken)
 
 	client.Expires = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
-	err = client.Initialize()
+	_, err = client.GetZones()
 	assert.Nil(t, err)
 	assert.Greater(t, client.Expires.Unix(), time.Now().Unix())
 	assert.Equal(t, 242, client.HomeID)

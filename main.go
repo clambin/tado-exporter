@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"tado-exporter/internal/exporter"
 	"tado-exporter/internal/version"
+	"time"
 )
 
 func main() {
@@ -44,7 +45,15 @@ func main() {
 	}
 
 	go func() {
-		exporter.RunProbe(exporter.CreateProbe(&cfg), cfg.Interval)
+		probe := exporter.CreateProbe(&cfg)
+
+		for {
+			if err = probe.Run(); err != nil {
+				break
+			}
+
+			time.Sleep(cfg.Interval)
+		}
 	}()
 
 	listenAddress := fmt.Sprintf(":%d", cfg.Port)

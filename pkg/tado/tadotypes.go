@@ -58,18 +58,18 @@ type Value struct {
 	Value string `json:"value"`
 }
 
-// ZoneInfoSetting contains zone power & target temperature
+// ZoneInfoSetting contains the zone's current power & target temperature
 type ZoneInfoSetting struct {
 	Power       string      `json:"power"`
 	Temperature Temperature `json:"temperature"`
 }
 
-// ZoneInfoActivityDataPoints contains zone heating info
+// ZoneInfoActivityDataPoints contains the zone's heating info
 type ZoneInfoActivityDataPoints struct {
 	HeatingPower Percentage `json:"heatingPower"`
 }
 
-// ZoneInfoSensorDataPoints contains zone temperature & humidity
+// ZoneInfoSensorDataPoints contains the zone's current temperature & humidity
 type ZoneInfoSensorDataPoints struct {
 	Temperature Temperature `json:"insideTemperature"`
 	Humidity    Percentage  `json:"humidity"`

@@ -7,7 +7,6 @@ import (
 	"tado-exporter/internal/exporter"
 	"tado-exporter/internal/testtools"
 	"testing"
-	"time"
 )
 
 func TestRunProbe(t *testing.T) {
@@ -17,7 +16,7 @@ func TestRunProbe(t *testing.T) {
 	assert.NotNil(t, probe.HTTPClient)
 
 	probe.APIClient.HTTPClient = httpstub.NewTestClient(testtools.APIServer)
-	exporter.RunProbe(probe, 5*time.Second)
+	_ = probe.Run()
 
 	testCases := testtools.TestCases
 	for _, testCase := range testCases {

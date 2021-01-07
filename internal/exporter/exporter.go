@@ -7,6 +7,7 @@ import (
 	"tado-exporter/pkg/tado"
 )
 
+// Configuration options for tado-exporter
 type Configuration struct {
 	Username     string
 	Password     string
@@ -16,22 +17,14 @@ type Configuration struct {
 	Debug        bool
 }
 
+// CreateProbe creates a new tado-exporter probe
 func CreateProbe(cfg *Configuration) *Probe {
 	return &Probe{
 		APIClient: tado.APIClient{
-			HTTPClient: &http.Client{},
-			Username:   cfg.Username,
-			Password:   cfg.Password,
-			Secret:     cfg.ClientSecret,
+			HTTPClient:   &http.Client{},
+			Username:     cfg.Username,
+			Password:     cfg.Password,
+			ClientSecret: cfg.ClientSecret,
 		},
-	}
-}
-
-func RunProbe(probe *Probe, interval time.Duration) {
-	for {
-		if probe.Run() != nil {
-			break
-		}
-		time.Sleep(interval)
 	}
 }
