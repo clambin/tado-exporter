@@ -10,7 +10,7 @@ import (
 // Probe structure representing a tado-exporter probe
 type Probe struct {
 	tado.APIClient
-	states map[string]float64
+	weatherStates map[string]float64
 }
 
 // CreateProbe creates a new tado-exporter probe
@@ -22,7 +22,7 @@ func CreateProbe(cfg *Configuration) *Probe {
 			Password:     cfg.Password,
 			ClientSecret: cfg.ClientSecret,
 		},
-		states: make(map[string]float64),
+		weatherStates: make(map[string]float64),
 	}
 }
 
@@ -65,14 +65,14 @@ func (probe *Probe) Run() error {
 }
 
 func (probe *Probe) reportWeather(weatherInfo *tado.WeatherInfo) {
-	for key := range probe.states {
-		probe.states[key] = 0.0
+	for key := range probe.weatherStates {
+		probe.weatherStates[key] = 0.0
 	}
-	probe.states[weatherInfo.WeatherState.Value] = 1.0
-
+	probe.weatherStates[weatherInfo.WeatherState.Value] = 1.0
+	log.WithField("states", probe.weatherStates).Debug("weatherStates")
 	tadoOutsideTemperature.Set(weatherInfo.OutsideTemperature.Celsius)
 	tadoSolarIntensity.Set(weatherInfo.SolarIntensity.Percentage)
-	for key, value := range probe.states {
+	for key, value := range probe.weatherStates {
 		tadoWeather.WithLabelValues(key).Set(value)
 	}
 }
