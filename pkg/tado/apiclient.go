@@ -95,6 +95,9 @@ func (client *APIClient) doAuthentication(grantType, credential string) error {
 		err  error
 		resp *http.Response
 	)
+
+	log.WithField("grant_type", grantType).Debug("authenticating")
+
 	form := url.Values{}
 	form.Add("client_id", "tado-web-app")
 	form.Add("client_secret", client.ClientSecret)
@@ -125,7 +128,7 @@ func (client *APIClient) doAuthentication(grantType, credential string) error {
 			err = errors.New(resp.Status)
 		}
 	}
-	log.WithFields(log.Fields{"err": err, "expires": client.Expires}).Debug("authentication")
+	log.WithFields(log.Fields{"err": err, "expires": client.Expires}).Debug("authenticated")
 
 	return err
 }
@@ -140,14 +143,11 @@ func (client *APIClient) getHomeID() error {
 
 	var (
 		err  error
-		resp *http.Response
+		body []byte
 	)
-	req, _ := http.NewRequest("GET", "https://my.tado.com/api/v1/me", nil)
-	req.Header.Add("Authorization", "Bearer "+client.AccessToken)
 
-	if resp, err = client.HTTPClient.Do(req); err == nil {
-		body, _ := ioutil.ReadAll(resp.Body)
-
+	apiURL := "https://my.tado.com/api/v1/me"
+	if body, err = client.call(apiURL); err == nil {
 		var resp interface{}
 		if err = json.Unmarshal(body, &resp); err == nil {
 			m := resp.(map[string]interface{})
@@ -162,20 +162,14 @@ func (client *APIClient) getHomeID() error {
 func (client *APIClient) GetZones() ([]Zone, error) {
 	var (
 		err  error
-		resp *http.Response
+		body []byte
 	)
 	tadoZones := make([]Zone, 0)
 
 	if err = client.initialize(); err == nil {
 		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones"
-		req, _ := http.NewRequest("GET", apiURL, nil)
-		req.Header.Add("Authorization", "Bearer "+client.AccessToken)
-
-		if resp, err = client.HTTPClient.Do(req); err == nil {
-			if resp.StatusCode == http.StatusOK {
-				body, _ := ioutil.ReadAll(resp.Body)
-				err = json.Unmarshal(body, &tadoZones)
-			}
+		if body, err = client.call(apiURL); err == nil {
+			err = json.Unmarshal(body, &tadoZones)
 		}
 	}
 	return tadoZones, err
@@ -199,21 +193,13 @@ func (client *APIClient) GetZones() ([]Zone, error) {
 func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 	var (
 		err          error
-		resp         *http.Response
+		body         []byte
 		tadoZoneInfo ZoneInfo
 	)
 	if err = client.initialize(); err == nil {
 		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones/" + strconv.Itoa(zoneID) + "/state"
-		req, _ := http.NewRequest("GET", apiURL, nil)
-		req.Header.Add("Authorization", "Bearer "+client.AccessToken)
-
-		if resp, err = client.HTTPClient.Do(req); err == nil {
-			if resp.StatusCode == http.StatusOK {
-				body, _ := ioutil.ReadAll(resp.Body)
-				err = json.Unmarshal(body, &tadoZoneInfo)
-			} else {
-				err = errors.New(resp.Status)
-			}
+		if body, err = client.call(apiURL); err == nil {
+			err = json.Unmarshal(body, &tadoZoneInfo)
 		}
 	}
 	return &tadoZoneInfo, err
@@ -231,23 +217,40 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 func (client *APIClient) GetWeatherInfo() (*WeatherInfo, error) {
 	var (
 		err             error
-		resp            *http.Response
 		tadoWeatherInfo WeatherInfo
+		body            []byte
 	)
 	if err = client.initialize(); err == nil {
 		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/weather"
-		req, _ := http.NewRequest("GET", apiURL, nil)
-		req.Header.Add("Authorization", "Bearer "+client.AccessToken)
-
-		if resp, err = client.HTTPClient.Do(req); err == nil {
-			if resp.StatusCode == http.StatusOK {
-				body, _ := ioutil.ReadAll(resp.Body)
-				err = json.Unmarshal(body, &tadoWeatherInfo)
-			} else {
-				err = errors.New(resp.Status)
-			}
+		if body, err = client.call(apiURL); err == nil {
+			err = json.Unmarshal(body, &tadoWeatherInfo)
 		}
 	}
 	return &tadoWeatherInfo, err
 
+}
+
+func (client *APIClient) call(apiURL string) ([]byte, error) {
+	var (
+		err  error
+		req  *http.Request
+		resp *http.Response
+	)
+
+	req, _ = http.NewRequest("GET", apiURL, nil)
+	req.Header.Add("Authorization", "Bearer "+client.AccessToken)
+	if resp, err = client.HTTPClient.Do(req); err == nil {
+		defer resp.Body.Close()
+		switch resp.StatusCode {
+		case http.StatusOK:
+			return ioutil.ReadAll(resp.Body)
+		case http.StatusForbidden:
+			client.AccessToken = ""
+		}
+		err = errors.New(resp.Status)
+	}
+
+	log.WithFields(log.Fields{"err": err, "url": apiURL}).Info("call failed")
+
+	return nil, err
 }
