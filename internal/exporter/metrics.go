@@ -45,4 +45,14 @@ var (
 		Name: "tado_weather",
 		Help: "Current weather. Always one. See label 'tado_weather'",
 	}, []string{"tado_weather"})
+
+	tadoDeviceConnectionStatus = metrics.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "tado_device_connection_status",
+		Help: "Tado device connection status",
+	}, []string{"zone", "id", "type", "firmware"})
+
+	tadoDeviceBatteryStatus = metrics.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "tado_device_battery_status",
+		Help: "Tado device battery status",
+	}, []string{"zone", "id", "type"})
 )

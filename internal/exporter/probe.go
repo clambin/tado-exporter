@@ -3,6 +3,7 @@ package exporter
 import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strconv"
 
 	"tado-exporter/pkg/tado"
 )
@@ -87,4 +88,18 @@ func (probe *Probe) reportZone(zone *tado.Zone, info *tado.ZoneInfo) {
 	tadoTemperatureCelsius.WithLabelValues(zone.Name).Set(info.SensorDataPoints.Temperature.Celsius)
 	tadoHumidityPercentage.WithLabelValues(zone.Name).Set(info.SensorDataPoints.Humidity.Percentage)
 	tadoHeatingPercentage.WithLabelValues(zone.Name).Set(info.ActivityDataPoints.HeatingPower.Percentage)
+
+	for i, device := range zone.Devices {
+		id := zone.Name + "_" + strconv.Itoa(i)
+		val := 1.0
+		if device.ConnectionState.Value == false {
+			val = 0.0
+		}
+		tadoDeviceConnectionStatus.WithLabelValues(zone.Name, id, device.DeviceType, device.Firmware).Set(val)
+		val = 1.0
+		if device.BatteryState != "NORMAL" {
+			val = 0.0
+		}
+		tadoDeviceBatteryStatus.WithLabelValues(zone.Name, id, device.DeviceType).Set(val)
+	}
 }

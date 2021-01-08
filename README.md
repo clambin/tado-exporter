@@ -89,6 +89,8 @@ tado-exporter exposes the following metrics:
 ```
 * tado_zone_target_temp_celsius:   Target temperature of this zone in degrees celsius
 * tado_zone_power_state:           Power status of this zone
+* tado_device_connection_status:   Connection status of devices in this zone
+* tado_device_battery_status:      Battery status of devices in this zone
 * tado_temperature_celsius:        Current temperature of this zone in degrees celsius
 * tado_heating_percentage:         Current heating percentage in this zone in percentage (0-100)
 * tado_humidity_percentage:        Current humidity percentage in this zone

@@ -5,7 +5,6 @@ import (
 	"github.com/clambin/gotools/httpstub"
 	"io/ioutil"
 	"net/http"
-	"tado-exporter/internal/testtools"
 	"tado-exporter/pkg/tado"
 	"time"
 
@@ -100,7 +99,7 @@ func TestAPIClient_Zones(t *testing.T) {
 
 func TestAPIClient_Weather(t *testing.T) {
 	client := tado.APIClient{
-		HTTPClient: httpstub.NewTestClient(testtools.APIServer),
+		HTTPClient: httpstub.NewTestClient(APIServer),
 		Username:   "user@examle.com",
 		Password:   "some-password",
 	}
@@ -111,6 +110,21 @@ func TestAPIClient_Weather(t *testing.T) {
 	assert.Equal(t, 13.3, tadoWeatherInfo.SolarIntensity.Percentage)
 	assert.Equal(t, "CLOUDY_MOSTLY", tadoWeatherInfo.WeatherState.Value)
 
+}
+
+func TestAPIClient_Devices(t *testing.T) {
+	client := tado.APIClient{
+		HTTPClient: httpstub.NewTestClient(APIServer),
+		Username:   "user@example.com",
+		Password:   "some-password",
+	}
+
+	zones, err := client.GetZones()
+	assert.Nil(t, err)
+	assert.Equal(t, "Living room", zones[0].Name)
+	assert.Len(t, zones[0].Devices, 1)
+	assert.Equal(t, true, zones[0].Devices[0].ConnectionState.Value)
+	assert.Equal(t, "NORMAL", zones[0].Devices[0].BatteryState)
 }
 
 // loopback functions
@@ -147,7 +161,20 @@ var responses = map[string]string{
   "type":"WEB_USER"
 }`,
 	"/api/v2/homes/242/zones": `[
-  { "id": 1, "name": "Living room" },
+  { 
+    "id": 1, 
+    "name": "Living room", 
+    "devices": [ 
+		{
+		  "deviceType": "RU02",
+		  "currentFwVersion": "67.2", 
+		  "connectionState": { 
+			"value": true 
+		  }, 
+		  "batteryState": "NORMAL" 
+		}
+    ]
+  },
   { "id": 2, "name": "Study" },
   { "id": 3, "name": "Bathroom" }
 ]`,

@@ -48,10 +48,7 @@ func main() {
 		probe := exporter.CreateProbe(&cfg)
 
 		for {
-			if err = probe.Run(); err != nil {
-				break
-			}
-
+			_ = probe.Run()
 			time.Sleep(cfg.Interval)
 		}
 	}()

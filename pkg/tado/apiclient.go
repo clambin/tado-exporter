@@ -164,15 +164,19 @@ func (client *APIClient) GetZones() ([]Zone, error) {
 		err  error
 		body []byte
 	)
-	tadoZones := make([]Zone, 0)
+	zones := make([]Zone, 0)
 
 	if err = client.initialize(); err == nil {
 		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones"
 		if body, err = client.call(apiURL); err == nil {
-			err = json.Unmarshal(body, &tadoZones)
+			err = json.Unmarshal(body, &zones)
 		}
 	}
-	return tadoZones, err
+
+	for _, zone := range zones {
+		log.WithFields(log.Fields{"err": err, "zone": zone}).Debug("GetZones")
+	}
+	return zones, err
 }
 
 // GetZoneInfo gets the info for the specified Zone
