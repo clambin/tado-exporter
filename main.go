@@ -39,7 +39,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
+	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 	if cfg.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -48,7 +48,7 @@ func main() {
 		probe := exporter.CreateProbe(&cfg)
 
 		for {
-			_ = probe.Run()
+			err = probe.Run()
 			time.Sleep(cfg.Interval)
 		}
 	}()

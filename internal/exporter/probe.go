@@ -38,8 +38,8 @@ func (probe *Probe) Run() error {
 
 	if weatherInfo, err = probe.GetWeatherInfo(); err == nil {
 		probe.reportWeather(weatherInfo)
-		log.WithFields(log.Fields{"err": err, "info": weatherInfo}).Debug("retrieved weather info")
 	}
+	log.WithFields(log.Fields{"err": err, "info": weatherInfo}).Debug("retrieved weather info")
 
 	if err == nil {
 		if zones, err = probe.GetZones(); err == nil {
@@ -48,18 +48,19 @@ func (probe *Probe) Run() error {
 				if info, err = probe.GetZoneInfo(zone.ID); err == nil {
 					probe.reportZone(&zone, info)
 
-					logger.WithField("zoneInfo", info).Debug("retrieved zone info")
 					if info.OpenWindow != "" {
 						logger.Infof("openWindow: %s", info.OpenWindow)
 					}
 				} else {
 					break
 				}
+				logger.WithField("zoneInfo", info).Debug("retrieved zone info")
 			}
 		}
 	}
+
 	if err != nil {
-		log.WithField("err", err.Error()).Warning("Failed to get Tado metrics")
+		log.WithField("err", err).Warning("Failed to get Tado metrics")
 	}
 
 	return err
@@ -70,7 +71,6 @@ func (probe *Probe) reportWeather(weatherInfo *tado.WeatherInfo) {
 		probe.weatherStates[key] = 0.0
 	}
 	probe.weatherStates[weatherInfo.WeatherState.Value] = 1.0
-	log.WithField("states", probe.weatherStates).Debug("weatherStates")
 	tadoOutsideTemperature.Set(weatherInfo.OutsideTemperature.Celsius)
 	tadoSolarIntensity.Set(weatherInfo.SolarIntensity.Percentage)
 	for key, value := range probe.weatherStates {

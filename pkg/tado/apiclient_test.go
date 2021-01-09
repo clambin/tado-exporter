@@ -1,14 +1,9 @@
 package tado_test
 
 import (
-	"bytes"
 	"github.com/clambin/gotools/httpstub"
-	"io/ioutil"
-	"net/http"
-	"tado-exporter/pkg/tado"
-	"time"
-
 	"github.com/stretchr/testify/assert"
+	"tado-exporter/pkg/tado"
 
 	"testing"
 )
@@ -40,42 +35,10 @@ func TestTypesToString(t *testing.T) {
 	assert.Equal(t, "temp=27.0 solar=75.0 weather=SUNNY", weatherInfo.String())
 }
 
-func TestAPIClient_Initialization(t *testing.T) {
-	client := tado.APIClient{
-		HTTPClient: httpstub.NewTestClient(APIServer),
-		Username:   "user@examle.com",
-		Password:   "some-password",
-	}
-
-	var err error
-	_, err = client.GetZones()
-	assert.Nil(t, err)
-	assert.Equal(t, "access_token", client.AccessToken)
-	assert.Equal(t, 242, client.HomeID)
-}
-
-func TestAPIClient_Authentication(t *testing.T) {
-	client := tado.APIClient{
-		HTTPClient: httpstub.NewTestClient(APIServer),
-		Username:   "user@examle.com",
-		Password:   "some-password",
-	}
-
-	var err error
-	_, err = client.GetZones()
-	assert.Nil(t, err)
-	assert.Equal(t, "access_token", client.AccessToken)
-
-	client.Expires = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
-	_, err = client.GetZones()
-	assert.Nil(t, err)
-	assert.Greater(t, client.Expires.Unix(), time.Now().Unix())
-	assert.Equal(t, 242, client.HomeID)
-}
-
 func TestAPIClient_Zones(t *testing.T) {
+	server := APIServer{}
 	client := tado.APIClient{
-		HTTPClient: httpstub.NewTestClient(APIServer),
+		HTTPClient: httpstub.NewTestClient(server.serve),
 		Username:   "user@examle.com",
 		Password:   "some-password",
 	}
@@ -98,8 +61,9 @@ func TestAPIClient_Zones(t *testing.T) {
 }
 
 func TestAPIClient_Weather(t *testing.T) {
+	server := &APIServer{}
 	client := tado.APIClient{
-		HTTPClient: httpstub.NewTestClient(APIServer),
+		HTTPClient: httpstub.NewTestClient(server.serve),
 		Username:   "user@examle.com",
 		Password:   "some-password",
 	}
@@ -113,8 +77,9 @@ func TestAPIClient_Weather(t *testing.T) {
 }
 
 func TestAPIClient_Devices(t *testing.T) {
+	server := &APIServer{}
 	client := tado.APIClient{
-		HTTPClient: httpstub.NewTestClient(APIServer),
+		HTTPClient: httpstub.NewTestClient(server.serve),
 		Username:   "user@example.com",
 		Password:   "some-password",
 	}
@@ -125,74 +90,4 @@ func TestAPIClient_Devices(t *testing.T) {
 	assert.Len(t, zones[0].Devices, 1)
 	assert.Equal(t, true, zones[0].Devices[0].ConnectionState.Value)
 	assert.Equal(t, "NORMAL", zones[0].Devices[0].BatteryState)
-}
-
-// loopback functions
-func APIServer(req *http.Request) *http.Response {
-	if response, ok := responses[req.URL.Path]; ok {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewBufferString(response)),
-		}
-	}
-	return &http.Response{
-		StatusCode: http.StatusNotFound,
-		Status:     "API" + req.URL.Path + " not implemented",
-	}
-}
-
-var responses = map[string]string{
-	"/oauth/token": `{
-  "access_token":"access_token",
-  "token_type":"bearer",
-  "refresh_token":"refresh_token",
-  "expires_in":599,
-  "scope":"home.user",
-  "jti":"jti"
-}`,
-	"/api/v1/me": `{
-  "name":"Some User",
-  "email":"user@example.com",
-  "username":"user@example.com",
-  "enabled":true,
-  "id":"somelongidstring",
-  "homeId":242,
-  "locale":"en_BE",
-  "type":"WEB_USER"
-}`,
-	"/api/v2/homes/242/zones": `[
-  { 
-    "id": 1, 
-    "name": "Living room", 
-    "devices": [ 
-		{
-		  "deviceType": "RU02",
-		  "currentFwVersion": "67.2", 
-		  "connectionState": { 
-			"value": true 
-		  }, 
-		  "batteryState": "NORMAL" 
-		}
-    ]
-  },
-  { "id": 2, "name": "Study" },
-  { "id": 3, "name": "Bathroom" }
-]`,
-	"/api/v2/homes/242/zones/1/state": `{
-  "setting": {
-    "power": "ON",
-    "temperature": { "celsius": 20.00 }
-  },
-  "openWindow": null,
-  "activityDataPoints": { "heatingPower": { "percentage": 11.00 } },
-  "sensorDataPoints": {
-    "insideTemperature": { "celsius": 19.94 },
-    "humidity": { "percentage": 37.70 }
-  }
-}`,
-	"/api/v2/homes/242/weather": `{
-  "outsideTemperature": { "celsius": 3.4 },
-  "solarIntensity": { "percentage": 13.3 },
-  "weatherState": { "value": "CLOUDY_MOSTLY" }
-}`,
 }

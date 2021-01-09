@@ -75,17 +75,18 @@ func (client *APIClient) initialize() error {
 
 // authenticate logs in to tado.com and gets an Access Token to invoke the API functions.
 // Once logged in, authenticate renews the Access Token if it's expired since the last call.
-//
-// Invoked by each API function, so doesn't need to be called by the calling application.
 func (client *APIClient) authenticate() error {
 	var err error
-	if client.AccessToken == "" {
-		if client.ClientSecret == "" {
-			client.ClientSecret = "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc"
+	if client.ClientSecret == "" {
+		client.ClientSecret = "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc"
+	}
+	log.WithFields(log.Fields{"refreshTokenLen": len(client.RefreshToken), "expiry": client.Expires}).Debug("checking need to authenticate")
+	if client.RefreshToken != "" {
+		if time.Now().After(client.Expires) {
+			err = client.doAuthentication("refresh_token", client.RefreshToken)
 		}
+	} else {
 		err = client.doAuthentication("password", client.Password)
-	} else if time.Now().After(client.Expires) {
-		err = client.doAuthentication("refresh_token", client.RefreshToken)
 	}
 	return err
 }
@@ -127,6 +128,11 @@ func (client *APIClient) doAuthentication(grantType, credential string) error {
 		} else {
 			err = errors.New(resp.Status)
 		}
+	}
+
+	if err != nil && grantType == "refresh_token" {
+		// failed during refresh. reset refresh_token to force a password login
+		client.RefreshToken = ""
 	}
 	log.WithFields(log.Fields{"err": err, "expires": client.Expires}).Debug("authenticated")
 
@@ -249,12 +255,19 @@ func (client *APIClient) call(apiURL string) ([]byte, error) {
 		case http.StatusOK:
 			return ioutil.ReadAll(resp.Body)
 		case http.StatusForbidden:
-			client.AccessToken = ""
+			// we're authenticated, but still got forbidden.
+			// force password login to get a new token.
+			client.RefreshToken = ""
 		}
 		err = errors.New(resp.Status)
 	}
 
-	log.WithFields(log.Fields{"err": err, "url": apiURL}).Info("call failed")
+	log.WithFields(log.Fields{
+		"err":               err,
+		"url":               apiURL,
+		"expiry":            client.Expires,
+		"accessTokenLength": len(client.AccessToken)},
+	).Debug("call failed")
 
 	return nil, err
 }

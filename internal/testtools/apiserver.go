@@ -54,7 +54,29 @@ var responses = map[string]string{
   "type":"WEB_USER"
 }`,
 	"/api/v2/homes/242/zones": `[
-  { "id": 1, "name": "Living room" },
+  { 
+    "id": 1, 
+    "name": "Living room",
+    "devices": 
+    [ 
+		{
+		  "deviceType": "RU02",
+		  "currentFwVersion": "67.2", 
+		  "connectionState": { 
+			"value": true 
+		  }, 
+		  "batteryState": "NORMAL" 
+		},
+		{
+		  "deviceType": "VA02",
+		  "currentFwVersion": "57.2", 
+		  "connectionState": { 
+			"value": false 
+		  }, 
+		  "batteryState": "LOW" 
+		}
+    ]
+  },
   { "id": 2, "name": "Study" },
   { "id": 3, "name": "Bathroom" }
 ]`,
