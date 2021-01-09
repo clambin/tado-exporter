@@ -43,6 +43,7 @@ func main() {
 	if cfg.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
+	log.Infof("tado-exporter %s", version.BuildVersion)
 
 	go func() {
 		probe := exporter.CreateProbe(&cfg)
