@@ -80,7 +80,7 @@ func (client *APIClient) authenticate() error {
 	if client.ClientSecret == "" {
 		client.ClientSecret = "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc"
 	}
-	log.WithFields(log.Fields{"refreshTokenLen": len(client.RefreshToken), "expiry": client.Expires}).Debug("checking need to authenticate")
+	// log.WithFields(log.Fields{"refreshTokenLen": len(client.RefreshToken), "expiry": client.Expires}).Debug("checking need to authenticate")
 	if client.RefreshToken != "" {
 		if time.Now().After(client.Expires) {
 			err = client.doAuthentication("refresh_token", client.RefreshToken)
