@@ -33,6 +33,21 @@ func TestTypesToString(t *testing.T) {
 	}
 
 	assert.Equal(t, "temp=27.0 solar=75.0 weather=SUNNY", weatherInfo.String())
+
+	zone := tado.Zone{
+		ID:   1,
+		Name: "Living room",
+		Devices: []tado.Device{
+			{
+				DeviceType:      "RU02",
+				Firmware:        "67.2",
+				ConnectionState: tado.ConnectionState{Value: true},
+				BatteryState:    "LOW",
+			},
+		},
+	}
+
+	assert.Equal(t, "id=1 name=Living room devices={type=RU02 firmware=67.2 connection=true battery=LOW}", zone.String())
 }
 
 func TestAPIClient_Zones(t *testing.T) {
