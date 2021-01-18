@@ -55,4 +55,9 @@ var (
 		Name: "tado_device_battery_status",
 		Help: "Tado device battery status",
 	}, []string{"zone", "id", "type"})
+
+	tadoMobileDeviceStatus = metrics.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "tado_mobile_device_status",
+		Help: "Tado mobile device status. 1 if the device is \"home\"",
+	}, []string{"name"})
 )

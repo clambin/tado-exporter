@@ -39,7 +39,7 @@ func (apiServer *APIServer) serve(req *http.Request) *http.Response {
 	}
 	return &http.Response{
 		StatusCode: http.StatusNotFound,
-		Status:     "API" + req.URL.Path + " not implemented",
+		Status:     "API " + req.URL.Path + " not implemented",
 	}
 }
 
@@ -161,4 +161,25 @@ var responses = map[string]string{
   "solarIntensity": { "percentage": 13.3 },
   "weatherState": { "value": "CLOUDY_MOSTLY" }
 }`,
+	"/api/v2/homes/242/mobileDevices": `[{
+	"id": 1,
+	"name": "device 1",
+	"settings": {
+		"geoTrackingEnabled": true
+	},
+	"location": {
+		"stale": false,
+		"atHome": true
+	}
+}, {
+	"id": 2,
+	"name": "device 2",
+	"settings": {
+		"geoTrackingEnabled": true
+	},
+	"location": {
+		"stale": false,
+		"atHome": false
+	}
+}]`,
 }

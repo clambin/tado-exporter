@@ -8,16 +8,25 @@ import (
 	"tado-exporter/pkg/tado"
 )
 
+// API for the Tado APIClient.
+// Used to mock the API during unit testing
+type API interface {
+	GetZones() ([]tado.Zone, error)
+	GetZoneInfo(zoneID int) (*tado.ZoneInfo, error)
+	GetWeatherInfo() (*tado.WeatherInfo, error)
+	GetMobileDevices() ([]tado.MobileDevice, error)
+}
+
 // Probe structure representing a tado-exporter probe
 type Probe struct {
-	tado.APIClient
+	API
 	weatherStates map[string]float64
 }
 
 // CreateProbe creates a new tado-exporter probe
 func CreateProbe(cfg *Configuration) *Probe {
 	return &Probe{
-		APIClient: tado.APIClient{
+		API: &tado.APIClient{
 			HTTPClient:   &http.Client{},
 			Username:     cfg.Username,
 			Password:     cfg.Password,
@@ -30,16 +39,26 @@ func CreateProbe(cfg *Configuration) *Probe {
 // Run a tado-exporter probe once
 func (probe *Probe) Run() error {
 	var (
-		err         error
-		zones       []tado.Zone
-		info        *tado.ZoneInfo
-		weatherInfo *tado.WeatherInfo
+		err           error
+		zones         []tado.Zone
+		info          *tado.ZoneInfo
+		weatherInfo   *tado.WeatherInfo
+		mobileDevices []tado.MobileDevice
 	)
 
 	if weatherInfo, err = probe.GetWeatherInfo(); err == nil {
 		probe.reportWeather(weatherInfo)
+		log.WithField("info", weatherInfo).Debug("retrieved weather info")
 	}
-	log.WithFields(log.Fields{"err": err, "info": weatherInfo}).Debug("retrieved weather info")
+
+	if err == nil {
+		if mobileDevices, err = probe.GetMobileDevices(); err == nil {
+			for _, mobileDevice := range mobileDevices {
+				probe.reportMobileDevice(&mobileDevice)
+				log.WithField("device", mobileDevice.String()).Debug("retrieved mobile device")
+			}
+		}
+	}
 
 	if err == nil {
 		if zones, err = probe.GetZones(); err == nil {
@@ -49,7 +68,7 @@ func (probe *Probe) Run() error {
 					probe.reportZone(&zone, info)
 
 					if info.OpenWindow != "" {
-						logger.Infof("openWindow: %s", info.OpenWindow)
+						logger.WithField("openWindow", info.OpenWindow).Info("Non-empty openWindow found!")
 					}
 				} else {
 					break
@@ -101,5 +120,15 @@ func (probe *Probe) reportZone(zone *tado.Zone, info *tado.ZoneInfo) {
 			val = 0.0
 		}
 		tadoDeviceBatteryStatus.WithLabelValues(zone.Name, id, device.DeviceType).Set(val)
+	}
+}
+
+func (probe *Probe) reportMobileDevice(mobileDevice *tado.MobileDevice) {
+	if mobileDevice.Settings.GeoTrackingEnabled {
+		value := 0.0
+		if mobileDevice.Location.AtHome && !mobileDevice.Location.Stale {
+			value = 1.0
+		}
+		tadoMobileDeviceStatus.WithLabelValues(mobileDevice.Name).Set(value)
 	}
 }

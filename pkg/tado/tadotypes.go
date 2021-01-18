@@ -28,6 +28,14 @@ func (zone Zone) String() string {
 }
 
 // ZoneInfo contains the response to /api/v2/homes/<HomeID>/zones/<zoneID>/state
+//
+// This structure provides the following key information:
+//   Setting.Power:                              power state of the specified zone (0-1)
+//   Temperature.Celsius:                        target temperature for the zone, in degrees Celsius
+//   OpenWindow:                                 TBD
+//   ActivityDataPoints.HeatingPower.Percentage: heating power for the zone (0-100%)
+//   SensorDataPoints.Temperature.Celsius:       current temperature, in degrees Celsius
+//   SensorDataPoints.Humidity.Percentage:       humidity (0-100%)
 type ZoneInfo struct {
 	Setting            ZoneInfoSetting            `json:"setting"`
 	OpenWindow         string                     `json:"openWindow"`
@@ -46,12 +54,18 @@ func (zoneInfo *ZoneInfo) String() string {
 }
 
 // WeatherInfo contains the response to /api/v2/homes/<HomeID>/weather
+//
+// This structure provides the following key information:
+//   OutsideTemperature.Celsius:  outside temperate, in degrees Celsius
+//   SolarIntensity.Percentage:   solar intensity (0-100%)
+//   WeatherState.Value:          string describing current weather (list TBD)
 type WeatherInfo struct {
 	OutsideTemperature Temperature `json:"outsideTemperature"`
 	SolarIntensity     Percentage  `json:"solarIntensity"`
 	WeatherState       Value       `json:"weatherState"`
 }
 
+// String converts WeatherInfo to a loggable string
 func (weatherInfo *WeatherInfo) String() string {
 	return fmt.Sprintf("temp=%.1f solar=%.1f weather=%s",
 		weatherInfo.OutsideTemperature.Celsius,
@@ -60,19 +74,45 @@ func (weatherInfo *WeatherInfo) String() string {
 	)
 }
 
+// MobileDevice contains the response to /api/v2/homes/<HomeID>/mobileDevices
+type MobileDevice struct {
+	ID       int                  `json:"id"`
+	Name     string               `json:"name"`
+	Settings MobileDeviceSettings `json:"settings"`
+	Location MobileDeviceLocation `json:"location"`
+}
+
+type MobileDeviceSettings struct {
+	GeoTrackingEnabled bool `json:"geoTrackingEnabled"`
+}
+
+type MobileDeviceLocation struct {
+	Stale  bool `json:"stale"`
+	AtHome bool `json:"atHome"`
+}
+
+func (mobileDevice *MobileDevice) String() string {
+	return fmt.Sprintf("name=%s geotrack=%v stale=%v athome=%v",
+		mobileDevice.Name,
+		mobileDevice.Settings.GeoTrackingEnabled,
+		mobileDevice.Location.Stale,
+		mobileDevice.Location.AtHome,
+	)
+}
+
 // Supporting data/json structs
 
-// Temperature structure representing a temperature (in degrees Celsius)
+// Temperature contains a temperature in degrees Celsius
 type Temperature struct {
 	Celsius float64 `json:"celsius"`
 }
 
-// Percentage structure representing a percentage
+// Percentage contains a percentage (0-100%)
 type Percentage struct {
 	Percentage float64 `json:"percentage"`
 }
 
-// Value structure representing a value
+// Value contains a string value
 type Value struct {
 	Value string `json:"value"`
 }

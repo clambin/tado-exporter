@@ -106,3 +106,22 @@ func TestAPIClient_Devices(t *testing.T) {
 	assert.Equal(t, true, zones[0].Devices[0].ConnectionState.Value)
 	assert.Equal(t, "NORMAL", zones[0].Devices[0].BatteryState)
 }
+
+func TestAPIClient_MobileDevices(t *testing.T) {
+	server := &APIServer{}
+	client := tado.APIClient{
+		HTTPClient: httpstub.NewTestClient(server.serve),
+		Username:   "user@example.com",
+		Password:   "some-password",
+	}
+
+	mobileDevices, err := client.GetMobileDevices()
+	assert.Nil(t, err)
+	assert.Len(t, mobileDevices, 2)
+	assert.Equal(t, "device 1", mobileDevices[0].Name)
+	assert.True(t, mobileDevices[0].Settings.GeoTrackingEnabled)
+	assert.True(t, mobileDevices[0].Location.AtHome)
+	assert.Equal(t, "device 2", mobileDevices[1].Name)
+	assert.True(t, mobileDevices[1].Settings.GeoTrackingEnabled)
+	assert.False(t, mobileDevices[1].Location.AtHome)
+}
