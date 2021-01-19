@@ -118,10 +118,9 @@ func (probe *Probe) runZones() error {
 				if info.OpenWindow != "" {
 					logger.WithField("openWindow", info.OpenWindow).Info("Non-empty openWindow found!")
 				}
-			} else {
-				break
+
+				logger.WithField("zoneInfo", info).Debug("retrieved zone info")
 			}
-			logger.WithField("zoneInfo", info).Debug("retrieved zone info")
 		}
 	}
 
