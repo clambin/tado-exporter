@@ -24,10 +24,26 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 )
+
+// Common Tado data structures
+
+// Temperature contains a temperature in degrees Celsius
+type Temperature struct {
+	Celsius float64 `json:"celsius"`
+}
+
+// Percentage contains a percentage (0-100%)
+type Percentage struct {
+	Percentage float64 `json:"percentage"`
+}
+
+// Value contains a string value
+type Value struct {
+	Value string `json:"value"`
+}
 
 // APIClient represents a Tado API client.
 //
@@ -81,79 +97,6 @@ func (client *APIClient) getHomeID() error {
 	}
 	return err
 }
-
-// GetZones retrieves the different Zones configured for the user's Home ID
-func (client *APIClient) GetZones() ([]Zone, error) {
-	var (
-		err  error
-		body []byte
-	)
-	zones := make([]Zone, 0)
-
-	if err = client.initialize(); err == nil {
-		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones"
-		if body, err = client.call(apiURL); err == nil {
-			err = json.Unmarshal(body, &zones)
-		}
-	}
-
-	for _, zone := range zones {
-		log.WithFields(log.Fields{"err": err, "zone": zone}).Debug("GetZones")
-	}
-	return zones, err
-}
-
-// GetZoneInfo gets the info for the specified Zone
-func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
-	var (
-		err          error
-		body         []byte
-		tadoZoneInfo ZoneInfo
-	)
-	if err = client.initialize(); err == nil {
-		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones/" + strconv.Itoa(zoneID) + "/state"
-		if body, err = client.call(apiURL); err == nil {
-			err = json.Unmarshal(body, &tadoZoneInfo)
-		}
-	}
-	return &tadoZoneInfo, err
-}
-
-// GetWeatherInfo retrieves weather information for the user's Home.
-func (client *APIClient) GetWeatherInfo() (*WeatherInfo, error) {
-	var (
-		err             error
-		tadoWeatherInfo WeatherInfo
-		body            []byte
-	)
-	if err = client.initialize(); err == nil {
-		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/weather"
-		if body, err = client.call(apiURL); err == nil {
-			err = json.Unmarshal(body, &tadoWeatherInfo)
-		}
-	}
-	return &tadoWeatherInfo, err
-
-}
-
-// GetMobileDevices retrieves the status of all registered mobile devices.
-func (client *APIClient) GetMobileDevices() ([]MobileDevice, error) {
-	var (
-		err               error
-		tadoMobileDevices []MobileDevice
-		body              []byte
-	)
-	if err = client.initialize(); err == nil {
-		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/mobileDevices"
-		if body, err = client.call(apiURL); err == nil {
-			err = json.Unmarshal(body, &tadoMobileDevices)
-		}
-	}
-
-	return tadoMobileDevices, err
-}
-
-// non-exported functions
 
 // Initialize sets up the client to call the various APIs, i.e. authenticates with tado.com,
 // retrieving/updating the Access Token required for the API functions, and retrieving the
