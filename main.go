@@ -49,7 +49,10 @@ func main() {
 		probe := exporter.CreateProbe(&cfg)
 
 		for {
-			err = probe.Run()
+			if err = probe.Run(); err != nil {
+				log.WithField("err", err).Warning("Failed to get Tado metrics")
+			}
+
 			time.Sleep(cfg.Interval)
 		}
 	}()

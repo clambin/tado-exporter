@@ -47,10 +47,6 @@ func (probe *Probe) Run() error {
 		err = probe.runZones()
 	}
 
-	if err != nil {
-		log.WithField("err", err).Warning("Failed to get Tado metrics")
-	}
-
 	return err
 }
 
