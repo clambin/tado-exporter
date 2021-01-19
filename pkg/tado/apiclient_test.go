@@ -14,7 +14,10 @@ func TestTypesToString(t *testing.T) {
 			Power:       "ON",
 			Temperature: tado.Temperature{Celsius: 25.0},
 		},
-		OpenWindow: "",
+		OpenWindow: tado.ZoneInfoOpenWindow{
+			DurationInSeconds:      50,
+			RemainingTimeInSeconds: 250,
+		},
 		SensorDataPoints: tado.ZoneInfoSensorDataPoints{
 			Temperature: tado.Temperature{Celsius: 21.0},
 			Humidity:    tado.Percentage{Percentage: 30.0},
@@ -24,7 +27,7 @@ func TestTypesToString(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, "target=25.0 power=ON temp=21.0, humidity=30.0, heating=25.0", zoneInfo.String())
+	assert.Equal(t, `target=25.0ºC power=ON temp=21.0ºC, humidity=30.0%, heating=25.0%, openwindow=50s`, zoneInfo.String())
 
 	weatherInfo := tado.WeatherInfo{
 		OutsideTemperature: tado.Temperature{Celsius: 27.0},
@@ -32,7 +35,7 @@ func TestTypesToString(t *testing.T) {
 		WeatherState:       tado.Value{Value: "SUNNY"},
 	}
 
-	assert.Equal(t, "temp=27.0 solar=75.0 weather=SUNNY", weatherInfo.String())
+	assert.Equal(t, `temp=27.0ºC, solar=75.0%, weather=SUNNY`, weatherInfo.String())
 
 	zone := tado.Zone{
 		ID:   1,
@@ -48,6 +51,20 @@ func TestTypesToString(t *testing.T) {
 	}
 
 	assert.Equal(t, "id=1 name=Living room devices={type=RU02 firmware=67.2 connection=true battery=LOW}", zone.String())
+
+	mobileDevice := tado.MobileDevice{
+		ID:   1,
+		Name: "phone",
+		Settings: tado.MobileDeviceSettings{
+			GeoTrackingEnabled: true,
+		},
+		Location: tado.MobileDeviceLocation{
+			Stale:  false,
+			AtHome: true,
+		},
+	}
+
+	assert.Equal(t, `name=phone, geotrack=true, stale=false, athome=true`, mobileDevice.String())
 }
 
 func TestAPIClient_Zones(t *testing.T) {
@@ -69,10 +86,15 @@ func TestAPIClient_Zones(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 20.0, tadoZoneInfo.Setting.Temperature.Celsius)
 	assert.Equal(t, "ON", tadoZoneInfo.Setting.Power)
-	assert.Equal(t, "", tadoZoneInfo.OpenWindow)
 	assert.Equal(t, 11.0, tadoZoneInfo.ActivityDataPoints.HeatingPower.Percentage)
 	assert.Equal(t, 19.94, tadoZoneInfo.SensorDataPoints.Temperature.Celsius)
 	assert.Equal(t, 37.7, tadoZoneInfo.SensorDataPoints.Humidity.Percentage)
+
+	tadoZoneInfo, err = client.GetZoneInfo(tadoZones[1].ID)
+	assert.Nil(t, err)
+	assert.Equal(t, 50, tadoZoneInfo.OpenWindow.DurationInSeconds)
+	assert.Equal(t, 250, tadoZoneInfo.OpenWindow.RemainingTimeInSeconds)
+
 }
 
 func TestAPIClient_Weather(t *testing.T) {

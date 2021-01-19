@@ -38,18 +38,19 @@ func (zone Zone) String() string {
 //   SensorDataPoints.Humidity.Percentage:       humidity (0-100%)
 type ZoneInfo struct {
 	Setting            ZoneInfoSetting            `json:"setting"`
-	OpenWindow         string                     `json:"openWindow"`
+	OpenWindow         ZoneInfoOpenWindow         `json:"openwindow,omitempty"`
 	ActivityDataPoints ZoneInfoActivityDataPoints `json:"activityDataPoints"`
 	SensorDataPoints   ZoneInfoSensorDataPoints   `json:"sensorDataPoints"`
 }
 
 func (zoneInfo *ZoneInfo) String() string {
-	return fmt.Sprintf("target=%.1f power=%s temp=%.1f, humidity=%.1f, heating=%.1f",
+	return fmt.Sprintf("target=%.1fºC power=%s temp=%.1fºC, humidity=%.1f%%, heating=%.1f%%, openwindow=%ds",
 		zoneInfo.Setting.Temperature.Celsius,
 		zoneInfo.Setting.Power,
 		zoneInfo.SensorDataPoints.Temperature.Celsius,
 		zoneInfo.SensorDataPoints.Humidity.Percentage,
 		zoneInfo.ActivityDataPoints.HeatingPower.Percentage,
+		zoneInfo.OpenWindow.DurationInSeconds,
 	)
 }
 
@@ -67,7 +68,7 @@ type WeatherInfo struct {
 
 // String converts WeatherInfo to a loggable string
 func (weatherInfo *WeatherInfo) String() string {
-	return fmt.Sprintf("temp=%.1f solar=%.1f weather=%s",
+	return fmt.Sprintf("temp=%.1fºC, solar=%.1f%%, weather=%s",
 		weatherInfo.OutsideTemperature.Celsius,
 		weatherInfo.SolarIntensity.Percentage,
 		weatherInfo.WeatherState.Value,
@@ -94,7 +95,7 @@ type MobileDeviceLocation struct {
 }
 
 func (mobileDevice *MobileDevice) String() string {
-	return fmt.Sprintf("name=%s geotrack=%v stale=%v athome=%v",
+	return fmt.Sprintf("name=%s, geotrack=%v, stale=%v, athome=%v",
 		mobileDevice.Name,
 		mobileDevice.Settings.GeoTrackingEnabled,
 		mobileDevice.Location.Stale,
@@ -134,6 +135,14 @@ type ZoneInfoActivityDataPoints struct {
 type ZoneInfoSensorDataPoints struct {
 	Temperature Temperature `json:"insideTemperature"`
 	Humidity    Percentage  `json:"humidity"`
+}
+
+// ZoneInfoOpenWindow contains info on an open window. Only set if a window is open
+type ZoneInfoOpenWindow struct {
+	DetectedTime           time.Time `json:"detectedTime"`
+	DurationInSeconds      int       `json:"durationInSeconds"`
+	Expiry                 time.Time `json:"expiry"`
+	RemainingTimeInSeconds int       `json:"remainingTimeInSeconds"`
 }
 
 // ConnectionState contains the connection state of a Tado device

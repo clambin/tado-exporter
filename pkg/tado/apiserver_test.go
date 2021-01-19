@@ -156,6 +156,27 @@ var responses = map[string]string{
     "humidity": { "percentage": 37.70 }
   }
 }`,
+	"/api/v2/homes/242/zones/2/state": `{
+  "setting": {
+    "power": "ON",
+    "temperature": { "celsius": 20.00 }
+  },
+  "openWindow": {
+    "durationInSeconds": 50,
+    "remainingTimeInSeconds": 250
+  },
+  "activityDataPoints": { "heatingPower": { "percentage": 11.00 } },
+  "sensorDataPoints": {
+    "insideTemperature": { "celsius": 19.94 },
+    "humidity": { "percentage": 37.70 }
+  }
+}`,
+	//type ZoneInfoOpenWindow struct {
+	//	DetectedTime           time.Time `json:"detectedTime"`
+	//	DurationInSeconds      int       `json:"durationInSeconds"`
+	//	Expiry                 time.Time `json:"expiry"`
+	//	RemainingTimeInSeconds int       `json:"remainingTimeInSeconds"`
+	//}
 	"/api/v2/homes/242/weather": `{
   "outsideTemperature": { "celsius": 3.4 },
   "solarIntensity": { "percentage": 13.3 },

@@ -114,11 +114,6 @@ func (probe *Probe) runZones() error {
 			logger := log.WithFields(log.Fields{"err": err, "zone.ID": zone.ID, "zone.Name": zone.Name})
 			if info, err = probe.GetZoneInfo(zone.ID); err == nil {
 				probe.reportZone(&zone, info)
-
-				if info.OpenWindow != "" {
-					logger.WithField("openWindow", info.OpenWindow).Info("Non-empty openWindow found!")
-				}
-
 				logger.WithField("zoneInfo", info).Debug("retrieved zone info")
 			}
 		}

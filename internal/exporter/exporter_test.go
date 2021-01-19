@@ -104,7 +104,10 @@ func (client *mockAPI) GetZoneInfo(_ int) (*tado.ZoneInfo, error) {
 			Power:       "ON",
 			Temperature: tado.Temperature{Celsius: 20.0},
 		},
-		OpenWindow: "YES",
+		OpenWindow: tado.ZoneInfoOpenWindow{
+			DurationInSeconds:      50,
+			RemainingTimeInSeconds: 250,
+		},
 		ActivityDataPoints: tado.ZoneInfoActivityDataPoints{
 			HeatingPower: tado.Percentage{Percentage: 11.0},
 		},
