@@ -132,6 +132,8 @@ func (probe *Probe) reportZone(zone *tado.Zone, info *tado.ZoneInfo) {
 	tadoTemperatureCelsius.WithLabelValues(zone.Name).Set(info.SensorDataPoints.Temperature.Celsius)
 	tadoHumidityPercentage.WithLabelValues(zone.Name).Set(info.SensorDataPoints.Humidity.Percentage)
 	tadoHeatingPercentage.WithLabelValues(zone.Name).Set(info.ActivityDataPoints.HeatingPower.Percentage)
+	tadoOpenWindowDuration.WithLabelValues(zone.Name).Set(float64(info.OpenWindow.DurationInSeconds))
+	tadoOpenWindowRemaining.WithLabelValues(zone.Name).Set(float64(info.OpenWindow.RemainingTimeInSeconds))
 
 	for i, device := range zone.Devices {
 		id := zone.Name + "_" + strconv.Itoa(i)

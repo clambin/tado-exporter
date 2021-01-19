@@ -32,7 +32,7 @@ func (zone Zone) String() string {
 // This structure provides the following key information:
 //   Setting.Power:                              power state of the specified zone (0-1)
 //   Temperature.Celsius:                        target temperature for the zone, in degrees Celsius
-//   OpenWindow:                                 TBD
+//   OpenWindow.DurationInSeconds:               how long an open window has been detected in seconds
 //   ActivityDataPoints.HeatingPower.Percentage: heating power for the zone (0-100%)
 //   SensorDataPoints.Temperature.Celsius:       current temperature, in degrees Celsius
 //   SensorDataPoints.Humidity.Percentage:       humidity (0-100%)

@@ -20,6 +20,8 @@ var testCases = []struct {
 	{"tado_humidity_percentage", 37.7},
 	{"tado_outside_temp_celsius", 3.4},
 	{"tado_solar_intensity_percentage", 13.3},
+	{"tado_open_window_duration", 50.0},
+	{"tado_open_window_remaining", 250.0},
 }
 
 func TestRunProbe(t *testing.T) {

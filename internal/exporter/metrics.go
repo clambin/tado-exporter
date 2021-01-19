@@ -60,4 +60,14 @@ var (
 		Name: "tado_mobile_device_status",
 		Help: "Tado mobile device status. 1 if the device is \"home\"",
 	}, []string{"name"})
+
+	tadoOpenWindowDuration = metrics.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "tado_open_window_duration",
+		Help: "Duration of open window event in seconds",
+	}, []string{"zone"})
+
+	tadoOpenWindowRemaining = metrics.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "tado_open_window_remaining",
+		Help: "Remaining duration of open window event in seconds",
+	}, []string{"zone"})
 )
