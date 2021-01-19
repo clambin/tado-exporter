@@ -3,7 +3,6 @@ package tado
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 )
 
 // MobileDevice contains the response to /api/v2/homes/<HomeID>/mobileDevices
@@ -33,7 +32,7 @@ func (client *APIClient) GetMobileDevices() ([]MobileDevice, error) {
 		body              []byte
 	)
 	if err = client.initialize(); err == nil {
-		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/mobileDevices"
+		apiURL := client.apiURL("/mobileDevices")
 		if body, err = client.call(apiURL); err == nil {
 			err = json.Unmarshal(body, &tadoMobileDevices)
 		}

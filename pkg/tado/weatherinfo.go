@@ -3,7 +3,6 @@ package tado
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 )
 
 // WeatherInfo contains the response to /api/v2/homes/<HomeID>/weather
@@ -26,7 +25,7 @@ func (client *APIClient) GetWeatherInfo() (*WeatherInfo, error) {
 		body            []byte
 	)
 	if err = client.initialize(); err == nil {
-		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/weather"
+		apiURL := client.apiURL("/weather")
 		if body, err = client.call(apiURL); err == nil {
 			err = json.Unmarshal(body, &tadoWeatherInfo)
 		}

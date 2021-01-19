@@ -11,10 +11,10 @@
 // Once a client has been created, you can query tado.com for information about your different Tado devices.
 // Currently the following three APIs are supported:
 //
-//   GetZones:       get the different zones (rooms) defined in your home
-//   GetZoneInfo:    get metrics for a specified zone in your home
-//   GetWeatherInfo: get overall weather information
-//
+//   GetZones:         get the different zones (rooms) defined in your home
+//   GetZoneInfo:      get metrics for a specified zone in your home
+//   GetWeatherInfo:   get overall weather information
+//   GetMobileDevices: get status of each registered mobile device
 package tado
 
 import (
@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -74,6 +75,14 @@ type APIClient struct {
 	HomeID       int
 }
 
+const baseAPIURL = "https://my.tado.com"
+const authURL = "https://auth.tado.com/oauth/token"
+
+// apiURL returns a API v2 URL
+func (client *APIClient) apiURL(endpoint string) string {
+	return baseAPIURL + "/api/v2/homes/" + strconv.Itoa(client.HomeID) + endpoint
+}
+
 // getHomeID gets the user's Home ID, used by the GetZones API
 //
 // Called by Initialize, so doesn't need to be called by the calling application.
@@ -87,8 +96,7 @@ func (client *APIClient) getHomeID() error {
 		body []byte
 	)
 
-	apiURL := "https://my.tado.com/api/v1/me"
-	if body, err = client.call(apiURL); err == nil {
+	if body, err = client.call(baseAPIURL + "/api/v1/me"); err == nil {
 		var resp interface{}
 		if err = json.Unmarshal(body, &resp); err == nil {
 			m := resp.(map[string]interface{})
@@ -119,7 +127,6 @@ func (client *APIClient) authenticate() error {
 	if client.ClientSecret == "" {
 		client.ClientSecret = "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc"
 	}
-	// log.WithFields(log.Fields{"refreshTokenLen": len(client.RefreshToken), "expiry": client.Expires}).Debug("checking need to authenticate")
 	if client.RefreshToken != "" {
 		if time.Now().After(client.Expires) {
 			err = client.doAuthentication("refresh_token", client.RefreshToken)
@@ -148,7 +155,7 @@ func (client *APIClient) doAuthentication(grantType, credential string) error {
 		form.Add("username", client.Username)
 	}
 
-	req, _ := http.NewRequest("POST", "https://auth.tado.com/oauth/token", strings.NewReader(form.Encode()))
+	req, _ := http.NewRequest("POST", authURL, strings.NewReader(form.Encode()))
 	req.Header.Add("Referer", "https://my.tado.com/")
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
 

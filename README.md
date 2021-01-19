@@ -1,4 +1,4 @@
-# tado-exporter
+¡# tado-exporter
 ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/clambin/tado-exporter?color=green&label=Release&style=plastic)
 ![Codecov](https://img.shields.io/codecov/c/gh/clambin/tado-exporter?style=plastic)
 ![Build](https://github.com/clambin/tado-exporter/workflows/Build/badge.svg)
@@ -105,6 +105,11 @@ tado-exporter exposes the following metrics:
 The repo contains a sample [Grafana dashboard](assets/grafana/dashboards) to visualize the scraped metrics.
 
 Feel free to customize as you see fit.
+
+## Tado Client API
+
+The Tado Client API implementation can be found in [pkg/data](pkg/tado). The API should be fairly stable at this point, 
+so feel free to reuse for your own projects.
 
 ## Authors
 

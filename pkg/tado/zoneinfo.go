@@ -56,8 +56,7 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 		tadoZoneInfo ZoneInfo
 	)
 	if err = client.initialize(); err == nil {
-		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones/" + strconv.Itoa(zoneID) + "/state"
-		if body, err = client.call(apiURL); err == nil {
+		if body, err = client.call(client.apiURL("/zones/" + strconv.Itoa(zoneID) + "/state")); err == nil {
 			err = json.Unmarshal(body, &tadoZoneInfo)
 		}
 	}
@@ -66,12 +65,12 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 
 // String serializes a ZoneInfo into a string. Used for logging.
 func (zoneInfo *ZoneInfo) String() string {
-	return fmt.Sprintf("target=%.1fºC power=%s temp=%.1fºC, humidity=%.1f%%, heating=%.1f%%, openwindow=%ds",
+	return fmt.Sprintf("target=%.1fºC, temp=%.1fºC, humidity=%.1f%%, heating=%.1f%%, power=%s, openwindow=%ds",
 		zoneInfo.Setting.Temperature.Celsius,
-		zoneInfo.Setting.Power,
 		zoneInfo.SensorDataPoints.Temperature.Celsius,
 		zoneInfo.SensorDataPoints.Humidity.Percentage,
 		zoneInfo.ActivityDataPoints.HeatingPower.Percentage,
-		zoneInfo.OpenWindow.DurationInSeconds,
+		zoneInfo.Setting.Power,
+		zoneInfo.OpenWindow.DurationInSeconds-zoneInfo.OpenWindow.RemainingTimeInSeconds,
 	)
 }

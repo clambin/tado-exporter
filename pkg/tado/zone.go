@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -39,8 +38,7 @@ func (client *APIClient) GetZones() ([]Zone, error) {
 	zones := make([]Zone, 0)
 
 	if err = client.initialize(); err == nil {
-		apiURL := "https://my.tado.com/api/v2/homes/" + strconv.Itoa(client.HomeID) + "/zones"
-		if body, err = client.call(apiURL); err == nil {
+		if body, err = client.call(client.apiURL("/zones")); err == nil {
 			err = json.Unmarshal(body, &zones)
 		}
 	}
