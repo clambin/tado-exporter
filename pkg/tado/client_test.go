@@ -15,7 +15,7 @@ func TestTypesToString(t *testing.T) {
 			Temperature: tado.Temperature{Celsius: 25.0},
 		},
 		OpenWindow: tado.ZoneInfoOpenWindow{
-			DurationInSeconds:      50,
+			DurationInSeconds:      900,
 			RemainingTimeInSeconds: 250,
 		},
 		SensorDataPoints: tado.ZoneInfoSensorDataPoints{
@@ -27,7 +27,7 @@ func TestTypesToString(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, `target=25.0ºC power=ON temp=21.0ºC, humidity=30.0%, heating=25.0%, openwindow=50s`, zoneInfo.String())
+	assert.Equal(t, `target=25.0ºC, temp=21.0ºC, humidity=30.0%, heating=25.0%, power=ON, openwindow=650s`, zoneInfo.String())
 
 	weatherInfo := tado.WeatherInfo{
 		OutsideTemperature: tado.Temperature{Celsius: 27.0},
