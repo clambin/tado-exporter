@@ -1,11 +1,10 @@
 package exporter
 
 import (
+	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
-
-	"tado-exporter/pkg/tado"
 )
 
 // API for the Tado APIClient.
@@ -38,48 +37,30 @@ func CreateProbe(cfg *Configuration) *Probe {
 
 // Run a tado-exporter probe once
 func (probe *Probe) Run() error {
-	var (
-		err           error
-		zones         []tado.Zone
-		info          *tado.ZoneInfo
-		weatherInfo   *tado.WeatherInfo
-		mobileDevices []tado.MobileDevice
-	)
+	err := probe.runWeather()
 
-	if weatherInfo, err = probe.GetWeatherInfo(); err == nil {
-		probe.reportWeather(weatherInfo)
-		log.WithField("info", weatherInfo).Debug("retrieved weather info")
+	if err == nil {
+		err = probe.runMobileDevices()
 	}
 
 	if err == nil {
-		if mobileDevices, err = probe.GetMobileDevices(); err == nil {
-			for _, mobileDevice := range mobileDevices {
-				probe.reportMobileDevice(&mobileDevice)
-				log.WithField("device", mobileDevice.String()).Debug("retrieved mobile device")
-			}
-		}
-	}
-
-	if err == nil {
-		if zones, err = probe.GetZones(); err == nil {
-			for _, zone := range zones {
-				logger := log.WithFields(log.Fields{"err": err, "zone.ID": zone.ID, "zone.Name": zone.Name})
-				if info, err = probe.GetZoneInfo(zone.ID); err == nil {
-					probe.reportZone(&zone, info)
-
-					if info.OpenWindow != "" {
-						logger.WithField("openWindow", info.OpenWindow).Info("Non-empty openWindow found!")
-					}
-				} else {
-					break
-				}
-				logger.WithField("zoneInfo", info).Debug("retrieved zone info")
-			}
-		}
+		err = probe.runZones()
 	}
 
 	if err != nil {
 		log.WithField("err", err).Warning("Failed to get Tado metrics")
+	}
+
+	return err
+}
+
+func (probe *Probe) runWeather() error {
+	var err error
+	var weatherInfo *tado.WeatherInfo
+
+	if weatherInfo, err = probe.GetWeatherInfo(); err == nil {
+		probe.reportWeather(weatherInfo)
+		log.WithField("info", weatherInfo).Debug("retrieved weather info")
 	}
 
 	return err
@@ -95,6 +76,56 @@ func (probe *Probe) reportWeather(weatherInfo *tado.WeatherInfo) {
 	for key, value := range probe.weatherStates {
 		tadoWeather.WithLabelValues(key).Set(value)
 	}
+}
+
+func (probe *Probe) runMobileDevices() error {
+	var err error
+	var mobileDevices []tado.MobileDevice
+
+	if mobileDevices, err = probe.GetMobileDevices(); err == nil {
+		for _, mobileDevice := range mobileDevices {
+			probe.reportMobileDevice(&mobileDevice)
+			log.WithField("device", mobileDevice.String()).Debug("retrieved mobile device")
+		}
+	}
+
+	return err
+}
+
+func (probe *Probe) reportMobileDevice(mobileDevice *tado.MobileDevice) {
+	if mobileDevice.Settings.GeoTrackingEnabled {
+		value := 0.0
+		if mobileDevice.Location.AtHome && !mobileDevice.Location.Stale {
+			value = 1.0
+		}
+		tadoMobileDeviceStatus.WithLabelValues(mobileDevice.Name).Set(value)
+	}
+}
+
+func (probe *Probe) runZones() error {
+	var (
+		err   error
+		zones []tado.Zone
+		info  *tado.ZoneInfo
+	)
+
+	if zones, err = probe.GetZones(); err == nil {
+		for _, zone := range zones {
+			logger := log.WithFields(log.Fields{"err": err, "zone.ID": zone.ID, "zone.Name": zone.Name})
+			if info, err = probe.GetZoneInfo(zone.ID); err == nil {
+				probe.reportZone(&zone, info)
+
+				if info.OpenWindow != "" {
+					logger.WithField("openWindow", info.OpenWindow).Info("Non-empty openWindow found!")
+				}
+			} else {
+				break
+			}
+			logger.WithField("zoneInfo", info).Debug("retrieved zone info")
+		}
+	}
+
+	return err
 }
 
 func (probe *Probe) reportZone(zone *tado.Zone, info *tado.ZoneInfo) {
@@ -120,15 +151,5 @@ func (probe *Probe) reportZone(zone *tado.Zone, info *tado.ZoneInfo) {
 			val = 0.0
 		}
 		tadoDeviceBatteryStatus.WithLabelValues(zone.Name, id, device.DeviceType).Set(val)
-	}
-}
-
-func (probe *Probe) reportMobileDevice(mobileDevice *tado.MobileDevice) {
-	if mobileDevice.Settings.GeoTrackingEnabled {
-		value := 0.0
-		if mobileDevice.Location.AtHome && !mobileDevice.Location.Stale {
-			value = 1.0
-		}
-		tadoMobileDeviceStatus.WithLabelValues(mobileDevice.Name).Set(value)
 	}
 }

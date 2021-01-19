@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
+	"github.com/clambin/tado-exporter/internal/exporter"
+	"github.com/clambin/tado-exporter/internal/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"net/http"
 	"os"
 	"path/filepath"
-	"tado-exporter/internal/exporter"
-	"tado-exporter/internal/version"
 	"time"
 )
 

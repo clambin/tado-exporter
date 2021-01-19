@@ -1,4 +1,4 @@
-module tado-exporter
+module github.com/clambin/tado-exporter
 
 go 1.15
 

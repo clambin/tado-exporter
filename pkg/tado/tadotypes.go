@@ -82,10 +82,12 @@ type MobileDevice struct {
 	Location MobileDeviceLocation `json:"location"`
 }
 
+// MobileDeviceSettings is a sub-structure of MobileDevice
 type MobileDeviceSettings struct {
 	GeoTrackingEnabled bool `json:"geoTrackingEnabled"`
 }
 
+// MobileDeviceLocation is a sub-structure of MobileDevice
 type MobileDeviceLocation struct {
 	Stale  bool `json:"stale"`
 	AtHome bool `json:"atHome"`

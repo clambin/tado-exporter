@@ -2,10 +2,10 @@ package exporter_test
 
 import (
 	"github.com/clambin/gotools/metrics"
+	"github.com/clambin/tado-exporter/internal/exporter"
+	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"tado-exporter/internal/exporter"
-	"tado-exporter/pkg/tado"
 	"testing"
 )
 

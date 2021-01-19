@@ -2,8 +2,8 @@ package tado_test
 
 import (
 	"github.com/clambin/gotools/httpstub"
+	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/stretchr/testify/assert"
-	"tado-exporter/pkg/tado"
 
 	"testing"
 )

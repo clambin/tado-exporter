@@ -1,11 +1,10 @@
 package exporter
 
 import (
-	"github.com/stretchr/testify/assert"
-	"tado-exporter/pkg/tado"
-	"testing"
-
 	"github.com/clambin/gotools/metrics"
+	"github.com/clambin/tado-exporter/pkg/tado"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestWeatherInfoState(t *testing.T) {
