@@ -97,11 +97,13 @@ tado-exporter exposes the following metrics:
 * tado_outside_temp_celsius:       Current outside temperature in degrees celsius
 * tado_solar_intensity_percentage: Current solar intensity in percentage (0-100)
 * tado_weather:                    Current weather. Always one. See label 'tado_weather'
+* tado_mobile_device_status:       Status of any geotracked mobile devices (1: at home, 0: away)
 ```
 
 ### Grafana
 
-[Github](https://github.com/clambin/tado-exporter/assets/grafana/dashboards) contains a sample Grafana dashboard to visualize the scraped metrics.
+The repo contains a sample [Grafana dashboard](assets/grafana/dashboards) to visualize the scraped metrics.
+
 Feel free to customize as you see fit.
 
 ## Authors
