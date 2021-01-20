@@ -98,6 +98,8 @@ tado-exporter exposes the following metrics:
 * tado_solar_intensity_percentage: Current solar intensity in percentage (0-100)
 * tado_weather:                    Current weather. Always one. See label 'tado_weather'
 * tado_mobile_device_status:       Status of any geotracked mobile devices (1: at home, 0: away)
+* tado_open_window_duration:       Duration of open window event in seconds
+* tado_open_window_remaining:      Remaining duration of open window event in seconds
 ```
 
 ### Grafana
