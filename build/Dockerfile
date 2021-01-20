@@ -5,7 +5,7 @@ WORKDIR /build
 COPY . ./
 
 ARG BUILD_VERSION=development
-RUN CGO_ENABLED=0 go build -ldflags "-X tado-exporter/internal/version.BuildVersion=$BUILD_VERSION"
+RUN CGO_ENABLED=0 go build -ldflags "-X github.com/clambin/tado-exporter/internal/version.BuildVersion=$BUILD_VERSION"
 
 FROM alpine
 
