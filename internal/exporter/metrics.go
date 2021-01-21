@@ -9,7 +9,12 @@ var (
 	tadoZoneTargetTempCelsius = metrics.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "tado_zone_target_temp_celsius",
 		Help: "Target temperature of this zone in degrees celsius",
-	}, []string{"zone_name", "mode"})
+	}, []string{"zone_name"})
+
+	tadoZoneTargetManualMode = metrics.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "tado_zone_target_manual_mode",
+		Help: "1 if this zone is in manual temp target mode",
+	}, []string{"zone_name"})
 
 	tadoZonePowerState = metrics.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "tado_zone_power_state",

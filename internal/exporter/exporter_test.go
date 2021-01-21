@@ -14,10 +14,10 @@ var testCases = []struct {
 	Labels []string
 	Value  float64
 }{
-	{"tado_zone_target_temp_celsius", []string{"Living room", "AUTO"}, 20.0},
-	{"tado_zone_target_temp_celsius", []string{"Living room", "MANUAL"}, 0.0},
-	{"tado_zone_target_temp_celsius", []string{"Study", "AUTO"}, 0.0},
-	{"tado_zone_target_temp_celsius", []string{"Study", "MANUAL"}, 25.0},
+	{"tado_zone_target_temp_celsius", []string{"Living room"}, 20.0},
+	{"tado_zone_target_manual_mode", []string{"Living room"}, 0.0},
+	{"tado_zone_target_temp_celsius", []string{"Study"}, 25.0},
+	{"tado_zone_target_manual_mode", []string{"Study"}, 1.0},
 	{"tado_zone_power_state", []string{"Living room"}, 1.0},
 	{"tado_temperature_celsius", []string{"Living room"}, 19.94},
 	{"tado_heating_percentage", []string{"Living room"}, 11.0},
@@ -124,6 +124,7 @@ func (client *mockAPI) GetZoneInfo(zoneID int) (*tado.ZoneInfo, error) {
 	}
 
 	if zoneID != 1 {
+		info.Setting.Temperature.Celsius = 25.0
 		info.Overlay = tado.ZoneInfoOverlay{
 			Type: "MANUAL",
 			Setting: tado.ZoneInfoOverlaySetting{

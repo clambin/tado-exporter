@@ -119,11 +119,12 @@ func (probe *Probe) runZones() error {
 }
 
 func (probe *Probe) reportZone(zone *tado.Zone, info *tado.ZoneInfo) {
+	tadoZoneTargetTempCelsius.WithLabelValues(zone.Name).Set(info.Setting.Temperature.Celsius)
+	manualMode := 0.0
 	if info.Overlay.Type == "MANUAL" {
-		tadoZoneTargetTempCelsius.WithLabelValues(zone.Name, "MANUAL").Set(info.Overlay.Setting.Temperature.Celsius)
-	} else {
-		tadoZoneTargetTempCelsius.WithLabelValues(zone.Name, "AUTO").Set(info.Setting.Temperature.Celsius)
+		manualMode = 1.0
 	}
+	tadoZoneTargetManualMode.WithLabelValues(zone.Name).Set(manualMode)
 	powerState := 0.0
 	if info.Setting.Power == "ON" {
 		powerState = 1.0
