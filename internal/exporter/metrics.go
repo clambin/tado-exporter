@@ -22,17 +22,17 @@ var (
 	}, []string{"zone_name"})
 
 	tadoTemperatureCelsius = metrics.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tado_temperature_celsius",
+		Name: "tado_zone_temperature_celsius",
 		Help: "Current temperature of this zone in degrees celsius",
 	}, []string{"zone_name"})
 
 	tadoHeatingPercentage = metrics.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tado_heating_percentage",
+		Name: "tado_zone_heating_percentage",
 		Help: "Current heating percentage in this zone in percentage (0-100)",
 	}, []string{"zone_name"})
 
 	tadoHumidityPercentage = metrics.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tado_humidity_percentage",
+		Name: "tado_zone_humidity_percentage",
 		Help: "Current humidity percentage in this zone",
 	}, []string{"zone_name"})
 
@@ -52,14 +52,14 @@ var (
 	}, []string{"tado_weather"})
 
 	tadoDeviceConnectionStatus = metrics.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tado_device_connection_status",
+		Name: "tado_zone_device_connection_status",
 		Help: "Tado device connection status",
-	}, []string{"zone", "id", "type", "firmware"})
+	}, []string{"zone_name", "id", "type", "firmware"})
 
 	tadoDeviceBatteryStatus = metrics.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tado_device_battery_status",
+		Name: "tado_zone_device_battery_status",
 		Help: "Tado device battery status",
-	}, []string{"zone", "id", "type"})
+	}, []string{"zone_name", "id", "type"})
 
 	tadoMobileDeviceStatus = metrics.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "tado_mobile_device_status",
@@ -67,12 +67,12 @@ var (
 	}, []string{"name"})
 
 	tadoOpenWindowDuration = metrics.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tado_open_window_duration",
+		Name: "tado_zone_open_window_duration",
 		Help: "Duration of open window event in seconds",
-	}, []string{"zone"})
+	}, []string{"zone_name"})
 
 	tadoOpenWindowRemaining = metrics.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tado_open_window_remaining",
+		Name: "tado_zone_open_window_remaining",
 		Help: "Remaining duration of open window event in seconds",
-	}, []string{"zone"})
+	}, []string{"zone_name"})
 )

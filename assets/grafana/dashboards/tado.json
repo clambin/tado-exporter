@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 452,
-  "iteration": 1610125960112,
+  "iteration": 1611261357299,
   "links": [],
   "panels": [
     {
@@ -45,7 +45,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 0
       },
@@ -64,7 +64,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.6",
+      "pluginVersion": "7.3.7",
       "targets": [
         {
           "expr": "avg(tado_outside_temp_celsius)",
@@ -90,11 +90,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "light-blue",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "#EAB839",
+                "value": 50
+              },
+              {
+                "color": "semi-dark-green",
                 "value": 80
               }
             ]
@@ -104,9 +108,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 3,
-        "x": 4,
+        "h": 4,
+        "w": 4,
+        "x": 3,
         "y": 0
       },
       "id": 10,
@@ -124,7 +128,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.6",
+      "pluginVersion": "7.3.7",
       "targets": [
         {
           "expr": "avg(tado_solar_intensity_percentage)",
@@ -139,12 +143,382 @@
       "type": "stat"
     },
     {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "semi-dark-blue",
+                "value": null
+              },
+              {
+                "color": "semi-dark-yellow",
+                "value": 18
+              },
+              {
+                "color": "semi-dark-green",
+                "value": 20
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 7,
+        "y": 0
+      },
+      "id": 22,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "7.3.7",
+      "targets": [
+        {
+          "expr": "avg by (zone_name) (tado_temperature_celsius)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "{{zone_name}}",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "All rooms",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "max": 50,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "semi-dark-blue",
+                "value": null
+              },
+              {
+                "color": "dark-green",
+                "value": 5
+              },
+              {
+                "color": "light-yellow",
+                "value": 15
+              },
+              {
+                "color": "light-orange",
+                "value": 25
+              },
+              {
+                "color": "light-red",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 13,
+        "y": 0
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.7",
+      "targets": [
+        {
+          "expr": "avg by (zone_name) (tado_heating_percentage)",
+          "interval": "",
+          "legendFormat": "{{zone_name}}",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Heating percentage",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [
+            {
+              "from": "",
+              "id": 1,
+              "text": "AUTO",
+              "to": "",
+              "type": 1,
+              "value": "0"
+            },
+            {
+              "from": "",
+              "id": 2,
+              "text": "MANUAL",
+              "to": "",
+              "type": 1,
+              "value": "1"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "semi-dark-blue",
+                "value": null
+              },
+              {
+                "color": "dark-green",
+                "value": 1
+              },
+              {
+                "color": "light-yellow",
+                "value": 15
+              },
+              {
+                "color": "light-orange",
+                "value": 25
+              },
+              {
+                "color": "light-red",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 17,
+        "y": 0
+      },
+      "id": 69,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.7",
+      "targets": [
+        {
+          "expr": "avg by (zone_name) (tado_zone_target_manual_mode)",
+          "interval": "",
+          "legendFormat": "{{zone_name}}",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Heating mode",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [
+            {
+              "from": "",
+              "id": 1,
+              "text": "Away",
+              "to": "",
+              "type": 1,
+              "value": "0"
+            },
+            {
+              "from": "",
+              "id": 2,
+              "text": "Home",
+              "to": "",
+              "type": 1,
+              "value": "1"
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-blue",
+                "value": null
+              },
+              {
+                "color": "semi-dark-green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 3,
+        "x": 21,
+        "y": 0
+      },
+      "id": 42,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.7",
+      "targets": [
+        {
+          "expr": "avg by (name) (tado_mobile_device_status)",
+          "interval": "",
+          "legendFormat": "{{zone_name}}",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Mobile devices",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": null,
+            "filterable": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "light-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 4
+      },
+      "id": 25,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^tado_weather$/",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "pluginVersion": "7.3.7",
+      "targets": [
+        {
+          "expr": "tado_weather == 1",
+          "format": "table",
+          "interval": "",
+          "legendFormat": "{{tado_weather}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Weather",
+      "transformations": [],
+      "type": "stat"
+    },
+    {
       "aliasColors": {
-        "CLOUDY_MOSTLY": "rgb(166, 171, 165)",
+        "CLOUDY": "rgb(156, 156, 156)",
+        "CLOUDY_MOSTLY": "rgb(145, 145, 184)",
         "CLOUDY_PARTLY": "rgb(132, 150, 103)",
         "DRIZZLE": "rgb(98, 144, 217)",
+        "FOGGY": "rgb(247, 247, 255)",
+        "NIGHT_CLEAR": "rgb(33, 33, 28)",
         "NIGHT_CLOUDY": "rgb(77, 75, 72)",
-        "SCATTERED_RAIN": "rgb(50, 27, 145)"
+        "SCATTERED_RAIN": "rgb(50, 27, 145)",
+        "SUN": "semi-dark-yellow"
       },
       "bars": true,
       "dashLength": 10,
@@ -159,10 +533,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 7,
-        "x": 7,
-        "y": 0
+        "h": 4,
+        "w": 4,
+        "x": 3,
+        "y": 4
       },
       "hiddenSeries": false,
       "id": 20,
@@ -182,7 +556,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.6",
+      "pluginVersion": "7.3.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -241,283 +615,7 @@
       }
     },
     {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {},
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "semi-dark-blue",
-                "value": null
-              },
-              {
-                "color": "semi-dark-yellow",
-                "value": 18
-              },
-              {
-                "color": "semi-dark-green",
-                "value": 20
-              }
-            ]
-          },
-          "unit": "celsius"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 5,
-        "x": 14,
-        "y": 0
-      },
-      "id": 22,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name"
-      },
-      "pluginVersion": "7.3.6",
-      "targets": [
-        {
-          "expr": "avg by (zone_name) (tado_temperature_celsius)",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "{{zone_name}}",
-          "queryType": "randomWalk",
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "All rooms",
-      "type": "stat"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {},
-          "mappings": [
-            {
-              "from": "",
-              "id": 1,
-              "text": "Off",
-              "to": "",
-              "type": 1,
-              "value": "0"
-            },
-            {
-              "from": "",
-              "id": 2,
-              "text": "On",
-              "to": "",
-              "type": 1,
-              "value": "1"
-            }
-          ],
-          "max": 1,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "dark-blue",
-                "value": null
-              },
-              {
-                "color": "semi-dark-green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 5,
-        "x": 19,
-        "y": 0
-      },
-      "id": 4,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "7.3.6",
-      "targets": [
-        {
-          "expr": "avg by (zone_name) (tado_zone_power_state)",
-          "interval": "",
-          "legendFormat": "{{zone_name}}",
-          "queryType": "randomWalk",
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Power state",
-      "type": "stat"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": null,
-            "filterable": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "light-green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 0,
-        "y": 4
-      },
-      "id": 25,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "/^tado_weather$/",
-          "values": false
-        },
-        "textMode": "value"
-      },
-      "pluginVersion": "7.3.6",
-      "targets": [
-        {
-          "expr": "tado_weather",
-          "format": "table",
-          "interval": "",
-          "legendFormat": "{{tado_weather}}",
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Weather",
-      "transformations": [],
-      "type": "stat"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {},
-          "mappings": [],
-          "max": 50,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "semi-dark-blue",
-                "value": null
-              },
-              {
-                "color": "dark-green",
-                "value": 5
-              },
-              {
-                "color": "light-yellow",
-                "value": 15
-              },
-              {
-                "color": "light-orange",
-                "value": 25
-              },
-              {
-                "color": "light-red",
-                "value": 50
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 5,
-        "x": 19,
-        "y": 4
-      },
-      "id": 6,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "7.3.6",
-      "targets": [
-        {
-          "expr": "avg by (zone_name) (tado_heating_percentage)",
-          "interval": "",
-          "legendFormat": "{{zone_name}}",
-          "queryType": "randomWalk",
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Heating percentage",
-      "type": "stat"
-    },
-    {
+      "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
@@ -554,7 +652,7 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
-        "w": 24,
+        "w": 14,
         "x": 0,
         "y": 9
       },
@@ -576,7 +674,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.6",
+      "pluginVersion": "7.3.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -604,7 +702,7 @@
         {
           "expr": "avg(tado_zone_target_temp_celsius{zone_name=\"$Room\"})",
           "interval": "",
-          "legendFormat": "Target",
+          "legendFormat": "Scheduled Target",
           "queryType": "randomWalk",
           "refId": "B"
         },
@@ -621,20 +719,13 @@
           "legendFormat": "Heating",
           "queryType": "randomWalk",
           "refId": "C"
-        },
-        {
-          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
-          "interval": "",
-          "legendFormat": "Humidity",
-          "queryType": "randomWalk",
-          "refId": "D"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "$Room",
+      "title": "Heating - $Room",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -654,7 +745,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
@@ -673,6 +764,201 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 9,
+        "x": 14,
+        "y": 9
+      },
+      "hiddenSeries": false,
+      "id": 52,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.7",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Bathroom",
+          "value": "Bathroom"
+        }
+      },
+      "seriesOverrides": [
+        {
+          "alias": "Open Window",
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Humidity",
+          "queryType": "randomWalk",
+          "refId": "D"
+        },
+        {
+          "expr": "avg(tado_open_window_duration{zone=\"$Room\"} - tado_open_window_remaining{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Open Window",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Humidity - $Room",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "semi-dark-green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 1,
+        "x": 23,
+        "y": 9
+      },
+      "id": 51,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.7",
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Bathroom",
+          "value": "Bathroom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "avg(tado_device_battery_status{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Battery",
+          "queryType": "randomWalk",
+          "refId": "A"
+        },
+        {
+          "expr": "avg(tado_zone_power_state{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Power",
+          "refId": "B"
+        },
+        {
+          "expr": "avg(tado_device_connection_status{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Connection",
+          "refId": "C"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Devices status",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
@@ -680,15 +966,15 @@
         "x": 0,
         "y": 18
       },
-      "id": 27,
+      "id": 53,
       "panels": [],
-      "repeatIteration": 1610125960112,
+      "repeatIteration": 1611261357299,
       "repeatPanelId": 18,
       "scopedVars": {
         "Room": {
           "selected": false,
-          "text": "Living room",
-          "value": "Living room"
+          "text": "Eva Bedroom",
+          "value": "Eva Bedroom"
         }
       },
       "title": "Room",
@@ -710,12 +996,12 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
-        "w": 24,
+        "w": 14,
         "x": 0,
         "y": 19
       },
       "hiddenSeries": false,
-      "id": 28,
+      "id": 54,
       "legend": {
         "avg": false,
         "current": false,
@@ -732,18 +1018,18 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.6",
+      "pluginVersion": "7.3.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1610125960112,
+      "repeatIteration": 1611261357299,
       "repeatPanelId": 26,
       "repeatedByRow": true,
       "scopedVars": {
         "Room": {
           "selected": false,
-          "text": "Living room",
-          "value": "Living room"
+          "text": "Eva Bedroom",
+          "value": "Eva Bedroom"
         }
       },
       "seriesOverrides": [
@@ -763,7 +1049,7 @@
         {
           "expr": "avg(tado_zone_target_temp_celsius{zone_name=\"$Room\"})",
           "interval": "",
-          "legendFormat": "Target",
+          "legendFormat": "Scheduled Target",
           "queryType": "randomWalk",
           "refId": "B"
         },
@@ -780,20 +1066,13 @@
           "legendFormat": "Heating",
           "queryType": "randomWalk",
           "refId": "C"
-        },
-        {
-          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
-          "interval": "",
-          "legendFormat": "Humidity",
-          "queryType": "randomWalk",
-          "refId": "D"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "$Room",
+      "title": "Heating - $Room",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -832,6 +1111,207 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 9,
+        "x": 14,
+        "y": 19
+      },
+      "hiddenSeries": false,
+      "id": 55,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.7",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 52,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Eva Bedroom",
+          "value": "Eva Bedroom"
+        }
+      },
+      "seriesOverrides": [
+        {
+          "alias": "Open Window",
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Humidity",
+          "queryType": "randomWalk",
+          "refId": "D"
+        },
+        {
+          "expr": "avg(tado_open_window_duration{zone=\"$Room\"} - tado_open_window_remaining{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Open Window",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Humidity - $Room",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "semi-dark-green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 1,
+        "x": 23,
+        "y": 19
+      },
+      "id": 56,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.7",
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 51,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Eva Bedroom",
+          "value": "Eva Bedroom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "avg(tado_device_battery_status{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Battery",
+          "queryType": "randomWalk",
+          "refId": "A"
+        },
+        {
+          "expr": "avg(tado_zone_power_state{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Power",
+          "refId": "B"
+        },
+        {
+          "expr": "avg(tado_device_connection_status{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Connection",
+          "refId": "C"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Devices status",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
@@ -839,15 +1319,15 @@
         "x": 0,
         "y": 28
       },
-      "id": 29,
+      "id": 57,
       "panels": [],
-      "repeatIteration": 1610125960112,
+      "repeatIteration": 1611261357299,
       "repeatPanelId": 18,
       "scopedVars": {
         "Room": {
           "selected": false,
-          "text": "Study",
-          "value": "Study"
+          "text": "Living room",
+          "value": "Living room"
         }
       },
       "title": "Room",
@@ -869,12 +1349,12 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
-        "w": 24,
+        "w": 14,
         "x": 0,
         "y": 29
       },
       "hiddenSeries": false,
-      "id": 30,
+      "id": 58,
       "legend": {
         "avg": false,
         "current": false,
@@ -891,18 +1371,18 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.6",
+      "pluginVersion": "7.3.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1610125960112,
+      "repeatIteration": 1611261357299,
       "repeatPanelId": 26,
       "repeatedByRow": true,
       "scopedVars": {
         "Room": {
           "selected": false,
-          "text": "Study",
-          "value": "Study"
+          "text": "Living room",
+          "value": "Living room"
         }
       },
       "seriesOverrides": [
@@ -922,7 +1402,7 @@
         {
           "expr": "avg(tado_zone_target_temp_celsius{zone_name=\"$Room\"})",
           "interval": "",
-          "legendFormat": "Target",
+          "legendFormat": "Scheduled Target",
           "queryType": "randomWalk",
           "refId": "B"
         },
@@ -939,20 +1419,13 @@
           "legendFormat": "Heating",
           "queryType": "randomWalk",
           "refId": "C"
-        },
-        {
-          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
-          "interval": "",
-          "legendFormat": "Humidity",
-          "queryType": "randomWalk",
-          "refId": "D"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "$Room",
+      "title": "Heating - $Room",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -991,6 +1464,207 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 9,
+        "x": 14,
+        "y": 29
+      },
+      "hiddenSeries": false,
+      "id": 59,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.7",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 52,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Living room",
+          "value": "Living room"
+        }
+      },
+      "seriesOverrides": [
+        {
+          "alias": "Open Window",
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Humidity",
+          "queryType": "randomWalk",
+          "refId": "D"
+        },
+        {
+          "expr": "avg(tado_open_window_duration{zone=\"$Room\"} - tado_open_window_remaining{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Open Window",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Humidity - $Room",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "semi-dark-green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 1,
+        "x": 23,
+        "y": 29
+      },
+      "id": 60,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.7",
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 51,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Living room",
+          "value": "Living room"
+        }
+      },
+      "targets": [
+        {
+          "expr": "avg(tado_device_battery_status{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Battery",
+          "queryType": "randomWalk",
+          "refId": "A"
+        },
+        {
+          "expr": "avg(tado_zone_power_state{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Power",
+          "refId": "B"
+        },
+        {
+          "expr": "avg(tado_device_connection_status{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Connection",
+          "refId": "C"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Devices status",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
@@ -998,9 +1672,702 @@
         "x": 0,
         "y": 38
       },
-      "id": 16,
-      "title": "Misc",
+      "id": 61,
+      "panels": [],
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 18,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Study",
+          "value": "Study"
+        }
+      },
+      "title": "Room",
       "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 14,
+        "x": 0,
+        "y": 39
+      },
+      "hiddenSeries": false,
+      "id": 62,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.7",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 26,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Study",
+          "value": "Study"
+        }
+      },
+      "seriesOverrides": [
+        {
+          "alias": "Heating",
+          "yaxis": 2
+        },
+        {
+          "alias": "Humidity",
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg(tado_zone_target_temp_celsius{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Scheduled Target",
+          "queryType": "randomWalk",
+          "refId": "B"
+        },
+        {
+          "expr": "avg(tado_temperature_celsius{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Temperature",
+          "queryType": "randomWalk",
+          "refId": "A"
+        },
+        {
+          "expr": "avg(tado_heating_percentage{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Heating",
+          "queryType": "randomWalk",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Heating - $Room",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "celsius",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "percent",
+          "label": null,
+          "logBase": 1,
+          "max": "100",
+          "min": "0",
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 9,
+        "x": 14,
+        "y": 39
+      },
+      "hiddenSeries": false,
+      "id": 63,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.7",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 52,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Study",
+          "value": "Study"
+        }
+      },
+      "seriesOverrides": [
+        {
+          "alias": "Open Window",
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Humidity",
+          "queryType": "randomWalk",
+          "refId": "D"
+        },
+        {
+          "expr": "avg(tado_open_window_duration{zone=\"$Room\"} - tado_open_window_remaining{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Open Window",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Humidity - $Room",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "semi-dark-green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 1,
+        "x": 23,
+        "y": 39
+      },
+      "id": 64,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.7",
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 51,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Study",
+          "value": "Study"
+        }
+      },
+      "targets": [
+        {
+          "expr": "avg(tado_device_battery_status{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Battery",
+          "queryType": "randomWalk",
+          "refId": "A"
+        },
+        {
+          "expr": "avg(tado_zone_power_state{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Power",
+          "refId": "B"
+        },
+        {
+          "expr": "avg(tado_device_connection_status{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Connection",
+          "refId": "C"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Devices status",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "id": 65,
+      "panels": [],
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 18,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Thomas Bedroom",
+          "value": "Thomas Bedroom"
+        }
+      },
+      "title": "Room",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 14,
+        "x": 0,
+        "y": 49
+      },
+      "hiddenSeries": false,
+      "id": 66,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.7",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 26,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Thomas Bedroom",
+          "value": "Thomas Bedroom"
+        }
+      },
+      "seriesOverrides": [
+        {
+          "alias": "Heating",
+          "yaxis": 2
+        },
+        {
+          "alias": "Humidity",
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg(tado_zone_target_temp_celsius{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Scheduled Target",
+          "queryType": "randomWalk",
+          "refId": "B"
+        },
+        {
+          "expr": "avg(tado_temperature_celsius{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Temperature",
+          "queryType": "randomWalk",
+          "refId": "A"
+        },
+        {
+          "expr": "avg(tado_heating_percentage{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Heating",
+          "queryType": "randomWalk",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Heating - $Room",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "celsius",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "percent",
+          "label": null,
+          "logBase": 1,
+          "max": "100",
+          "min": "0",
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 9,
+        "x": 14,
+        "y": 49
+      },
+      "hiddenSeries": false,
+      "id": 67,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.7",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 52,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Thomas Bedroom",
+          "value": "Thomas Bedroom"
+        }
+      },
+      "seriesOverrides": [
+        {
+          "alias": "Open Window",
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Humidity",
+          "queryType": "randomWalk",
+          "refId": "D"
+        },
+        {
+          "expr": "avg(tado_open_window_duration{zone=\"$Room\"} - tado_open_window_remaining{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Open Window",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Humidity - $Room",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "semi-dark-green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 1,
+        "x": 23,
+        "y": 49
+      },
+      "id": 68,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.7",
+      "repeatIteration": 1611261357299,
+      "repeatPanelId": 51,
+      "repeatedByRow": true,
+      "scopedVars": {
+        "Room": {
+          "selected": false,
+          "text": "Thomas Bedroom",
+          "value": "Thomas Bedroom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "avg(tado_device_battery_status{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Battery",
+          "queryType": "randomWalk",
+          "refId": "A"
+        },
+        {
+          "expr": "avg(tado_zone_power_state{zone_name=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Power",
+          "refId": "B"
+        },
+        {
+          "expr": "avg(tado_device_connection_status{zone=\"$Room\"})",
+          "interval": "",
+          "legendFormat": "Connection",
+          "refId": "C"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Devices status",
+      "type": "stat"
     }
   ],
   "refresh": "1m",
@@ -1024,33 +2391,12 @@
         "label": null,
         "multi": false,
         "name": "Room",
-        "options": [
-          {
-            "selected": true,
-            "text": "All",
-            "value": "$__all"
-          },
-          {
-            "selected": false,
-            "text": "Bathroom",
-            "value": "Bathroom"
-          },
-          {
-            "selected": false,
-            "text": "Living room",
-            "value": "Living room"
-          },
-          {
-            "selected": false,
-            "text": "Study",
-            "value": "Study"
-          }
-        ],
+        "options": [],
         "query": "label_values(zone_name)",
-        "refresh": 0,
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -1060,12 +2406,12 @@
     ]
   },
   "time": {
-    "from": "now-3d",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "tadoº",
   "uid": "jIGk6cWRk",
-  "version": 18
+  "version": 40
 }

@@ -1,4 +1,4 @@
-¡# tado-exporter
+# tado-exporter
 ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/clambin/tado-exporter?color=green&label=Release&style=plastic)
 ![Codecov](https://img.shields.io/codecov/c/gh/clambin/tado-exporter?style=plastic)
 ![Build](https://github.com/clambin/tado-exporter/workflows/Build/badge.svg)
@@ -55,7 +55,7 @@ docker run -e TADO_USERNAME=user@example.com -e TADO_PASSWORD="your-password" --
 ### Prometheus
 
 Add tado-exporter as a target to let Prometheus scrape the metrics into its database. 
-This highly depends on your particular Prometheus configuration. In it simplest form, add a new scrape target to `prometheus.yml`:
+This highly depends on your particular Prometheus configuration. In its simplest form, add a new scrape target to `prometheus.yml`:
 
 ```
 scrape_configs:
@@ -86,21 +86,38 @@ Flags:
 
 tado-exporter exposes the following metrics:
 
+#### Metrics by Zone:
+
+The following metrics are reported for each discovered zone.  The zone name is added as 'zone_name' label.
+
 ```
-* tado_zone_target_temp_celsius:   Target temperature of this zone in degrees celsius
-* tado_zone_target_manual_mode:    1.0 if this zone is in manual target temp mode
-* tado_zone_power_state:           Power status of this zone
-* tado_device_connection_status:   Connection status of devices in this zone
-* tado_device_battery_status:      Battery status of devices in this zone
-* tado_temperature_celsius:        Current temperature of this zone in degrees celsius
-* tado_heating_percentage:         Current heating percentage in this zone in percentage (0-100)
-* tado_humidity_percentage:        Current humidity percentage in this zone
-* tado_outside_temp_celsius:       Current outside temperature in degrees celsius
-* tado_solar_intensity_percentage: Current solar intensity in percentage (0-100)
-* tado_weather:                    Current weather. Always one. See label 'tado_weather'
-* tado_mobile_device_status:       Status of any geotracked mobile devices (1: at home, 0: away)
-* tado_open_window_duration:       Duration of open window event in seconds
-* tado_open_window_remaining:      Remaining duration of open window event in seconds
+* tado_zone_device_battery_status:      Battery status of devices in this zone
+* tado_zone_device_connection_status:   Connection status of devices in this zone
+* tado_zone_heating_percentage:         Current heating percentage in this zone in percentage (0-100)
+* tado_zone_humidity_percentage:        Current humidity percentage in this zone
+* tado_zone_open_window_duration:       Duration of open window event in seconds
+* tado_zone_open_window_remaining:      Remaining duration of open window event in seconds
+* tado_zone_power_state:                Power status of this zone
+* tado_zone_target_manual_mode:         1.0 if this zone is in manual target temp mode
+* tado_zone_target_temp_celsius:        Target temperature of this zone in degrees celsius
+* tado_zone_temperature_celsius:        Current temperature of this zone in degrees celsius
+```
+
+#### Mobile device home/away status metrics:
+
+Tado reports the home/away status of registered mobile devices. See device name is added as 'name' label.
+
+```
+* tado_mobile_device_status:            Status of any geotracked mobile devices (1: at home, 0: away)
+
+```
+
+#### General metrics:
+
+```
+* tado_outside_temp_celsius:            Current outside temperature in degrees celsius
+* tado_solar_intensity_percentage:      Current solar intensity in percentage (0-100)
+* tado_weather:                         Current weather. Always one. See label 'tado_weather'
 ```
 
 ### Grafana
@@ -111,7 +128,7 @@ Feel free to customize as you see fit.
 
 ## Tado Client API
 
-The Tado Client API implementation can be found in [pkg/data](pkg/tado). The API should be fairly stable at this point, 
+The Tado Client API implementation can be found in [pkg/tado](pkg/tado). The API should be fairly stable at this point, 
 so feel free to reuse for your own projects.
 
 ## Authors

@@ -4,7 +4,6 @@ import (
 	"github.com/clambin/gotools/metrics"
 	"github.com/clambin/tado-exporter/internal/exporter"
 	"github.com/clambin/tado-exporter/pkg/tado"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -19,27 +18,29 @@ var testCases = []struct {
 	{"tado_zone_target_temp_celsius", []string{"Study"}, 25.0},
 	{"tado_zone_target_manual_mode", []string{"Study"}, 1.0},
 	{"tado_zone_power_state", []string{"Living room"}, 1.0},
-	{"tado_temperature_celsius", []string{"Living room"}, 19.94},
-	{"tado_heating_percentage", []string{"Living room"}, 11.0},
-	{"tado_humidity_percentage", []string{"Living room"}, 37.7},
-	{"tado_outside_temp_celsius", []string{"Living room"}, 3.4},
-	{"tado_solar_intensity_percentage", []string{"Living room"}, 13.3},
-	{"tado_open_window_duration", []string{"Living room"}, 50.0},
-	{"tado_open_window_remaining", []string{"Living room"}, 250.0},
+	{"tado_zone_temperature_celsius", []string{"Living room"}, 19.94},
+	{"tado_zone_heating_percentage", []string{"Living room"}, 11.0},
+	{"tado_zone_humidity_percentage", []string{"Living room"}, 37.7},
+	{"tado_zone_open_window_duration", []string{"Living room"}, 50.0},
+	{"tado_zone_open_window_remaining", []string{"Living room"}, 250.0},
+	{"tado_outside_temp_celsius", []string{}, 3.4},
+	{"tado_solar_intensity_percentage", []string{}, 13.3},
+	{"tado_weather", []string{"CLOUDY_MOSTLY"}, 1.0},
+	{"tado_mobile_device_status", []string{"Phone 1"}, 1.0},
+	{"tado_mobile_device_status", []string{"Phone 2"}, 0.0},
+	{"tado_mobile_device_status", []string{"Phone 3"}, 0.0},
+	// LoadValue doesn't detect non-existing values for the label, so this will succeed
+	{"tado_mobile_device_status", []string{"Phone 4"}, 0.0},
 }
 
 func TestRunProbe(t *testing.T) {
 	var err error
 	var value float64
 
-	cfg := exporter.Configuration{}
-	probe := exporter.CreateProbe(&cfg)
+	probe := exporter.CreateProbe(&exporter.Configuration{})
 	assert.NotNil(t, probe)
-
 	probe.API = &mockAPI{}
-
-	log.SetLevel(log.DebugLevel)
-
+	// log.SetLevel(log.DebugLevel)
 	err = probe.Run()
 	assert.Nil(t, err)
 
@@ -48,24 +49,6 @@ func TestRunProbe(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, testCase.Value, value, testCase.Metric)
 	}
-
-	value, err = metrics.LoadValue("tado_weather", "CLOUDY_MOSTLY")
-	assert.Nil(t, err)
-	assert.Equal(t, 1.0, value)
-
-	value, err = metrics.LoadValue("tado_mobile_device_status", "Phone 1")
-	assert.Nil(t, err)
-	assert.Equal(t, 1.0, value)
-	value, err = metrics.LoadValue("tado_mobile_device_status", "Phone 2")
-	assert.Nil(t, err)
-	assert.Equal(t, 0.0, value)
-	value, err = metrics.LoadValue("tado_mobile_device_status", "Phone 3")
-	assert.Nil(t, err)
-	assert.Equal(t, 0.0, value)
-	value, err = metrics.LoadValue("tado_mobile_device_status", "Phone 4")
-	// LoadValue doesn't detect non-existing values for the label, so this will succeed
-	assert.Nil(t, err)
-	assert.Equal(t, 0.0, value)
 }
 
 type mockAPI struct {
