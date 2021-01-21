@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 452,
-  "iteration": 1611261357299,
+  "iteration": 1611264781864,
   "links": [],
   "panels": [
     {
@@ -193,7 +193,7 @@
       "pluginVersion": "7.3.7",
       "targets": [
         {
-          "expr": "avg by (zone_name) (tado_temperature_celsius)",
+          "expr": "avg by (zone_name) (tado_zone_temperature_celsius)",
           "format": "time_series",
           "interval": "",
           "legendFormat": "{{zone_name}}",
@@ -267,7 +267,7 @@
       "pluginVersion": "7.3.7",
       "targets": [
         {
-          "expr": "avg by (zone_name) (tado_heating_percentage)",
+          "expr": "avg by (zone_name) (tado_zone_heating_percentage)",
           "interval": "",
           "legendFormat": "{{zone_name}}",
           "queryType": "randomWalk",
@@ -702,19 +702,19 @@
         {
           "expr": "avg(tado_zone_target_temp_celsius{zone_name=\"$Room\"})",
           "interval": "",
-          "legendFormat": "Scheduled Target",
+          "legendFormat": "Target",
           "queryType": "randomWalk",
           "refId": "B"
         },
         {
-          "expr": "avg(tado_temperature_celsius{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_temperature_celsius{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Temperature",
           "queryType": "randomWalk",
           "refId": "A"
         },
         {
-          "expr": "avg(tado_heating_percentage{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_heating_percentage{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Heating",
           "queryType": "randomWalk",
@@ -823,14 +823,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_humidity_percentage{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Humidity",
           "queryType": "randomWalk",
           "refId": "D"
         },
         {
-          "expr": "avg(tado_open_window_duration{zone=\"$Room\"} - tado_open_window_remaining{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_open_window_duration{zone_name=\"$Room\"} - tado_zone_open_window_remaining{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Open Window",
           "queryType": "randomWalk",
@@ -933,7 +933,7 @@
       },
       "targets": [
         {
-          "expr": "avg(tado_device_battery_status{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_device_battery_status{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Battery",
           "queryType": "randomWalk",
@@ -946,7 +946,7 @@
           "refId": "B"
         },
         {
-          "expr": "avg(tado_device_connection_status{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_device_connection_status{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Connection",
           "refId": "C"
@@ -966,9 +966,9 @@
         "x": 0,
         "y": 18
       },
-      "id": 53,
+      "id": 70,
       "panels": [],
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 18,
       "scopedVars": {
         "Room": {
@@ -1001,7 +1001,7 @@
         "y": 19
       },
       "hiddenSeries": false,
-      "id": 54,
+      "id": 71,
       "legend": {
         "avg": false,
         "current": false,
@@ -1022,7 +1022,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 26,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1049,19 +1049,19 @@
         {
           "expr": "avg(tado_zone_target_temp_celsius{zone_name=\"$Room\"})",
           "interval": "",
-          "legendFormat": "Scheduled Target",
+          "legendFormat": "Target",
           "queryType": "randomWalk",
           "refId": "B"
         },
         {
-          "expr": "avg(tado_temperature_celsius{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_temperature_celsius{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Temperature",
           "queryType": "randomWalk",
           "refId": "A"
         },
         {
-          "expr": "avg(tado_heating_percentage{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_heating_percentage{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Heating",
           "queryType": "randomWalk",
@@ -1131,7 +1131,7 @@
         "y": 19
       },
       "hiddenSeries": false,
-      "id": 55,
+      "id": 72,
       "legend": {
         "avg": false,
         "current": false,
@@ -1152,7 +1152,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 52,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1173,14 +1173,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_humidity_percentage{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Humidity",
           "queryType": "randomWalk",
           "refId": "D"
         },
         {
-          "expr": "avg(tado_open_window_duration{zone=\"$Room\"} - tado_open_window_remaining{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_open_window_duration{zone_name=\"$Room\"} - tado_zone_open_window_remaining{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Open Window",
           "queryType": "randomWalk",
@@ -1258,7 +1258,7 @@
         "x": 23,
         "y": 19
       },
-      "id": 56,
+      "id": 73,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -1274,7 +1274,7 @@
         "textMode": "auto"
       },
       "pluginVersion": "7.3.7",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 51,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1286,7 +1286,7 @@
       },
       "targets": [
         {
-          "expr": "avg(tado_device_battery_status{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_device_battery_status{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Battery",
           "queryType": "randomWalk",
@@ -1299,7 +1299,7 @@
           "refId": "B"
         },
         {
-          "expr": "avg(tado_device_connection_status{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_device_connection_status{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Connection",
           "refId": "C"
@@ -1319,9 +1319,9 @@
         "x": 0,
         "y": 28
       },
-      "id": 57,
+      "id": 74,
       "panels": [],
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 18,
       "scopedVars": {
         "Room": {
@@ -1354,7 +1354,7 @@
         "y": 29
       },
       "hiddenSeries": false,
-      "id": 58,
+      "id": 75,
       "legend": {
         "avg": false,
         "current": false,
@@ -1375,7 +1375,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 26,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1402,19 +1402,19 @@
         {
           "expr": "avg(tado_zone_target_temp_celsius{zone_name=\"$Room\"})",
           "interval": "",
-          "legendFormat": "Scheduled Target",
+          "legendFormat": "Target",
           "queryType": "randomWalk",
           "refId": "B"
         },
         {
-          "expr": "avg(tado_temperature_celsius{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_temperature_celsius{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Temperature",
           "queryType": "randomWalk",
           "refId": "A"
         },
         {
-          "expr": "avg(tado_heating_percentage{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_heating_percentage{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Heating",
           "queryType": "randomWalk",
@@ -1484,7 +1484,7 @@
         "y": 29
       },
       "hiddenSeries": false,
-      "id": 59,
+      "id": 76,
       "legend": {
         "avg": false,
         "current": false,
@@ -1505,7 +1505,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 52,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1526,14 +1526,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_humidity_percentage{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Humidity",
           "queryType": "randomWalk",
           "refId": "D"
         },
         {
-          "expr": "avg(tado_open_window_duration{zone=\"$Room\"} - tado_open_window_remaining{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_open_window_duration{zone_name=\"$Room\"} - tado_zone_open_window_remaining{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Open Window",
           "queryType": "randomWalk",
@@ -1611,7 +1611,7 @@
         "x": 23,
         "y": 29
       },
-      "id": 60,
+      "id": 77,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -1627,7 +1627,7 @@
         "textMode": "auto"
       },
       "pluginVersion": "7.3.7",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 51,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1639,7 +1639,7 @@
       },
       "targets": [
         {
-          "expr": "avg(tado_device_battery_status{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_device_battery_status{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Battery",
           "queryType": "randomWalk",
@@ -1652,7 +1652,7 @@
           "refId": "B"
         },
         {
-          "expr": "avg(tado_device_connection_status{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_device_connection_status{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Connection",
           "refId": "C"
@@ -1672,9 +1672,9 @@
         "x": 0,
         "y": 38
       },
-      "id": 61,
+      "id": 78,
       "panels": [],
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 18,
       "scopedVars": {
         "Room": {
@@ -1707,7 +1707,7 @@
         "y": 39
       },
       "hiddenSeries": false,
-      "id": 62,
+      "id": 79,
       "legend": {
         "avg": false,
         "current": false,
@@ -1728,7 +1728,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 26,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1755,19 +1755,19 @@
         {
           "expr": "avg(tado_zone_target_temp_celsius{zone_name=\"$Room\"})",
           "interval": "",
-          "legendFormat": "Scheduled Target",
+          "legendFormat": "Target",
           "queryType": "randomWalk",
           "refId": "B"
         },
         {
-          "expr": "avg(tado_temperature_celsius{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_temperature_celsius{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Temperature",
           "queryType": "randomWalk",
           "refId": "A"
         },
         {
-          "expr": "avg(tado_heating_percentage{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_heating_percentage{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Heating",
           "queryType": "randomWalk",
@@ -1837,7 +1837,7 @@
         "y": 39
       },
       "hiddenSeries": false,
-      "id": 63,
+      "id": 80,
       "legend": {
         "avg": false,
         "current": false,
@@ -1858,7 +1858,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 52,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1879,14 +1879,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_humidity_percentage{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Humidity",
           "queryType": "randomWalk",
           "refId": "D"
         },
         {
-          "expr": "avg(tado_open_window_duration{zone=\"$Room\"} - tado_open_window_remaining{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_open_window_duration{zone_name=\"$Room\"} - tado_zone_open_window_remaining{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Open Window",
           "queryType": "randomWalk",
@@ -1964,7 +1964,7 @@
         "x": 23,
         "y": 39
       },
-      "id": 64,
+      "id": 81,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -1980,7 +1980,7 @@
         "textMode": "auto"
       },
       "pluginVersion": "7.3.7",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 51,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1992,7 +1992,7 @@
       },
       "targets": [
         {
-          "expr": "avg(tado_device_battery_status{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_device_battery_status{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Battery",
           "queryType": "randomWalk",
@@ -2005,7 +2005,7 @@
           "refId": "B"
         },
         {
-          "expr": "avg(tado_device_connection_status{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_device_connection_status{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Connection",
           "refId": "C"
@@ -2025,9 +2025,9 @@
         "x": 0,
         "y": 48
       },
-      "id": 65,
+      "id": 82,
       "panels": [],
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 18,
       "scopedVars": {
         "Room": {
@@ -2060,7 +2060,7 @@
         "y": 49
       },
       "hiddenSeries": false,
-      "id": 66,
+      "id": 83,
       "legend": {
         "avg": false,
         "current": false,
@@ -2081,7 +2081,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 26,
       "repeatedByRow": true,
       "scopedVars": {
@@ -2108,19 +2108,19 @@
         {
           "expr": "avg(tado_zone_target_temp_celsius{zone_name=\"$Room\"})",
           "interval": "",
-          "legendFormat": "Scheduled Target",
+          "legendFormat": "Target",
           "queryType": "randomWalk",
           "refId": "B"
         },
         {
-          "expr": "avg(tado_temperature_celsius{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_temperature_celsius{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Temperature",
           "queryType": "randomWalk",
           "refId": "A"
         },
         {
-          "expr": "avg(tado_heating_percentage{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_heating_percentage{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Heating",
           "queryType": "randomWalk",
@@ -2190,7 +2190,7 @@
         "y": 49
       },
       "hiddenSeries": false,
-      "id": 67,
+      "id": 84,
       "legend": {
         "avg": false,
         "current": false,
@@ -2211,7 +2211,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 52,
       "repeatedByRow": true,
       "scopedVars": {
@@ -2232,14 +2232,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(tado_humidity_percentage{zone_name=\"$Room\"})",
+          "expr": "avg(tado_zone_humidity_percentage{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Humidity",
           "queryType": "randomWalk",
           "refId": "D"
         },
         {
-          "expr": "avg(tado_open_window_duration{zone=\"$Room\"} - tado_open_window_remaining{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_open_window_duration{zone_name=\"$Room\"} - tado_zone_open_window_remaining{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Open Window",
           "queryType": "randomWalk",
@@ -2317,7 +2317,7 @@
         "x": 23,
         "y": 49
       },
-      "id": 68,
+      "id": 85,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -2333,7 +2333,7 @@
         "textMode": "auto"
       },
       "pluginVersion": "7.3.7",
-      "repeatIteration": 1611261357299,
+      "repeatIteration": 1611264781864,
       "repeatPanelId": 51,
       "repeatedByRow": true,
       "scopedVars": {
@@ -2345,7 +2345,7 @@
       },
       "targets": [
         {
-          "expr": "avg(tado_device_battery_status{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_device_battery_status{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Battery",
           "queryType": "randomWalk",
@@ -2358,7 +2358,7 @@
           "refId": "B"
         },
         {
-          "expr": "avg(tado_device_connection_status{zone=\"$Room\"})",
+          "expr": "avg(tado_zone_device_connection_status{zone_name=\"$Room\"})",
           "interval": "",
           "legendFormat": "Connection",
           "refId": "C"
@@ -2406,12 +2406,12 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "tadoº",
   "uid": "jIGk6cWRk",
-  "version": 40
+  "version": 42
 }
