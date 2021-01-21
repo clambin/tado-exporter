@@ -11,17 +11,21 @@ import (
 
 var testCases = []struct {
 	Metric string
+	Labels []string
 	Value  float64
 }{
-	{"tado_zone_target_temp_celsius", 20.0},
-	{"tado_zone_power_state", 1.0},
-	{"tado_temperature_celsius", 19.94},
-	{"tado_heating_percentage", 11.0},
-	{"tado_humidity_percentage", 37.7},
-	{"tado_outside_temp_celsius", 3.4},
-	{"tado_solar_intensity_percentage", 13.3},
-	{"tado_open_window_duration", 50.0},
-	{"tado_open_window_remaining", 250.0},
+	{"tado_zone_target_temp_celsius", []string{"Living room", "AUTO"}, 20.0},
+	{"tado_zone_target_temp_celsius", []string{"Living room", "MANUAL"}, 0.0},
+	{"tado_zone_target_temp_celsius", []string{"Study", "AUTO"}, 0.0},
+	{"tado_zone_target_temp_celsius", []string{"Study", "MANUAL"}, 25.0},
+	{"tado_zone_power_state", []string{"Living room"}, 1.0},
+	{"tado_temperature_celsius", []string{"Living room"}, 19.94},
+	{"tado_heating_percentage", []string{"Living room"}, 11.0},
+	{"tado_humidity_percentage", []string{"Living room"}, 37.7},
+	{"tado_outside_temp_celsius", []string{"Living room"}, 3.4},
+	{"tado_solar_intensity_percentage", []string{"Living room"}, 13.3},
+	{"tado_open_window_duration", []string{"Living room"}, 50.0},
+	{"tado_open_window_remaining", []string{"Living room"}, 250.0},
 }
 
 func TestRunProbe(t *testing.T) {
@@ -40,7 +44,7 @@ func TestRunProbe(t *testing.T) {
 	assert.Nil(t, err)
 
 	for _, testCase := range testCases {
-		value, err = metrics.LoadValue(testCase.Metric, "Living room")
+		value, err = metrics.LoadValue(testCase.Metric, testCase.Labels...)
 		assert.Nil(t, err)
 		assert.Equal(t, testCase.Value, value, testCase.Metric)
 	}
@@ -100,8 +104,8 @@ func (client *mockAPI) GetZones() ([]tado.Zone, error) {
 	}, nil
 }
 
-func (client *mockAPI) GetZoneInfo(_ int) (*tado.ZoneInfo, error) {
-	return &tado.ZoneInfo{
+func (client *mockAPI) GetZoneInfo(zoneID int) (*tado.ZoneInfo, error) {
+	info := tado.ZoneInfo{
 		Setting: tado.ZoneInfoSetting{
 			Power:       "ON",
 			Temperature: tado.Temperature{Celsius: 20.0},
@@ -117,7 +121,20 @@ func (client *mockAPI) GetZoneInfo(_ int) (*tado.ZoneInfo, error) {
 			Temperature: tado.Temperature{Celsius: 19.94},
 			Humidity:    tado.Percentage{Percentage: 37.7},
 		},
-	}, nil
+	}
+
+	if zoneID != 1 {
+		info.Overlay = tado.ZoneInfoOverlay{
+			Type: "MANUAL",
+			Setting: tado.ZoneInfoOverlaySetting{
+				Type:        "HEATING",
+				Power:       "ON",
+				Temperature: tado.Temperature{Celsius: 25.0},
+			},
+		}
+	}
+
+	return &info, nil
 }
 
 func (client *mockAPI) GetWeatherInfo() (*tado.WeatherInfo, error) {

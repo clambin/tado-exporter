@@ -18,9 +18,10 @@ import (
 //   SensorDataPoints.Humidity.Percentage:       humidity (0-100%)
 type ZoneInfo struct {
 	Setting            ZoneInfoSetting            `json:"setting"`
-	OpenWindow         ZoneInfoOpenWindow         `json:"openwindow,omitempty"`
 	ActivityDataPoints ZoneInfoActivityDataPoints `json:"activityDataPoints"`
 	SensorDataPoints   ZoneInfoSensorDataPoints   `json:"sensorDataPoints"`
+	OpenWindow         ZoneInfoOpenWindow         `json:"openwindow,omitempty"`
+	Overlay            ZoneInfoOverlay            `json:"overlay,omitempty"`
 }
 
 // ZoneInfoSetting contains the zone's current power & target temperature
@@ -48,6 +49,18 @@ type ZoneInfoOpenWindow struct {
 	RemainingTimeInSeconds int       `json:"remainingTimeInSeconds"`
 }
 
+// ZoneInfoOverlay contains the zone's manual settings
+type ZoneInfoOverlay struct {
+	Type    string                 `json:"type"`
+	Setting ZoneInfoOverlaySetting `json:"setting"`
+}
+
+type ZoneInfoOverlaySetting struct {
+	Type        string      `json:"type"`
+	Power       string      `json:"power"`
+	Temperature Temperature `json:"temperature"`
+}
+
 // GetZoneInfo gets the info for the specified Zone
 func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 	var (
@@ -65,12 +78,25 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 
 // String serializes a ZoneInfo into a string. Used for logging.
 func (zoneInfo *ZoneInfo) String() string {
-	return fmt.Sprintf("target=%.1fºC, temp=%.1fºC, humidity=%.1f%%, heating=%.1f%%, power=%s, openwindow=%ds",
+	return fmt.Sprintf("target=%.1fºC, temp=%.1fºC, humidity=%.1f%%, heating=%.1f%%, power=%s, openwindow=%ds, overlay={%s}",
 		zoneInfo.Setting.Temperature.Celsius,
 		zoneInfo.SensorDataPoints.Temperature.Celsius,
 		zoneInfo.SensorDataPoints.Humidity.Percentage,
 		zoneInfo.ActivityDataPoints.HeatingPower.Percentage,
 		zoneInfo.Setting.Power,
 		zoneInfo.OpenWindow.DurationInSeconds-zoneInfo.OpenWindow.RemainingTimeInSeconds,
+		zoneInfo.Overlay.String(),
+	)
+}
+
+func (overlay *ZoneInfoOverlay) String() string {
+	return fmt.Sprintf("type=%s, settings={%s}", overlay.Type, overlay.Setting.String())
+}
+
+func (setting *ZoneInfoOverlaySetting) String() string {
+	return fmt.Sprintf("type=%s, power=%s, temp=%.1fºC",
+		setting.Type,
+		setting.Power,
+		setting.Temperature.Celsius,
 	)
 }

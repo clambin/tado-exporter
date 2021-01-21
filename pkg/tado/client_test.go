@@ -25,9 +25,17 @@ func TestTypesToString(t *testing.T) {
 		ActivityDataPoints: tado.ZoneInfoActivityDataPoints{
 			HeatingPower: tado.Percentage{Percentage: 25.0},
 		},
+		Overlay: tado.ZoneInfoOverlay{
+			Type: "MANUAL",
+			Setting: tado.ZoneInfoOverlaySetting{
+				Type:        "HEATING",
+				Power:       "ON",
+				Temperature: tado.Temperature{Celsius: 25.0},
+			},
+		},
 	}
 
-	assert.Equal(t, `target=25.0ºC, temp=21.0ºC, humidity=30.0%, heating=25.0%, power=ON, openwindow=650s`, zoneInfo.String())
+	assert.Equal(t, `target=25.0ºC, temp=21.0ºC, humidity=30.0%, heating=25.0%, power=ON, openwindow=650s, overlay={type=MANUAL, settings={type=HEATING, power=ON, temp=25.0ºC}}`, zoneInfo.String())
 
 	weatherInfo := tado.WeatherInfo{
 		OutsideTemperature: tado.Temperature{Celsius: 27.0},
