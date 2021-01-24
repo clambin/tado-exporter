@@ -9,6 +9,7 @@ type Controller struct {
 	tado.API
 	Rules        *Rules
 	AutoAwayInfo map[int]AutoAwayInfo
+	Overlays     map[int]time.Time
 }
 
 // Configuration options for tado-exporter
@@ -22,5 +23,11 @@ type Configuration struct {
 }
 
 func (controller *Controller) Run() error {
-	return controller.AutoAwayRun()
+	err := controller.AutoAwayRun()
+
+	if err == nil {
+		err = controller.OverlayLimitRun()
+	}
+
+	return err
 }

@@ -211,6 +211,8 @@ func (client *APIClient) call(method string, apiURL string, payload string) ([]b
 		switch resp.StatusCode {
 		case http.StatusOK:
 			return ioutil.ReadAll(resp.Body)
+		case http.StatusNoContent:
+			return []byte{}, nil
 		case http.StatusForbidden:
 			// we're authenticated, but still got forbidden.
 			// force password login to get a new token.

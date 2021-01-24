@@ -80,14 +80,14 @@ func (controller *Controller) AutoAwayUpdateInfo() error {
 				log.WithFields(log.Fields{
 					"deviceID":   autoAway.MobileDeviceID,
 					"deviceName": autoAway.MobileDeviceName,
-				}).Warning("skipping unknown mobile device")
+				}).Warning("skipping unknown mobile device in AutoAway rule")
 				continue
 			}
 			if zone = getZone(zones, autoAway.ZoneID, autoAway.ZoneName); zone == nil {
 				log.WithFields(log.Fields{
 					"zoneID":   autoAway.ZoneID,
 					"zoneName": autoAway.ZoneName,
-				}).Warning("skipping unknown zone")
+				}).Warning("skipping unknown zone in AutoAway rule")
 				continue
 			}
 

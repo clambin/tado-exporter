@@ -1,7 +1,6 @@
 package controller_test
 
 import (
-	"errors"
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/stretchr/testify/assert"
@@ -214,9 +213,9 @@ func (client *mockAPI) DeleteZoneManualTemperature(zoneID int) error {
 		client.Overlays = make(map[int]float64)
 	}
 
-	if _, ok := client.Overlays[zoneID]; ok == false {
-		return errors.New("tried to delete non-existing overlay")
-	}
+	// if _, ok := client.Overlays[zoneID]; ok == false {
+	//	return errors.New("tried to delete non-existing overlay")
+	//}
 	delete(client.Overlays, zoneID)
 	return nil
 }
