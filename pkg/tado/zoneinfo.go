@@ -61,7 +61,7 @@ type ZoneInfoOverlaySetting struct {
 	Temperature Temperature `json:"temperature"`
 }
 
-// GetZoneInfo gets the info for the specified Zone
+// GetZoneInfo gets the info for the specified ZoneID
 func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 	var (
 		err          error
@@ -69,11 +69,49 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 		tadoZoneInfo ZoneInfo
 	)
 	if err = client.initialize(); err == nil {
-		if body, err = client.call(client.apiURL("/zones/" + strconv.Itoa(zoneID) + "/state")); err == nil {
+		if body, err = client.call("GET", client.apiURL("/zones/"+strconv.Itoa(zoneID)+"/state"), ""); err == nil {
 			err = json.Unmarshal(body, &tadoZoneInfo)
 		}
 	}
 	return &tadoZoneInfo, err
+}
+
+// SetZoneManualTemperature sets an overlay for the specified ZoneID
+func (client *APIClient) SetZoneManualTemperature(zoneID int, temperature float64) error {
+	const payloadFormat = `{
+  "setting": {
+    "type": "HEATING",
+    "power": "ON",
+    "temperature": {
+      "celsius": %.1f
+    }
+  }, 
+  "termination": "MANUAL"
+}`
+	if temperature < 5 {
+		temperature = 5
+	}
+
+	var (
+		err     error
+		payload = fmt.Sprintf(payloadFormat, temperature)
+	)
+
+	if err = client.initialize(); err == nil {
+		_, err = client.call("PUT", client.apiURL("/zones/"+strconv.Itoa(zoneID)+"/overlay"), payload)
+	}
+
+	return err
+}
+
+// DeleteZoneManualTemperature deletes the overlay for the specified ZoneID
+func (client *APIClient) DeleteZoneManualTemperature(zoneID int) error {
+	var err error
+	if err = client.initialize(); err == nil {
+		_, err = client.call("DELETE", client.apiURL("/zones/"+strconv.Itoa(zoneID)+"/overlay"), "")
+	}
+
+	return err
 }
 
 // String serializes a ZoneInfo into a string. Used for logging.
@@ -89,10 +127,12 @@ func (zoneInfo *ZoneInfo) String() string {
 	)
 }
 
+// String serializes a ZoneInfoOverlay into a string. Used for logging.
 func (overlay *ZoneInfoOverlay) String() string {
 	return fmt.Sprintf("type=%s, settings={%s}", overlay.Type, overlay.Setting.String())
 }
 
+// String serializes a ZoneInfoOverlaySetting into a string. Used for logging.
 func (setting *ZoneInfoOverlaySetting) String() string {
 	return fmt.Sprintf("type=%s, power=%s, temp=%.1fºC",
 		setting.Type,

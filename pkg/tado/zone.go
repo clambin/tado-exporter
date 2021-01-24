@@ -3,7 +3,6 @@ package tado
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"strings"
 	"time"
 )
@@ -38,14 +37,15 @@ func (client *APIClient) GetZones() ([]Zone, error) {
 	zones := make([]Zone, 0)
 
 	if err = client.initialize(); err == nil {
-		if body, err = client.call(client.apiURL("/zones")); err == nil {
+		if body, err = client.call("GET", client.apiURL("/zones"), ""); err == nil {
 			err = json.Unmarshal(body, &zones)
 		}
 	}
 
-	for _, zone := range zones {
-		log.WithFields(log.Fields{"err": err, "zone": zone}).Debug("GetZones")
-	}
+	//for _, zone := range zones {
+	//	log.WithFields(log.Fields{"err": err, "zone": zone}).Debug("GetZones")
+	//}
+
 	return zones, err
 }
 

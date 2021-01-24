@@ -26,7 +26,7 @@ func (client *APIClient) GetWeatherInfo() (*WeatherInfo, error) {
 	)
 	if err = client.initialize(); err == nil {
 		apiURL := client.apiURL("/weather")
-		if body, err = client.call(apiURL); err == nil {
+		if body, err = client.call("GET", apiURL, ""); err == nil {
 			err = json.Unmarshal(body, &tadoWeatherInfo)
 		}
 	}

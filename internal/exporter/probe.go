@@ -7,18 +7,9 @@ import (
 	"strconv"
 )
 
-// API for the Tado APIClient.
-// Used to mock the API during unit testing
-type API interface {
-	GetZones() ([]tado.Zone, error)
-	GetZoneInfo(zoneID int) (*tado.ZoneInfo, error)
-	GetWeatherInfo() (*tado.WeatherInfo, error)
-	GetMobileDevices() ([]tado.MobileDevice, error)
-}
-
 // Probe structure representing a tado-exporter probe
 type Probe struct {
-	API
+	tado.API
 	weatherStates map[string]float64
 }
 

@@ -4,7 +4,6 @@ import (
 	"github.com/clambin/gotools/httpstub"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/stretchr/testify/assert"
-
 	"testing"
 )
 
@@ -154,4 +153,19 @@ func TestAPIClient_MobileDevices(t *testing.T) {
 	assert.Equal(t, "device 2", mobileDevices[1].Name)
 	assert.True(t, mobileDevices[1].Settings.GeoTrackingEnabled)
 	assert.False(t, mobileDevices[1].Location.AtHome)
+}
+
+func TestAPIClient_ManualTemperature(t *testing.T) {
+	server := &APIServer{}
+	client := tado.APIClient{
+		HTTPClient: httpstub.NewTestClient(server.serve),
+		Username:   "user@example.com",
+		Password:   "some-password",
+	}
+
+	err := client.SetZoneManualTemperature(2, 4.0)
+	assert.Nil(t, err)
+
+	err = client.DeleteZoneManualTemperature(2)
+	assert.Nil(t, err)
 }

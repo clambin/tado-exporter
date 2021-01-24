@@ -203,4 +203,6 @@ var responses = map[string]string{
 		"atHome": false
 	}
 }]`,
+	// TODO: this doesn't test whether PUT/DELETE were used, nor validates the payload
+	"/api/v2/homes/242/zones/2/overlay": `{}`,
 }

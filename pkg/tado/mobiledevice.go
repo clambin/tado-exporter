@@ -33,7 +33,7 @@ func (client *APIClient) GetMobileDevices() ([]MobileDevice, error) {
 	)
 	if err = client.initialize(); err == nil {
 		apiURL := client.apiURL("/mobileDevices")
-		if body, err = client.call(apiURL); err == nil {
+		if body, err = client.call("GET", apiURL, ""); err == nil {
 			err = json.Unmarshal(body, &tadoMobileDevices)
 		}
 	}

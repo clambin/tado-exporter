@@ -18,6 +18,7 @@
 package tado
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	log "github.com/sirupsen/logrus"
@@ -44,6 +45,17 @@ type Percentage struct {
 // Value contains a string value
 type Value struct {
 	Value string `json:"value"`
+}
+
+// API for the Tado APIClient.
+// Used to mock the API during unit testing
+type API interface {
+	GetZones() ([]Zone, error)
+	GetZoneInfo(zoneID int) (*ZoneInfo, error)
+	GetWeatherInfo() (*WeatherInfo, error)
+	GetMobileDevices() ([]MobileDevice, error)
+	SetZoneManualTemperature(int, float64) error
+	DeleteZoneManualTemperature(int) error
 }
 
 // APIClient represents a Tado API client.
@@ -96,7 +108,7 @@ func (client *APIClient) getHomeID() error {
 		body []byte
 	)
 
-	if body, err = client.call(baseAPIURL + "/api/v1/me"); err == nil {
+	if body, err = client.call("GET", baseAPIURL+"/api/v1/me", ""); err == nil {
 		var resp interface{}
 		if err = json.Unmarshal(body, &resp); err == nil {
 			m := resp.(map[string]interface{})
@@ -185,14 +197,14 @@ func (client *APIClient) doAuthentication(grantType, credential string) error {
 	return err
 }
 
-func (client *APIClient) call(apiURL string) ([]byte, error) {
+func (client *APIClient) call(method string, apiURL string, payload string) ([]byte, error) {
 	var (
 		err  error
 		req  *http.Request
 		resp *http.Response
 	)
 
-	req, _ = http.NewRequest("GET", apiURL, nil)
+	req, _ = http.NewRequest(method, apiURL, bytes.NewBufferString(payload))
 	req.Header.Add("Authorization", "Bearer "+client.AccessToken)
 	if resp, err = client.HTTPClient.Do(req); err == nil {
 		defer resp.Body.Close()
