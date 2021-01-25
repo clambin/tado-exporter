@@ -3,7 +3,6 @@ package controller_test
 import (
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
-	"github.com/containrrr/shoutrrr"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -38,11 +37,4 @@ overlayLimit:
 	err = ctrlr.Run()
 	assert.Nil(t, err)
 	assert.Len(t, ctrlr.Overlays, 0)
-}
-
-func TestSlackNotification(t *testing.T) {
-	url := "slack://tado-controller@T01J50B58E8/B01LHL7NHH6/XCJ00nU3Cr5qo2RWJcqKatVb"
-	err := shoutrrr.Send(url, "Hello world!")
-
-	assert.Nil(t, err)
 }
