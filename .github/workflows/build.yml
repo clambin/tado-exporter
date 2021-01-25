@@ -34,8 +34,8 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - name: metadata
-      id: docker_meta
+    - name: tado-exporter metadata
+      id: docker_exporter_meta
       uses: crazy-max/ghaction-docker-meta@v1
       with:
         images: clambin/tado-exporter
@@ -43,14 +43,34 @@ jobs:
         tag-semver: |
           {{version}}
           {{major}}.{{minor}}.{{patch}}
-    - name: Build docker image
+    - name: Build tado-exporter
       uses: docker/build-push-action@v2
       with:
         context: .
-        file: ./build/Dockerfile
+        file: ./build/Dockerfile-tado-exporter
         platforms: linux/amd64,linux/arm/v7
         push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.docker_meta.outputs.tags }}
-        labels: ${{ steps.docker_meta.outputs.labels }}
+        tags: ${{ steps.docker_exporter_meta.outputs.tags }}
+        labels: ${{ steps.docker_exporter_meta.outputs.labels }}
         build-args: |
-          BUILD_VERSION=${{ steps.docker_meta.outputs.version }}
+          BUILD_VERSION=${{ steps.docker_exporter_meta.outputs.version }}
+    - name: tado-controller metadata
+      id: docker_controller_meta
+      uses: crazy-max/ghaction-docker-meta@v1
+      with:
+        images: clambin/tado-controller
+        tag-sha: True
+        tag-semver: |
+          {{version}}
+          {{major}}.{{minor}}.{{patch}}
+    - name: Build tado-controller
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./build/Dockerfile-tado-controller
+        platforms: linux/amd64,linux/arm/v7
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.docker_controller_meta.outputs.tags }}
+        labels: ${{ steps.docker_controller_meta.outputs.labels }}
+        build-args: |
+          BUILD_VERSION=${{ steps.docker_controller_meta.outputs.version }}
