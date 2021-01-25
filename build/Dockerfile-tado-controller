@@ -8,7 +8,7 @@ ARG BUILD_VERSION=development
 
 RUN CGO_ENABLED=0 go build -ldflags "-X github.com/clambin/tado-exporter/internal/version.BuildVersion=$BUILD_VERSION" cmd/tado-controller/tado-controller.go
 
-FROM scratch
+FROM alpine
 
 WORKDIR /app
 
