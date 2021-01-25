@@ -55,6 +55,7 @@ type ZoneInfoOverlay struct {
 	Setting ZoneInfoOverlaySetting `json:"setting"`
 }
 
+// ZoneInfoOverlaySetting contains the zone's overlay settings
 type ZoneInfoOverlaySetting struct {
 	Type        string      `json:"type"`
 	Power       string      `json:"power"`
@@ -76,8 +77,8 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 	return &tadoZoneInfo, err
 }
 
-// SetZoneManualTemperature sets an overlay for the specified ZoneID
-func (client *APIClient) SetZoneManualTemperature(zoneID int, temperature float64) error {
+// SetZoneOverlay sets an overlay (manual temperature setting) for the specified ZoneID
+func (client *APIClient) SetZoneOverlay(zoneID int, temperature float64) error {
 	const payloadFormat = `{
   "setting": {
     "type": "HEATING",
@@ -104,8 +105,8 @@ func (client *APIClient) SetZoneManualTemperature(zoneID int, temperature float6
 	return err
 }
 
-// DeleteZoneManualTemperature deletes the overlay for the specified ZoneID
-func (client *APIClient) DeleteZoneManualTemperature(zoneID int) error {
+// DeleteZoneOverlay deletes the overlay (manual temperature setting) for the specified ZoneID
+func (client *APIClient) DeleteZoneOverlay(zoneID int) error {
 	var err error
 	if err = client.initialize(); err == nil {
 		_, err = client.call("DELETE", client.apiURL("/zones/"+strconv.Itoa(zoneID)+"/overlay"), "")

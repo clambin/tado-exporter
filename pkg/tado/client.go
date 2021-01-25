@@ -54,8 +54,8 @@ type API interface {
 	GetZoneInfo(zoneID int) (*ZoneInfo, error)
 	GetWeatherInfo() (*WeatherInfo, error)
 	GetMobileDevices() ([]MobileDevice, error)
-	SetZoneManualTemperature(int, float64) error
-	DeleteZoneManualTemperature(int) error
+	SetZoneOverlay(int, float64) error
+	DeleteZoneOverlay(int) error
 }
 
 // APIClient represents a Tado API client.

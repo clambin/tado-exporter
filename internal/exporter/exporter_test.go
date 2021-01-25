@@ -158,10 +158,10 @@ func (client *mockAPI) GetMobileDevices() ([]tado.MobileDevice, error) {
 	}, nil
 }
 
-func (client *mockAPI) SetZoneManualTemperature(_ int, _ float64) error {
+func (client *mockAPI) SetZoneOverlay(_ int, _ float64) error {
 	return nil
 }
 
-func (client *mockAPI) DeleteZoneManualTemperature(_ int) error {
+func (client *mockAPI) DeleteZoneOverlay(_ int) error {
 	return nil
 }

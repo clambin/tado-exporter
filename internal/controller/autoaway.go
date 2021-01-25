@@ -6,52 +6,49 @@ import (
 	"time"
 )
 
+// AutoAwayInfo contains the user we are tracking, and what zone to set to which temperature
+// when ActivationTime occurs
 type AutoAwayInfo struct {
 	MobileDevice      *tado.MobileDevice
 	Home              bool
-	Since             time.Time
-	WaitTime          time.Duration
+	ActivationTime    time.Time
 	ZoneID            int
 	TargetTemperature float64
 }
 
-type Action struct {
-	Overlay           bool
-	ZoneID            int
-	TargetTemperature float64
-}
-
-func (controller *Controller) AutoAwayRun() error {
+// runAutoAway runOverlayLimit checks if mobileDevices have come/left home and performs
+// configured autoAway rules
+func (controller *Controller) runAutoAway() error {
 	if controller.Rules.AutoAway == nil {
 		return nil
 	}
 
 	var (
 		err     error
-		actions []Action
+		actions []action
 	)
 
 	// update mobiles & zones for each autoaway entry
-	if err = controller.AutoAwayUpdateInfo(); err == nil {
+	if err = controller.updateAutoAwayInfo(); err == nil {
 		// get actions for each autoaway setting
-		if actions, err = controller.AutoAwayGetActions(); err == nil {
+		if actions, err = controller.getAutoAwayActions(); err == nil {
 			for _, action := range actions {
 				// execute each action
-				if err = controller.AutoAwayDoAction(action); err != nil {
+				if err = controller.runAction(action); err != nil {
 					break
 				}
 			}
 		}
 	}
 
-	log.WithField("err", err).Debug("AutoAwayRun")
+	log.WithField("err", err).Debug("runAutoAway")
 	return err
 }
 
-// AutoAwayUpdateInfo updates the mobile device & zone information for each autoAway rule.
+// updateAutoAwayInfo updates the mobile device & zone information for each autoAway rule.
 // On exit, the map controller.AutoAwayInfo contains the up to date mobileDevice information
 // for any mobile device mentioned in any autoAway rule.
-func (controller *Controller) AutoAwayUpdateInfo() error {
+func (controller *Controller) updateAutoAwayInfo() error {
 	var (
 		err           error
 		mobileDevices []tado.MobileDevice
@@ -75,7 +72,8 @@ func (controller *Controller) AutoAwayUpdateInfo() error {
 				mobileDevice *tado.MobileDevice
 				zone         *tado.Zone
 			)
-			// Validate the configured mobileDevice & zone ID/Name
+			// Rules file can contain either mobileDevice/zone ID or Name. Retrieve the ID for each of these
+			// and discard any that aren't valid
 			if mobileDevice = getMobileDevice(mobileDevices, autoAway.MobileDeviceID, autoAway.MobileDeviceName); mobileDevice == nil {
 				log.WithFields(log.Fields{
 					"deviceID":   autoAway.MobileDeviceID,
@@ -93,13 +91,12 @@ func (controller *Controller) AutoAwayUpdateInfo() error {
 
 			// Add/update the entry in the AutoAwayInfo map
 			if entry, ok := controller.AutoAwayInfo[mobileDevice.ID]; ok == false {
-				// If we don't already have a record, create it
+				// We don't already have a record. Create it
 				controller.AutoAwayInfo[mobileDevice.ID] = AutoAwayInfo{
 					MobileDevice:      mobileDevice,
 					Home:              mobileDevice.Location.AtHome,
-					Since:             time.Now(),
+					ActivationTime:    time.Now().Add(autoAway.WaitTime),
 					ZoneID:            zone.ID,
-					WaitTime:          autoAway.WaitTime,
 					TargetTemperature: autoAway.TargetTemperature,
 				}
 			} else {
@@ -112,11 +109,12 @@ func (controller *Controller) AutoAwayUpdateInfo() error {
 	return err
 }
 
-// autoAwayGetActions returns a list of needed actions based on the current status of the autoAway mobile devices
-func (controller *Controller) AutoAwayGetActions() ([]Action, error) {
+// getAutoAwayActions scans the AutoAwayInfo map and returns all required actions, i.e. any zones that
+// need to be put in/out of Overlay mode.
+func (controller *Controller) getAutoAwayActions() ([]action, error) {
 	var (
 		err     error
-		actions = make([]Action, 0)
+		actions = make([]action, 0)
 	)
 
 	for id, autoAway := range controller.AutoAwayInfo {
@@ -133,7 +131,7 @@ func (controller *Controller) AutoAwayGetActions() ([]Action, error) {
 			autoAway.Home = true
 			controller.AutoAwayInfo[id] = autoAway
 			// add action to disable the overlay
-			actions = append(actions, Action{
+			actions = append(actions, action{
 				Overlay: false,
 				ZoneID:  autoAway.ZoneID,
 			})
@@ -147,13 +145,12 @@ func (controller *Controller) AutoAwayGetActions() ([]Action, error) {
 			// if the phone was home, mark the phone away & record the time
 			if autoAway.Home {
 				autoAway.Home = false
-				autoAway.Since = time.Now()
 				controller.AutoAwayInfo[id] = autoAway
 			}
 			// if the phone's been away for the required time
-			if time.Now().After(autoAway.Since.Add(autoAway.WaitTime)) {
+			if time.Now().After(autoAway.ActivationTime) {
 				// add action to set the overlay
-				actions = append(actions, Action{
+				actions = append(actions, action{
 					Overlay:           true,
 					ZoneID:            autoAway.ZoneID,
 					TargetTemperature: autoAway.TargetTemperature,
@@ -167,52 +164,4 @@ func (controller *Controller) AutoAwayGetActions() ([]Action, error) {
 		}
 	}
 	return actions, err
-}
-
-// AutoAwayDoAction execute an action
-func (controller *Controller) AutoAwayDoAction(action Action) error {
-	var (
-		err      error
-		zoneInfo *tado.ZoneInfo
-	)
-
-	if action.Overlay == false {
-		// Are we currently in overlay?
-		if zoneInfo, err = controller.GetZoneInfo(action.ZoneID); err == nil {
-			if zoneInfo.Overlay.Type == "MANUAL" {
-				// Delete the overlay
-				err = controller.DeleteZoneManualTemperature(action.ZoneID)
-			}
-		}
-	} else {
-		// Set the overlay
-		err = controller.SetZoneManualTemperature(action.ZoneID, action.TargetTemperature)
-	}
-
-	return err
-}
-
-// getMobileDevice returns the mobile device matching the mobileDeviceID or mobileDeviceName from the list of mobile devices
-func getMobileDevice(mobileDevices []tado.MobileDevice, mobileDeviceID int, mobileDeviceName string) *tado.MobileDevice {
-	for _, mobileDevice := range mobileDevices {
-		if (mobileDeviceName != "" && mobileDeviceName == mobileDevice.Name) ||
-			(mobileDeviceID != 0 && mobileDeviceID == mobileDevice.ID) {
-			return &mobileDevice
-		}
-	}
-
-	return nil
-}
-
-// getZone returns the zone matching zoneID or zoneName from the list of zones
-func getZone(zones []tado.Zone, zoneID int, zoneName string) *tado.Zone {
-	for _, zone := range zones {
-		if (zoneName != "" && zoneName == zone.Name) ||
-			(zoneID != 0 && zoneID == zone.ID) {
-			return &zone
-		}
-	}
-
-	return nil
-
 }

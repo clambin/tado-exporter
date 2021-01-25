@@ -2,6 +2,7 @@ package controller_test
 
 import (
 	"github.com/clambin/tado-exporter/internal/controller"
+	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -19,7 +20,7 @@ overlayLimit:
 `))
 
 	ctrlr := controller.Controller{
-		API:   &mockAPI{},
+		API:   &mockapi.MockAPI{},
 		Rules: rules,
 	}
 

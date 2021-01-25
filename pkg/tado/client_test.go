@@ -163,9 +163,9 @@ func TestAPIClient_ManualTemperature(t *testing.T) {
 		Password:   "some-password",
 	}
 
-	err := client.SetZoneManualTemperature(2, 4.0)
+	err := client.SetZoneOverlay(2, 4.0)
 	assert.Nil(t, err)
 
-	err = client.DeleteZoneManualTemperature(2)
+	err = client.DeleteZoneOverlay(2)
 	assert.Nil(t, err)
 }

@@ -7,17 +7,21 @@ import (
 	"time"
 )
 
+// Rules for tado-controller. Currently supports OverlayLimit and AutoAway
 type Rules struct {
 	OverlayLimit *[]OverlayLimit `yaml:"overlayLimit"`
 	AutoAway     *[]AutoAway     `yaml:"autoAway"`
 }
 
+// OverlayLimit rule removes an overlay from ZoneID/ZoneName for MaxTime duration
 type OverlayLimit struct {
 	ZoneID   int           `yaml:"zoneID"`
 	ZoneName string        `yaml:"zoneName"`
 	MaxTime  time.Duration `yaml:"maxTime"`
 }
 
+// AutoAway sets a zone (ZoneID/ZoneName) to TargetTemperature when the user (MobileDeviceID/MobileDeviceName)
+// has been away for a WaitTime duration
 type AutoAway struct {
 	MobileDeviceID    int           `yaml:"mobileDeviceID"`
 	MobileDeviceName  string        `yaml:"mobileDeviceName"`
@@ -27,6 +31,7 @@ type AutoAway struct {
 	TargetTemperature float64       `yaml:"targetTemperature"`
 }
 
+// ParseRulesFile returns the list of tado-controller rules in fileName
 func ParseRulesFile(fileName string) (*Rules, error) {
 	var (
 		err     error
@@ -39,6 +44,7 @@ func ParseRulesFile(fileName string) (*Rules, error) {
 	return rules, err
 }
 
+// ParseRules returns a list of tado-controller rules in content
 func ParseRules(content []byte) (*Rules, error) {
 	var err error
 

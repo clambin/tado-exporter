@@ -6,7 +6,8 @@ import (
 	"time"
 )
 
-func (controller *Controller) OverlayLimitRun() error {
+// runOverlayLimit checks for new overlays and expires any that have exceeded their limit
+func (controller *Controller) runOverlayLimit() error {
 	if controller.Rules.OverlayLimit == nil {
 		return nil
 	}
@@ -15,21 +16,32 @@ func (controller *Controller) OverlayLimitRun() error {
 		controller.Overlays = make(map[int]time.Time)
 	}
 
-	var err error
+	var (
+		err     error
+		actions []action
+	)
 
-	if err = controller.OverlayLimitUpdateInfo(); err == nil {
-		err = controller.ExpireOverlays()
+	if err = controller.updateOverlays(); err == nil {
+		if actions, err = controller.expireOverlays(); err == nil {
+			for _, action := range actions {
+				if err = controller.runAction(action); err == nil {
+					break
+				}
+			}
+		}
 	}
 
 	log.WithFields(log.Fields{
 		"err":      err,
 		"overlays": len(controller.Overlays),
-	}).Debug("OverlayLimitRun")
+	}).Debug("runOverlayLimit")
 
 	return err
 }
 
-func (controller *Controller) OverlayLimitUpdateInfo() error {
+// updateOverlays gets any overlays that are currently active and stores them in controller.Overlays.
+// Any zones that are not in overlay are removed from controller.Overlays
+func (controller *Controller) updateOverlays() error {
 	var (
 		err   error
 		zones []tado.Zone
@@ -75,15 +87,22 @@ func (controller *Controller) OverlayLimitUpdateInfo() error {
 	return err
 }
 
-func (controller *Controller) ExpireOverlays() error {
-	var err error
+// expireOverlays deletes any overlays that have expired
+func (controller *Controller) expireOverlays() ([]action, error) {
+	var (
+		err     error
+		actions = make([]action, 0)
+	)
 	for zoneID, expiryTimer := range controller.Overlays {
 		if time.Now().After(expiryTimer) {
-			err = controller.DeleteZoneManualTemperature(zoneID)
+			actions = append(actions, action{
+				Overlay: false,
+				ZoneID:  zoneID,
+			})
 			log.WithField("zoneID", zoneID).Info("expiring overlay in zone")
 			// Technically not needed (next run will do this automatically, but facilitates unit testing
 			delete(controller.Overlays, zoneID)
 		}
 	}
-	return err
+	return actions, err
 }
