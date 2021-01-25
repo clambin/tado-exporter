@@ -28,13 +28,17 @@ autoAway:
     targetTemperature: 7.0
 `))
 	ctrlr := Controller{
-		API:          &mockapi.MockAPI{},
-		Rules:        rules,
-		AutoAwayInfo: nil,
+		API:           &mockapi.MockAPI{},
+		Rules:         rules,
+		AutoAwayInfo:  nil,
+		Configuration: &Configuration{},
 	}
 
 	assert.Nil(t, err)
 	assert.Nil(t, ctrlr.AutoAwayInfo)
+
+	err = ctrlr.updateTadoConfig()
+	assert.Nil(t, err)
 
 	err = ctrlr.updateAutoAwayInfo()
 	assert.Nil(t, err)

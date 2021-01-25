@@ -33,6 +33,7 @@ func main() {
 	// a.Flag("port", "API listener port").Default("8080").IntVar(&cfg.Port)
 	a.Flag("interval", "Scrape interval").Default("1m").DurationVar(&cfg.Interval)
 	a.Flag("rules", "Rules config file").Short('r').Required().StringVar(&rulesFilename)
+	a.Flag("notify", "URL to send notification for triggered rules").Short('n').Required().StringVar(&cfg.NotifyURL)
 
 	_, err = a.Parse(os.Args[1:])
 	if err != nil {
@@ -63,7 +64,8 @@ func main() {
 			Password:     cfg.Password,
 			ClientSecret: cfg.ClientSecret,
 		},
-		Rules: rules,
+		Configuration: &cfg,
+		Rules:         rules,
 	}
 
 	for {

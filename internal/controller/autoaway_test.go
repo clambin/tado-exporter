@@ -22,9 +22,10 @@ autoAway:
 `))
 	server := mockapi.MockAPI{}
 	control := controller.Controller{
-		API:          &server,
-		Rules:        rules,
-		AutoAwayInfo: nil,
+		API:           &server,
+		Configuration: &controller.Configuration{},
+		Rules:         rules,
+		AutoAwayInfo:  nil,
 	}
 
 	assert.Nil(t, err)

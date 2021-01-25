@@ -7,8 +7,8 @@ type MockAPI struct {
 	Overlays map[int]float64
 }
 
-func (client *MockAPI) GetZones() ([]tado.Zone, error) {
-	return []tado.Zone{
+func (client *MockAPI) GetZones() ([]*tado.Zone, error) {
+	return []*tado.Zone{
 		{
 			ID:   1,
 			Name: "foo",
@@ -62,8 +62,8 @@ func (client *MockAPI) GetWeatherInfo() (*tado.WeatherInfo, error) {
 	}, nil
 }
 
-func (client *MockAPI) GetMobileDevices() ([]tado.MobileDevice, error) {
-	return []tado.MobileDevice{
+func (client *MockAPI) GetMobileDevices() ([]*tado.MobileDevice, error) {
+	return []*tado.MobileDevice{
 		{
 			ID:       1,
 			Name:     "foo",

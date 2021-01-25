@@ -67,11 +67,11 @@ func (probe *Probe) reportWeather(weatherInfo *tado.WeatherInfo) {
 
 func (probe *Probe) runMobileDevices() error {
 	var err error
-	var mobileDevices []tado.MobileDevice
+	var mobileDevices []*tado.MobileDevice
 
 	if mobileDevices, err = probe.GetMobileDevices(); err == nil {
 		for _, mobileDevice := range mobileDevices {
-			probe.reportMobileDevice(&mobileDevice)
+			probe.reportMobileDevice(mobileDevice)
 			log.WithField("device", mobileDevice.String()).Debug("retrieved mobile device")
 		}
 	}
@@ -92,7 +92,7 @@ func (probe *Probe) reportMobileDevice(mobileDevice *tado.MobileDevice) {
 func (probe *Probe) runZones() error {
 	var (
 		err   error
-		zones []tado.Zone
+		zones []*tado.Zone
 		info  *tado.ZoneInfo
 	)
 
@@ -100,7 +100,7 @@ func (probe *Probe) runZones() error {
 		for _, zone := range zones {
 			logger := log.WithFields(log.Fields{"err": err, "zone.ID": zone.ID, "zone.Name": zone.Name})
 			if info, err = probe.GetZoneInfo(zone.ID); err == nil {
-				probe.reportZone(&zone, info)
+				probe.reportZone(zone, info)
 				logger.WithField("zoneInfo", info).Debug("retrieved zone info")
 			}
 		}

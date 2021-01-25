@@ -54,8 +54,8 @@ func TestRunProbe(t *testing.T) {
 type mockAPI struct {
 }
 
-func (client *mockAPI) GetZones() ([]tado.Zone, error) {
-	return []tado.Zone{
+func (client *mockAPI) GetZones() ([]*tado.Zone, error) {
+	return []*tado.Zone{
 		{
 			ID:   1,
 			Name: "Living room",
@@ -129,8 +129,8 @@ func (client *mockAPI) GetWeatherInfo() (*tado.WeatherInfo, error) {
 	}, nil
 }
 
-func (client *mockAPI) GetMobileDevices() ([]tado.MobileDevice, error) {
-	return []tado.MobileDevice{
+func (client *mockAPI) GetMobileDevices() ([]*tado.MobileDevice, error) {
+	return []*tado.MobileDevice{
 		{
 			ID:       1,
 			Name:     "Phone 1",
