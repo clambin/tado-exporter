@@ -45,6 +45,19 @@ autoAway:
 	assert.Nil(t, err)
 	assert.Len(t, server.Overlays, 0)
 
+	// "bar" was previously home
+	autoAway, _ = control.AutoAwayInfo[2]
+	oldActivationTime := autoAway.ActivationTime
+	autoAway.Home = true
+	control.AutoAwayInfo[2] = autoAway
+
+	err = control.Run()
+	assert.Nil(t, err)
+
+	autoAway, _ = control.AutoAwayInfo[2]
+	assert.False(t, autoAway.Home)
+	assert.True(t, autoAway.ActivationTime.After(oldActivationTime))
+
 	// "bar" has been away for a long time
 	autoAway, _ = control.AutoAwayInfo[2]
 	autoAway.ActivationTime = time.Now().Add(-2 * time.Hour)

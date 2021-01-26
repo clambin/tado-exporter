@@ -11,11 +11,11 @@ import (
 // AutoAwayInfo contains the user we are tracking, and what zone to set to which temperature
 // when ActivationTime occurs
 type AutoAwayInfo struct {
-	MobileDevice      *tado.MobileDevice
-	Home              bool
-	ActivationTime    time.Time
-	ZoneID            int
-	TargetTemperature float64
+	MobileDevice   *tado.MobileDevice
+	Home           bool
+	ActivationTime time.Time
+	ZoneID         int
+	AutoAwayRule   *AutoAway
 }
 
 // runAutoAway runOverlayLimit checks if mobileDevices have come/left home and performs
@@ -48,7 +48,7 @@ func (controller *Controller) runAutoAway() error {
 }
 
 // updateAutoAwayInfo updates the mobile device & zone information for each autoAway rule.
-// On exit, the map controller.AutoAwayInfo contains the up to date mobileDevice information
+// On exit, the map controller.AutoAwayInfo contains the up-to-date mobileDevice information
 // for any mobile device mentioned in any autoAway rule.
 func (controller *Controller) updateAutoAwayInfo() error {
 	var err error
@@ -85,11 +85,11 @@ func (controller *Controller) updateAutoAwayInfo() error {
 		if entry, ok := controller.AutoAwayInfo[mobileDevice.ID]; ok == false {
 			// We don't already have a record. Create it
 			controller.AutoAwayInfo[mobileDevice.ID] = AutoAwayInfo{
-				MobileDevice:      mobileDevice,
-				Home:              mobileDevice.Location.AtHome,
-				ActivationTime:    time.Now().Add(autoAway.WaitTime),
-				ZoneID:            zone.ID,
-				TargetTemperature: autoAway.TargetTemperature,
+				MobileDevice:   mobileDevice,
+				ZoneID:         zone.ID,
+				AutoAwayRule:   autoAway,
+				Home:           mobileDevice.Location.AtHome,
+				ActivationTime: time.Now().Add(autoAway.WaitTime),
 			}
 		} else {
 			// If we already have it, update it
@@ -108,31 +108,31 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 		actions = make([]action, 0)
 	)
 
-	for id, autoAway := range controller.AutoAwayInfo {
+	for id, autoAwayInfo := range controller.AutoAwayInfo {
 		log.WithFields(log.Fields{
-			"mobileDeviceID":   autoAway.MobileDevice.ID,
-			"mobileDeviceName": autoAway.MobileDevice.Name,
-			"new_home":         autoAway.MobileDevice.Location.AtHome,
-			"old_home":         autoAway.Home,
+			"mobileDeviceID":   autoAwayInfo.MobileDevice.ID,
+			"mobileDeviceName": autoAwayInfo.MobileDevice.Name,
+			"new_home":         autoAwayInfo.MobileDevice.Location.AtHome,
+			"old_home":         autoAwayInfo.Home,
 		}).Debug("autoAwayInfo")
 
 		// if the mobile phone is now home but was away
-		if autoAway.MobileDevice.Location.AtHome && !autoAway.Home {
+		if autoAwayInfo.MobileDevice.Location.AtHome && !autoAwayInfo.Home {
 			// mark the phone at home
-			autoAway.Home = true
-			controller.AutoAwayInfo[id] = autoAway
+			autoAwayInfo.Home = true
+			controller.AutoAwayInfo[id] = autoAwayInfo
 			// add action to disable the overlay
 			actions = append(actions, action{
 				Overlay: false,
-				ZoneID:  autoAway.ZoneID,
+				ZoneID:  autoAwayInfo.ZoneID,
 			})
 			log.WithFields(log.Fields{
 				"MobileDeviceID": id,
-				"ZoneID":         autoAway.ZoneID,
+				"ZoneID":         autoAwayInfo.ZoneID,
 			}).Info("User returned home. Removing overlay")
 			if controller.Configuration.NotifyURL != "" {
 				mobileDevice, _ := controller.MobileDevices[id]
-				zone, _ := controller.Zones[autoAway.ZoneID]
+				zone, _ := controller.Zones[autoAwayInfo.ZoneID]
 				err = shoutrrr.Send(controller.Configuration.NotifyURL,
 					fmt.Sprintf("%s is home. switching off manual control in zone %s",
 						mobileDevice.Name,
@@ -142,28 +142,29 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 			}
 		} else
 		// if the mobile phone is away
-		if !autoAway.MobileDevice.Location.AtHome {
+		if !autoAwayInfo.MobileDevice.Location.AtHome {
 			// if the phone was home, mark the phone away & record the time
-			if autoAway.Home {
-				autoAway.Home = false
-				controller.AutoAwayInfo[id] = autoAway
+			if autoAwayInfo.Home {
+				autoAwayInfo.Home = false
+				autoAwayInfo.ActivationTime = time.Now().Add(autoAwayInfo.AutoAwayRule.WaitTime)
+				controller.AutoAwayInfo[id] = autoAwayInfo
 			}
 			// if the phone's been away for the required time
-			if time.Now().After(autoAway.ActivationTime) {
+			if time.Now().After(autoAwayInfo.ActivationTime) {
 				// add action to set the overlay
 				actions = append(actions, action{
 					Overlay:           true,
-					ZoneID:            autoAway.ZoneID,
-					TargetTemperature: autoAway.TargetTemperature,
+					ZoneID:            autoAwayInfo.ZoneID,
+					TargetTemperature: autoAwayInfo.AutoAwayRule.TargetTemperature,
 				})
 				log.WithFields(log.Fields{
 					"MobileDeviceID":    id,
-					"ZoneID":            autoAway.ZoneID,
-					"TargetTemperature": autoAway.TargetTemperature,
+					"ZoneID":            autoAwayInfo.ZoneID,
+					"TargetTemperature": autoAwayInfo.AutoAwayRule.TargetTemperature,
 				}).Info("User left. Setting overlay")
 				if controller.Configuration.NotifyURL != "" {
 					mobileDevice, _ := controller.MobileDevices[id]
-					zone, _ := controller.Zones[autoAway.ZoneID]
+					zone, _ := controller.Zones[autoAwayInfo.AutoAwayRule.ZoneID]
 					err = shoutrrr.Send(controller.Configuration.NotifyURL,
 						fmt.Sprintf("%s is away. activating manual control in zone %s",
 							mobileDevice.Name,

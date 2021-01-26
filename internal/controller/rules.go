@@ -9,8 +9,8 @@ import (
 
 // Rules for tado-controller. Currently supports OverlayLimit and AutoAway
 type Rules struct {
-	OverlayLimit *[]OverlayLimit `yaml:"overlayLimit"`
-	AutoAway     *[]AutoAway     `yaml:"autoAway"`
+	OverlayLimit *[]*OverlayLimit `yaml:"overlayLimit"`
+	AutoAway     *[]*AutoAway     `yaml:"autoAway"`
 }
 
 // OverlayLimit rule removes an overlay from ZoneID/ZoneName for MaxTime duration
