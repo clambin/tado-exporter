@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/internal/version"
 	"github.com/clambin/tado-exporter/pkg/tado"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"net/http"
@@ -30,8 +32,8 @@ func main() {
 	a.HelpFlag.Short('h')
 	a.VersionFlag.Short('v')
 	a.Flag("debug", "Log debug messages").BoolVar(&cfg.Debug)
-	// a.Flag("port", "API listener port").Default("8080").IntVar(&cfg.Port)
-	a.Flag("interval", "Scrape interval").Default("1m").DurationVar(&cfg.Interval)
+	a.Flag("port", "API listener port").Default("8080").IntVar(&cfg.Port)
+	a.Flag("interval", "Polling interval").Default("1m").DurationVar(&cfg.Interval)
 	a.Flag("rules", "Rules config file").Short('r').Required().StringVar(&rulesFilename)
 	a.Flag("notify", "URL to send notification for triggered rules").Short('n').Required().StringVar(&cfg.NotifyURL)
 
@@ -68,16 +70,18 @@ func main() {
 		Rules:         rules,
 	}
 
-	for {
-		if err = c.Run(); err != nil {
-			log.WithField("err", err).Warning("controller failed")
-			break
+	go func() {
+		for {
+			if err = c.Run(); err != nil {
+				log.WithField("err", err).Warning("controller failed")
+				break
+			}
+
+			time.Sleep(cfg.Interval)
 		}
+	}()
 
-		time.Sleep(cfg.Interval)
-	}
-
-	// listenAddress := fmt.Sprintf(":%d", cfg.Port)
-	// http.Handle("/metrics", promhttp.Handler())
-	// _ = http.ListenAndServe(listenAddress, nil)
+	listenAddress := fmt.Sprintf(":%d", cfg.Port)
+	http.Handle("/metrics", promhttp.Handler())
+	_ = http.ListenAndServe(listenAddress, nil)
 }

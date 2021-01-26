@@ -36,8 +36,8 @@ type Configuration struct {
 	ClientSecret string
 	Interval     time.Duration
 	NotifyURL    string
-	// Port         int
-	Debug bool
+	Port         int
+	Debug        bool
 }
 
 // Run executes all controller rules
