@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 452,
-  "iteration": 1611264781864,
+  "iteration": 1611703536599,
   "links": [],
   "panels": [
     {
@@ -307,11 +307,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "semi-dark-blue",
+                "color": "semi-dark-green",
                 "value": null
               },
               {
-                "color": "dark-green",
+                "color": "semi-dark-blue",
                 "value": 1
               },
               {
@@ -651,8 +651,8 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
-        "w": 14,
+        "h": 10,
+        "w": 13,
         "x": 0,
         "y": 9
       },
@@ -778,9 +778,9 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
+        "h": 10,
         "w": 9,
-        "x": 14,
+        "x": 13,
         "y": 9
       },
       "hiddenSeries": false,
@@ -903,9 +903,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 1,
-        "x": 23,
+        "h": 10,
+        "w": 2,
+        "x": 22,
         "y": 9
       },
       "id": 51,
@@ -916,7 +916,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "mean"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -964,11 +964,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 19
       },
       "id": 70,
       "panels": [],
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 18,
       "scopedVars": {
         "Room": {
@@ -995,10 +995,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
-        "w": 14,
+        "h": 10,
+        "w": 13,
         "x": 0,
-        "y": 19
+        "y": 20
       },
       "hiddenSeries": false,
       "id": 71,
@@ -1022,7 +1022,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 26,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1125,10 +1125,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
+        "h": 10,
         "w": 9,
-        "x": 14,
-        "y": 19
+        "x": 13,
+        "y": 20
       },
       "hiddenSeries": false,
       "id": 72,
@@ -1152,7 +1152,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 52,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1253,10 +1253,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 1,
-        "x": 23,
-        "y": 19
+        "h": 10,
+        "w": 2,
+        "x": 22,
+        "y": 20
       },
       "id": 73,
       "options": {
@@ -1266,7 +1266,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "mean"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -1274,7 +1274,7 @@
         "textMode": "auto"
       },
       "pluginVersion": "7.3.7",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 51,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1317,11 +1317,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 30
       },
       "id": 74,
       "panels": [],
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 18,
       "scopedVars": {
         "Room": {
@@ -1348,10 +1348,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
-        "w": 14,
+        "h": 10,
+        "w": 13,
         "x": 0,
-        "y": 29
+        "y": 31
       },
       "hiddenSeries": false,
       "id": 75,
@@ -1375,7 +1375,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 26,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1478,10 +1478,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
+        "h": 10,
         "w": 9,
-        "x": 14,
-        "y": 29
+        "x": 13,
+        "y": 31
       },
       "hiddenSeries": false,
       "id": 76,
@@ -1505,7 +1505,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 52,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1606,10 +1606,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 1,
-        "x": 23,
-        "y": 29
+        "h": 10,
+        "w": 2,
+        "x": 22,
+        "y": 31
       },
       "id": 77,
       "options": {
@@ -1619,7 +1619,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "mean"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -1627,7 +1627,7 @@
         "textMode": "auto"
       },
       "pluginVersion": "7.3.7",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 51,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1670,11 +1670,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 41
       },
       "id": 78,
       "panels": [],
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 18,
       "scopedVars": {
         "Room": {
@@ -1701,10 +1701,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
-        "w": 14,
+        "h": 10,
+        "w": 13,
         "x": 0,
-        "y": 39
+        "y": 42
       },
       "hiddenSeries": false,
       "id": 79,
@@ -1728,7 +1728,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 26,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1831,10 +1831,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
+        "h": 10,
         "w": 9,
-        "x": 14,
-        "y": 39
+        "x": 13,
+        "y": 42
       },
       "hiddenSeries": false,
       "id": 80,
@@ -1858,7 +1858,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 52,
       "repeatedByRow": true,
       "scopedVars": {
@@ -1959,10 +1959,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 1,
-        "x": 23,
-        "y": 39
+        "h": 10,
+        "w": 2,
+        "x": 22,
+        "y": 42
       },
       "id": 81,
       "options": {
@@ -1972,7 +1972,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "mean"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -1980,7 +1980,7 @@
         "textMode": "auto"
       },
       "pluginVersion": "7.3.7",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 51,
       "repeatedByRow": true,
       "scopedVars": {
@@ -2023,11 +2023,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 52
       },
       "id": 82,
       "panels": [],
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 18,
       "scopedVars": {
         "Room": {
@@ -2054,10 +2054,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
-        "w": 14,
+        "h": 10,
+        "w": 13,
         "x": 0,
-        "y": 49
+        "y": 53
       },
       "hiddenSeries": false,
       "id": 83,
@@ -2081,7 +2081,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 26,
       "repeatedByRow": true,
       "scopedVars": {
@@ -2184,10 +2184,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
+        "h": 10,
         "w": 9,
-        "x": 14,
-        "y": 49
+        "x": 13,
+        "y": 53
       },
       "hiddenSeries": false,
       "id": 84,
@@ -2211,7 +2211,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 52,
       "repeatedByRow": true,
       "scopedVars": {
@@ -2312,10 +2312,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 1,
-        "x": 23,
-        "y": 49
+        "h": 10,
+        "w": 2,
+        "x": 22,
+        "y": 53
       },
       "id": 85,
       "options": {
@@ -2325,7 +2325,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "mean"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -2333,7 +2333,7 @@
         "textMode": "auto"
       },
       "pluginVersion": "7.3.7",
-      "repeatIteration": 1611264781864,
+      "repeatIteration": 1611703536599,
       "repeatPanelId": 51,
       "repeatedByRow": true,
       "scopedVars": {
@@ -2406,12 +2406,12 @@
     ]
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-12h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "tadoº",
   "uid": "jIGk6cWRk",
-  "version": 42
+  "version": 45
 }
