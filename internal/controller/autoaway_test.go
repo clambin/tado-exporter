@@ -1,6 +1,7 @@
 package controller_test
 
 import (
+	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
@@ -9,8 +10,9 @@ import (
 )
 
 func TestAutoAwayConfigBlack(t *testing.T) {
-	rules, err := controller.ParseRules([]byte(`
-autoAway:
+	cfg, err := configuration.LoadConfiguration([]byte(`
+controller:
+  autoAwayRules:
   - zoneName: "foo"
     mobileDeviceName: "foo"
     waitTime: 1h
@@ -20,12 +22,15 @@ autoAway:
     waitTime: 1h
     targetTemperature: 15.0
 `))
+
+	if err != nil {
+		panic(err)
+	}
+
 	server := mockapi.MockAPI{}
 	control := controller.Controller{
 		API:           &server,
-		Configuration: &controller.Configuration{},
-		Rules:         rules,
-		AutoAwayInfo:  nil,
+		Configuration: &cfg.Controller,
 	}
 
 	assert.Nil(t, err)

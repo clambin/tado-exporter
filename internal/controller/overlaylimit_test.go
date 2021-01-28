@@ -1,6 +1,7 @@
 package controller_test
 
 import (
+	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
@@ -9,8 +10,9 @@ import (
 )
 
 func TestOverlayLimit(t *testing.T) {
-	rules, err := controller.ParseRules([]byte(`
-overlayLimit:
+	cfg, err := configuration.LoadConfiguration([]byte(`
+controller:
+  overlayLimitRules:
   - zoneName: "foo"
     maxTime: 1h
   - zoneName: "bar"
@@ -19,10 +21,13 @@ overlayLimit:
     maxTime: 1h
 `))
 
+	if err != nil {
+		panic(err)
+	}
+
 	ctrlr := controller.Controller{
 		API:           &mockapi.MockAPI{},
-		Configuration: &controller.Configuration{},
-		Rules:         rules,
+		Configuration: &cfg.Controller,
 	}
 
 	err = ctrlr.Run()

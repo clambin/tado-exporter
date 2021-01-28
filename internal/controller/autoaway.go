@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/containrrr/shoutrrr"
 	log "github.com/sirupsen/logrus"
@@ -15,13 +16,13 @@ type AutoAwayInfo struct {
 	Home           bool
 	ActivationTime time.Time
 	ZoneID         int
-	AutoAwayRule   *AutoAway
+	AutoAwayRule   *configuration.AutoAwayRule
 }
 
 // runAutoAway runOverlayLimit checks if mobileDevices have come/left home and performs
 // configured autoAway rules
 func (controller *Controller) runAutoAway() error {
-	if controller.Rules.AutoAway == nil {
+	if controller.Configuration.AutoAwayRules == nil {
 		return nil
 	}
 
@@ -59,7 +60,7 @@ func (controller *Controller) updateAutoAwayInfo() error {
 	}
 
 	// for each autoAway setting, add/update a record for the mobileDevice
-	for _, autoAway := range *controller.Rules.AutoAway {
+	for _, autoAway := range *controller.Configuration.AutoAwayRules {
 		var (
 			mobileDevice *tado.MobileDevice
 			zone         *tado.Zone
