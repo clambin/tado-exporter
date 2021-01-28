@@ -1,29 +1,58 @@
-# tado-exporter
+# tado-monitor
 ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/clambin/tado-exporter?color=green&label=Release&style=plastic)
 ![Codecov](https://img.shields.io/codecov/c/gh/clambin/tado-exporter?style=plastic)
 ![Build](https://github.com/clambin/tado-exporter/workflows/Build/badge.svg)
 ![Go Report Card](https://goreportcard.com/badge/github.com/clambin/tado-exporter)
 ![GitHub](https://img.shields.io/github/license/clambin/tado-exporter?style=plastic)
 
-Prometheus exporter for Tadoº Smart Thermostat devices.
+Monitor & control utility Tadoº Smart Thermostat devices.
+
+## Features
+
+tado-monitor offers two types of functionality:
+
+* an exporter to expose metrics to Prometheus
+* a controller to control the temperature settings of rooms in your Tado-controlled home
+
+The controller is rule-based. It currently supports two types of rules:
+
+* **LimitOverlay** disables manual temperature settings in a room after a specified amount of time. Typical use case is to disable the bathroom heating if someone forgot to switch off a manual temperature setting.
+* **AutoAway** rules switch off the automatic temperature control for a room when a user has left home for a specified amount of time. Typical use case is one of the kids leaving for college for the week.
+
 
 ## Installation
 
-A Docker image is available on [docker](https://hub.docker.com/clambin/tado-exporter).  Images are available for amd64 & arm32v7.
+A Docker image is available on [docker](https://hub.docker.com/clambin/tado-monitor).  Images are available for amd64 & arm32v7.
 
 Alternatively, you can clone the repository from [github](https://github.com/r/clambin/tado-exporter) and build from source:
 
 ```
 git clone https://github.com/clambin/tado-exporter.git
 cd tado-exporter
-go build
+go build tado-monitor
 ```
 
-You will need to have go 1.15 installed on your system.
+You will need to have Go 1.15 installed on your system.
 
-## Running tado-exporter
+## Running tado-monitor
+### Command-line options
 
-Set the following environment variables prior to starting tado-exporter:
+The following command-line arguments can be passed:
+
+```
+usage: tado-monitor --config=CONFIG [<flags>]
+
+tado-monitor
+
+Flags:
+  -h, --help           Show context-sensitive help (also try --help-long and --help-man).
+  -v, --version        Show application version.
+      --debug          Log debug messages
+      --config=CONFIG  Configuration file
+```
+
+### Tadoº credentials
+Set the following environment variables prior to starting tado-monitor:
 
 ```
 * TADO_USERNAME: your Tado username
@@ -46,15 +75,59 @@ var TD = {
 };
 ```
 
-Once you have the relevant environment variables set, you can start tado-exporter. E.g. when using Docker, start tado-exporter as follows:
+### Configuration file
+The (mandatory) configuration file option specifies a yaml file to control tado-monitor's behaviour:
 
 ```
-docker run -e TADO_USERNAME=user@example.com -e TADO_PASSWORD="your-password" --rm -p 8080:8080 clambin/tado-exporter:latest
+# Set to true to enable debug logging
+debug: false
+
+# Section for Prometheus exporter functionality
+exporter:
+  # Enable exporter functionality
+  enabled: true
+  # HTTP port for Prometheus scraping. Metrics are exposed on /metrics path
+  port: 8080
+  # How often the exporter should run
+  interval: 1m
+  
+# Section for controller functionality
+controller:
+  # Enable controller functionality
+  enabled: false
+  # How often rules should be evaluated
+  interval: 5m
+  # When set, notifyURL is used to report actions taken due to executed rules
+  # See https://github.com/containrrr/shoutrrr for possible values
+  notifyURL: slack://tado-controller@T01J50B58E8/B01LHL7NHH6/XCJ00nU3Cr5qo2RWJcqKatVb
+  
+  # autoAway rules switch a room to manual control when a user is not home
+  autoAwayRules:
+      # mobileDeviceName or mobileDeviceID identify the user through his registed mobile phone
+    - mobileDeviceName: "my Phone"
+      # zoneName or zoneID identify the room / zone to switch to manual control
+      zoneName: "Study"
+      # how long do we wait after the user leaves home to set the room to manual control?
+      waitTime: 2h
+      # temperature of the room while the user is away. 5 or less degrees switch the room to frost control (i.e. off)
+      targetTemperature: 15.0
+
+  # overlayLimit rules switch off a room's manual temperature setting after a configured amount of time
+  overlayLimitRules:
+    # zoneName or zoneID identify the room  
+  - zoneName: "Study"
+    # how long do we allow the room to be in manual control before switching it to automatic control
+    maxTime: 1m
 ```
 
-### Prometheus
+Note: clearly, those two sets of rules can interact. No logic is implemented to compensate this. Use wisely.
 
-Add tado-exporter as a target to let Prometheus scrape the metrics into its database. 
+
+## Prometheus
+
+### Adding tado-monitor as a target
+
+Add tado-exporter as a target to let Prometheus scrape the metrics into its database.
 This highly depends on your particular Prometheus configuration. In its simplest form, add a new scrape target to `prometheus.yml`:
 
 ```
@@ -63,30 +136,11 @@ scrape_configs:
   static_configs:
   - targets: [ '<tado host>:8080' ]
 ```
-
-### Command-line options
-
-The following command-line arguments can be passed:
-
-```
-usage: tado-exporter [<flags>]
-
-tado-exporter
-
-Flags:
-  -h, --help         Show context-sensitive help (also try --help-long and --help-man).
-  -v, --version      Show application version.
-      --debug        Log debug messages
-      --port=8080    API listener port
-      --interval=1m  Scrape interval
-
-```
-
 ### Metrics
 
 tado-exporter exposes the following metrics:
 
-#### Metrics by Zone:
+#### Metrics by Zone
 
 The following metrics are reported for each discovered zone.  The zone name is added as 'zone_name' label.
 
@@ -103,7 +157,7 @@ The following metrics are reported for each discovered zone.  The zone name is a
 * tado_zone_temperature_celsius:        Current temperature of this zone in degrees celsius
 ```
 
-#### Mobile device home/away status metrics:
+#### Mobile device home/away status metrics
 
 Tado reports the home/away status of registered mobile devices. See device name is added as 'name' label.
 
@@ -112,7 +166,7 @@ Tado reports the home/away status of registered mobile devices. See device name 
 
 ```
 
-#### General metrics:
+#### General metrics
 
 ```
 * tado_outside_temp_celsius:            Current outside temperature in degrees celsius
