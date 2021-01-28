@@ -1,28 +1,17 @@
 package controller
 
 import (
+	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"time"
 )
 
 // Controller object for tado-controller.
-//
-// Create this by supplying the necessary parameters, e.g.
-//
-//   rules, err := controller.ParseConfigFile("rules.yaml")
-//   control := controller.Controller{
-//     API:   &tado.APIClient{
-//       HTTPClient: &http.Client{},
-//       Username: "user@example.com",
-//       Password: "somepassword",
-//     },
-//     Rules: rules,
-//	}
 type Controller struct {
 	tado.API
-	Configuration *Configuration
-	Rules         *Rules
+	Configuration *configuration.ControllerConfiguration
+
 	Zones         map[int]*tado.Zone
 	MobileDevices map[int]*tado.MobileDevice
 	AutoAwayInfo  map[int]AutoAwayInfo

@@ -37,11 +37,12 @@ func TestRunProbe(t *testing.T) {
 	var err error
 	var value float64
 
-	probe := exporter.CreateProbe(&exporter.Configuration{})
-	assert.NotNil(t, probe)
-	probe.API = &mockAPI{}
+	export := exporter.Exporter{
+		API: &mockAPI{},
+	}
 	// log.SetLevel(log.DebugLevel)
-	err = probe.Run()
+
+	err = export.Run()
 	assert.Nil(t, err)
 
 	for _, testCase := range testCases {

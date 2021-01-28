@@ -10,7 +10,7 @@ import (
 
 // runOverlayLimit checks for new overlays and expires any that have exceeded their limit
 func (controller *Controller) runOverlayLimit() error {
-	if controller.Rules.OverlayLimit == nil {
+	if controller.Configuration.OverlayLimitRules == nil {
 		return nil
 	}
 
@@ -48,15 +48,15 @@ func (controller *Controller) updateOverlays() error {
 		err error
 	)
 
-	for _, overlayLimit := range *controller.Rules.OverlayLimit {
+	for _, overlayLimitRule := range *controller.Configuration.OverlayLimitRules {
 		var (
 			zone     *tado.Zone
 			zoneInfo *tado.ZoneInfo
 		)
-		if zone = controller.lookupZone(overlayLimit.ZoneID, overlayLimit.ZoneName); zone == nil {
+		if zone = controller.lookupZone(overlayLimitRule.ZoneID, overlayLimitRule.ZoneName); zone == nil {
 			log.WithFields(log.Fields{
-				"ZoneID":   overlayLimit.ZoneID,
-				"ZoneName": overlayLimit.ZoneName,
+				"ZoneID":   overlayLimitRule.ZoneID,
+				"ZoneName": overlayLimitRule.ZoneName,
 			}).Warning("skipping unknown zone in OverlayLimit rule")
 			continue
 		}
@@ -65,7 +65,7 @@ func (controller *Controller) updateOverlays() error {
 			if zoneInfo.Overlay.Type == "MANUAL" && zoneInfo.Overlay.Setting.Type == "HEATING" {
 				// Zone in overlay. If we're not already tracking it, add it now
 				if _, ok := controller.Overlays[zone.ID]; ok == false {
-					expiry := time.Now().Add(overlayLimit.MaxTime)
+					expiry := time.Now().Add(overlayLimitRule.MaxTime)
 					controller.Overlays[zone.ID] = expiry
 					log.WithFields(log.Fields{
 						"zoneID":   zone.ID,
