@@ -45,8 +45,8 @@ jobs:
           {{major}}.{{minor}}.{{patch}}
     - name: Build
       run: |
-        GOOS=linux GOARCH=arm   go build -o bld/tado-exporter-linux-arm
-        GOOS=linux GOARCH=amd64 go build -o bld/tado-exporter-linux-amd64
+        GOOS=linux GOARCH=arm   go build -o bld/tado-monitor-linux-arm
+        GOOS=linux GOARCH=amd64 go build -o bld/tado-monitor-linux-amd64
     - name: output
       run: |
         find bld -type f -print
