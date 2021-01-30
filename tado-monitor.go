@@ -55,6 +55,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	log.Infof("tado-monitor v%s", version.BuildVersion)
+
 	exportTicker := time.NewTicker(cfg.Exporter.Interval)
 	defer exportTicker.Stop()
 

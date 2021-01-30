@@ -43,6 +43,11 @@ jobs:
         tag-semver: |
           {{version}}
           {{major}}.{{minor}}.{{patch}}
+    - uses: crazy-max/ghaction-xgo@v1
+      with:
+        v: true
+        dest: bld
+        ldflags: -X github.com/clambin/tado-exporter/internal/version.BuildVersion=${{ steps.docker_meta.outputs.version }}
     - name: Docker build
       uses: docker/build-push-action@v2
       with:
