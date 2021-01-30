@@ -37,6 +37,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	log.WithField("version", version.BuildVersion).Info("tado-monitor starting")
+
 	if cfg, err = configuration.LoadConfigurationFile(configFile); err != nil {
 		log.Error("Could not load configuration file: " + err.Error())
 		os.Exit(2)
@@ -54,8 +56,6 @@ func main() {
 		log.Error("TADO_USERNAME/TADO_PASSWORD environment variables not set. Aborting ...")
 		os.Exit(1)
 	}
-
-	log.Infof("tado-monitor v%s", version.BuildVersion)
 
 	exportTicker := time.NewTicker(cfg.Exporter.Interval)
 	defer exportTicker.Stop()
@@ -105,13 +105,13 @@ func main() {
 		}).Info("controller created")
 	}
 
-	if export != nil {
-		go func() {
-			listenAddress := fmt.Sprintf(":%d", cfg.Exporter.Port)
-			http.Handle("/metrics", promhttp.Handler())
-			_ = http.ListenAndServe(listenAddress, nil)
-		}()
+	go func() {
+		listenAddress := fmt.Sprintf(":%d", cfg.Exporter.Port)
+		http.Handle("/metrics", promhttp.Handler())
+		_ = http.ListenAndServe(listenAddress, nil)
+	}()
 
+	if export != nil {
 		if err = export.Run(); err != nil {
 			log.WithField("err", err).Warning("exporter failed. Will keep retrying")
 		}
@@ -146,5 +146,5 @@ loop:
 		}
 	}
 
-	log.Debug("exiting")
+	log.Info("tado-monitor exiting")
 }
