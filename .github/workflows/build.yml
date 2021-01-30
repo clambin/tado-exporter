@@ -43,12 +43,10 @@ jobs:
         tag-semver: |
           {{version}}
           {{major}}.{{minor}}.{{patch}}
-    - uses: crazy-max/ghaction-xgo@v1
-      with:
-        v: true
-        dest: bld
-        targets: linux/amd64,linux/arm-7
-        ldflags: -X github.com/clambin/tado-exporter/internal/version.BuildVersion=${{ steps.docker_meta.outputs.version }}
+    - name: Build
+      run: |
+        GOOS=linux GOARCH=arm   go build -o bld/tado-exporter-linux-arm
+        GOOS=linux GOARCH=amd64 go build -o bld/tado-exporter-linux-amd64
     - name: output
       run: |
         find bld -type f -print
