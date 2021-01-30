@@ -48,8 +48,12 @@ jobs:
           {{major}}.{{minor}}.{{patch}}
     - name: Build
       run: |
-        GOOS=linux GOARCH=arm   go build -o bld/tado-monitor-linux-arm
-        GOOS=linux GOARCH=amd64 go build -o bld/tado-monitor-linux-amd64
+        for ARCH in arm amd64; do
+          GOOS=linux GOARCH=$ARCH \
+            go build \
+              -X github.com/clambin/tado-exporter/internal/version.BuildVersion=${{ steps.covid19api_meta.outputs.version }} \
+              -o bld/tado-monitor-linux-$ARCH
+        done
     - name: Docker build
       uses: docker/build-push-action@v2
       with:
@@ -59,8 +63,6 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_meta.outputs.tags }}
         labels: ${{ steps.docker_meta.outputs.labels }}
-        build-args: |
-          BUILD_VERSION=${{ steps.docker_meta.outputs.version }}
     - name: Docker Hub Description
       uses: peter-evans/dockerhub-description@v2
       with:

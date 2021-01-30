@@ -24,7 +24,7 @@ The controller is rule-based. It currently supports two types of rules:
 
 A Docker image is available on [docker](https://hub.docker.com/clambin/tado-monitor).  Images are available for amd64 & arm32v7.
 
-Alternatively, you can clone the repository from [github](https://github.com/r/clambin/tado-exporter) and build from source:
+Alternatively, you can clone the repository from [github](https://github.com/clambin/tado-exporter) and build from source:
 
 ```
 git clone https://github.com/clambin/tado-exporter.git
