@@ -47,7 +47,11 @@ jobs:
       with:
         v: true
         dest: bld
+        targets: linux/amd64,linux/arm-7
         ldflags: -X github.com/clambin/tado-exporter/internal/version.BuildVersion=${{ steps.docker_meta.outputs.version }}
+    - name: output
+      run: |
+        ls bld
     - name: Docker build
       uses: docker/build-push-action@v2
       with:
