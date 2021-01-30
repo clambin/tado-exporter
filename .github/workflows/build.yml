@@ -51,7 +51,7 @@ jobs:
         for ARCH in arm amd64; do
           GOOS=linux GOARCH=$ARCH \
             go build \
-              -ldflags "X github.com/clambin/tado-exporter/internal/version.BuildVersion=${{ steps.covid19api_meta.outputs.version }}" \
+              -ldflags "X github.com/clambin/tado-exporter/internal/version.BuildVersion=${{ steps.docker_meta.outputs.version }}" \
               -o bld/tado-monitor-linux-$ARCH
         done
     - name: Docker build
