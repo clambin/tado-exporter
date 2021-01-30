@@ -6,9 +6,11 @@ COPY . ./
 
 ARG BUILD_VERSION=development
 ARG TARGETPLATFORM
-ARG BUILDPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
 
-RUN echo "I am running on $BUILDPLATFORM, building for $TARGETPLATFORM"
+RUN echo "Building for $TARGETPLATFORM. OS: $TARGETOS, ARCH: $TARGETARCH, VARIANT: $TARGETVARIANT"
 
 RUN CGO_ENABLED=0 go build -ldflags "-X github.com/clambin/tado-exporter/internal/version.BuildVersion=$BUILD_VERSION" tado-monitor.go
 
