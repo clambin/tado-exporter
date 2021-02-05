@@ -25,8 +25,8 @@ func (controller *Controller) runOverlayLimit() error {
 
 	if err = controller.updateOverlays(); err == nil {
 		if actions, err = controller.expireOverlays(); err == nil {
-			for _, action := range actions {
-				if err = controller.runAction(action); err == nil {
+			for _, a := range actions {
+				if err = controller.runAction(a); err == nil {
 					break
 				}
 			}
