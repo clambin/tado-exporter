@@ -31,10 +31,14 @@ func TestTypesToString(t *testing.T) {
 				Power:       "ON",
 				Temperature: tado.Temperature{Celsius: 25.0},
 			},
+			Termination: tado.ZoneInfoOverlayTermination{
+				Type:          "TIMER",
+				RemainingTime: 120,
+			},
 		},
 	}
 
-	assert.Equal(t, `target=25.0ºC, temp=21.0ºC, humidity=30.0%, heating=25.0%, power=ON, openwindow=650s, overlay={type=MANUAL, settings={type=HEATING, power=ON, temp=25.0ºC}}`, zoneInfo.String())
+	assert.Equal(t, `target=25.0ºC, temp=21.0ºC, humidity=30.0%, heating=25.0%, power=ON, openwindow=650s, overlay={type=MANUAL, settings={type=HEATING, power=ON, temp=25.0ºC}, termination={type="TIMER", remaining=120}}`, zoneInfo.String())
 
 	weatherInfo := tado.WeatherInfo{
 		OutsideTemperature: tado.Temperature{Celsius: 27.0},

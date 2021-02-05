@@ -1,6 +1,9 @@
 package controller
 
-import "github.com/clambin/tado-exporter/pkg/tado"
+import (
+	"github.com/clambin/tado-exporter/pkg/tado"
+	log "github.com/sirupsen/logrus"
+)
 
 type action struct {
 	Overlay           bool
@@ -26,6 +29,9 @@ func (controller *Controller) runAction(action action) error {
 			if zoneInfo.Overlay.Type == "MANUAL" {
 				// Delete the overlay
 				err = controller.DeleteZoneOverlay(action.ZoneID)
+			} else {
+				// TODO: does this ever happen?
+				log.WithField("type", zoneInfo.Overlay.Type).Info("not a manual overlay type. not deleting")
 			}
 		}
 	} else {

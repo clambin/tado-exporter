@@ -37,18 +37,24 @@ func (client *MockAPI) GetZoneInfo(zoneID int) (*tado.ZoneInfo, error) {
 			Temperature: tado.Temperature{Celsius: 19.94},
 			Humidity:    tado.Percentage{Percentage: 37.7},
 		},
-	}
-
-	if zoneID != 1 {
-		info.Setting.Temperature.Celsius = 25.0
-		info.Overlay = tado.ZoneInfoOverlay{
+		Overlay: tado.ZoneInfoOverlay{
 			Type: "MANUAL",
 			Setting: tado.ZoneInfoOverlaySetting{
 				Type:        "HEATING",
 				Power:       "ON",
 				Temperature: tado.Temperature{Celsius: 25.0},
 			},
-		}
+			Termination: tado.ZoneInfoOverlayTermination{
+				Type:          "TIMER",
+				RemainingTime: 1200,
+			},
+		},
+	}
+
+	if zoneID == 2 {
+		info.Setting.Temperature.Celsius = 25.0
+		info.Overlay.Termination.Type = "MANUAL"
+		info.Overlay.Termination.RemainingTime = 0
 	}
 
 	return &info, nil

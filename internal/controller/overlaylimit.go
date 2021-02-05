@@ -62,7 +62,12 @@ func (controller *Controller) updateOverlays() error {
 		}
 
 		if zoneInfo, err = controller.GetZoneInfo(zone.ID); err == nil {
-			if zoneInfo.Overlay.Type == "MANUAL" && zoneInfo.Overlay.Setting.Type == "HEATING" {
+			if zoneInfo.Overlay.Type == "MANUAL" &&
+				zoneInfo.Overlay.Setting.Type == "HEATING" &&
+				zoneInfo.Overlay.Termination.Type == "MANUAL" {
+
+				log.WithField("overlay", zoneInfo.Overlay.String()).Debug("overlay found")
+
 				// Zone in overlay. If we're not already tracking it, add it now
 				if _, ok := controller.Overlays[zone.ID]; ok == false {
 					expiry := time.Now().Add(overlayLimitRule.MaxTime)

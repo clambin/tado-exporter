@@ -51,8 +51,9 @@ type ZoneInfoOpenWindow struct {
 
 // ZoneInfoOverlay contains the zone's manual settings
 type ZoneInfoOverlay struct {
-	Type    string                 `json:"type"`
-	Setting ZoneInfoOverlaySetting `json:"setting"`
+	Type        string                     `json:"type"`
+	Setting     ZoneInfoOverlaySetting     `json:"setting"`
+	Termination ZoneInfoOverlayTermination `json:"termination"`
 }
 
 // ZoneInfoOverlaySetting contains the zone's overlay settings
@@ -60,6 +61,17 @@ type ZoneInfoOverlaySetting struct {
 	Type        string      `json:"type"`
 	Power       string      `json:"power"`
 	Temperature Temperature `json:"temperature"`
+}
+
+// ZoneInfoOverlayTermination contains the termination parameters for the zone's overlay
+type ZoneInfoOverlayTermination struct {
+	Type          string `json:"type"`
+	RemainingTime int    `json:"remainingTimeInSeconds"`
+	// not specified:
+	//  "typeSkillBasedApp":"NEXT_TIME_BLOCK",
+	//  "durationInSeconds":1800,
+	//  "expiry":"2021-02-05T23:00:00Z",
+	//  "projectedExpiry":"2021-02-05T23:00:00Z"
 }
 
 // GetZoneInfo gets the info for the specified ZoneID
@@ -130,7 +142,12 @@ func (zoneInfo *ZoneInfo) String() string {
 
 // String serializes a ZoneInfoOverlay into a string. Used for logging.
 func (overlay *ZoneInfoOverlay) String() string {
-	return fmt.Sprintf("type=%s, settings={%s}", overlay.Type, overlay.Setting.String())
+	return fmt.Sprintf(`type=%s, settings={%s}, termination={type="%s", remaining=%d}`,
+		overlay.Type,
+		overlay.Setting.String(),
+		overlay.Termination.Type,
+		overlay.Termination.RemainingTime,
+	)
 }
 
 // String serializes a ZoneInfoOverlaySetting into a string. Used for logging.
