@@ -77,6 +77,9 @@ func (controller *Controller) updateOverlays() error {
 						"zoneName": zone.Name,
 						"expiry":   expiry,
 					}).Info("new zone in overlay")
+					err = controller.notify(
+						fmt.Sprintf("Manual temperature setting detected in zone %s",
+							controller.zoneName(zone.ID)))
 				}
 			} else {
 				// Zone is not in overlay. Remove it from the tracking map
