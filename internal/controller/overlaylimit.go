@@ -111,12 +111,26 @@ func (controller *Controller) expireOverlays() ([]action, error) {
 			// Technically not needed (next run will do this automatically, but facilitates unit testing
 			delete(controller.Overlays, zoneID)
 			// Send a notification if configured
-			if controller.Configuration.NotifyURL != "" {
-				zone, _ := controller.Zones[zoneID]
-				err = shoutrrr.Send(controller.Configuration.NotifyURL,
-					fmt.Sprintf("Disabling manual temperature setting in zone %s", zone.Name))
-			}
+			err = controller.notify(
+				fmt.Sprintf("Disabling manual temperature setting in zone %s",
+					controller.zoneName(zoneID)),
+			)
 		}
 	}
 	return actions, err
+}
+
+func (controller *Controller) notify(message string) error {
+	var err error
+	if controller.Configuration.NotifyURL != "" {
+		err = shoutrrr.Send(controller.Configuration.NotifyURL, message)
+	}
+	return err
+}
+
+func (controller *Controller) zoneName(zoneID int) string {
+	if zone, ok := controller.Zones[zoneID]; ok {
+		return zone.Name
+	}
+	return "unknown"
 }
