@@ -90,29 +90,29 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
-    publish:
-      needs: build
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v2
-        - uses: actions/download-artifact@v2
-          with:
-            path: ./artifacts
-        - name: Move binaries into place
-          run: |
-            mkdir bld
-            mv artifacts/*/* bld
-        - name: Upload binaries to release
-          uses: svenstaro/upload-release-action@v2
-          with:
-            repo_token: ${{ secrets.GITHUB_TOKEN }}
-            file: bld/*
-            tag: ${{ github.ref }}
-            overwrite: true
-            file_glob: true
-        - name: Docker Hub Description
-          uses: peter-evans/dockerhub-description@v2
-          with:
-            username: ${{ secrets.DOCKERHUB_USERNAME }}
-            password: ${{ secrets.DOCKERHUB_TOKEN }}
-            repository: clambin/tado-monitor
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          path: ./artifacts
+      - name: Move binaries into place
+        run: |
+          mkdir bld
+          mv artifacts/*/* bld
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: bld/*
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
+      - name: Docker Hub Description
+        uses: peter-evans/dockerhub-description@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: clambin/tado-monitor
