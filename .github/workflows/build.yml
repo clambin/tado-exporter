@@ -58,9 +58,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
-          with:
-            name: tado-monitor-linux-arm
-            path: ./bld
+        with:
+          name: tado-monitor-linux-arm
+          path: ./bld
       - uses: actions/download-artifact@v2
         with:
           name: tado-monitor-linux-amd64
