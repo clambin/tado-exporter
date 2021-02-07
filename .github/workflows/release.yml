@@ -45,7 +45,7 @@ jobs:
       run: |
           go build \
             -ldflags "-X github.com/clambin/tado-exporter/internal/version.BuildVersion=$RELEASE_VERSION" \
-            -o bld/$TARGET-$PLATFORM-$ARCH \
+            -o bld/$TARGET-$GOOS-$GOARCH \
             $TARGET.go
     - uses: actions/upload-artifact@v2
       with:
