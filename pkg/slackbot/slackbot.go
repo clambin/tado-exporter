@@ -10,9 +10,9 @@ import (
 )
 
 type SlackBot struct {
+	counter uint64
 	ws      *websocket.Conn
 	id      string
-	counter uint64
 }
 
 // Connect to slack & return a slackbot handle
