@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/pkg/tado"
-	"github.com/containrrr/shoutrrr"
 	log "github.com/sirupsen/logrus"
 	"time"
 )
@@ -31,9 +30,9 @@ func (controller *Controller) runAutoAway() error {
 		actions []action
 	)
 
-	// update mobiles & zones for each autoaway entry
+	// update mobiles & zones for each autoAway entry
 	if err = controller.updateAutoAwayInfo(); err == nil {
-		// get actions for each autoaway setting
+		// get actions for each autoAway setting
 		if actions, err = controller.getAutoAwayActions(); err == nil {
 			for _, action := range actions {
 				// execute each action
@@ -131,16 +130,14 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 				"MobileDeviceID": id,
 				"ZoneID":         autoAwayInfo.ZoneID,
 			}).Info("User returned home. Removing overlay")
-			if controller.Configuration.NotifyURL != "" {
-				mobileDevice, _ := controller.MobileDevices[id]
-				zone, _ := controller.Zones[autoAwayInfo.ZoneID]
-				err = shoutrrr.Send(controller.Configuration.NotifyURL,
-					fmt.Sprintf("%s is home. switching off manual control in zone %s",
-						mobileDevice.Name,
-						zone.Name,
-					),
-				)
-			}
+			// notify via slack if needed
+			mobileDevice, _ := controller.MobileDevices[id]
+			err = controller.notify(
+				fmt.Sprintf("%s is home. switching off manual control in zone %s",
+					mobileDevice.Name,
+					controller.zoneName(autoAwayInfo.ZoneID),
+				),
+			)
 		} else
 		// if the mobile phone is away
 		if !autoAwayInfo.MobileDevice.Location.AtHome {
@@ -163,17 +160,14 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 					"ZoneID":            autoAwayInfo.ZoneID,
 					"TargetTemperature": autoAwayInfo.AutoAwayRule.TargetTemperature,
 				}).Info("User left. Setting overlay")
-				if controller.Configuration.NotifyURL != "" {
-					mobileDevice, _ := controller.MobileDevices[id]
-					zone, _ := controller.Zones[autoAwayInfo.AutoAwayRule.ZoneID]
-					err = shoutrrr.Send(controller.Configuration.NotifyURL,
-						fmt.Sprintf("%s is away. activating manual control in zone %s",
-							mobileDevice.Name,
-							zone.Name,
-						),
-					)
-				}
-
+				// notify via slack if needed
+				mobileDevice, _ := controller.MobileDevices[id]
+				err = controller.notify(
+					fmt.Sprintf("%s is away. activating manual control in zone %s",
+						mobileDevice.Name,
+						controller.zoneName(autoAwayInfo.AutoAwayRule.ZoneID),
+					),
+				)
 			}
 		}
 	}

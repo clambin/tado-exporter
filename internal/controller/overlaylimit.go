@@ -3,7 +3,6 @@ package controller
 import (
 	"fmt"
 	"github.com/clambin/tado-exporter/pkg/tado"
-	"github.com/containrrr/shoutrrr"
 	log "github.com/sirupsen/logrus"
 	"time"
 )
@@ -77,6 +76,7 @@ func (controller *Controller) updateOverlays() error {
 						"zoneName": zone.Name,
 						"expiry":   expiry,
 					}).Info("new zone in overlay")
+					// notify via slack if needed
 					err = controller.notify(
 						fmt.Sprintf("Manual temperature setting detected in zone %s",
 							controller.zoneName(zone.ID)))
@@ -113,7 +113,7 @@ func (controller *Controller) expireOverlays() ([]action, error) {
 			log.WithField("zoneID", zoneID).Info("expiring overlay in zone")
 			// Technically not needed (next run will do this automatically, but facilitates unit testing
 			delete(controller.Overlays, zoneID)
-			// Send a notification if configured
+			// notify via slack if needed
 			err = controller.notify(
 				fmt.Sprintf("Disabling manual temperature setting in zone %s",
 					controller.zoneName(zoneID)),
@@ -121,19 +121,4 @@ func (controller *Controller) expireOverlays() ([]action, error) {
 		}
 	}
 	return actions, err
-}
-
-func (controller *Controller) notify(message string) error {
-	var err error
-	if controller.Configuration.NotifyURL != "" {
-		err = shoutrrr.Send(controller.Configuration.NotifyURL, message)
-	}
-	return err
-}
-
-func (controller *Controller) zoneName(zoneID int) string {
-	if zone, ok := controller.Zones[zoneID]; ok {
-		return zone.Name
-	}
-	return "unknown"
 }
