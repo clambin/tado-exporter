@@ -70,8 +70,6 @@ func (bot *TadoBot) Run() {
 				if err = bot.slackbot.PostMessage(message); err != nil {
 					log.WithField("err", err).Warning("failed to send slack message")
 				}
-			} else {
-				log.WithField("type", message.Type).Info("unhandled message type")
 			}
 		}
 	}

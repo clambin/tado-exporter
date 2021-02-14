@@ -10,6 +10,8 @@ import (
 )
 
 type SlackBot struct {
+	// counter needs to be first, otherwise atomic.AddUint64() may panic in 32 architectures
+	// https://github.com/golang/go/issues/23345
 	counter uint64
 	ws      *websocket.Conn
 	id      string
