@@ -25,6 +25,7 @@ type ExporterConfiguration struct {
 type ControllerConfiguration struct {
 	Enabled           bool
 	Interval          time.Duration
+	SlackbotToken     string               `yaml:"slackbotToken"`
 	NotifyURL         string               `yaml:"notifyURL"`
 	AutoAwayRules     *[]*AutoAwayRule     `yaml:"autoAwayRules"`
 	OverlayLimitRules *[]*OverlayLimitRule `yaml:"overlayLimitRules"`

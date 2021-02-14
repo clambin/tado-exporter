@@ -2,6 +2,7 @@ package controller
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -11,6 +12,7 @@ import (
 type Controller struct {
 	tado.API
 	Configuration *configuration.ControllerConfiguration
+	TadoBot       *tadobot.TadoBot
 
 	Zones         map[int]*tado.Zone
 	MobileDevices map[int]*tado.MobileDevice
