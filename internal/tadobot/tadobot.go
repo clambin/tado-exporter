@@ -15,9 +15,10 @@ type CallbackFunc func() []string
 type TadoBot struct {
 	tado.API
 	slackClient *slack.Client
+	slackRTM    *slack.RTM
 	slackToken  string
 	userID      string
-	channels    []string
+	channelIDs  []string
 	callbacks   map[string]CallbackFunc
 }
 
@@ -39,22 +40,24 @@ func Create(slackToken, tadoUser, tadoPassword, tadoSecret string) (bot *TadoBot
 		"rooms":   bot.doRooms,
 		"users":   bot.doUsers,
 	}
+	bot.channelIDs, err = bot.getAllChannels()
 	return
 }
 
 // Run the slackbot
 func (bot *TadoBot) Run() {
-	rtm := bot.slackClient.NewRTM()
-	go rtm.ManageConnection()
+	bot.slackRTM = bot.slackClient.NewRTM()
+	go bot.slackRTM.ManageConnection()
 
 loop:
-	for msg := range rtm.IncomingEvents {
+	for msg := range bot.slackRTM.IncomingEvents {
 		switch ev := msg.Data.(type) {
 		case *slack.HelloEvent:
 			log.WithField("ev", ev).Debug("hello")
 		case *slack.ConnectedEvent:
 			bot.userID = ev.Info.User.ID
 			log.WithField("userID", bot.userID).Info("tadoBot connected to slack")
+			_ = bot.SendMessage("", "tadobot reporting for duty")
 		case *slack.MessageEvent:
 			log.WithFields(log.Fields{
 				"name":     ev.Name,
@@ -65,7 +68,7 @@ loop:
 				"botID":    ev.BotID,
 			}).Debug("message received: " + ev.Text)
 			if attachment := bot.processMessage(ev.Text); attachment != nil {
-				if _, _, err := rtm.PostMessage(
+				if _, _, err := bot.slackRTM.PostMessage(
 					ev.Channel,
 					slack.MsgOptionAttachments(*attachment),
 					slack.MsgOptionAsUser(true),
@@ -103,6 +106,60 @@ func (bot *TadoBot) processMessage(text string) (attachment *slack.Attachment) {
 			}
 		}
 	}
+	return
+}
+
+// getAllChannels returns all channels the bot can post on.
+// This is either the bot's direct channel or any channels the bot's been invited to
+func (bot *TadoBot) getAllChannels() (channelIDs []string, err error) {
+	params := &slack.GetConversationsForUserParameters{
+		Cursor: "",
+		Limit:  0,
+		Types: []string{
+			"public_channel", "private_channel", "im",
+		},
+	}
+
+	channels, _, err := bot.slackClient.GetConversationsForUser(params)
+
+	for _, channel := range channels {
+		log.WithFields(log.Fields{
+			"name":      channel.Name,
+			"id":        channel.ID,
+			"isChannel": channel.IsChannel,
+			"isPrivate": channel.IsPrivate,
+			"isIM":      channel.IsIM,
+		}).Debug("found a channel")
+
+		// if channel.IsChannel || (channel.IsIM && channel.Conversation.ID == bot.userID) {
+		channelIDs = append(channelIDs, channel.ID)
+		// }
+	}
+
+	log.WithFields(log.Fields{
+		"channelIDs": channelIDs,
+		"err":        err,
+	}).Debug("found channels")
+
+	return
+}
+
+func (bot *TadoBot) SendMessage(title, text string) (err error) {
+	attachment := slack.Attachment{
+		Title: title,
+		Text:  text,
+	}
+
+	for _, channelID := range bot.channelIDs {
+		_, _, err = bot.slackRTM.PostMessage(
+			channelID,
+			slack.MsgOptionAttachments(attachment),
+			slack.MsgOptionAsUser(true),
+		)
+	}
+
+	log.WithField("err", err).Debug("sent a message")
+
 	return
 }
 

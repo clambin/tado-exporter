@@ -131,9 +131,9 @@ func (controller *Controller) notify(message string) error {
 	if controller.Configuration.NotifyURL != "" {
 		err = shoutrrr.Send(controller.Configuration.NotifyURL, message)
 	}
-	//	if controller.TadoBot != nil {
-	//		err = controller.TadoBot.PostMessage(message)
-	//	}
+	if controller.TadoBot != nil {
+		err = controller.TadoBot.SendMessage("", message)
+	}
 	return err
 }
 
