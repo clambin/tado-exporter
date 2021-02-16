@@ -3,9 +3,9 @@ package tadobot
 import (
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/version"
-	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
+	"github.com/slack-go/slack"
 	"net/http"
 	"strings"
 )
@@ -14,82 +14,99 @@ type CallbackFunc func() []string
 
 type TadoBot struct {
 	tado.API
-	slackbot   *slackbot.SlackBot
-	slackToken string
-	channel    string
-	callbacks  map[string]CallbackFunc
+	slackClient *slack.Client
+	slackToken  string
+	userID      string
+	channels    []string
+	callbacks   map[string]CallbackFunc
 }
 
 // Create connects to a slackbot designated by token
 func Create(slackToken, tadoUser, tadoPassword, tadoSecret string) (bot *TadoBot, err error) {
-	var botHandle *slackbot.SlackBot
+	bot = &TadoBot{
+		API: &tado.APIClient{
+			HTTPClient:   &http.Client{},
+			Username:     tadoUser,
+			Password:     tadoPassword,
+			ClientSecret: tadoSecret,
+		},
+		slackClient: slack.New(slackToken),
+		slackToken:  slackToken,
+	}
+	bot.callbacks = map[string]CallbackFunc{
+		"help":    bot.doHelp,
+		"version": bot.doVersion,
+		"rooms":   bot.doRooms,
+		"users":   bot.doUsers,
+	}
+	return
+}
 
-	if botHandle, err = slackbot.Connect(slackToken); err == nil {
-		bot = &TadoBot{
-			API: &tado.APIClient{
-				HTTPClient:   &http.Client{},
-				Username:     tadoUser,
-				Password:     tadoPassword,
-				ClientSecret: tadoSecret,
-			},
-			slackbot:   botHandle,
-			slackToken: slackToken,
+// Run the slackbot
+func (bot *TadoBot) Run() {
+	rtm := bot.slackClient.NewRTM()
+	go rtm.ManageConnection()
+
+loop:
+	for msg := range rtm.IncomingEvents {
+		switch ev := msg.Data.(type) {
+		case *slack.HelloEvent:
+			log.WithField("ev", ev).Debug("hello")
+		case *slack.ConnectedEvent:
+			bot.userID = ev.Info.User.ID
+			log.WithField("userID", bot.userID).Info("tadoBot connected to slack")
+		case *slack.MessageEvent:
+			log.WithFields(log.Fields{
+				"name":     ev.Name,
+				"user":     ev.User,
+				"channel":  ev.Channel,
+				"type":     ev.Type,
+				"userName": ev.Username,
+				"botID":    ev.BotID,
+			}).Debug("message received: " + ev.Text)
+			if attachment := bot.processMessage(ev.Text); attachment != nil {
+				if _, _, err := rtm.PostMessage(
+					ev.Channel,
+					slack.MsgOptionAttachments(*attachment),
+					slack.MsgOptionAsUser(true),
+				); err != nil {
+					log.WithField("err", err).Warning("failed to send on slack")
+				}
+			}
+		case *slack.RTMError:
+			log.WithField("error", ev.Error()).Error("Error")
+			// TODO: reconnect here?
+		case *slack.InvalidAuthEvent:
+			log.Error("invalid credentials")
+			break loop
 		}
-		bot.callbacks = map[string]CallbackFunc{
-			"help":    bot.DoHelp,
-			"version": bot.DoVersion,
-			"rooms":   bot.DoRooms,
-			"users":   bot.DoUsers,
+	}
+}
+
+func (bot *TadoBot) processMessage(text string) (attachment *slack.Attachment) {
+	// check if we're mentioned
+	log.WithField("text", text).Debug("processing slack chatter")
+	if parts := strings.Split(text, " "); len(parts) > 0 {
+		if parts[0] == "<@"+bot.userID+">" {
+			if command, ok := bot.callbacks[parts[1]]; ok {
+				log.WithField("command", command).Debug("command found")
+				attachment = &slack.Attachment{
+					Color: "good",
+					Text:  strings.Join(command(), "\n"),
+				}
+			} else {
+				attachment = &slack.Attachment{
+					Color: "warning",
+					Title: "Unknown command \"" + parts[1] + "\"",
+					Text:  strings.Join(bot.doHelp(), "\n"),
+				}
+			}
 		}
 	}
 	return
 }
 
-func (bot *TadoBot) Run() {
-	var (
-		err       error
-		message   slackbot.Message
-		responses []string
-	)
-
-	for {
-		message, err = bot.slackbot.GetMessage()
-
-		if err != nil {
-			log.WithField("err", err).Warning("failed to get slack message. reconnecting")
-			if bot.slackbot, err = slackbot.Connect(bot.slackToken); err != nil {
-				log.WithField("err", err).Fatal("failed to reconnect to slack")
-			}
-		} else {
-			if message.Type == "hello" {
-				bot.channel = message.Channel
-			} else if message.Type == "message" {
-				if f, ok := bot.callbacks[message.Text]; ok {
-					responses = f()
-				} else {
-					responses = []string{"unknown command"}
-				}
-
-				message.Text = strings.Join(responses, "\n")
-
-				if err = bot.slackbot.PostMessage(message); err != nil {
-					log.WithField("err", err).Warning("failed to send slack message")
-				}
-			}
-		}
-	}
-}
-
-func (bot *TadoBot) PostMessage(message string) error {
-	m := slackbot.Message{
-		Type:    "message",
-		Channel: bot.channel,
-		Text:    message,
-	}
-	return bot.slackbot.PostMessage(m)
-}
-
-func (bot *TadoBot) DoHelp() []string {
+func (bot *TadoBot) doHelp() []string {
 	var commands = make([]string, 0)
 	for command := range bot.callbacks {
 		commands = append(commands, command)
@@ -97,11 +114,11 @@ func (bot *TadoBot) DoHelp() []string {
 	return []string{"supported commands: " + strings.Join(commands, ", ")}
 }
 
-func (bot *TadoBot) DoVersion() []string {
+func (bot *TadoBot) doVersion() []string {
 	return []string{"tado v" + version.BuildVersion}
 }
 
-func (bot *TadoBot) DoRooms() (responses []string) {
+func (bot *TadoBot) doRooms() (responses []string) {
 	var (
 		err   error
 		zones []*tado.Zone
@@ -139,7 +156,7 @@ func (bot *TadoBot) DoRooms() (responses []string) {
 	return
 }
 
-func (bot *TadoBot) DoUsers() (responses []string) {
+func (bot *TadoBot) doUsers() (responses []string) {
 	var (
 		err     error
 		devices []*tado.MobileDevice
