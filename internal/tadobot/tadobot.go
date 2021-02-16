@@ -10,13 +10,14 @@ import (
 	"strings"
 )
 
-type CallbackFunc func() string
+type CallbackFunc func() []string
 
 type TadoBot struct {
 	tado.API
-	slackbot  *slackbot.SlackBot
-	channel   string
-	callbacks map[string]CallbackFunc
+	slackbot   *slackbot.SlackBot
+	slackToken string
+	channel    string
+	callbacks  map[string]CallbackFunc
 }
 
 // Create connects to a slackbot designated by token
@@ -31,7 +32,8 @@ func Create(slackToken, tadoUser, tadoPassword, tadoSecret string) (bot *TadoBot
 				Password:     tadoPassword,
 				ClientSecret: tadoSecret,
 			},
-			slackbot: botHandle,
+			slackbot:   botHandle,
+			slackToken: slackToken,
 		}
 		bot.callbacks = map[string]CallbackFunc{
 			"help":    bot.DoHelp,
@@ -45,27 +47,30 @@ func Create(slackToken, tadoUser, tadoPassword, tadoSecret string) (bot *TadoBot
 
 func (bot *TadoBot) Run() {
 	var (
-		err      error
-		message  slackbot.Message
-		response string
+		err       error
+		message   slackbot.Message
+		responses []string
 	)
 
 	for {
 		message, err = bot.slackbot.GetMessage()
 
 		if err != nil {
-			log.WithField("err", err).Warning("failed to get slack message")
+			log.WithField("err", err).Warning("failed to get slack message. reconnecting")
+			if bot.slackbot, err = slackbot.Connect(bot.slackToken); err != nil {
+				log.WithField("err", err).Fatal("failed to reconnect to slack")
+			}
 		} else {
 			if message.Type == "hello" {
 				bot.channel = message.Channel
 			} else if message.Type == "message" {
 				if f, ok := bot.callbacks[message.Text]; ok {
-					response = f()
+					responses = f()
 				} else {
-					response = "unknown command"
+					responses = []string{"unknown command"}
 				}
 
-				message.Text = response
+				message.Text = strings.Join(responses, "\n")
 
 				if err = bot.slackbot.PostMessage(message); err != nil {
 					log.WithField("err", err).Warning("failed to send slack message")
@@ -84,19 +89,19 @@ func (bot *TadoBot) PostMessage(message string) error {
 	return bot.slackbot.PostMessage(m)
 }
 
-func (bot *TadoBot) DoHelp() string {
+func (bot *TadoBot) DoHelp() []string {
 	var commands = make([]string, 0)
 	for command := range bot.callbacks {
 		commands = append(commands, command)
 	}
-	return "supported commands: " + strings.Join(commands, ", ")
+	return []string{"supported commands: " + strings.Join(commands, ", ")}
 }
 
-func (bot *TadoBot) DoVersion() string {
-	return "tado v" + version.BuildVersion
+func (bot *TadoBot) DoVersion() []string {
+	return []string{"tado v" + version.BuildVersion}
 }
 
-func (bot *TadoBot) DoRooms() (response string) {
+func (bot *TadoBot) DoRooms() (responses []string) {
 	var (
 		err   error
 		zones []*tado.Zone
@@ -115,29 +120,26 @@ func (bot *TadoBot) DoRooms() (response string) {
 
 	if err == nil {
 		for zoneName, zoneInfo := range zoneInfos {
-			if response != "" {
-				response += "\n"
-			}
 			mode := ""
 			if zoneInfo.Overlay.Type == "MANUAL" &&
 				zoneInfo.Overlay.Setting.Type == "HEATING" {
 				mode = " MANUAL"
 			}
-			response += fmt.Sprintf("%s: %.1fºC (target: %.1fºC%s)",
+			responses = append(responses, fmt.Sprintf("%s: %.1fºC (target: %.1fºC%s)",
 				zoneName,
 				zoneInfo.SensorDataPoints.Temperature.Celsius,
 				zoneInfo.Setting.Temperature.Celsius,
 				mode,
-			)
+			))
 		}
 	} else {
-		response = "unable to get rooms: " + err.Error()
+		responses = []string{"unable to get rooms: " + err.Error()}
 	}
 
 	return
 }
 
-func (bot *TadoBot) DoUsers() (response string) {
+func (bot *TadoBot) DoUsers() (responses []string) {
 	var (
 		err     error
 		devices []*tado.MobileDevice
@@ -149,14 +151,11 @@ func (bot *TadoBot) DoUsers() (response string) {
 				if device.Location.AtHome {
 					state = "home"
 				}
-				if response != "" {
-					response += "\n"
-				}
-				response += fmt.Sprintf("%s: %s", device.Name, state)
+				responses = append(responses, fmt.Sprintf("%s: %s", device.Name, state))
 			}
 		}
 	} else {
-		response = "unable to get users: " + err.Error()
+		responses = []string{"unable to get users: " + err.Error()}
 	}
-	return response
+	return
 }

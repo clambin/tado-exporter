@@ -5,15 +5,17 @@ import (
 	"github.com/clambin/tado-exporter/internal/version"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
+	"sort"
 	"testing"
 )
 
 func TestTadoBot_DoVersion(t *testing.T) {
 	bot := tadobot.TadoBot{}
 
-	response := bot.DoVersion()
+	responses := bot.DoVersion()
+	sort.Strings(responses)
 
-	assert.Equal(t, "tado v"+version.BuildVersion, response)
+	assert.Equal(t, "tado v"+version.BuildVersion, responses[0])
 }
 
 func TestTadoBot_DoRooms(t *testing.T) {
@@ -21,9 +23,12 @@ func TestTadoBot_DoRooms(t *testing.T) {
 		API: &mockapi.MockAPI{},
 	}
 
-	response := bot.DoRooms()
+	responses := bot.DoRooms()
+	sort.Strings(responses)
 
-	assert.Equal(t, "foo: 19.9ºC (target: 20.0ºC MANUAL)\nbar: 19.9ºC (target: 25.0ºC MANUAL)", response)
+	assert.Equal(t, "bar: 19.9ºC (target: 25.0ºC MANUAL)", responses[0])
+	assert.Equal(t, "foo: 19.9ºC (target: 20.0ºC MANUAL)", responses[1])
+
 }
 
 func TestTadoBot_DoUsers(t *testing.T) {
@@ -31,7 +36,9 @@ func TestTadoBot_DoUsers(t *testing.T) {
 		API: &mockapi.MockAPI{},
 	}
 
-	response := bot.DoUsers()
+	responses := bot.DoUsers()
+	sort.Strings(responses)
 
-	assert.Equal(t, "foo: home\nbar: away", response)
+	assert.Equal(t, "bar: away", responses[0])
+	assert.Equal(t, "foo: home", responses[1])
 }

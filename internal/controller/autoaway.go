@@ -2,21 +2,10 @@ package controller
 
 import (
 	"fmt"
-	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"time"
 )
-
-// AutoAwayInfo contains the user we are tracking, and what zone to set to which temperature
-// when ActivationTime occurs
-type AutoAwayInfo struct {
-	MobileDevice   *tado.MobileDevice
-	Home           bool
-	ActivationTime time.Time
-	ZoneID         int
-	AutoAwayRule   *configuration.AutoAwayRule
-}
 
 // runAutoAway runOverlayLimit checks if mobileDevices have come/left home and performs
 // configured autoAway rules
@@ -50,33 +39,31 @@ func (controller *Controller) runAutoAway() error {
 // updateAutoAwayInfo updates the mobile device & zone information for each autoAway rule.
 // On exit, the map controller.AutoAwayInfo contains the up-to-date mobileDevice information
 // for any mobile device mentioned in any autoAway rule.
-func (controller *Controller) updateAutoAwayInfo() error {
-	var err error
-
+func (controller *Controller) updateAutoAwayInfo() (err error) {
 	// If the map doesn't exist, create it
 	if controller.AutoAwayInfo == nil {
 		controller.AutoAwayInfo = make(map[int]AutoAwayInfo)
 	}
 
 	// for each autoAway setting, add/update a record for the mobileDevice
-	for _, autoAway := range *controller.Configuration.AutoAwayRules {
+	for _, autoAwayRule := range *controller.Configuration.AutoAwayRules {
 		var (
 			mobileDevice *tado.MobileDevice
 			zone         *tado.Zone
 		)
 		// Rules file can contain either mobileDevice/zone ID or Name. Retrieve the ID for each of these
 		// and discard any that aren't valid
-		if mobileDevice = controller.lookupMobileDevice(autoAway.MobileDeviceID, autoAway.MobileDeviceName); mobileDevice == nil {
+		if mobileDevice = controller.lookupMobileDevice(autoAwayRule.MobileDeviceID, autoAwayRule.MobileDeviceName); mobileDevice == nil {
 			log.WithFields(log.Fields{
-				"deviceID":   autoAway.MobileDeviceID,
-				"deviceName": autoAway.MobileDeviceName,
+				"deviceID":   autoAwayRule.MobileDeviceID,
+				"deviceName": autoAwayRule.MobileDeviceName,
 			}).Warning("skipping unknown mobile device in AutoAway rule")
 			continue
 		}
-		if zone = controller.lookupZone(autoAway.ZoneID, autoAway.ZoneName); zone == nil {
+		if zone = controller.lookupZone(autoAwayRule.ZoneID, autoAwayRule.ZoneName); zone == nil {
 			log.WithFields(log.Fields{
-				"zoneID":   autoAway.ZoneID,
-				"zoneName": autoAway.ZoneName,
+				"zoneID":   autoAwayRule.ZoneID,
+				"zoneName": autoAwayRule.ZoneName,
 			}).Warning("skipping unknown zone in AutoAway rule")
 			continue
 		}
@@ -87,14 +74,16 @@ func (controller *Controller) updateAutoAwayInfo() error {
 			controller.AutoAwayInfo[mobileDevice.ID] = AutoAwayInfo{
 				MobileDevice:   mobileDevice,
 				ZoneID:         zone.ID,
-				AutoAwayRule:   autoAway,
-				Home:           mobileDevice.Location.AtHome,
-				ActivationTime: time.Now().Add(autoAway.WaitTime),
+				AutoAwayRule:   autoAwayRule,
+				state:          getInitialState(mobileDevice),
+				ActivationTime: time.Now().Add(autoAwayRule.WaitTime),
 			}
 		} else {
 			// If we already have it, update it
 			entry.MobileDevice = mobileDevice
+			controller.AutoAwayInfo[mobileDevice.ID] = entry
 		}
+
 	}
 
 	return err
@@ -112,14 +101,15 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 		log.WithFields(log.Fields{
 			"mobileDeviceID":   autoAwayInfo.MobileDevice.ID,
 			"mobileDeviceName": autoAwayInfo.MobileDevice.Name,
+			"state":            autoAwayInfo.state,
 			"new_home":         autoAwayInfo.MobileDevice.Location.AtHome,
-			"old_home":         autoAwayInfo.Home,
+			"activation_time":  autoAwayInfo.ActivationTime,
 		}).Debug("autoAwayInfo")
 
 		// if the mobile phone is now home but was away
-		if autoAwayInfo.MobileDevice.Location.AtHome && !autoAwayInfo.Home {
+		if autoAwayInfo.cameHome() {
 			// mark the phone at home
-			autoAwayInfo.Home = true
+			autoAwayInfo.state = autoAwayStateHome
 			controller.AutoAwayInfo[id] = autoAwayInfo
 			// add action to disable the overlay
 			actions = append(actions, action{
@@ -139,36 +129,36 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 				),
 			)
 		} else
-		// if the mobile phone is away
-		if !autoAwayInfo.MobileDevice.Location.AtHome {
-			// if the phone was home, mark the phone away & record the time
-			if autoAwayInfo.Home {
-				autoAwayInfo.Home = false
-				autoAwayInfo.ActivationTime = time.Now().Add(autoAwayInfo.AutoAwayRule.WaitTime)
-				controller.AutoAwayInfo[id] = autoAwayInfo
-			}
-			// if the phone's been away for the required time
-			if time.Now().After(autoAwayInfo.ActivationTime) {
-				// add action to set the overlay
-				actions = append(actions, action{
-					Overlay:           true,
-					ZoneID:            autoAwayInfo.ZoneID,
-					TargetTemperature: autoAwayInfo.AutoAwayRule.TargetTemperature,
-				})
-				log.WithFields(log.Fields{
-					"MobileDeviceID":    id,
-					"ZoneID":            autoAwayInfo.ZoneID,
-					"TargetTemperature": autoAwayInfo.AutoAwayRule.TargetTemperature,
-				}).Info("User left. Setting overlay")
-				// notify via slack if needed
-				mobileDevice, _ := controller.MobileDevices[id]
-				err = controller.notify(
-					fmt.Sprintf("%s is away. activating manual control in zone %s",
-						mobileDevice.Name,
-						controller.zoneName(autoAwayInfo.AutoAwayRule.ZoneID),
-					),
-				)
-			}
+		// if the mobile phone is away, mark it as such and set the activation timer
+		if autoAwayInfo.leftHome() {
+			autoAwayInfo.state = autoAwayStateAway
+			autoAwayInfo.ActivationTime = time.Now().Add(autoAwayInfo.AutoAwayRule.WaitTime)
+			controller.AutoAwayInfo[id] = autoAwayInfo
+		} else
+		// if the mobile phone was already away, check the activation timer
+		if autoAwayInfo.shouldReport() {
+
+			autoAwayInfo.state = autoAwayStateReported
+			controller.AutoAwayInfo[id] = autoAwayInfo
+			// add action to set the overlay
+			actions = append(actions, action{
+				Overlay:           true,
+				ZoneID:            autoAwayInfo.ZoneID,
+				TargetTemperature: autoAwayInfo.AutoAwayRule.TargetTemperature,
+			})
+			log.WithFields(log.Fields{
+				"MobileDeviceID":    id,
+				"ZoneID":            autoAwayInfo.ZoneID,
+				"TargetTemperature": autoAwayInfo.AutoAwayRule.TargetTemperature,
+			}).Info("User left. Setting overlay")
+			// notify via slack if needed
+			mobileDevice, _ := controller.MobileDevices[id]
+			err = controller.notify(
+				fmt.Sprintf("%s is away. activating manual control in zone %s",
+					mobileDevice.Name,
+					controller.zoneName(autoAwayInfo.ZoneID),
+				),
+			)
 		}
 	}
 	return actions, err

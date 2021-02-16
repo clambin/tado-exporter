@@ -1,8 +1,7 @@
-package controller_test
+package controller
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -28,7 +27,7 @@ controller:
 	}
 
 	server := mockapi.MockAPI{}
-	control := controller.Controller{
+	control := Controller{
 		API:           &server,
 		Configuration: &cfg.Controller,
 	}
@@ -43,7 +42,7 @@ controller:
 
 	// "foo" was previously away
 	autoAway, _ := control.AutoAwayInfo[1]
-	autoAway.Home = false
+	autoAway.state = autoAwayStateAway
 	control.AutoAwayInfo[1] = autoAway
 
 	err = control.Run()
@@ -53,14 +52,14 @@ controller:
 	// "bar" was previously home
 	autoAway, _ = control.AutoAwayInfo[2]
 	oldActivationTime := autoAway.ActivationTime
-	autoAway.Home = true
+	autoAway.state = autoAwayStateHome
 	control.AutoAwayInfo[2] = autoAway
 
 	err = control.Run()
 	assert.Nil(t, err)
 
 	autoAway, _ = control.AutoAwayInfo[2]
-	assert.False(t, autoAway.Home)
+	assert.Equal(t, autoAwayState(autoAwayStateAway), autoAway.state)
 	assert.True(t, autoAway.ActivationTime.After(oldActivationTime))
 
 	// "bar" has been away for a long time
@@ -69,6 +68,10 @@ controller:
 	control.AutoAwayInfo[2] = autoAway
 	err = control.Run()
 	assert.Nil(t, err)
+	autoAway, _ = control.AutoAwayInfo[2]
+	assert.Equal(t, autoAwayState(autoAwayStateReported), autoAway.state)
 	assert.Len(t, server.Overlays, 1)
 	assert.Equal(t, 15.0, server.Overlays[2])
+
+	// TODO: once bar is away, it shouldn't trigger any more events
 }
