@@ -44,8 +44,7 @@ func TestTadoBot_DoUsers(t *testing.T) {
 }
 
 func TestTadoBot_ProcessMessage(t *testing.T) {
-	bot, err := Create("", "", "", "")
-	assert.Nil(t, err)
+	bot, _ := Create("", "", "", "")
 	bot.API = &mockapi.MockAPI{}
 	bot.userID = "12345678"
 
