@@ -97,7 +97,7 @@ controller:
   enabled: false
   # How often rules should be evaluated
   interval: 5m
-  # When set, tado will start a slack bot. See below for details.
+  # When set, tado will start a slack bot.  See below for details.
   slackbotToken: xoxb-slackbot-token
   
   # autoAway rules switch a room to manual control when a user is not home
@@ -190,6 +190,7 @@ Manual temperature setting detected in zone Bathroom
 
 tadobotAPP  14:15
 Disabling manual temperature setting in zone Bathroom
+
 ```
 
 Users can also interact with the bot:
@@ -212,7 +213,7 @@ Currently, the following commands are supported:
 * **version**: show version of tado-controller
 * **help**: show all available commands
 
-To enable the bot, add a bot in the workspace's Custom Integrations and add the API Token in the configuration file (*slackbotToken*).
+To enable the bot, add a bot the workspace's Custom Integrations and add the API Token in the configuration file (*slackbotToken*).
 
 ## Tado Client API
 

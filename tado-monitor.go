@@ -5,6 +5,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/internal/exporter"
+	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/internal/version"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -98,6 +99,22 @@ func main() {
 		if cfg.Controller.OverlayLimitRules != nil {
 			overlayLimitRules = len(*cfg.Controller.OverlayLimitRules)
 		}
+
+		if cfg.Controller.SlackbotToken != "" {
+			if control.TadoBot, err = tadobot.Create(
+				cfg.Controller.SlackbotToken,
+				username,
+				password,
+				clientSecret,
+			); err == nil {
+				go func() {
+					control.TadoBot.Run()
+				}()
+			} else {
+				log.WithField("err", "failed to start TadoBot")
+			}
+		}
+
 		log.WithFields(log.Fields{
 			"interval":          cfg.Controller.Interval,
 			"autoAwayRules":     autoAwayRules,
