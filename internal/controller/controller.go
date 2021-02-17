@@ -20,17 +20,6 @@ type Controller struct {
 	Overlays      map[int]time.Time
 }
 
-// Configuration options for tado-exporter
-type Configuration struct {
-	Username     string
-	Password     string
-	ClientSecret string
-	Interval     time.Duration
-	NotifyURL    string
-	Port         int
-	Debug        bool
-}
-
 // Run executes all controller rules
 func (controller *Controller) Run() error {
 	err := controller.updateTadoConfig()
