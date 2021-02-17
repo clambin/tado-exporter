@@ -97,9 +97,8 @@ controller:
   enabled: false
   # How often rules should be evaluated
   interval: 5m
-  # When set, notifyURL is used to report actions taken due to executed rules
-  # See https://github.com/containrrr/shoutrrr for possible values
-  notifyURL: slack://tado-controller@T01J50B58E8/B01LHL7NHH6/XCJ00nU3Cr5qo2RWJcqKatVb
+  # When set, tado will start a slack bot. See below for details.
+  slackbotToken: xoxb-slackbot-token
   
   # autoAway rules switch a room to manual control when a user is not home
   autoAwayRules:
@@ -179,6 +178,41 @@ Tado reports the home/away status of registered mobile devices. See device name 
 The repo contains a sample [Grafana dashboard](assets/grafana/dashboards) to visualize the scraped metrics.
 
 Feel free to customize as you see fit.
+
+## Slack bot
+
+Tado-controller can run a slack bot that will report on any rules being triggered:
+
+```
+tadobotAPP  13:15
+Manual temperature setting detected in zone Bathroom
+
+
+tadobotAPP  14:15
+Disabling manual temperature setting in zone Bathroom
+```
+
+Users can also interact with the bot:
+
+```
+Christophe Lambin  11:59
+@tadobot rooms
+
+tadobotAPP  11:59
+Bedroom: 21.0ºC (target: 21.0ºC)
+Living room: 21.3ºC (target: 21.5ºC)
+Study: 22.2ºC (target: 22.0ºC MANUAL)
+Bathroom: 21.2ºC (target: 16.0ºC)
+```
+
+Currently, the following commands are supported:
+
+* **users**: show presence of all users (i.e. geo-tracked mobile devices)
+* **rooms**: show info of all rooms (zones)
+* **version**: show version of tado-controller
+* **help**: show all available commands
+
+To enable the bot, add a bot in the workspace's Custom Integrations and add the API Token in the configuration file (*slackbotToken*).
 
 ## Tado Client API
 
