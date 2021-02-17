@@ -5,6 +5,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 	"time"
 )
 
@@ -18,6 +19,37 @@ type Controller struct {
 	MobileDevices map[int]*tado.MobileDevice
 	AutoAwayInfo  map[int]AutoAwayInfo
 	Overlays      map[int]time.Time
+}
+
+// New creates a new Controller object
+func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration.ControllerConfiguration) (controller *Controller, err error) {
+	controller = &Controller{
+		API: &tado.APIClient{
+			HTTPClient:   &http.Client{},
+			Username:     tadoUsername,
+			Password:     tadoPassword,
+			ClientSecret: tadoClientSecret,
+		},
+		Configuration: cfg,
+	}
+
+	if cfg.SlackbotToken != "" {
+		if controller.TadoBot, err = tadobot.Create(
+			cfg.SlackbotToken,
+			tadoUsername,
+			tadoPassword,
+			tadoClientSecret,
+			nil,
+		); err == nil {
+			go func() {
+				controller.TadoBot.Run()
+			}()
+		} else {
+			log.WithField("err", "failed to start TadoBot")
+		}
+	}
+
+	return
 }
 
 // Run executes all controller rules

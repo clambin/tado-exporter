@@ -23,7 +23,7 @@ type TadoBot struct {
 }
 
 // Create connects to a slackbot designated by token
-func Create(slackToken, tadoUser, tadoPassword, tadoSecret string) (bot *TadoBot, err error) {
+func Create(slackToken, tadoUser, tadoPassword, tadoSecret string, callbacks map[string]CallbackFunc) (bot *TadoBot, err error) {
 	bot = &TadoBot{
 		API: &tado.APIClient{
 			HTTPClient:   &http.Client{},
@@ -39,6 +39,11 @@ func Create(slackToken, tadoUser, tadoPassword, tadoSecret string) (bot *TadoBot
 		"version": bot.doVersion,
 		"rooms":   bot.doRooms,
 		"users":   bot.doUsers,
+	}
+	if callbacks != nil {
+		for name, callbackFunction := range callbacks {
+			bot.callbacks[name] = callbackFunction
+		}
 	}
 	bot.channelIDs, err = bot.getAllChannels()
 	return
@@ -174,7 +179,7 @@ func (bot *TadoBot) doHelp() []string {
 }
 
 func (bot *TadoBot) doVersion() []string {
-	return []string{"tado v" + version.BuildVersion}
+	return []string{"tado " + version.BuildVersion}
 }
 
 func (bot *TadoBot) doRooms() (responses []string) {

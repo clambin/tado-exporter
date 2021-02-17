@@ -44,7 +44,7 @@ func TestTadoBot_DoUsers(t *testing.T) {
 }
 
 func TestTadoBot_ProcessMessage(t *testing.T) {
-	bot, _ := Create("", "", "", "")
+	bot, _ := Create("", "", "", "", nil)
 	bot.API = &mockapi.MockAPI{}
 	bot.userID = "12345678"
 
@@ -57,5 +57,5 @@ func TestTadoBot_ProcessMessage(t *testing.T) {
 	assert.Equal(t, "Unknown command \"Hello\"", attachment.Title)
 	attachment = bot.processMessage("<@12345678> version")
 	assert.NotNil(t, attachment)
-	assert.Equal(t, "tado v"+version.BuildVersion, attachment.Text)
+	assert.Equal(t, "tado "+version.BuildVersion, attachment.Text)
 }
