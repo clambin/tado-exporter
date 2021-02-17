@@ -55,7 +55,7 @@ controller:
 
 	// "foo" was previously away
 	autoAway, _ := ctrlr.AutoAwayInfo[1]
-	autoAway.Home = false
+	autoAway.state = autoAwayStateAway
 	ctrlr.AutoAwayInfo[1] = autoAway
 
 	err = ctrlr.updateAutoAwayInfo()

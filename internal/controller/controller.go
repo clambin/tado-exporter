@@ -2,6 +2,7 @@ package controller
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -11,6 +12,7 @@ import (
 type Controller struct {
 	tado.API
 	Configuration *configuration.ControllerConfiguration
+	TadoBot       *tadobot.TadoBot
 
 	Zones         map[int]*tado.Zone
 	MobileDevices map[int]*tado.MobileDevice
@@ -120,4 +122,20 @@ func (controller *Controller) lookupZone(zoneID int, zoneName string) *tado.Zone
 		return nil
 	}
 	return zone
+}
+
+// notify sends a message to slack
+func (controller *Controller) notify(message string) error {
+	var err error
+	if controller.TadoBot != nil {
+		err = controller.TadoBot.SendMessage("", message)
+	}
+	return err
+}
+
+func (controller *Controller) zoneName(zoneID int) string {
+	if zone, ok := controller.Zones[zoneID]; ok {
+		return zone.Name
+	}
+	return "unknown"
 }
