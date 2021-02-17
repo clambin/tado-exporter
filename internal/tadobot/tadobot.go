@@ -120,20 +120,22 @@ func (bot *TadoBot) getAllChannels() (channelIDs []string, err error) {
 		},
 	}
 
-	channels, _, err := bot.slackClient.GetConversationsForUser(params)
+	var channels []slack.Channel
+	if channels, _, err = bot.slackClient.GetConversationsForUser(params); err == nil {
 
-	for _, channel := range channels {
-		log.WithFields(log.Fields{
-			"name":      channel.Name,
-			"id":        channel.ID,
-			"isChannel": channel.IsChannel,
-			"isPrivate": channel.IsPrivate,
-			"isIM":      channel.IsIM,
-		}).Debug("found a channel")
+		for _, channel := range channels {
+			log.WithFields(log.Fields{
+				"name":      channel.Name,
+				"id":        channel.ID,
+				"isChannel": channel.IsChannel,
+				"isPrivate": channel.IsPrivate,
+				"isIM":      channel.IsIM,
+			}).Debug("found a channel")
 
-		// if channel.IsChannel || (channel.IsIM && channel.Conversation.ID == bot.userID) {
-		channelIDs = append(channelIDs, channel.ID)
-		// }
+			// if channel.IsChannel || (channel.IsIM && channel.Conversation.ID == bot.userID) {
+			channelIDs = append(channelIDs, channel.ID)
+			// }
+		}
 	}
 
 	log.WithFields(log.Fields{
