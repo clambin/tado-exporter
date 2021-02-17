@@ -21,7 +21,7 @@ exporter:
 controller:
   enabled: true
   interval: 5m
-  notifyURL: http://example.com
+  slackbotToken: 1234
   overlayLimitRules:
   - zoneName: "foo"
     maxTime: 2h
@@ -58,7 +58,7 @@ controller:
 
 		assert.True(t, cfg.Controller.Enabled)
 		assert.Equal(t, 5*time.Minute, cfg.Controller.Interval)
-		assert.Equal(t, "http://example.com", cfg.Controller.NotifyURL)
+		assert.Equal(t, "1234", cfg.Controller.SlackbotToken)
 
 		if assert.NotNil(t, cfg.Controller.OverlayLimitRules) &&
 			assert.Len(t, *cfg.Controller.OverlayLimitRules, 2) {
