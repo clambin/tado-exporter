@@ -4,7 +4,6 @@ import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
-	"github.com/containrrr/shoutrrr"
 	log "github.com/sirupsen/logrus"
 	"time"
 )
@@ -128,9 +127,6 @@ func (controller *Controller) lookupZone(zoneID int, zoneName string) *tado.Zone
 // notify sends a message to slack
 func (controller *Controller) notify(message string) error {
 	var err error
-	if controller.Configuration.NotifyURL != "" {
-		err = shoutrrr.Send(controller.Configuration.NotifyURL, message)
-	}
 	if controller.TadoBot != nil {
 		err = controller.TadoBot.SendMessage("", message)
 	}
