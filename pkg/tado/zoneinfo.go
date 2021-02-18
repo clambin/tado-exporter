@@ -66,7 +66,7 @@ type ZoneInfoOverlaySetting struct {
 // ZoneInfoOverlayTermination contains the termination parameters for the zone's overlay
 type ZoneInfoOverlayTermination struct {
 	Type          string `json:"type"`
-	RemainingTime int    `json:"remainingTimeInSeconds"`
+	RemainingTime int    `json:"remainingTimeInSeconds,omitempty"`
 	// not specified:
 	//  "typeSkillBasedApp":"NEXT_TIME_BLOCK",
 	//  "durationInSeconds":1800,
@@ -91,29 +91,33 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 
 // SetZoneOverlay sets an overlay (manual temperature setting) for the specified ZoneID
 func (client *APIClient) SetZoneOverlay(zoneID int, temperature float64) error {
-	const payloadFormat = `{
-  "setting": {
-    "type": "HEATING",
-    "power": "ON",
-    "temperature": {
-      "celsius": %.1f
-    }
-  }, 
-  "termination": {
-    "type": MANUAL"
-  }
-}`
 	if temperature < 5 {
 		temperature = 5
 	}
 
 	var (
 		err     error
-		payload = fmt.Sprintf(payloadFormat, temperature)
+		payload []byte
 	)
 
 	if err = client.initialize(); err == nil {
-		_, err = client.call("PUT", client.apiURL("/zones/"+strconv.Itoa(zoneID)+"/overlay"), payload)
+		request := ZoneInfoOverlay{
+			Type: "MANUAL",
+			Setting: ZoneInfoOverlaySetting{
+				Type:  "HEATING",
+				Power: "ON",
+				Temperature: Temperature{
+					Celsius: temperature,
+				},
+			},
+			Termination: ZoneInfoOverlayTermination{
+				Type: "MANUAL",
+			},
+		}
+
+		payload, err = json.Marshal(request)
+
+		_, err = client.call("PUT", client.apiURL("/zones/"+strconv.Itoa(zoneID)+"/overlay"), string(payload))
 	}
 
 	return err

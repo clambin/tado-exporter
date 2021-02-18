@@ -205,6 +205,7 @@ func (client *APIClient) call(method string, apiURL string, payload string) ([]b
 	)
 
 	req, _ = http.NewRequest(method, apiURL, bytes.NewBufferString(payload))
+	req.Header.Add("Content-Type", "application/json;charset=UTF-8")
 	req.Header.Add("Authorization", "Bearer "+client.AccessToken)
 	if resp, err = client.HTTPClient.Do(req); err == nil {
 		defer resp.Body.Close()
@@ -217,8 +218,13 @@ func (client *APIClient) call(method string, apiURL string, payload string) ([]b
 			// we're authenticated, but still got forbidden.
 			// force password login to get a new token.
 			client.RefreshToken = ""
+			err = errors.New(resp.Status)
+		case http.StatusUnprocessableEntity:
+			errBody, _ := ioutil.ReadAll(resp.Body)
+			err = errors.New(string(errBody))
+		default:
+			err = errors.New(resp.Status)
 		}
-		err = errors.New(resp.Status)
 	}
 
 	log.WithFields(log.Fields{

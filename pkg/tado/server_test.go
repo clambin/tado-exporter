@@ -24,6 +24,13 @@ func (apiServer *APIServer) serve(req *http.Request) *http.Response {
 		return apiServer.respondAuth(req)
 	}
 
+	if contentType, ok := req.Header["Content-Type"]; ok == false || contentType[0] != "application/json;charset=UTF-8" {
+		return &http.Response{
+			StatusCode: http.StatusUnprocessableEntity,
+			Status:     "content type should be application/json",
+		}
+	}
+
 	if apiServer.validate(req) == false {
 		return &http.Response{
 			StatusCode: http.StatusForbidden,
