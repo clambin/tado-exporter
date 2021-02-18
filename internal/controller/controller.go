@@ -37,8 +37,11 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 
 	if cfg.SlackbotToken != "" {
 		callbacks := map[string]tadobot.CallbackFunc{
-			"rooms": controller.doRooms,
-			"users": controller.doUsers,
+			"rooms":        controller.doRooms,
+			"users":        controller.doUsers,
+			"rules":        controller.doRules,
+			"autoaway":     controller.doRulesAutoAway,
+			"limitoverlay": controller.doRulesLimitOverlay,
 		}
 		if controller.TadoBot, err = tadobot.Create(
 			cfg.SlackbotToken,
