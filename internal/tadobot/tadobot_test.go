@@ -18,31 +18,6 @@ func TestTadoBot_DoVersion(t *testing.T) {
 	assert.Equal(t, "tado "+version.BuildVersion, responses[0])
 }
 
-func TestTadoBot_DoRooms(t *testing.T) {
-	bot := TadoBot{
-		API: &mockapi.MockAPI{},
-	}
-
-	responses := bot.doRooms()
-	sort.Strings(responses)
-
-	assert.Equal(t, "bar: 19.9ºC (target: 25.0ºC MANUAL)", responses[0])
-	assert.Equal(t, "foo: 19.9ºC (target: 20.0ºC MANUAL)", responses[1])
-
-}
-
-func TestTadoBot_DoUsers(t *testing.T) {
-	bot := TadoBot{
-		API: &mockapi.MockAPI{},
-	}
-
-	responses := bot.doUsers()
-	sort.Strings(responses)
-
-	assert.Equal(t, "bar: away", responses[0])
-	assert.Equal(t, "foo: home", responses[1])
-}
-
 func TestTadoBot_ProcessMessage(t *testing.T) {
 	bot, _ := Create("", "", "", "", nil)
 	bot.API = &mockapi.MockAPI{}

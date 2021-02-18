@@ -20,15 +20,16 @@ type action struct {
 func (controller *Controller) runAction(action action) error {
 	var (
 		err      error
+		ok       bool
 		zoneInfo *tado.ZoneInfo
 	)
 
 	if action.Overlay == false {
 		// Are we currently in overlay?
-		if zoneInfo, err = controller.GetZoneInfo(action.ZoneID); err == nil {
+		if zoneInfo, ok = controller.proxy.ZoneInfo[action.ZoneID]; ok {
 			if zoneInfo.Overlay.Type == "MANUAL" {
 				// Delete the overlay
-				err = controller.DeleteZoneOverlay(action.ZoneID)
+				err = controller.proxy.DeleteZoneOverlay(action.ZoneID)
 			} else {
 				// TODO: does this ever happen?
 				log.WithField("type", zoneInfo.Overlay.Type).Info("not a manual overlay type. not deleting")
@@ -36,7 +37,7 @@ func (controller *Controller) runAction(action action) error {
 		}
 	} else {
 		// Set the overlay
-		err = controller.SetZoneOverlay(action.ZoneID, action.TargetTemperature)
+		err = controller.proxy.SetZoneOverlay(action.ZoneID, action.TargetTemperature)
 	}
 
 	return err

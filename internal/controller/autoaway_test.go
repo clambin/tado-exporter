@@ -2,6 +2,7 @@ package controller
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/tadoproxy"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -28,8 +29,10 @@ controller:
 
 	server := mockapi.MockAPI{}
 	control := Controller{
-		API:           &server,
 		Configuration: &cfg.Controller,
+		proxy: tadoproxy.Proxy{
+			API: &server,
+		},
 	}
 
 	assert.Nil(t, err)

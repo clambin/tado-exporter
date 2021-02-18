@@ -121,7 +121,7 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 				"ZoneID":         autoAwayInfo.ZoneID,
 			}).Info("User returned home. Removing overlay")
 			// notify via slack if needed
-			mobileDevice, _ := controller.MobileDevices[id]
+			mobileDevice, _ := controller.proxy.MobileDevice[id]
 			err = controller.notify(
 				fmt.Sprintf("%s is home. switching off manual control in zone %s",
 					mobileDevice.Name,
@@ -152,7 +152,7 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 				"TargetTemperature": autoAwayInfo.AutoAwayRule.TargetTemperature,
 			}).Info("User left. Setting overlay")
 			// notify via slack if needed
-			mobileDevice, _ := controller.MobileDevices[id]
+			mobileDevice, _ := controller.proxy.MobileDevice[id]
 			err = controller.notify(
 				fmt.Sprintf("%s is away. activating manual control in zone %s",
 					mobileDevice.Name,

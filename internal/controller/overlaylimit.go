@@ -45,6 +45,7 @@ func (controller *Controller) runOverlayLimit() error {
 func (controller *Controller) updateOverlays() error {
 	var (
 		err error
+		ok  bool
 	)
 
 	for _, overlayLimitRule := range *controller.Configuration.OverlayLimitRules {
@@ -60,7 +61,7 @@ func (controller *Controller) updateOverlays() error {
 			continue
 		}
 
-		if zoneInfo, err = controller.GetZoneInfo(zone.ID); err == nil {
+		if zoneInfo, ok = controller.proxy.ZoneInfo[zone.ID]; ok {
 			if zoneInfo.Overlay.Type == "MANUAL" &&
 				zoneInfo.Overlay.Setting.Type == "HEATING" &&
 				zoneInfo.Overlay.Termination.Type == "MANUAL" {

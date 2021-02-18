@@ -1,7 +1,6 @@
 package tadobot
 
 import (
-	"fmt"
 	"github.com/clambin/tado-exporter/internal/version"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
@@ -20,6 +19,7 @@ type TadoBot struct {
 	userID      string
 	channelIDs  []string
 	callbacks   map[string]CallbackFunc
+	reconnect   bool
 }
 
 // Create connects to a slackbot designated by token
@@ -37,8 +37,6 @@ func Create(slackToken, tadoUser, tadoPassword, tadoSecret string, callbacks map
 	bot.callbacks = map[string]CallbackFunc{
 		"help":    bot.doHelp,
 		"version": bot.doVersion,
-		"rooms":   bot.doRooms,
-		"users":   bot.doUsers,
 	}
 	if callbacks != nil {
 		for name, callbackFunction := range callbacks {
@@ -61,8 +59,13 @@ loop:
 			log.WithField("ev", ev).Debug("hello")
 		case *slack.ConnectedEvent:
 			bot.userID = ev.Info.User.ID
-			log.WithField("userID", bot.userID).Info("tadoBot connected to slack")
-			_ = bot.SendMessage("", "tadobot reporting for duty")
+			if bot.reconnect == false {
+				log.WithField("userID", bot.userID).Info("tadoBot connected to slack")
+				_ = bot.SendMessage("", "tadobot reporting for duty")
+				bot.reconnect = true
+			} else {
+				log.Debug("tadoBot reconnected to slack")
+			}
 		case *slack.MessageEvent:
 			log.WithFields(log.Fields{
 				"name":     ev.Name,
@@ -115,7 +118,7 @@ func (bot *TadoBot) processMessage(text string) (attachment *slack.Attachment) {
 }
 
 // getAllChannels returns all channels the bot can post on.
-// This is either the bot's direct channel or any channels the bot's been invited to
+// This is either the bot's direct channel or any channels the bot has been invited to
 func (bot *TadoBot) getAllChannels() (channelIDs []string, err error) {
 	params := &slack.GetConversationsForUserParameters{
 		Cursor: "",
@@ -180,63 +183,4 @@ func (bot *TadoBot) doHelp() []string {
 
 func (bot *TadoBot) doVersion() []string {
 	return []string{"tado " + version.BuildVersion}
-}
-
-func (bot *TadoBot) doRooms() (responses []string) {
-	var (
-		err   error
-		zones []*tado.Zone
-	)
-	zoneInfos := make(map[string]*tado.ZoneInfo)
-	if zones, err = bot.GetZones(); err == nil {
-		for _, zone := range zones {
-			var zoneInfo *tado.ZoneInfo
-			if zoneInfo, err = bot.GetZoneInfo(zone.ID); err == nil {
-				zoneInfos[zone.Name] = zoneInfo
-			} else {
-				break
-			}
-		}
-	}
-
-	if err == nil {
-		for zoneName, zoneInfo := range zoneInfos {
-			mode := ""
-			if zoneInfo.Overlay.Type == "MANUAL" &&
-				zoneInfo.Overlay.Setting.Type == "HEATING" {
-				mode = " MANUAL"
-			}
-			responses = append(responses, fmt.Sprintf("%s: %.1fºC (target: %.1fºC%s)",
-				zoneName,
-				zoneInfo.SensorDataPoints.Temperature.Celsius,
-				zoneInfo.Setting.Temperature.Celsius,
-				mode,
-			))
-		}
-	} else {
-		responses = []string{"unable to get rooms: " + err.Error()}
-	}
-
-	return
-}
-
-func (bot *TadoBot) doUsers() (responses []string) {
-	var (
-		err     error
-		devices []*tado.MobileDevice
-	)
-	if devices, err = bot.GetMobileDevices(); err == nil {
-		for _, device := range devices {
-			if device.Settings.GeoTrackingEnabled {
-				state := "away"
-				if device.Location.AtHome {
-					state = "home"
-				}
-				responses = append(responses, fmt.Sprintf("%s: %s", device.Name, state))
-			}
-		}
-	} else {
-		responses = []string{"unable to get users: " + err.Error()}
-	}
-	return
 }
