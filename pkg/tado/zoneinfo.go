@@ -99,7 +99,9 @@ func (client *APIClient) SetZoneOverlay(zoneID int, temperature float64) error {
       "celsius": %.1f
     }
   }, 
-  "termination": "MANUAL"
+  "termination": {
+    "type": MANUAL"
+  }
 }`
 	if temperature < 5 {
 		temperature = 5

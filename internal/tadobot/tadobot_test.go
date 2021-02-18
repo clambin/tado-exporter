@@ -15,7 +15,7 @@ func TestTadoBot_DoVersion(t *testing.T) {
 	responses := bot.doVersion()
 	sort.Strings(responses)
 
-	assert.Equal(t, "tado v"+version.BuildVersion, responses[0])
+	assert.Equal(t, "tado "+version.BuildVersion, responses[0])
 }
 
 func TestTadoBot_DoRooms(t *testing.T) {
