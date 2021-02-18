@@ -100,7 +100,7 @@ func (bot *TadoBot) processMessage(text string) (attachment *slack.Attachment) {
 	if parts := strings.Split(text, " "); len(parts) > 0 {
 		if parts[0] == "<@"+bot.userID+">" {
 			if command, ok := bot.callbacks[parts[1]]; ok {
-				log.WithField("command", command).Debug("command found")
+				log.WithField("command", parts[1]).Debug("command found")
 				attachment = &slack.Attachment{
 					Color: "good",
 					Text:  strings.Join(command(), "\n"),

@@ -82,6 +82,10 @@ func (controller *Controller) doRulesLimitOverlay() (responses []string) {
 			entry.Format("2006-01-02 15:04:05"),
 		))
 	}
-	sort.Strings(responses)
+	if len(responses) > 0 {
+		sort.Strings(responses)
+	} else {
+		responses = append(responses, "No rooms in manual control")
+	}
 	return
 }
