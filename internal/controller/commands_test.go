@@ -19,9 +19,10 @@ func TestController_doRooms(t *testing.T) {
 	assert.Nil(t, err)
 
 	output := control.doRooms()
-	assert.Len(t, output, 2)
-	assert.Equal(t, "bar: 19.9ºC (target: 25.0ºC MANUAL)", output[0])
-	assert.Equal(t, "foo: 19.9ºC (target: 20.0ºC MANUAL)", output[1])
+	if assert.Len(t, output, 1) && assert.Len(t, output[0], 2) {
+		assert.Equal(t, "bar: 19.9ºC (target: 25.0ºC MANUAL)", output[0][0])
+		assert.Equal(t, "foo: 19.9ºC (target: 20.0ºC MANUAL)", output[0][1])
+	}
 }
 
 func TestController_doUsers(t *testing.T) {
@@ -34,9 +35,10 @@ func TestController_doUsers(t *testing.T) {
 	assert.Nil(t, err)
 
 	output := control.doUsers()
-	assert.Len(t, output, 2)
-	assert.Equal(t, "bar: away", output[0])
-	assert.Equal(t, "foo: home", output[1])
+	if assert.Len(t, output, 1) && assert.Len(t, output[0], 2) {
+		assert.Equal(t, "bar: away", output[0][0])
+		assert.Equal(t, "foo: home", output[0][1])
+	}
 }
 
 func TestController_doRules(t *testing.T) {
@@ -68,11 +70,15 @@ controller:
 		if assert.Nil(t, err); err == nil {
 
 			output := control.doRules()
-			assert.Len(t, output, 4)
-			assert.Equal(t, "bar is away. will set bar to manual in 1h0m0s", output[0])
-			assert.Equal(t, "foo is home", output[1])
-			assert.Equal(t, "", output[2])
-			assert.Equal(t, "bar will be reset to auto in 1h0m0s", output[3])
+			if assert.Len(t, output, 2) {
+				if assert.Len(t, output[0], 2) {
+					assert.Equal(t, "bar is away. will set bar to manual in 1h0m0s", output[0][0])
+					assert.Equal(t, "foo is home", output[0][1])
+				}
+				if assert.Len(t, output[1], 1) {
+					assert.Equal(t, "bar will be reset to auto in 1h0m0s", output[1][0])
+				}
+			}
 		}
 	}
 }

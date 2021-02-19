@@ -6,51 +6,51 @@ import (
 	"time"
 )
 
-func (controller *Controller) doUsers() (responses []string) {
+func (controller *Controller) doUsers() [][]string {
+	output := make([]string, 0)
 	for _, device := range controller.proxy.MobileDevice {
 		if device.Settings.GeoTrackingEnabled {
 			state := "away"
 			if device.Location.AtHome {
 				state = "home"
 			}
-			responses = append(responses, fmt.Sprintf("%s: %s", device.Name, state))
+			output = append(output, fmt.Sprintf("%s: %s", device.Name, state))
 		}
 	}
-	sort.Strings(responses)
-	return
+	sort.Strings(output)
+	return [][]string{output}
 }
 
-func (controller *Controller) doRooms() (responses []string) {
+func (controller *Controller) doRooms() [][]string {
+	output := make([]string, 0)
 	for zoneID, zoneInfo := range controller.proxy.ZoneInfo {
 		mode := ""
 		if zoneInfo.Overlay.Type == "MANUAL" &&
 			zoneInfo.Overlay.Setting.Type == "HEATING" {
 			mode = " MANUAL"
 		}
-		responses = append(responses, fmt.Sprintf("%s: %.1fºC (target: %.1fºC%s)",
+		output = append(output, fmt.Sprintf("%s: %.1fºC (target: %.1fºC%s)",
 			controller.proxy.Zone[zoneID].Name,
 			zoneInfo.SensorDataPoints.Temperature.Celsius,
 			zoneInfo.Setting.Temperature.Celsius,
 			mode,
 		))
 	}
-	sort.Strings(responses)
-	return
+	sort.Strings(output)
+	return [][]string{output}
 }
 
-func (controller *Controller) doRules() (responses []string) {
+func (controller *Controller) doRules() (responses [][]string) {
 	awayResponses := controller.doRulesAutoAway()
 	limitResponses := controller.doRulesLimitOverlay()
 
-	responses = append(responses, awayResponses...)
-	if len(awayResponses) > 0 && len(limitResponses) > 0 {
-		responses = append(responses, "")
-	}
-	responses = append(responses, limitResponses...)
+	responses = append(responses, awayResponses[0])
+	responses = append(responses, limitResponses[0])
 	return
 }
 
-func (controller *Controller) doRulesAutoAway() (responses []string) {
+func (controller *Controller) doRulesAutoAway() [][]string {
+	output := make([]string, 0)
 	for _, entry := range controller.AutoAwayInfo {
 		var response string
 		switch entry.state {
@@ -66,24 +66,23 @@ func (controller *Controller) doRulesAutoAway() (responses []string) {
 		case autoAwayStateReported:
 			response = "away. " + entry.Zone.Name + " is set to manual"
 		}
-		responses = append(responses,
-			entry.MobileDevice.Name+" is "+response,
-		)
+		output = append(output, entry.MobileDevice.Name+" is "+response)
 	}
-	sort.Strings(responses)
-	return
+	sort.Strings(output)
+	return [][]string{output}
 }
 
-func (controller *Controller) doRulesLimitOverlay() (responses []string) {
+func (controller *Controller) doRulesLimitOverlay() [][]string {
+	output := make([]string, 0)
 	for zoneID, entry := range controller.Overlays {
-		responses = append(responses,
+		output = append(output,
 			controller.proxy.Zone[zoneID].Name+" will be reset to auto in "+entry.Sub(time.Now()).Round(1*time.Minute).String(),
 		)
 	}
-	if len(responses) > 0 {
-		sort.Strings(responses)
+	if len(output) > 0 {
+		sort.Strings(output)
 	} else {
-		responses = append(responses, "No rooms in manual control")
+		output = []string{"No rooms in manual control"}
 	}
-	return
+	return [][]string{output}
 }

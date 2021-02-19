@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type CallbackFunc func() []string
+type CommandFunc func() [][]string
 
 type TadoBot struct {
 	slackClient *slack.Client
@@ -15,17 +15,17 @@ type TadoBot struct {
 	slackToken  string
 	userID      string
 	channelIDs  []string
-	callbacks   map[string]CallbackFunc
+	callbacks   map[string]CommandFunc
 	reconnect   bool
 }
 
 // Create connects to a slackbot designated by token
-func Create(slackToken string, callbacks map[string]CallbackFunc) (bot *TadoBot, err error) {
+func Create(slackToken string, callbacks map[string]CommandFunc) (bot *TadoBot, err error) {
 	bot = &TadoBot{
 		slackClient: slack.New(slackToken),
 		slackToken:  slackToken,
 	}
-	bot.callbacks = map[string]CallbackFunc{
+	bot.callbacks = map[string]CommandFunc{
 		"help":    bot.doHelp,
 		"version": bot.doVersion,
 	}
@@ -85,9 +85,7 @@ func (bot *TadoBot) processEvent(msg slack.RTMEvent) (channel string, attachment
 			"botID":    ev.BotID,
 		}).Debug("message received: " + ev.Text)
 		channel = ev.Channel
-		if attachment := bot.processMessage(ev.Text); attachment != nil {
-			attachments = append(attachments, *attachment)
-		}
+		attachments = bot.processMessage(ev.Text)
 	// case *slack.RTMError:
 	//	log.WithField("error", ev.Error()).Error("Error")
 	//	// TODO: reconnect here?
@@ -98,23 +96,30 @@ func (bot *TadoBot) processEvent(msg slack.RTMEvent) (channel string, attachment
 	return
 }
 
-func (bot *TadoBot) processMessage(text string) (attachment *slack.Attachment) {
+func (bot *TadoBot) processMessage(text string) (attachments []slack.Attachment) {
 	// check if we're mentioned
 	log.WithField("text", text).Debug("processing slack chatter")
 	if parts := strings.Split(text, " "); len(parts) > 0 {
 		if parts[0] == "<@"+bot.userID+">" {
 			if command, ok := bot.callbacks[parts[1]]; ok {
-				log.WithField("command", parts[1]).Debug("command found")
-				attachment = &slack.Attachment{
-					Color: "good",
-					Text:  strings.Join(command(), "\n"),
+				outputs := command()
+
+				log.WithFields(log.Fields{
+					"command": parts[1],
+					"outputs": len(outputs),
+				}).Debug("command run")
+				for _, output := range outputs {
+					attachments = append(attachments, slack.Attachment{
+						Color: "good",
+						Text:  strings.Join(output, "\n"),
+					})
 				}
 			} else {
-				attachment = &slack.Attachment{
+				attachments = append(attachments, slack.Attachment{
 					Color: "warning",
 					Title: "Unknown command \"" + parts[1] + "\"",
-					Text:  strings.Join(bot.doHelp(), "\n"),
-				}
+					Text:  strings.Join(bot.doHelp()[0], "\n"),
+				})
 			}
 		}
 	}
@@ -177,14 +182,14 @@ func (bot *TadoBot) SendMessage(title, text string) (err error) {
 	return
 }
 
-func (bot *TadoBot) doHelp() []string {
+func (bot *TadoBot) doHelp() [][]string {
 	var commands = make([]string, 0)
 	for command := range bot.callbacks {
 		commands = append(commands, command)
 	}
-	return []string{"supported commands: " + strings.Join(commands, ", ")}
+	return [][]string{{"supported commands: " + strings.Join(commands, ", ")}}
 }
 
-func (bot *TadoBot) doVersion() []string {
-	return []string{"tado " + version.BuildVersion}
+func (bot *TadoBot) doVersion() [][]string {
+	return [][]string{{"tado " + version.BuildVersion}}
 }
