@@ -202,14 +202,24 @@ Christophe Lambin  11:59
 tadobotAPP  11:59
 Bedroom: 21.0ºC (target: 21.0ºC)
 Living room: 21.3ºC (target: 21.5ºC)
-Study: 22.2ºC (target: 22.0ºC MANUAL)
-Bathroom: 21.2ºC (target: 16.0ºC)
+Study: 22.2ºC (target: 22.0ºC)
+Bathroom: 21.2ºC (target: 22.0ºC MANUAL)
+
+Christophe Lambin  12:05
+@tadobot rules
+
+tadobotAPP  12:05
+Christophe is home
+room Bathroom will be set back to auto in 37m0s
 ```
 
-Currently, the following commands are supported:
+TadoBot supports the following commands:
 
 * **users**: show presence of all users (i.e. geo-tracked mobile devices)
 * **rooms**: show info of all rooms (zones)
+* **rules**: show status of all configured rules
+* **autoaway**: show status of all configured autoAway rules
+* **limitoverlay**: show status of all configured limitOverlay rules
 * **version**: show version of tado-controller
 * **help**: show all available commands
 

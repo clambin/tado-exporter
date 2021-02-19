@@ -54,44 +54,57 @@ func (bot *TadoBot) Run() {
 
 loop:
 	for msg := range bot.slackRTM.IncomingEvents {
-		switch ev := msg.Data.(type) {
-		case *slack.HelloEvent:
-			log.WithField("ev", ev).Debug("hello")
-		case *slack.ConnectedEvent:
-			bot.userID = ev.Info.User.ID
-			if bot.reconnect == false {
-				log.WithField("userID", bot.userID).Info("tadoBot connected to slack")
-				_ = bot.SendMessage("", "tadobot reporting for duty")
-				bot.reconnect = true
-			} else {
-				log.Debug("tadoBot reconnected to slack")
+		channel, attachments, stop := bot.processEvent(msg)
+
+		for _, attachment := range attachments {
+			if _, _, err := bot.slackRTM.PostMessage(
+				channel,
+				slack.MsgOptionAttachments(attachment),
+				slack.MsgOptionAsUser(true),
+			); err != nil {
+				log.WithField("err", err).Warning("failed to send on slack")
 			}
-		case *slack.MessageEvent:
-			log.WithFields(log.Fields{
-				"name":     ev.Name,
-				"user":     ev.User,
-				"channel":  ev.Channel,
-				"type":     ev.Type,
-				"userName": ev.Username,
-				"botID":    ev.BotID,
-			}).Debug("message received: " + ev.Text)
-			if attachment := bot.processMessage(ev.Text); attachment != nil {
-				if _, _, err := bot.slackRTM.PostMessage(
-					ev.Channel,
-					slack.MsgOptionAttachments(*attachment),
-					slack.MsgOptionAsUser(true),
-				); err != nil {
-					log.WithField("err", err).Warning("failed to send on slack")
-				}
-			}
-		case *slack.RTMError:
-			log.WithField("error", ev.Error()).Error("Error")
-			// TODO: reconnect here?
-		case *slack.InvalidAuthEvent:
-			log.Error("invalid credentials")
+		}
+
+		if stop {
 			break loop
 		}
 	}
+}
+
+func (bot *TadoBot) processEvent(msg slack.RTMEvent) (channel string, attachments []slack.Attachment, stop bool) {
+	switch ev := msg.Data.(type) {
+	// case *slack.HelloEvent:
+	//	log.WithField("ev", ev).Debug("hello")
+	case *slack.ConnectedEvent:
+		bot.userID = ev.Info.User.ID
+		if bot.reconnect == false {
+			log.WithField("userID", bot.userID).Info("tadoBot connected to slack")
+			bot.reconnect = true
+		} else {
+			log.Debug("tadoBot reconnected to slack")
+		}
+	case *slack.MessageEvent:
+		log.WithFields(log.Fields{
+			"name":     ev.Name,
+			"user":     ev.User,
+			"channel":  ev.Channel,
+			"type":     ev.Type,
+			"userName": ev.Username,
+			"botID":    ev.BotID,
+		}).Debug("message received: " + ev.Text)
+		channel = ev.Channel
+		if attachment := bot.processMessage(ev.Text); attachment != nil {
+			attachments = append(attachments, *attachment)
+		}
+	// case *slack.RTMError:
+	//	log.WithField("error", ev.Error()).Error("Error")
+	//	// TODO: reconnect here?
+	case *slack.InvalidAuthEvent:
+		log.Error("invalid credentials")
+		stop = true
+	}
+	return
 }
 
 func (bot *TadoBot) processMessage(text string) (attachment *slack.Attachment) {
