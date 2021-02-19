@@ -44,7 +44,7 @@ jobs:
           GOARCH: ${{ matrix.arch }}
           RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
         run: |
-          go build \
+          CGO_ENABLED=0 go build \
             -ldflags "-X github.com/clambin/tado-exporter/internal/version.BuildVersion=$RELEASE_VERSION" \
             -o bld/$TARGET-$GOOS-$GOARCH \
             $TARGET.go
