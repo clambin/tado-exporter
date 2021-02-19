@@ -62,8 +62,8 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 }
 
 // Run executes all controller rules
-func (controller *Controller) Run() error {
-	err := controller.proxy.Refresh()
+func (controller *Controller) Run() (err error) {
+	err = controller.proxy.Refresh()
 
 	if err == nil {
 		err = controller.runAutoAway()
@@ -75,15 +75,12 @@ func (controller *Controller) Run() error {
 
 	log.WithField("err", err).Debug("Run")
 
-	return err
+	return
 }
 
 // lookupMobileDevice returns the mobile device matching the mobileDeviceID or mobileDeviceName from the list of mobile devices
-func (controller *Controller) lookupMobileDevice(mobileDeviceID int, mobileDeviceName string) *tado.MobileDevice {
-	var (
-		ok           bool
-		mobileDevice *tado.MobileDevice
-	)
+func (controller *Controller) lookupMobileDevice(mobileDeviceID int, mobileDeviceName string) (mobileDevice *tado.MobileDevice) {
+	var ok bool
 
 	if mobileDevice, ok = controller.proxy.MobileDevice[mobileDeviceID]; ok == false {
 		for _, mobileDevice = range controller.proxy.MobileDevice {
@@ -95,17 +92,14 @@ func (controller *Controller) lookupMobileDevice(mobileDeviceID int, mobileDevic
 	}
 
 	if ok == false {
-		return nil
+		mobileDevice = nil
 	}
-	return mobileDevice
+	return
 }
 
 // lookupZone returns the zone matching zoneID or zoneName from the list of zones
-func (controller *Controller) lookupZone(zoneID int, zoneName string) *tado.Zone {
-	var (
-		ok   bool
-		zone *tado.Zone
-	)
+func (controller *Controller) lookupZone(zoneID int, zoneName string) (zone *tado.Zone) {
+	var ok bool
 
 	if zone, ok = controller.proxy.Zone[zoneID]; ok == false {
 		for _, zone = range controller.proxy.Zone {
@@ -117,18 +111,17 @@ func (controller *Controller) lookupZone(zoneID int, zoneName string) *tado.Zone
 	}
 
 	if ok == false {
-		return nil
+		zone = nil
 	}
-	return zone
+	return
 }
 
 // notify sends a message to slack
-func (controller *Controller) notify(message string) error {
-	var err error
+func (controller *Controller) notify(message string) (err error) {
 	if controller.TadoBot != nil {
 		err = controller.TadoBot.SendMessage("", message)
 	}
-	return err
+	return
 }
 
 func (controller *Controller) zoneName(zoneID int) string {

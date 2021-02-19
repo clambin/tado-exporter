@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"sort"
+	"time"
 )
 
 func (controller *Controller) doUsers() (responses []string) {
@@ -58,17 +59,15 @@ func (controller *Controller) doRulesAutoAway() (responses []string) {
 		case autoAwayStateHome:
 			response = "home"
 		case autoAwayStateAway:
-			response = fmt.Sprintf("away. will set room %s to manual at %s",
-				controller.zoneName(entry.ZoneID),
-				entry.ActivationTime.Format("2006-01-02 15:04:05"),
-			)
+			response = "away. will set room " + controller.zoneName(entry.ZoneID) + " to manual in " +
+				entry.ActivationTime.Sub(time.Now()).Round(1*time.Minute).String()
 		case autoAwayStateExpired:
-			response = "away but not yet reported"
+			response = "away. room " + controller.zoneName(entry.ZoneID) + "will be set to manual"
 		case autoAwayStateReported:
-			response = "away & reported"
+			response = "away. room " + controller.zoneName(entry.ZoneID) + "is set to manual"
 		}
 		responses = append(responses,
-			entry.MobileDevice.Name+": "+response,
+			entry.MobileDevice.Name+" is "+response,
 		)
 	}
 	sort.Strings(responses)
@@ -77,9 +76,9 @@ func (controller *Controller) doRulesAutoAway() (responses []string) {
 
 func (controller *Controller) doRulesLimitOverlay() (responses []string) {
 	for zoneID, entry := range controller.Overlays {
-		responses = append(responses, fmt.Sprintf("room %s will be set back to auto on %s",
+		responses = append(responses, fmt.Sprintf("room %s will be set back to auto in %s",
 			controller.zoneName(zoneID),
-			entry.Format("2006-01-02 15:04:05"),
+			entry.Sub(time.Now()).Round(1*time.Minute).String(),
 		))
 	}
 	if len(responses) > 0 {
