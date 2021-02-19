@@ -137,7 +137,7 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 			// notify via slack if needed
 			err = controller.notify(
 				autoAwayInfo.MobileDevice.Name + " is away. will set " +
-					autoAwayInfo.Zone.Name + " to manual in " + autoAwayInfo.ActivationTime.String())
+					autoAwayInfo.Zone.Name + " to manual in " + autoAwayInfo.AutoAwayRule.WaitTime.String())
 		} else
 		// if the mobile phone was already away, check the activation timer
 		if autoAwayInfo.shouldReport() {
