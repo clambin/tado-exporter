@@ -2,7 +2,6 @@ package tadobot
 
 import (
 	"github.com/clambin/tado-exporter/internal/version"
-	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"sort"
@@ -19,8 +18,7 @@ func TestDoVersion(t *testing.T) {
 }
 
 func TestProcessMessage(t *testing.T) {
-	bot, _ := Create("", "", "", "", nil)
-	bot.API = &mockapi.MockAPI{}
+	bot, _ := Create("", nil)
 	bot.userID = "12345678"
 
 	var attachment *slack.Attachment
@@ -36,10 +34,9 @@ func TestProcessMessage(t *testing.T) {
 }
 
 func TestProcessEvent(t *testing.T) {
-	bot, _ := Create("", "", "", "", map[string]CallbackFunc{
+	bot, _ := Create("", map[string]CallbackFunc{
 		"hello": doHello,
 	})
-	bot.API = &mockapi.MockAPI{}
 
 	msg := slack.RTMEvent{Type: "connected", Data: &slack.ConnectedEvent{
 		ConnectionCount: 1,

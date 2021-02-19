@@ -43,13 +43,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 			"autoaway":     controller.doRulesAutoAway,
 			"limitoverlay": controller.doRulesLimitOverlay,
 		}
-		if controller.TadoBot, err = tadobot.Create(
-			cfg.SlackbotToken,
-			tadoUsername,
-			tadoPassword,
-			tadoClientSecret,
-			callbacks,
-		); err == nil {
+		if controller.TadoBot, err = tadobot.Create(cfg.SlackbotToken, callbacks); err == nil {
 			go func() {
 				controller.TadoBot.Run()
 			}()
@@ -123,19 +117,3 @@ func (controller *Controller) notify(message string) (err error) {
 	}
 	return
 }
-
-/*
-func (controller *Controller) zoneName(zoneID int) string {
-	if zone, ok := controller.proxy.Zone[zoneID]; ok {
-		return zone.Name
-	}
-	return "unknown"
-}
-
-func (controller *Controller) mobileDeviceName(mobileDeviceID int) string {
-	if mobileDevice, ok := controller.proxy.MobileDevice[mobileDeviceID]; ok {
-		return mobileDevice.Name
-	}
-	return "unknown"
-}
-*/

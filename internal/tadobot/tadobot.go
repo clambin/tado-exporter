@@ -2,17 +2,14 @@ package tadobot
 
 import (
 	"github.com/clambin/tado-exporter/internal/version"
-	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
-	"net/http"
 	"strings"
 )
 
 type CallbackFunc func() []string
 
 type TadoBot struct {
-	tado.API
 	slackClient *slack.Client
 	slackRTM    *slack.RTM
 	slackToken  string
@@ -23,14 +20,8 @@ type TadoBot struct {
 }
 
 // Create connects to a slackbot designated by token
-func Create(slackToken, tadoUser, tadoPassword, tadoSecret string, callbacks map[string]CallbackFunc) (bot *TadoBot, err error) {
+func Create(slackToken string, callbacks map[string]CallbackFunc) (bot *TadoBot, err error) {
 	bot = &TadoBot{
-		API: &tado.APIClient{
-			HTTPClient:   &http.Client{},
-			Username:     tadoUser,
-			Password:     tadoPassword,
-			ClientSecret: tadoSecret,
-		},
 		slackClient: slack.New(slackToken),
 		slackToken:  slackToken,
 	}
