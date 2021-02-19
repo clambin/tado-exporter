@@ -124,9 +124,18 @@ func (controller *Controller) notify(message string) (err error) {
 	return
 }
 
+/*
 func (controller *Controller) zoneName(zoneID int) string {
 	if zone, ok := controller.proxy.Zone[zoneID]; ok {
 		return zone.Name
 	}
 	return "unknown"
 }
+
+func (controller *Controller) mobileDeviceName(mobileDeviceID int) string {
+	if mobileDevice, ok := controller.proxy.MobileDevice[mobileDeviceID]; ok {
+		return mobileDevice.Name
+	}
+	return "unknown"
+}
+*/

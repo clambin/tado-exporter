@@ -28,7 +28,7 @@ func (controller *Controller) doRooms() (responses []string) {
 			mode = " MANUAL"
 		}
 		responses = append(responses, fmt.Sprintf("%s: %.1fºC (target: %.1fºC%s)",
-			controller.zoneName(zoneID),
+			controller.proxy.Zone[zoneID].Name,
 			zoneInfo.SensorDataPoints.Temperature.Celsius,
 			zoneInfo.Setting.Temperature.Celsius,
 			mode,
@@ -59,12 +59,12 @@ func (controller *Controller) doRulesAutoAway() (responses []string) {
 		case autoAwayStateHome:
 			response = "home"
 		case autoAwayStateAway:
-			response = "away. will set room " + controller.zoneName(entry.ZoneID) + " to manual in " +
+			response = "away. will set " + entry.Zone.Name + " to manual in " +
 				entry.ActivationTime.Sub(time.Now()).Round(1*time.Minute).String()
 		case autoAwayStateExpired:
-			response = "away. room " + controller.zoneName(entry.ZoneID) + "will be set to manual"
+			response = "away. " + entry.Zone.Name + " will be set to manual"
 		case autoAwayStateReported:
-			response = "away. room " + controller.zoneName(entry.ZoneID) + "is set to manual"
+			response = "away. " + entry.Zone.Name + " is set to manual"
 		}
 		responses = append(responses,
 			entry.MobileDevice.Name+" is "+response,
@@ -76,10 +76,9 @@ func (controller *Controller) doRulesAutoAway() (responses []string) {
 
 func (controller *Controller) doRulesLimitOverlay() (responses []string) {
 	for zoneID, entry := range controller.Overlays {
-		responses = append(responses, fmt.Sprintf("room %s will be set back to auto in %s",
-			controller.zoneName(zoneID),
-			entry.Sub(time.Now()).Round(1*time.Minute).String(),
-		))
+		responses = append(responses,
+			controller.proxy.Zone[zoneID].Name+" will be reset to auto in "+entry.Sub(time.Now()).Round(1*time.Minute).String(),
+		)
 	}
 	if len(responses) > 0 {
 		sort.Strings(responses)

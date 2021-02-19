@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -79,8 +78,8 @@ func (controller *Controller) updateOverlays() error {
 					}).Info("new zone in overlay")
 					// notify via slack if needed
 					err = controller.notify(
-						fmt.Sprintf("Manual temperature setting detected in zone %s",
-							controller.zoneName(zone.ID)))
+						"Manual temperature setting detected in zone " + zone.Name,
+					)
 				}
 			} else {
 				// Zone is not in overlay. Remove it from the tracking map
@@ -116,8 +115,7 @@ func (controller *Controller) expireOverlays() ([]action, error) {
 			delete(controller.Overlays, zoneID)
 			// notify via slack if needed
 			err = controller.notify(
-				fmt.Sprintf("Disabling manual temperature setting in zone %s",
-					controller.zoneName(zoneID)),
+				"Disabling manual temperature setting in zone " + controller.proxy.Zone[zoneID].Name,
 			)
 		}
 	}

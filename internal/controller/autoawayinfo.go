@@ -19,11 +19,10 @@ const (
 // AutoAwayInfo contains the user we are tracking, and what zone to set to which temperature
 // when ActivationTime occurs
 type AutoAwayInfo struct {
-	MobileDevice *tado.MobileDevice
-	state        autoAwayState
-	// Home           bool
+	MobileDevice   *tado.MobileDevice
+	Zone           *tado.Zone
+	state          autoAwayState
 	ActivationTime time.Time
-	ZoneID         int
 	AutoAwayRule   *configuration.AutoAwayRule
 }
 

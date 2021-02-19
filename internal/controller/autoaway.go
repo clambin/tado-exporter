@@ -73,7 +73,7 @@ func (controller *Controller) updateAutoAwayInfo() (err error) {
 			// We don't already have a record. Create it
 			controller.AutoAwayInfo[mobileDevice.ID] = AutoAwayInfo{
 				MobileDevice:   mobileDevice,
-				ZoneID:         zone.ID,
+				Zone:           zone,
 				AutoAwayRule:   autoAwayRule,
 				state:          getInitialState(mobileDevice),
 				ActivationTime: time.Now().Add(autoAwayRule.WaitTime),
@@ -114,18 +114,18 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 			// add action to disable the overlay
 			actions = append(actions, action{
 				Overlay: false,
-				ZoneID:  autoAwayInfo.ZoneID,
+				ZoneID:  autoAwayInfo.Zone.ID,
 			})
 			log.WithFields(log.Fields{
 				"MobileDeviceID": id,
-				"ZoneID":         autoAwayInfo.ZoneID,
+				"ZoneID":         autoAwayInfo.Zone.ID,
 			}).Info("User returned home. Removing overlay")
 			// notify via slack if needed
 			mobileDevice, _ := controller.proxy.MobileDevice[id]
 			err = controller.notify(
-				fmt.Sprintf("%s is home. switching off manual control in zone %s",
+				fmt.Sprintf("%s is home. resetting %s to auto",
 					mobileDevice.Name,
-					controller.zoneName(autoAwayInfo.ZoneID),
+					autoAwayInfo.Zone.Name,
 				),
 			)
 		} else
@@ -134,6 +134,10 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 			autoAwayInfo.state = autoAwayStateAway
 			autoAwayInfo.ActivationTime = time.Now().Add(autoAwayInfo.AutoAwayRule.WaitTime)
 			controller.AutoAwayInfo[id] = autoAwayInfo
+			// notify via slack if needed
+			err = controller.notify(
+				autoAwayInfo.MobileDevice.Name + " is away. will set " +
+					autoAwayInfo.Zone.Name + " to manual in " + autoAwayInfo.ActivationTime.String())
 		} else
 		// if the mobile phone was already away, check the activation timer
 		if autoAwayInfo.shouldReport() {
@@ -143,20 +147,19 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 			// add action to set the overlay
 			actions = append(actions, action{
 				Overlay:           true,
-				ZoneID:            autoAwayInfo.ZoneID,
+				ZoneID:            autoAwayInfo.Zone.ID,
 				TargetTemperature: autoAwayInfo.AutoAwayRule.TargetTemperature,
 			})
 			log.WithFields(log.Fields{
 				"MobileDeviceID":    id,
-				"ZoneID":            autoAwayInfo.ZoneID,
+				"ZoneID":            autoAwayInfo.Zone.ID,
 				"TargetTemperature": autoAwayInfo.AutoAwayRule.TargetTemperature,
 			}).Info("User left. Setting overlay")
 			// notify via slack if needed
-			mobileDevice, _ := controller.proxy.MobileDevice[id]
 			err = controller.notify(
 				fmt.Sprintf("%s is away. activating manual control in zone %s",
-					mobileDevice.Name,
-					controller.zoneName(autoAwayInfo.ZoneID),
+					autoAwayInfo.MobileDevice.Name,
+					autoAwayInfo.Zone.Name,
 				),
 			)
 		}

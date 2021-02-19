@@ -20,7 +20,7 @@ func TestAutoAwayInfo(t *testing.T) {
 				AtHome: true,
 			},
 		},
-		ZoneID: 0,
+		Zone: nil,
 		AutoAwayRule: &configuration.AutoAwayRule{
 			MobileDeviceID:    1,
 			MobileDeviceName:  "foo",

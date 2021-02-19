@@ -69,10 +69,10 @@ controller:
 
 			output := control.doRules()
 			assert.Len(t, output, 4)
-			assert.Equal(t, "bar is away. will set room bar to manual in 1h0m0s", output[0])
+			assert.Equal(t, "bar is away. will set bar to manual in 1h0m0s", output[0])
 			assert.Equal(t, "foo is home", output[1])
 			assert.Equal(t, "", output[2])
-			assert.Equal(t, "room bar will be set back to auto in 1h0m0s", output[3])
+			assert.Equal(t, "bar will be reset to auto in 1h0m0s", output[3])
 		}
 	}
 }
