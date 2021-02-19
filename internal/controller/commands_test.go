@@ -5,6 +5,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/tadoproxy"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 )
 
@@ -19,9 +20,12 @@ func TestController_doRooms(t *testing.T) {
 	assert.Nil(t, err)
 
 	output := control.doRooms()
-	if assert.Len(t, output, 1) && assert.Len(t, output[0], 2) {
-		assert.Equal(t, "bar: 19.9ºC (target: 25.0ºC MANUAL)", output[0][0])
-		assert.Equal(t, "foo: 19.9ºC (target: 20.0ºC MANUAL)", output[0][1])
+	if assert.Len(t, output, 1) {
+		lines := strings.Split(output[0].Text, "\n")
+		if assert.Len(t, lines, 2) {
+			assert.Equal(t, "bar: 19.9ºC (target: 25.0ºC MANUAL)", lines[0])
+			assert.Equal(t, "foo: 19.9ºC (target: 20.0ºC MANUAL)", lines[1])
+		}
 	}
 }
 
@@ -35,9 +39,12 @@ func TestController_doUsers(t *testing.T) {
 	assert.Nil(t, err)
 
 	output := control.doUsers()
-	if assert.Len(t, output, 1) && assert.Len(t, output[0], 2) {
-		assert.Equal(t, "bar: away", output[0][0])
-		assert.Equal(t, "foo: home", output[0][1])
+	if assert.Len(t, output, 1) {
+		lines := strings.Split(output[0].Text, "\n")
+		if assert.Len(t, lines, 2) {
+			assert.Equal(t, "bar: away", lines[0])
+			assert.Equal(t, "foo: home", lines[1])
+		}
 	}
 }
 
@@ -71,12 +78,15 @@ controller:
 
 			output := control.doRules()
 			if assert.Len(t, output, 2) {
-				if assert.Len(t, output[0], 2) {
-					assert.Equal(t, "bar is away. will set bar to manual in 1h0m0s", output[0][0])
-					assert.Equal(t, "foo is home", output[0][1])
+				lines := strings.Split(output[0].Text, "\n")
+				if assert.Len(t, lines, 2) {
+					assert.Equal(t, "bar is away. will set bar to manual in 1h0m0s", lines[0])
+					assert.Equal(t, "foo is home", lines[1])
 				}
-				if assert.Len(t, output[1], 1) {
-					assert.Equal(t, "bar will be reset to auto in 1h0m0s", output[1][0])
+
+				lines = strings.Split(output[1].Text, "\n")
+				if assert.Len(t, lines, 1) {
+					assert.Equal(t, "bar will be reset to auto in 1h0m0s", lines[0])
 				}
 			}
 		}

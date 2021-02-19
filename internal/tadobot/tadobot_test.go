@@ -11,8 +11,8 @@ func TestDoVersion(t *testing.T) {
 	bot := TadoBot{}
 
 	responses := bot.doVersion()
-	if assert.Len(t, responses, 1) && assert.Len(t, responses[0], 1) {
-		assert.Equal(t, "tado "+version.BuildVersion, responses[0][0])
+	if assert.Len(t, responses, 1) {
+		assert.Equal(t, "tado "+version.BuildVersion, responses[0].Text)
 	}
 }
 
@@ -26,7 +26,7 @@ func TestProcessMessage(t *testing.T) {
 	assert.Len(t, attachments, 0)
 	attachments = bot.processMessage("<@12345678> Hello")
 	assert.Len(t, attachments, 1)
-	assert.Equal(t, "Unknown command \"Hello\"", attachments[0].Title)
+	assert.Equal(t, "unrecognized command", attachments[0].Title)
 	attachments = bot.processMessage("<@12345678> version")
 	assert.Len(t, attachments, 1)
 	assert.Equal(t, "tado "+version.BuildVersion, attachments[0].Text)
@@ -108,7 +108,11 @@ func TestProcessEvent(t *testing.T) {
 	assert.True(t, stop)
 }
 
-func doHello() (responses [][]string) {
-	responses = [][]string{{"hello world"}}
+func doHello() (responses []slack.Attachment) {
+	responses = []slack.Attachment{
+		{
+			Text: "hello world",
+		},
+	}
 	return
 }

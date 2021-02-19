@@ -2,11 +2,13 @@ package controller
 
 import (
 	"fmt"
+	"github.com/slack-go/slack"
 	"sort"
+	"strings"
 	"time"
 )
 
-func (controller *Controller) doUsers() [][]string {
+func (controller *Controller) doUsers() []slack.Attachment {
 	output := make([]string, 0)
 	for _, device := range controller.proxy.MobileDevice {
 		if device.Settings.GeoTrackingEnabled {
@@ -18,10 +20,16 @@ func (controller *Controller) doUsers() [][]string {
 		}
 	}
 	sort.Strings(output)
-	return [][]string{output}
+	return []slack.Attachment{
+		{
+			Color: "good",
+			Title: "Users:",
+			Text:  strings.Join(output, "\n"),
+		},
+	}
 }
 
-func (controller *Controller) doRooms() [][]string {
+func (controller *Controller) doRooms() []slack.Attachment {
 	output := make([]string, 0)
 	for zoneID, zoneInfo := range controller.proxy.ZoneInfo {
 		mode := ""
@@ -37,10 +45,15 @@ func (controller *Controller) doRooms() [][]string {
 		))
 	}
 	sort.Strings(output)
-	return [][]string{output}
+	return []slack.Attachment{
+		{
+			Color: "good",
+			Title: "Rooms:",
+			Text:  strings.Join(output, "\n"),
+		}}
 }
 
-func (controller *Controller) doRules() (responses [][]string) {
+func (controller *Controller) doRules() (responses []slack.Attachment) {
 	awayResponses := controller.doRulesAutoAway()
 	limitResponses := controller.doRulesLimitOverlay()
 
@@ -49,7 +62,7 @@ func (controller *Controller) doRules() (responses [][]string) {
 	return
 }
 
-func (controller *Controller) doRulesAutoAway() [][]string {
+func (controller *Controller) doRulesAutoAway() []slack.Attachment {
 	output := make([]string, 0)
 	for _, entry := range controller.AutoAwayInfo {
 		var response string
@@ -69,10 +82,16 @@ func (controller *Controller) doRulesAutoAway() [][]string {
 		output = append(output, entry.MobileDevice.Name+" is "+response)
 	}
 	sort.Strings(output)
-	return [][]string{output}
+	return []slack.Attachment{
+		{
+			Color: "good",
+			Title: "autoAway rules:",
+			Text:  strings.Join(output, "\n"),
+		},
+	}
 }
 
-func (controller *Controller) doRulesLimitOverlay() [][]string {
+func (controller *Controller) doRulesLimitOverlay() []slack.Attachment {
 	output := make([]string, 0)
 	for zoneID, entry := range controller.Overlays {
 		output = append(output,
@@ -84,5 +103,11 @@ func (controller *Controller) doRulesLimitOverlay() [][]string {
 	} else {
 		output = []string{"No rooms in manual control"}
 	}
-	return [][]string{output}
+	return []slack.Attachment{
+		{
+			Color: "good",
+			Title: "limitOverlay rules:",
+			Text:  strings.Join(output, "\n"),
+		},
+	}
 }

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type CommandFunc func() [][]string
+type CommandFunc func() []slack.Attachment
 
 type TadoBot struct {
 	slackClient *slack.Client
@@ -102,24 +102,13 @@ func (bot *TadoBot) processMessage(text string) (attachments []slack.Attachment)
 	if parts := strings.Split(text, " "); len(parts) > 0 {
 		if parts[0] == "<@"+bot.userID+">" {
 			if command, ok := bot.callbacks[parts[1]]; ok {
-				outputs := command()
-
+				attachments = command()
 				log.WithFields(log.Fields{
 					"command": parts[1],
-					"outputs": len(outputs),
+					"outputs": len(attachments),
 				}).Debug("command run")
-				for _, output := range outputs {
-					attachments = append(attachments, slack.Attachment{
-						Color: "good",
-						Text:  strings.Join(output, "\n"),
-					})
-				}
 			} else {
-				attachments = append(attachments, slack.Attachment{
-					Color: "warning",
-					Title: "Unknown command \"" + parts[1] + "\"",
-					Text:  strings.Join(bot.doHelp()[0], "\n"),
-				})
+				attachments = append(attachments, bot.doHelp()...)
 			}
 		}
 	}
@@ -182,14 +171,24 @@ func (bot *TadoBot) SendMessage(title, text string) (err error) {
 	return
 }
 
-func (bot *TadoBot) doHelp() [][]string {
+func (bot *TadoBot) doHelp() []slack.Attachment {
 	var commands = make([]string, 0)
 	for command := range bot.callbacks {
 		commands = append(commands, command)
 	}
-	return [][]string{{"supported commands: " + strings.Join(commands, ", ")}}
+	return []slack.Attachment{
+		{
+			Color: "bad",
+			Title: "unrecognized command",
+			Text:  "supported commands: " + strings.Join(commands, ", "),
+		},
+	}
 }
 
-func (bot *TadoBot) doVersion() [][]string {
-	return [][]string{{"tado " + version.BuildVersion}}
+func (bot *TadoBot) doVersion() []slack.Attachment {
+	return []slack.Attachment{
+		{
+			Text: "tado " + version.BuildVersion,
+		},
+	}
 }
