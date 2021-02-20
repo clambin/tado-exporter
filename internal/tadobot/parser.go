@@ -1,18 +1,21 @@
 package tadobot
 
 import (
+	log "github.com/sirupsen/logrus"
 	"regexp"
 	"strings"
 )
 
+// <@U01N8HG45JQ> set "living room” auto
 func parseText(input string) (output []string) {
+	cleanInput := strings.Replace(input, "“", "\"", -1)
+	cleanInput = strings.Replace(cleanInput, "”", "\"", -1)
 	r := regexp.MustCompile(`[^\s"]+|"([^"]*)"`)
-	output = r.FindAllString(strings.Replace(input, "“", "\"", -1), -1)
+	output = r.FindAllString(cleanInput, -1)
+
+	log.WithField("parsed", output).Debug("parsed slack input")
 	for index, word := range output {
-		length := len(word)
-		if word[0] == '"' && word[length-1] == '"' {
-			output[index] = word[1 : length-1]
-		}
+		output[index] = strings.Trim(word, "\"")
 	}
 	return
 }
