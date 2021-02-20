@@ -107,7 +107,10 @@ func (bot *TadoBot) processMessage(text string) (attachments []slack.Attachment)
 				"outputs": len(attachments),
 			}).Debug("command run")
 		} else {
-			attachments = append(attachments, bot.doHelp()...)
+			attachments = append(attachments, slack.Attachment{
+				Color: "bad",
+				Text:  "invalid command",
+			})
 		}
 	}
 	return
@@ -176,9 +179,9 @@ func (bot *TadoBot) doHelp(_ ...string) []slack.Attachment {
 	}
 	return []slack.Attachment{
 		{
-			Color: "bad",
-			Title: "unrecognized command",
-			Text:  "supported commands: " + strings.Join(commands, ", "),
+			Color: "good",
+			Title: "supported commands",
+			Text:  strings.Join(commands, ", "),
 		},
 	}
 }
@@ -186,7 +189,8 @@ func (bot *TadoBot) doHelp(_ ...string) []slack.Attachment {
 func (bot *TadoBot) doVersion(_ ...string) []slack.Attachment {
 	return []slack.Attachment{
 		{
-			Text: "tado " + version.BuildVersion,
+			Color: "good",
+			Text:  "tado " + version.BuildVersion,
 		},
 	}
 }

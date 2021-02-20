@@ -27,7 +27,7 @@ func TestProcessMessage(t *testing.T) {
 	assert.Len(t, attachments, 0)
 	attachments = bot.processMessage("<@12345678> Hello")
 	assert.Len(t, attachments, 1)
-	assert.Equal(t, "unrecognized command", attachments[0].Title)
+	assert.Equal(t, "invalid command", attachments[0].Text)
 	attachments = bot.processMessage("<@12345678> version")
 	assert.Len(t, attachments, 1)
 	assert.Equal(t, "tado "+version.BuildVersion, attachments[0].Text)
