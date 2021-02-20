@@ -4,6 +4,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/version"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 )
 
@@ -92,14 +93,14 @@ func TestProcessEvent(t *testing.T) {
 	msg = slack.RTMEvent{Type: "message", Data: &slack.MessageEvent{
 		Msg: slack.Msg{
 			Channel: "some_channel",
-			Text:    "<@987654321> hello",
+			Text:    "<@987654321> hello how are you",
 		},
 	}}
 
 	_, attachments, stop = bot.processEvent(msg)
 	assert.False(t, stop)
 	if assert.Len(t, attachments, 1) {
-		assert.Equal(t, "hello world", attachments[0].Text)
+		assert.Equal(t, "hello world how, are, you", attachments[0].Text)
 	}
 
 	msg = slack.RTMEvent{Type: "invalid_auth", Data: &slack.InvalidAuthEvent{}}
@@ -108,10 +109,10 @@ func TestProcessEvent(t *testing.T) {
 	assert.True(t, stop)
 }
 
-func doHello() (responses []slack.Attachment) {
+func doHello(args ...string) (responses []slack.Attachment) {
 	responses = []slack.Attachment{
 		{
-			Text: "hello world",
+			Text: "hello world " + strings.Join(args, ", "),
 		},
 	}
 	return

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (controller *Controller) doUsers() []slack.Attachment {
+func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
 	output := make([]string, 0)
 	for _, device := range controller.proxy.MobileDevice {
 		if device.Settings.GeoTrackingEnabled {
@@ -29,7 +29,7 @@ func (controller *Controller) doUsers() []slack.Attachment {
 	}
 }
 
-func (controller *Controller) doRooms() []slack.Attachment {
+func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
 	output := make([]string, 0)
 	for zoneID, zoneInfo := range controller.proxy.ZoneInfo {
 		mode := ""
@@ -53,16 +53,16 @@ func (controller *Controller) doRooms() []slack.Attachment {
 		}}
 }
 
-func (controller *Controller) doRules() (responses []slack.Attachment) {
-	awayResponses := controller.doRulesAutoAway()
-	limitResponses := controller.doRulesLimitOverlay()
+func (controller *Controller) doRules(args ...string) (responses []slack.Attachment) {
+	awayResponses := controller.doRulesAutoAway(args...)
+	limitResponses := controller.doRulesLimitOverlay(args...)
 
 	responses = append(responses, awayResponses[0])
 	responses = append(responses, limitResponses[0])
 	return
 }
 
-func (controller *Controller) doRulesAutoAway() []slack.Attachment {
+func (controller *Controller) doRulesAutoAway(_ ...string) []slack.Attachment {
 	output := make([]string, 0)
 	for _, entry := range controller.AutoAwayInfo {
 		var response string
@@ -91,7 +91,7 @@ func (controller *Controller) doRulesAutoAway() []slack.Attachment {
 	}
 }
 
-func (controller *Controller) doRulesLimitOverlay() []slack.Attachment {
+func (controller *Controller) doRulesLimitOverlay(_ ...string) []slack.Attachment {
 	output := make([]string, 0)
 	for zoneID, entry := range controller.Overlays {
 		output = append(output,

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type CommandFunc func() []slack.Attachment
+type CommandFunc func(args ...string) []slack.Attachment
 
 type TadoBot struct {
 	slackClient *slack.Client
@@ -98,17 +98,16 @@ func (bot *TadoBot) processEvent(msg slack.RTMEvent) (channel string, attachment
 func (bot *TadoBot) processMessage(text string) (attachments []slack.Attachment) {
 	// check if we're mentioned
 	log.WithField("text", text).Debug("processing slack chatter")
-	if parts := strings.Split(text, " "); len(parts) > 0 {
-		if parts[0] == "<@"+bot.userID+">" {
-			if command, ok := bot.callbacks[parts[1]]; ok {
-				attachments = command()
-				log.WithFields(log.Fields{
-					"command": parts[1],
-					"outputs": len(attachments),
-				}).Debug("command run")
-			} else {
-				attachments = append(attachments, bot.doHelp()...)
-			}
+	command, args := bot.parseCommand(text)
+	if command != "" {
+		if callback, ok := bot.callbacks[command]; ok {
+			attachments = callback(args...)
+			log.WithFields(log.Fields{
+				"command": command,
+				"outputs": len(attachments),
+			}).Debug("command run")
+		} else {
+			attachments = append(attachments, bot.doHelp()...)
 		}
 	}
 	return
@@ -170,7 +169,7 @@ func (bot *TadoBot) SendMessage(title, text string) (err error) {
 	return
 }
 
-func (bot *TadoBot) doHelp() []slack.Attachment {
+func (bot *TadoBot) doHelp(_ ...string) []slack.Attachment {
 	var commands = make([]string, 0)
 	for command := range bot.callbacks {
 		commands = append(commands, command)
@@ -184,7 +183,7 @@ func (bot *TadoBot) doHelp() []slack.Attachment {
 	}
 }
 
-func (bot *TadoBot) doVersion() []slack.Attachment {
+func (bot *TadoBot) doVersion(_ ...string) []slack.Attachment {
 	return []slack.Attachment{
 		{
 			Text: "tado " + version.BuildVersion,
