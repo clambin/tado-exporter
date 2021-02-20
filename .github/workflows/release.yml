@@ -3,23 +3,23 @@ name: Release
 on:
   push:
     tags:
-      - '*'
+      - 'v*'
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
-      with:
-        go-version: 1.15
-    - name: test
-      run: |
-        go test ./... -race -coverprofile=coverage.txt -covermode=atomic
-    - uses: codecov/codecov-action@v1
-      with:
-        file: coverage.txt
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
+      - name: test
+        run: |
+          go test ./... -race -coverprofile=coverage.txt -covermode=atomic
+      - uses: codecov/codecov-action@v1
+        with:
+          file: coverage.txt
+          token: ${{ secrets.CODECOV_TOKEN }}
   build:
     needs: test
     runs-on: ubuntu-latest
@@ -29,28 +29,28 @@ jobs:
         platform: [ linux ]
         arch: [ amd64, arm ]
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
-      with:
-        go-version: 1.15
-    - name: Version number
-      id: vars
-      run: echo ::set-output name=tag::${GITHUB_REF##*/}
-    - name: build
-      env:
-        TARGET: ${{ matrix.target }}
-        GOOS: ${{ matrix.platform }}
-        GOARCH: ${{ matrix.arch }}
-        RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
-      run: |
-        CGO_ENABLED=0 go build \
-          -ldflags "-X github.com/clambin/tado-exporter/internal/version.BuildVersion=$RELEASE_VERSION" \
-          -o bld/$TARGET-$GOOS-$GOARCH \
-          $TARGET.go
-    - uses: actions/upload-artifact@v2
-      with:
-        name: ${{ matrix.target }}-${{ matrix.platform }}-${{ matrix.arch }}
-        path: ./bld/*
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
+      - name: Version number
+        id: vars
+        run: echo ::set-output name=tag::${GITHUB_REF##*/}
+      - name: build
+        env:
+          TARGET: ${{ matrix.target }}
+          GOOS: ${{ matrix.platform }}
+          GOARCH: ${{ matrix.arch }}
+          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+        run: |
+          CGO_ENABLED=0 go build \
+            -ldflags "-X github.com/$GITHUB_REPOSITORY/internal/version.BuildVersion=$RELEASE_VERSION" \
+            -o bld/$TARGET-$GOOS-$GOARCH \
+            $TARGET.go
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.target }}-${{ matrix.platform }}-${{ matrix.arch }}
+          path: ./bld/*
   docker:
     needs:  build
     runs-on: ubuntu-latest
@@ -80,7 +80,7 @@ jobs:
           tag-sha: True
           tag-semver: |
             {{version}}
-            {{major}}.{{minor}}.{{patch}}
+            {{major}}.{{minor}}
       - name: Docker build
         uses: docker/build-push-action@v2
         with:

@@ -80,7 +80,7 @@ jobs:
           tag-sha: True
           tag-semver: |
             {{version}}
-            {{major}}.{{minor}}.{{patch}}
+            {{major}}.{{minor}}
       - name: Docker build
         uses: docker/build-push-action@v2
         with:
