@@ -2,8 +2,10 @@ package controller
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -110,4 +112,80 @@ func (controller *Controller) doRulesLimitOverlay(_ ...string) []slack.Attachmen
 			Text:  strings.Join(output, "\n"),
 		},
 	}
+}
+
+func (controller *Controller) doSetTemperature(args ...string) (output []slack.Attachment) {
+	var (
+		zoneName    string
+		temperature float64
+		err         error
+		zoneID      int
+		ok          bool
+		auto        bool
+	)
+	if len(args) >= 2 {
+		zoneName = strings.ToLower(args[0])
+		if strings.ToLower(args[1]) == "auto" {
+			auto = true
+		} else {
+			if temperature, err = strconv.ParseFloat(args[1], 64); err != nil {
+				output = append(output, slack.Attachment{
+					Color: "bad",
+					Text:  "invalid temperature " + args[1],
+				})
+			}
+		}
+	}
+	for _, zone := range controller.proxy.Zone {
+		if strings.ToLower(zone.Name) == zoneName {
+			zoneID = zone.ID
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		output = append(output, slack.Attachment{
+			Color: "bad",
+			Text:  "unknown room " + args[0],
+		})
+	}
+
+	if ok && err == nil {
+		if auto {
+			if err = controller.proxy.DeleteZoneOverlay(zoneID); err == nil {
+				output = append(output, slack.Attachment{
+					Color: "good",
+					Text:  "setting " + args[0] + " back to auto",
+				})
+			} else {
+				log.WithFields(log.Fields{
+					"err":      err,
+					"zoneID":   zoneID,
+					"zoneName": zoneName,
+				}).Warning("failed to set zone back to auto")
+
+				output = append(output, slack.Attachment{
+					Color: "bad",
+					Text:  "failed to set " + args[0] + " back to auto",
+				})
+			}
+		} else {
+			if err = controller.proxy.SetZoneOverlay(zoneID, temperature); err == nil {
+				output = append(output, slack.Attachment{
+					Color: "good",
+					Text:  "setting temperature in " + args[0] + " to " + args[1],
+				})
+			} else {
+				output = append(output, slack.Attachment{
+					Color: "bad",
+					Text:  "failed to set manual temperature in " + args[0],
+				})
+			}
+		}
+	}
+
+	if err == nil {
+		err = controller.Run()
+	}
+	return
 }

@@ -92,3 +92,31 @@ controller:
 		}
 	}
 }
+
+func TestController_doSetTemperature(t *testing.T) {
+	control := Controller{
+		Configuration: &configuration.ControllerConfiguration{},
+		proxy: tadoproxy.Proxy{
+			API: &mockapi.MockAPI{},
+		},
+	}
+
+	err := control.proxy.Refresh()
+	assert.Nil(t, err)
+
+	output := control.doSetTemperature("FOO", "17.0")
+	if assert.Len(t, output, 1) {
+		assert.Equal(t, "setting temperature in FOO to 17.0", output[0].Text)
+	}
+
+	output = control.doSetTemperature("FOO", "auto")
+	if assert.Len(t, output, 1) {
+		assert.Equal(t, "setting FOO back to auto", output[0].Text)
+	}
+
+	output = control.doSetTemperature("wrong room", "ABC")
+	if assert.Len(t, output, 2) {
+		assert.Equal(t, "invalid temperature ABC", output[0].Text)
+		assert.Equal(t, "unknown room wrong room", output[1].Text)
+	}
+}

@@ -42,6 +42,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 			"rules":        controller.doRules,
 			"autoaway":     controller.doRulesAutoAway,
 			"limitoverlay": controller.doRulesLimitOverlay,
+			"set":          controller.doSetTemperature,
 		}
 		if controller.TadoBot, err = tadobot.Create(cfg.SlackbotToken, callbacks); err == nil {
 			go func() {
