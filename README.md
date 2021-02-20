@@ -196,10 +196,11 @@ TadoBot supports the following commands:
 * **rules**: show status of all configured rules
 * **autoaway**: show status of all configured autoAway rules
 * **limitoverlay**: show status of all configured limitOverlay rules
+* **set <room name> <temperature>**: set the target temperature of a room. use temperature "auto" to set back to automatic schedule
 * **version**: show version of tado-controller
 * **help**: show all available commands
 
-To enable the bot, add a bot the workspace's Custom Integrations and add the API Token in the configuration file (*slackbotToken*).
+To enable the bot, add a bot to the workspace's Custom Integrations and add the API Token in the configuration file above (*slackbotToken*).
 
 ## Tado Client API
 
