@@ -3,6 +3,7 @@ package controller
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/tadobot"
+	"github.com/clambin/tado-exporter/internal/tadoproxy"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -11,36 +12,38 @@ import (
 
 // Controller object for tado-controller.
 type Controller struct {
-	tado.API
+	//tado.API
 	Configuration *configuration.ControllerConfiguration
 	TadoBot       *tadobot.TadoBot
 
-	Zones         map[int]*tado.Zone
-	MobileDevices map[int]*tado.MobileDevice
-	AutoAwayInfo  map[int]AutoAwayInfo
-	Overlays      map[int]time.Time
+	proxy        tadoproxy.Proxy
+	AutoAwayInfo map[int]AutoAwayInfo
+	Overlays     map[int]time.Time
 }
 
 // New creates a new Controller object
 func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration.ControllerConfiguration) (controller *Controller, err error) {
 	controller = &Controller{
-		API: &tado.APIClient{
-			HTTPClient:   &http.Client{},
-			Username:     tadoUsername,
-			Password:     tadoPassword,
-			ClientSecret: tadoClientSecret,
-		},
 		Configuration: cfg,
+		proxy: tadoproxy.Proxy{
+			API: &tado.APIClient{
+				HTTPClient:   &http.Client{},
+				Username:     tadoUsername,
+				Password:     tadoPassword,
+				ClientSecret: tadoClientSecret,
+			},
+		},
 	}
 
 	if cfg.SlackbotToken != "" {
-		if controller.TadoBot, err = tadobot.Create(
-			cfg.SlackbotToken,
-			tadoUsername,
-			tadoPassword,
-			tadoClientSecret,
-			nil,
-		); err == nil {
+		callbacks := map[string]tadobot.CommandFunc{
+			"rooms":        controller.doRooms,
+			"users":        controller.doUsers,
+			"rules":        controller.doRules,
+			"autoaway":     controller.doRulesAutoAway,
+			"limitoverlay": controller.doRulesLimitOverlay,
+		}
+		if controller.TadoBot, err = tadobot.Create(cfg.SlackbotToken, callbacks); err == nil {
 			go func() {
 				controller.TadoBot.Run()
 			}()
@@ -53,8 +56,8 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 }
 
 // Run executes all controller rules
-func (controller *Controller) Run() error {
-	err := controller.updateTadoConfig()
+func (controller *Controller) Run() (err error) {
+	err = controller.proxy.Refresh()
 
 	if err == nil {
 		err = controller.runAutoAway()
@@ -66,50 +69,15 @@ func (controller *Controller) Run() error {
 
 	log.WithField("err", err).Debug("Run")
 
-	return err
-}
-
-func (controller *Controller) updateTadoConfig() error {
-	var (
-		err           error
-		zones         []*tado.Zone
-		mobileDevices []*tado.MobileDevice
-	)
-
-	if zones, err = controller.GetZones(); err == nil {
-		zoneMap := make(map[int]*tado.Zone)
-		for _, zone := range zones {
-			zoneMap[zone.ID] = zone
-		}
-		controller.Zones = zoneMap
-
-		if mobileDevices, err = controller.GetMobileDevices(); err == nil {
-			mobileDeviceMap := make(map[int]*tado.MobileDevice)
-			for _, mobileDevice := range mobileDevices {
-				mobileDeviceMap[mobileDevice.ID] = mobileDevice
-			}
-			controller.MobileDevices = mobileDeviceMap
-		}
-	}
-
-	log.WithFields(log.Fields{
-		"err":           err,
-		"zones":         len(controller.Zones),
-		"mobileDevices": len(controller.MobileDevices),
-	}).Debug("updateTadoConfig")
-
-	return err
+	return
 }
 
 // lookupMobileDevice returns the mobile device matching the mobileDeviceID or mobileDeviceName from the list of mobile devices
-func (controller *Controller) lookupMobileDevice(mobileDeviceID int, mobileDeviceName string) *tado.MobileDevice {
-	var (
-		ok           bool
-		mobileDevice *tado.MobileDevice
-	)
+func (controller *Controller) lookupMobileDevice(mobileDeviceID int, mobileDeviceName string) (mobileDevice *tado.MobileDevice) {
+	var ok bool
 
-	if mobileDevice, ok = controller.MobileDevices[mobileDeviceID]; ok == false {
-		for _, mobileDevice = range controller.MobileDevices {
+	if mobileDevice, ok = controller.proxy.MobileDevice[mobileDeviceID]; ok == false {
+		for _, mobileDevice = range controller.proxy.MobileDevice {
 			if mobileDeviceName == mobileDevice.Name {
 				ok = true
 				break
@@ -118,20 +86,17 @@ func (controller *Controller) lookupMobileDevice(mobileDeviceID int, mobileDevic
 	}
 
 	if ok == false {
-		return nil
+		mobileDevice = nil
 	}
-	return mobileDevice
+	return
 }
 
 // lookupZone returns the zone matching zoneID or zoneName from the list of zones
-func (controller *Controller) lookupZone(zoneID int, zoneName string) *tado.Zone {
-	var (
-		ok   bool
-		zone *tado.Zone
-	)
+func (controller *Controller) lookupZone(zoneID int, zoneName string) (zone *tado.Zone) {
+	var ok bool
 
-	if zone, ok = controller.Zones[zoneID]; ok == false {
-		for _, zone = range controller.Zones {
+	if zone, ok = controller.proxy.Zone[zoneID]; ok == false {
+		for _, zone = range controller.proxy.Zone {
 			if zoneName == zone.Name {
 				ok = true
 				break
@@ -140,23 +105,15 @@ func (controller *Controller) lookupZone(zoneID int, zoneName string) *tado.Zone
 	}
 
 	if ok == false {
-		return nil
+		zone = nil
 	}
-	return zone
+	return
 }
 
 // notify sends a message to slack
-func (controller *Controller) notify(message string) error {
-	var err error
+func (controller *Controller) notify(message string) (err error) {
 	if controller.TadoBot != nil {
 		err = controller.TadoBot.SendMessage("", message)
 	}
-	return err
-}
-
-func (controller *Controller) zoneName(zoneID int) string {
-	if zone, ok := controller.Zones[zoneID]; ok {
-		return zone.Name
-	}
-	return "unknown"
+	return
 }

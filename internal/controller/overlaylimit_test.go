@@ -1,8 +1,8 @@
-package controller_test
+package controller
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller"
+	"github.com/clambin/tado-exporter/internal/tadoproxy"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -25,21 +25,23 @@ controller:
 		panic(err)
 	}
 
-	ctrlr := controller.Controller{
-		API:           &mockapi.MockAPI{},
+	controller := Controller{
 		Configuration: &cfg.Controller,
+		proxy: tadoproxy.Proxy{
+			API: &mockapi.MockAPI{},
+		},
 	}
 
-	err = ctrlr.Run()
+	err = controller.Run()
 	assert.Nil(t, err)
-	assert.Len(t, ctrlr.Overlays, 1)
-	_, ok := ctrlr.Overlays[2]
+	assert.Len(t, controller.Overlays, 1)
+	_, ok := controller.Overlays[2]
 	assert.True(t, ok)
 
 	// Overlay's been running more than the expiry time
-	ctrlr.Overlays[2] = time.Now().Add(-2 * time.Hour)
+	controller.Overlays[2] = time.Now().Add(-2 * time.Hour)
 
-	err = ctrlr.Run()
+	err = controller.Run()
 	assert.Nil(t, err)
-	assert.Len(t, ctrlr.Overlays, 0)
+	assert.Len(t, controller.Overlays, 0)
 }

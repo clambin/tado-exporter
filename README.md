@@ -183,33 +183,19 @@ Feel free to customize as you see fit.
 
 Tado-controller can run a slack bot that will report on any rules being triggered:
 
-```
-tadobotAPP  13:15
-Manual temperature setting detected in zone Bathroom
-
-
-tadobotAPP  14:15
-Disabling manual temperature setting in zone Bathroom
-
-```
+![screenshot](assets/screenshots/tadobot_2.png?raw=true)
 
 Users can also interact with the bot:
 
-```
-Christophe Lambin  11:59
-@tadobot rooms
+![screenshot](assets/screenshots/tadobot_1.png?raw=true)
 
-tadobotAPP  11:59
-Bedroom: 21.0ºC (target: 21.0ºC)
-Living room: 21.3ºC (target: 21.5ºC)
-Study: 22.2ºC (target: 22.0ºC MANUAL)
-Bathroom: 21.2ºC (target: 16.0ºC)
-```
-
-Currently, the following commands are supported:
+TadoBot supports the following commands:
 
 * **users**: show presence of all users (i.e. geo-tracked mobile devices)
 * **rooms**: show info of all rooms (zones)
+* **rules**: show status of all configured rules
+* **autoaway**: show status of all configured autoAway rules
+* **limitoverlay**: show status of all configured limitOverlay rules
 * **version**: show version of tado-controller
 * **help**: show all available commands
 

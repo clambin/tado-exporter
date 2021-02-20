@@ -2,6 +2,7 @@ package controller
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/tadoproxy"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -34,14 +35,16 @@ controller:
 	}
 
 	ctrlr := Controller{
-		API:           &mockapi.MockAPI{},
 		Configuration: &cfg.Controller,
+		proxy: tadoproxy.Proxy{
+			API: &mockapi.MockAPI{},
+		},
 	}
 
 	assert.Nil(t, err)
 	assert.Nil(t, ctrlr.AutoAwayInfo)
 
-	err = ctrlr.updateTadoConfig()
+	err = ctrlr.proxy.Refresh()
 	assert.Nil(t, err)
 
 	err = ctrlr.updateAutoAwayInfo()
