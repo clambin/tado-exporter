@@ -47,10 +47,10 @@ loop:
 	for msg := range bot.slackRTM.IncomingEvents {
 		channel, attachments, stop := bot.processEvent(msg)
 
-		for _, attachment := range attachments {
+		if len(attachments) > 0 {
 			if _, _, err := bot.slackRTM.PostMessage(
 				channel,
-				slack.MsgOptionAttachments(attachment),
+				slack.MsgOptionAttachments(attachments...),
 				slack.MsgOptionAsUser(true),
 			); err != nil {
 				log.WithField("err", err).Warning("failed to send on slack")
@@ -86,9 +86,8 @@ func (bot *TadoBot) processEvent(msg slack.RTMEvent) (channel string, attachment
 		}).Debug("message received: " + ev.Text)
 		channel = ev.Channel
 		attachments = bot.processMessage(ev.Text)
-	// case *slack.RTMError:
-	//	log.WithField("error", ev.Error()).Error("Error")
-	//	// TODO: reconnect here?
+	case *slack.RTMError:
+		log.WithField("error", ev.Error()).Error("error reading slack RTM connection")
 	case *slack.InvalidAuthEvent:
 		log.Error("invalid credentials")
 		stop = true
