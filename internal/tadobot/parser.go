@@ -1,10 +1,13 @@
 package tadobot
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 func parseText(input string) (output []string) {
 	r := regexp.MustCompile(`[^\s"]+|"([^"]*)"`)
-	output = r.FindAllString(input, -1)
+	output = r.FindAllString(strings.Replace(input, "“", "\"", -1), -1)
 	for index, word := range output {
 		length := len(word)
 		if word[0] == '"' && word[length-1] == '"' {

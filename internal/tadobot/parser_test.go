@@ -74,4 +74,11 @@ func TestParseCommand(t *testing.T) {
 		assert.Equal(t, "18.0", args[1])
 	}
 
+	command, args = bot.parseCommand("<@123> set “the lobby“ 18.0")
+	assert.Equal(t, "set", command)
+	if assert.Len(t, args, 2) {
+		assert.Equal(t, "the lobby", args[0])
+		assert.Equal(t, "18.0", args[1])
+	}
+
 }
