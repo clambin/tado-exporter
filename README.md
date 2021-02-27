@@ -97,9 +97,15 @@ controller:
   enabled: false
   # How often rules should be evaluated
   interval: 5m
-  # When set, tado will start a slack bot.  See below for details.
-  slackbotToken: xoxb-slackbot-token
-  
+  tadoBot:
+    # When set, tado will start a slack bot.  See below for details.
+    enabled: false
+    token:
+      # slackbot token value
+      value: ""
+      # if set, tado will use the specified environment variable's value as slackbot token.
+      # Overrides the value above.
+      envVar: ""
   # autoAway rules switch a room to manual control when a user is not home
   autoAwayRules:
       # mobileDeviceName or mobileDeviceID identify the user through his registed mobile phone
