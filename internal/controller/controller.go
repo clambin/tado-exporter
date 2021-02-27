@@ -35,7 +35,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 		},
 	}
 
-	if cfg.SlackbotToken != "" {
+	if cfg.TadoBot.Enabled {
 		callbacks := map[string]tadobot.CommandFunc{
 			"rooms":        controller.doRooms,
 			"users":        controller.doUsers,
@@ -44,7 +44,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 			"limitoverlay": controller.doRulesLimitOverlay,
 			"set":          controller.doSetTemperature,
 		}
-		if controller.TadoBot, err = tadobot.Create(cfg.SlackbotToken, callbacks); err == nil {
+		if controller.TadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
 			go func() {
 				controller.TadoBot.Run()
 			}()

@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
+	"os"
 	"time"
 )
 
@@ -25,9 +26,18 @@ type ExporterConfiguration struct {
 type ControllerConfiguration struct {
 	Enabled           bool
 	Interval          time.Duration
-	SlackbotToken     string               `yaml:"slackbotToken"`
+	TadoBot           TadoBotConfiguration `yaml:"tadoBot"`
 	AutoAwayRules     *[]*AutoAwayRule     `yaml:"autoAwayRules"`
 	OverlayLimitRules *[]*OverlayLimitRule `yaml:"overlayLimitRules"`
+}
+
+// TadoBotConfiguration structure for TadoBot
+type TadoBotConfiguration struct {
+	Enabled bool `yaml:"enabled"`
+	Token   struct {
+		Value  string `yaml:"value"`
+		EnvVar string `yaml:"envVar"`
+	} `yaml:"token"`
 }
 
 // OverlayLimitRule removes an overlay from ZoneID/ZoneName after it's been active for MaxTime
@@ -74,6 +84,18 @@ func LoadConfiguration(content []byte) (*Configuration, error) {
 		},
 	}
 	err := yaml.Unmarshal(content, &configuration)
+
+	if err == nil {
+		if configuration.Controller.TadoBot.Enabled && configuration.Controller.TadoBot.Token.EnvVar != "" {
+			configuration.Controller.TadoBot.Token.Value = os.Getenv(configuration.Controller.TadoBot.Token.EnvVar)
+
+			if configuration.Controller.TadoBot.Token.Value == "" {
+				log.WithField("envVar", configuration.Controller.TadoBot.Token.EnvVar).
+					Warning("tadoBot environment variable for token not set. Disabling tadoBot")
+				configuration.Controller.TadoBot.Enabled = false
+			}
+		}
+	}
 
 	log.WithField("err", err).Debug("LoadConfiguration")
 

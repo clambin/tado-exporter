@@ -21,7 +21,10 @@ exporter:
 controller:
   enabled: true
   interval: 5m
-  slackbotToken: 1234
+  tadoBot:
+    enabled: true
+    token:
+      value: "1234"
   overlayLimitRules:
   - zoneName: "foo"
     maxTime: 2h
@@ -58,7 +61,8 @@ controller:
 
 		assert.True(t, cfg.Controller.Enabled)
 		assert.Equal(t, 5*time.Minute, cfg.Controller.Interval)
-		assert.Equal(t, "1234", cfg.Controller.SlackbotToken)
+		assert.True(t, cfg.Controller.TadoBot.Enabled)
+		assert.Equal(t, "1234", cfg.Controller.TadoBot.Token.Value)
 
 		if assert.NotNil(t, cfg.Controller.OverlayLimitRules) &&
 			assert.Len(t, *cfg.Controller.OverlayLimitRules, 2) {
@@ -101,6 +105,47 @@ func TestConfigLoader_Defaults(t *testing.T) {
 	assert.Equal(t, 1*time.Minute, cfg.Exporter.Interval)
 	assert.False(t, cfg.Controller.Enabled)
 	assert.Equal(t, 5*time.Minute, cfg.Controller.Interval)
+	assert.False(t, cfg.Controller.TadoBot.Enabled)
 	assert.Nil(t, cfg.Controller.AutoAwayRules)
 	assert.Nil(t, cfg.Controller.OverlayLimitRules)
+}
+
+func TestConfigLoader_Tadobot(t *testing.T) {
+	var testConfig = []byte(`
+debug: true
+controller:
+  enabled: true
+  interval: 5m
+  tadoBot:
+    enabled: true
+    token:
+      envVar: "SLACKBOT_TOKEN"
+`)
+
+	var (
+		err error
+		cfg *configuration.Configuration
+	)
+
+	err = os.Setenv("SLACKBOT_TOKEN", "")
+	if assert.Nil(t, err) {
+		cfg, err = configuration.LoadConfiguration(testConfig)
+
+		if assert.NotNil(t, cfg) {
+			if assert.Nil(t, err) {
+				assert.False(t, cfg.Controller.TadoBot.Enabled)
+			}
+		}
+
+		_ = os.Setenv("SLACKBOT_TOKEN", "4321")
+
+		cfg, err = configuration.LoadConfiguration(testConfig)
+
+		if assert.NotNil(t, cfg) {
+			if assert.Nil(t, err) {
+				assert.True(t, cfg.Controller.TadoBot.Enabled)
+				assert.Equal(t, "4321", cfg.Controller.TadoBot.Token.Value)
+			}
+		}
+	}
 }
