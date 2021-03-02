@@ -106,6 +106,14 @@ func (controller *Controller) getAutoAwayActions() ([]action, error) {
 			"activation_time":  autoAwayInfo.ActivationTime,
 		}).Debug("autoAwayInfo")
 
+		if autoAwayInfo.MobileDevice.Location.Stale {
+			log.WithFields(log.Fields{
+				"mobileDeviceID":   autoAwayInfo.MobileDevice.ID,
+				"mobileDeviceName": autoAwayInfo.MobileDevice.Name,
+			}).Info("stale location. Skipping ...")
+			continue
+		}
+
 		// if the mobile phone is now home but was away
 		if autoAwayInfo.cameHome() {
 			// mark the phone at home
