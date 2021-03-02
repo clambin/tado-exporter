@@ -18,6 +18,9 @@ func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
 			if device.Location.AtHome {
 				state = "home"
 			}
+			if device.Location.Stale {
+				state += " (stale)"
+			}
 			output = append(output, fmt.Sprintf("%s: %s", device.Name, state))
 		}
 	}
