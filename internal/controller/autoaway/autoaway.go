@@ -7,7 +7,6 @@ import (
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
-	"github.com/slack-go/slack"
 	"time"
 )
 
@@ -139,13 +138,11 @@ func (autoAway *AutoAway) getActions() (actionList []actions.Action, err error) 
 			}).Info("User returned home. Removing overlay")
 			// notify via slack if needed
 			if autoAway.Slack != nil {
-				autoAway.Slack <- []slack.Attachment{
-					{
-						Color: "good",
-						Title: deviceInfo.mobileDevice.Name + " is home",
-						Text:  "resetting " + deviceInfo.zone.Name + " to auto",
-					},
-				}
+				_ = tadobot.SendMessage(autoAway.Slack,
+					"good",
+					deviceInfo.mobileDevice.Name+" is home",
+					"resetting "+deviceInfo.zone.Name+" to auto",
+				)
 			}
 		} else
 		// if the mobile phone is away, mark it as such and set the activation timer
@@ -155,13 +152,11 @@ func (autoAway *AutoAway) getActions() (actionList []actions.Action, err error) 
 			autoAway.deviceInfo[id] = deviceInfo
 			// notify via slack if needed
 			if autoAway.Slack != nil {
-				autoAway.Slack <- []slack.Attachment{
-					{
-						Color: "good",
-						Title: deviceInfo.mobileDevice.Name + " is away",
-						Text:  "will set " + deviceInfo.zone.Name + " to manual in " + deviceInfo.rule.WaitTime.String(),
-					},
-				}
+				_ = tadobot.SendMessage(autoAway.Slack,
+					"good",
+					deviceInfo.mobileDevice.Name+" is away",
+					"will set "+deviceInfo.zone.Name+" to manual in "+deviceInfo.rule.WaitTime.String(),
+				)
 			}
 		} else
 		// if the mobile phone was already away, check the activation timer
@@ -182,13 +177,11 @@ func (autoAway *AutoAway) getActions() (actionList []actions.Action, err error) 
 			}).Info("User left. Setting overlay")
 			// notify via slack if needed
 			if autoAway.Slack != nil {
-				autoAway.Slack <- []slack.Attachment{
-					{
-						Color: "good",
-						Title: deviceInfo.mobileDevice.Name + " is away",
-						Text:  "activating manual control in zone " + deviceInfo.zone.Name,
-					},
-				}
+				_ = tadobot.SendMessage(autoAway.Slack,
+					"good",
+					deviceInfo.mobileDevice.Name+" is away",
+					"activating manual control in zone "+deviceInfo.zone.Name,
+				)
 			}
 		}
 	}

@@ -7,7 +7,6 @@ import (
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
-	"github.com/slack-go/slack"
 	"time"
 )
 
@@ -81,12 +80,11 @@ func (overlayLimit *OverlayLimit) updateInfo(tadoData *scheduler.TadoData) (err 
 					}).Info("new zone in overlay")
 					// notify via slack if needed
 					if overlayLimit.Slack != nil {
-						overlayLimit.Slack <- []slack.Attachment{
-							{
-								Color: "good",
-								Title: "Manual temperature setting detected in zone " + details.zone.Name,
-							},
-						}
+						_ = tadobot.SendMessage(overlayLimit.Slack,
+							"good",
+							"",
+							"Manual temperature setting detected in zone "+details.zone.Name,
+						)
 					}
 				}
 			} else if details.isOverlay == true {
@@ -143,12 +141,11 @@ func (overlayLimit *OverlayLimit) getActions() (actionList []actions.Action, err
 			overlayLimit.zoneDetails[id] = details
 			// notify via slack if needed
 			if overlayLimit.Slack != nil {
-				overlayLimit.Slack <- []slack.Attachment{
-					{
-						Color: "good",
-						Title: "Disabling manual temperature setting in zone " + details.zone.Name,
-					},
-				}
+				_ = tadobot.SendMessage(overlayLimit.Slack,
+					"good",
+					"",
+					"Disabling manual temperature setting in zone "+details.zone.Name,
+				)
 			}
 		}
 	}

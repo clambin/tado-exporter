@@ -20,9 +20,8 @@ type Action struct {
 func (action *Action) String() string {
 	if action.Overlay {
 		return fmt.Sprintf("setOverlay{zoneID=%d, temp=%.1f}", action.ZoneID, action.TargetTemperature)
-	} else {
-		return fmt.Sprintf("deleteOverlay{zoneID=%d}", action.ZoneID)
 	}
+	return fmt.Sprintf("deleteOverlay{zoneID=%d}", action.ZoneID)
 }
 
 // RunAction execute an action required by autoAway/overlayLimit rules

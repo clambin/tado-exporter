@@ -1,6 +1,7 @@
 package tadobot
 
 import (
+	"errors"
 	"github.com/clambin/tado-exporter/internal/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
@@ -173,25 +174,6 @@ func (bot *TadoBot) getAllChannels() (channelIDs []string, err error) {
 	return
 }
 
-func (bot *TadoBot) SendMessage(title, text string) (err error) {
-	attachment := slack.Attachment{
-		Title: title,
-		Text:  text,
-	}
-
-	for _, channelID := range bot.channelIDs {
-		_, _, err = bot.slackRTM.PostMessage(
-			channelID,
-			slack.MsgOptionAttachments(attachment),
-			slack.MsgOptionAsUser(true),
-		)
-	}
-
-	log.WithField("err", err).Debug("sent a message")
-
-	return
-}
-
 func (bot *TadoBot) doHelp(_ ...string) []slack.Attachment {
 	var commands = make([]string, 0)
 	for command := range bot.callbacks {
@@ -213,4 +195,22 @@ func (bot *TadoBot) doVersion(_ ...string) []slack.Attachment {
 			Text:  "tado " + version.BuildVersion,
 		},
 	}
+}
+
+func SendMessage(postChannel PostChannel, color, title, text string) (err error) {
+	if postChannel != nil {
+		postChannel <- []slack.Attachment{
+			{
+				Color: color,
+				Title: title,
+				Text:  text,
+			},
+		}
+	} else {
+		err = errors.New("invalid channel supplied")
+	}
+
+	log.WithField("err", err).Debug("sent a message")
+
+	return
 }
