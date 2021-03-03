@@ -1,63 +1,30 @@
 package controller
 
 import (
-	"fmt"
-	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
-	"sort"
-	"strconv"
 	"strings"
-	"time"
 )
 
 func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
-	output := make([]string, 0)
-	for _, device := range controller.proxy.MobileDevice {
-		if device.Settings.GeoTrackingEnabled {
-			state := "away"
-			if device.Location.AtHome {
-				state = "home"
-			}
-			if device.Location.Stale {
-				state += " (stale)"
-			}
-			output = append(output, fmt.Sprintf("%s: %s", device.Name, state))
-		}
-	}
-	sort.Strings(output)
 	return []slack.Attachment{
 		{
 			Color: "good",
 			Title: "Users:",
-			Text:  strings.Join(output, "\n"),
+			Text:  strings.Join(controller.registry.GetUsers(), "\n"),
 		},
 	}
 }
 
 func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
-	output := make([]string, 0)
-	for zoneID, zoneInfo := range controller.proxy.ZoneInfo {
-		mode := ""
-		if zoneInfo.Overlay.Type == "MANUAL" &&
-			zoneInfo.Overlay.Setting.Type == "HEATING" {
-			mode = " MANUAL"
-		}
-		output = append(output, fmt.Sprintf("%s: %.1fºC (target: %.1fºC%s)",
-			controller.proxy.Zone[zoneID].Name,
-			zoneInfo.SensorDataPoints.Temperature.Celsius,
-			zoneInfo.Setting.Temperature.Celsius,
-			mode,
-		))
-	}
-	sort.Strings(output)
 	return []slack.Attachment{
 		{
 			Color: "good",
 			Title: "Rooms:",
-			Text:  strings.Join(output, "\n"),
+			Text:  strings.Join(controller.registry.GetRooms(), "\n"),
 		}}
 }
 
+/*
 func (controller *Controller) doRules(args ...string) (responses []slack.Attachment) {
 	awayResponses := controller.doRulesAutoAway(args...)
 	limitResponses := controller.doRulesLimitOverlay(args...)
@@ -192,3 +159,4 @@ func (controller *Controller) doSetTemperature(args ...string) (output []slack.A
 	}
 	return
 }
+*/

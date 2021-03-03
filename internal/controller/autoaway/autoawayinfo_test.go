@@ -1,4 +1,4 @@
-package controller
+package autoaway
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
@@ -9,8 +9,8 @@ import (
 )
 
 func TestAutoAwayInfo(t *testing.T) {
-	info := &AutoAwayInfo{
-		MobileDevice: &tado.MobileDevice{
+	info := &DeviceInfo{
+		mobileDevice: tado.MobileDevice{
 			ID:   1,
 			Name: "foo",
 			Settings: tado.MobileDeviceSettings{
@@ -20,8 +20,7 @@ func TestAutoAwayInfo(t *testing.T) {
 				AtHome: true,
 			},
 		},
-		Zone: nil,
-		AutoAwayRule: &configuration.AutoAwayRule{
+		rule: configuration.AutoAwayRule{
 			MobileDeviceID:    1,
 			MobileDeviceName:  "foo",
 			WaitTime:          5 * time.Minute,
@@ -34,14 +33,14 @@ func TestAutoAwayInfo(t *testing.T) {
 
 	assert.False(t, info.leftHome())
 
-	info.MobileDevice.Location.AtHome = false
+	info.mobileDevice.Location.AtHome = false
 	assert.True(t, info.leftHome())
 
 	info.state = autoAwayStateAway
-	info.ActivationTime = time.Now().Add(5 * time.Minute)
+	info.activationTime = time.Now().Add(5 * time.Minute)
 	assert.False(t, info.shouldReport())
 
-	info.ActivationTime = time.Now().Add(-10 * time.Minute)
+	info.activationTime = time.Now().Add(-10 * time.Minute)
 	assert.True(t, info.shouldReport())
 
 	info.state = autoAwayStateExpired
