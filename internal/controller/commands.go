@@ -1,27 +1,78 @@
 package controller
 
 import (
+	"fmt"
+	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/slack-go/slack"
+	"sort"
 	"strings"
 )
 
 func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
+	var (
+		err           error
+		mobileDevices []*tado.MobileDevice
+	)
+	output := make([]string, 0)
+	if mobileDevices, err = controller.GetMobileDevices(); err == nil {
+		for _, device := range mobileDevices {
+			if device.Settings.GeoTrackingEnabled {
+				state := "away"
+				if device.Location.AtHome {
+					state = "home"
+				}
+				if device.Location.Stale {
+					state += " (stale)"
+				}
+				output = append(output, fmt.Sprintf("%s: %s", device.Name, state))
+			}
+		}
+		sort.Strings(output)
+	}
 	return []slack.Attachment{
 		{
 			Color: "good",
 			Title: "Users:",
-			Text:  strings.Join(controller.registry.GetUsers(), "\n"),
+			Text:  strings.Join(output, "\n"),
 		},
 	}
 }
 
 func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
+	var (
+		err      error
+		zones    []*tado.Zone
+		zoneInfo *tado.ZoneInfo
+	)
+	output := make([]string, 0)
+
+	if zones, err = controller.GetZones(); err == nil {
+		for _, zone := range zones {
+			if zoneInfo, err = controller.GetZoneInfo(zone.ID); err == nil {
+
+				mode := ""
+				if zoneInfo.Overlay.Type == "MANUAL" &&
+					zoneInfo.Overlay.Setting.Type == "HEATING" {
+					mode = " MANUAL"
+				}
+
+				output = append(output, fmt.Sprintf("%s: %.1fºC (target: %.1fºC%s)",
+					zone.Name,
+					zoneInfo.SensorDataPoints.Temperature.Celsius,
+					zoneInfo.Setting.Temperature.Celsius,
+					mode,
+				))
+			}
+		}
+		sort.Strings(output)
+	}
 	return []slack.Attachment{
 		{
 			Color: "good",
 			Title: "Rooms:",
-			Text:  strings.Join(controller.registry.GetRooms(), "\n"),
-		}}
+			Text:  strings.Join(output, "\n"),
+		},
+	}
 }
 
 /*

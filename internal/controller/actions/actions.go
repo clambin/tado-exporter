@@ -1,7 +1,16 @@
-package registry
+package actions
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/clambin/tado-exporter/pkg/tado"
+)
 
+// Actions implements a set of Tado actions controller rules may need
+type Actions struct {
+	tado.API
+}
+
+// Action structure for one Tado action
 type Action struct {
 	Overlay           bool
 	ZoneID            int
@@ -22,20 +31,20 @@ func (action *Action) String() string {
 // and 2. makes it easier to write unit tests
 //
 // Currently supports creating & deleting a fixed overlay
-func (registry *Registry) RunAction(action Action) (err error) {
+func (actions *Actions) RunAction(action Action) (err error) {
 	if action.Overlay == false {
-		err = registry.DeleteZoneOverlay(action.ZoneID)
+		err = actions.DeleteZoneOverlay(action.ZoneID)
 	} else {
 		// Set the overlay
-		err = registry.SetZoneOverlay(action.ZoneID, action.TargetTemperature)
+		err = actions.SetZoneOverlay(action.ZoneID, action.TargetTemperature)
 	}
 	return
 }
 
 // RunActions calls RunAction for the specified list of Actions
-func (registry *Registry) RunActions(actions []Action) (err error) {
-	for _, action := range actions {
-		if err2 := registry.RunAction(action); err2 != nil {
+func (actions *Actions) RunActions(actionList []Action) (err error) {
+	for _, action := range actionList {
+		if err2 := actions.RunAction(action); err2 != nil {
 			err = err2
 		}
 	}

@@ -2,9 +2,10 @@ package controller
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/actions"
 	"github.com/clambin/tado-exporter/internal/controller/autoaway"
 	"github.com/clambin/tado-exporter/internal/controller/overlaylimit"
-	"github.com/clambin/tado-exporter/internal/controller/registry"
+	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
@@ -13,32 +14,38 @@ import (
 
 // Controller object for tado-controller.
 type Controller struct {
-	// Configuration *configuration.ControllerConfiguration
+	tado.API
 
-	registry *registry.Registry
-	autoAway *autoaway.AutoAway
-	limiter  *overlaylimit.OverlayLimit
+	scheduler *scheduler.Scheduler
+	autoAway  *autoaway.AutoAway
+	limiter   *overlaylimit.OverlayLimit
 }
 
 // New creates a new Controller object
 func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration.ControllerConfiguration) (controller *Controller, err error) {
 	controller = &Controller{
-		registry: &registry.Registry{
-			API: &tado.APIClient{
-				HTTPClient:   &http.Client{},
-				Username:     tadoUsername,
-				Password:     tadoPassword,
-				ClientSecret: tadoClientSecret,
-			},
+		API: &tado.APIClient{
+			HTTPClient:   &http.Client{},
+			Username:     tadoUsername,
+			Password:     tadoPassword,
+			ClientSecret: tadoClientSecret,
 		},
-		// Configuration: cfg,
+		scheduler: &scheduler.Scheduler{},
 	}
 
 	if cfg != nil && cfg.AutoAwayRules != nil {
 		controller.autoAway = &autoaway.AutoAway{
-			Updates:  controller.registry.Register(),
-			Registry: controller.registry,
-			Rules:    *cfg.AutoAwayRules,
+			Actions: actions.Actions{
+				API: &tado.APIClient{
+					HTTPClient:   &http.Client{},
+					Username:     tadoUsername,
+					Password:     tadoPassword,
+					ClientSecret: tadoClientSecret,
+				},
+			},
+			Updates:   controller.scheduler.Register(),
+			Scheduler: controller.scheduler,
+			Rules:     *cfg.AutoAwayRules,
 		}
 		go func() {
 			controller.autoAway.Run()
@@ -47,9 +54,17 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 
 	if cfg != nil && cfg.OverlayLimitRules != nil {
 		controller.limiter = &overlaylimit.OverlayLimit{
-			Updates:  controller.registry.Register(),
-			Registry: controller.registry,
-			Rules:    *cfg.OverlayLimitRules,
+			Actions: actions.Actions{
+				API: &tado.APIClient{
+					HTTPClient:   &http.Client{},
+					Username:     tadoUsername,
+					Password:     tadoPassword,
+					ClientSecret: tadoClientSecret,
+				},
+			},
+			Updates:   controller.scheduler.Register(),
+			Scheduler: controller.scheduler,
+			Rules:     *cfg.OverlayLimitRules,
 		}
 		go func() {
 			controller.limiter.Run()
@@ -65,13 +80,13 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 			// "limitoverlay": controller.doRulesLimitOverlay,
 			// "set":          controller.doSetTemperature,
 		}
-		if controller.registry.TadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
+		if controller.scheduler.TadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
 			go func() {
-				controller.registry.TadoBot.Run()
+				controller.scheduler.TadoBot.Run()
 			}()
 		} else {
 			log.WithField("err", "failed to start TadoBot")
-			controller.registry.TadoBot = nil
+			controller.scheduler.TadoBot = nil
 		}
 	}
 
@@ -80,7 +95,11 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 
 // Run runs one update
 func (controller *Controller) Run() (err error) {
-	err = controller.registry.Run()
+	var tadoData scheduler.TadoData
+
+	tadoData, err = controller.refresh()
+
+	err = controller.scheduler.Run(&tadoData)
 
 	log.WithField("err", err).Debug("Run")
 
@@ -89,6 +108,52 @@ func (controller *Controller) Run() (err error) {
 
 // Stop terminates all components
 func (controller *Controller) Stop() (err error) {
-	controller.registry.Stop()
+	controller.scheduler.Stop()
+	return
+}
+
+// Refresh the Cache
+func (controller *Controller) refresh() (tadoData scheduler.TadoData, err error) {
+	var (
+		zones         []*tado.Zone
+		zoneInfo      *tado.ZoneInfo
+		mobileDevices []*tado.MobileDevice
+	)
+
+	zoneMap := make(map[int]tado.Zone)
+	if zones, err = controller.GetZones(); err == nil {
+		for _, zone := range zones {
+			zoneMap[zone.ID] = *zone
+		}
+	}
+	tadoData.Zone = zoneMap
+
+	if err == nil {
+		zoneInfoMap := make(map[int]tado.ZoneInfo)
+		for zoneID := range tadoData.Zone {
+			if zoneInfo, err = controller.GetZoneInfo(zoneID); err == nil {
+				zoneInfoMap[zoneID] = *zoneInfo
+			}
+		}
+		tadoData.ZoneInfo = zoneInfoMap
+	}
+
+	if err == nil {
+		mobileDeviceMap := make(map[int]tado.MobileDevice)
+		if mobileDevices, err = controller.GetMobileDevices(); err == nil {
+			for _, mobileDevice := range mobileDevices {
+				mobileDeviceMap[mobileDevice.ID] = *mobileDevice
+			}
+		}
+		tadoData.MobileDevice = mobileDeviceMap
+	}
+
+	log.WithFields(log.Fields{
+		"err":           err,
+		"zones":         len(tadoData.Zone),
+		"zoneInfos":     len(tadoData.ZoneInfo),
+		"mobileDevices": len(tadoData.MobileDevice),
+	}).Debug("updateTadoConfig")
+
 	return
 }

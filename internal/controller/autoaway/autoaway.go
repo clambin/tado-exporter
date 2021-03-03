@@ -3,20 +3,23 @@ package autoaway
 import (
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/registry"
+	"github.com/clambin/tado-exporter/internal/controller/actions"
+	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"time"
 )
 
 type AutoAway struct {
-	Updates    chan *registry.TadoData
-	Registry   *registry.Registry
+	actions.Actions
+
+	Updates    chan *scheduler.TadoData
+	Scheduler  *scheduler.Scheduler
 	Rules      []*configuration.AutoAwayRule
 	deviceInfo map[int]DeviceInfo
 }
 
-// Run waits for updates data from the registry and evaluates configured autoAway rules
+// Run waits for updates data from the scheduler and evaluates configured autoAway rules
 func (autoAway *AutoAway) Run() {
 	for tadoData := range autoAway.Updates {
 		if tadoData == nil {
@@ -30,12 +33,12 @@ func (autoAway *AutoAway) Run() {
 
 // process sets the state of each mobileDevice, checks if any have come/left home and performs
 // configured autoAway rules
-func (autoAway *AutoAway) process(tadoData *registry.TadoData) (err error) {
-	var actions []registry.Action
+func (autoAway *AutoAway) process(tadoData *scheduler.TadoData) (err error) {
+	var actionList []actions.Action
 
 	autoAway.updateInfo(tadoData)
-	if actions, err = autoAway.getActions(); err == nil {
-		if err = autoAway.Registry.RunActions(actions); err != nil {
+	if actionList, err = autoAway.getActions(); err == nil {
+		if err = autoAway.RunActions(actionList); err != nil {
 			log.WithField("err", err).Warning("failed to set action")
 		}
 	}
@@ -44,7 +47,7 @@ func (autoAway *AutoAway) process(tadoData *registry.TadoData) (err error) {
 }
 
 // updateInfo updates the state of each mobileDevice
-func (autoAway *AutoAway) updateInfo(tadoData *registry.TadoData) {
+func (autoAway *AutoAway) updateInfo(tadoData *scheduler.TadoData) {
 	// If the map doesn't exist, create it
 	if autoAway.deviceInfo == nil {
 		autoAway.initDeviceInfo(tadoData)
@@ -61,7 +64,7 @@ func (autoAway *AutoAway) updateInfo(tadoData *registry.TadoData) {
 	}
 }
 
-func (autoAway *AutoAway) initDeviceInfo(tadoData *registry.TadoData) {
+func (autoAway *AutoAway) initDeviceInfo(tadoData *scheduler.TadoData) {
 	autoAway.deviceInfo = make(map[int]DeviceInfo)
 
 	for _, rule := range autoAway.Rules {
@@ -72,7 +75,7 @@ func (autoAway *AutoAway) initDeviceInfo(tadoData *registry.TadoData) {
 		// Rules file can contain either mobileDevice/zone ID or Name. Retrieve the ID for each of these
 		// and discard any that aren't valid.  Update the mobileDevice/zone ID so we only need to do this once
 
-		if mobileDevice = registry.LookupMobileDevice(tadoData, rule.MobileDeviceID, rule.MobileDeviceName); mobileDevice == nil {
+		if mobileDevice = scheduler.LookupMobileDevice(tadoData, rule.MobileDeviceID, rule.MobileDeviceName); mobileDevice == nil {
 			log.WithFields(log.Fields{
 				"deviceID":   rule.MobileDeviceID,
 				"deviceName": rule.MobileDeviceName,
@@ -81,7 +84,7 @@ func (autoAway *AutoAway) initDeviceInfo(tadoData *registry.TadoData) {
 			continue
 		}
 
-		if zone = registry.LookupZone(tadoData, rule.ZoneID, rule.ZoneName); zone == nil {
+		if zone = scheduler.LookupZone(tadoData, rule.ZoneID, rule.ZoneName); zone == nil {
 			log.WithFields(log.Fields{
 				"zoneID":   rule.ZoneID,
 				"zoneName": rule.ZoneName,
@@ -101,7 +104,7 @@ func (autoAway *AutoAway) initDeviceInfo(tadoData *registry.TadoData) {
 
 // getActions scans the DeviceInfo map and returns all required actions, i.e. any zones that
 // need to be put in/out of Overlay mode.
-func (autoAway *AutoAway) getActions() (actions []registry.Action, err error) {
+func (autoAway *AutoAway) getActions() (actionList []actions.Action, err error) {
 	for id, deviceInfo := range autoAway.deviceInfo {
 		log.WithFields(log.Fields{
 			"mobileDeviceID":   deviceInfo.mobileDevice.ID,
@@ -125,7 +128,7 @@ func (autoAway *AutoAway) getActions() (actions []registry.Action, err error) {
 			deviceInfo.state = autoAwayStateHome
 			autoAway.deviceInfo[id] = deviceInfo
 			// add action to disable the overlay
-			actions = append(actions, registry.Action{
+			actionList = append(actionList, actions.Action{
 				Overlay: false,
 				ZoneID:  deviceInfo.zone.ID,
 			})
@@ -134,7 +137,7 @@ func (autoAway *AutoAway) getActions() (actions []registry.Action, err error) {
 				"ZoneID":         deviceInfo.zone.ID,
 			}).Info("User returned home. Removing overlay")
 			// notify via slack if needed
-			err = autoAway.Registry.Notify("",
+			err = autoAway.Scheduler.Notify("",
 				fmt.Sprintf("%s is home. resetting %s to auto",
 					deviceInfo.mobileDevice.Name,
 					deviceInfo.zone.Name,
@@ -147,7 +150,7 @@ func (autoAway *AutoAway) getActions() (actions []registry.Action, err error) {
 			deviceInfo.activationTime = time.Now().Add(deviceInfo.rule.WaitTime)
 			autoAway.deviceInfo[id] = deviceInfo
 			// notify via slack if needed
-			err = autoAway.Registry.Notify("",
+			err = autoAway.Scheduler.Notify("",
 				deviceInfo.mobileDevice.Name+" is away. will set "+
 					deviceInfo.zone.Name+" to manual in "+deviceInfo.rule.WaitTime.String())
 		} else
@@ -157,7 +160,7 @@ func (autoAway *AutoAway) getActions() (actions []registry.Action, err error) {
 			deviceInfo.state = autoAwayStateReported
 			autoAway.deviceInfo[id] = deviceInfo
 			// add action to set the overlay
-			actions = append(actions, registry.Action{
+			actionList = append(actionList, actions.Action{
 				Overlay:           true,
 				ZoneID:            deviceInfo.zone.ID,
 				TargetTemperature: deviceInfo.rule.TargetTemperature,
@@ -168,7 +171,7 @@ func (autoAway *AutoAway) getActions() (actions []registry.Action, err error) {
 				"TargetTemperature": deviceInfo.rule.TargetTemperature,
 			}).Info("User left. Setting overlay")
 			// notify via slack if needed
-			err = autoAway.Registry.Notify("",
+			err = autoAway.Scheduler.Notify("",
 				fmt.Sprintf("%s is away. activating manual control in zone %s",
 					deviceInfo.mobileDevice.Name,
 					deviceInfo.zone.Name,

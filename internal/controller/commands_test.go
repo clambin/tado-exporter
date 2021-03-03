@@ -11,7 +11,7 @@ func TestController_doRooms(t *testing.T) {
 	ctrl, err := New("", "", "", nil)
 	if assert.Nil(t, err) && assert.NotNil(t, ctrl) {
 
-		ctrl.registry.API = &mockapi.MockAPI{}
+		ctrl.API = &mockapi.MockAPI{}
 
 		err = ctrl.Run()
 		assert.Nil(t, err)
@@ -31,7 +31,7 @@ func TestController_doUsers(t *testing.T) {
 	ctrl, err := New("", "", "", nil)
 	if assert.Nil(t, err) && assert.NotNil(t, ctrl) {
 
-		ctrl.registry.API = &mockapi.MockAPI{}
+		ctrl.API = &mockapi.MockAPI{}
 
 		err = ctrl.Run()
 		assert.Nil(t, err)

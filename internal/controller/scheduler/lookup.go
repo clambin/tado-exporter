@@ -1,6 +1,8 @@
-package registry
+package scheduler
 
-import "github.com/clambin/tado-exporter/pkg/tado"
+import (
+	"github.com/clambin/tado-exporter/pkg/tado"
+)
 
 // LookupMobileDevice returns the mobile device matching the mobileDeviceID or mobileDeviceName from the list of mobile devices
 func LookupMobileDevice(tadoData *TadoData, mobileDeviceID int, mobileDeviceName string) *tado.MobileDevice {
