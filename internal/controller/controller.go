@@ -16,6 +16,7 @@ import (
 type Controller struct {
 	tado.API
 
+	tadoBot   *tadobot.TadoBot
 	scheduler *scheduler.Scheduler
 	autoAway  *autoaway.AutoAway
 	limiter   *overlaylimit.OverlayLimit
@@ -23,6 +24,27 @@ type Controller struct {
 
 // New creates a new Controller object
 func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration.ControllerConfiguration) (controller *Controller, err error) {
+	var (
+		slackChannel tadobot.PostChannel
+		tadoBot      *tadobot.TadoBot
+	)
+	if cfg != nil && cfg.TadoBot.Enabled {
+		callbacks := map[string]tadobot.CommandFunc{
+			"rooms": controller.doRooms,
+			"users": controller.doUsers,
+			// "rules":        controller.doRules,
+			// "autoaway":     controller.doRulesAutoAway,
+			// "limitoverlay": controller.doRulesLimitOverlay,
+			// "set":          controller.doSetTemperature,
+		}
+		if tadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
+			slackChannel = tadoBot.PostChannel
+			go tadoBot.Run()
+		} else {
+			log.WithField("err", "failed to start TadoBot")
+			tadoBot = nil
+		}
+	}
 	controller = &Controller{
 		API: &tado.APIClient{
 			HTTPClient:   &http.Client{},
@@ -30,6 +52,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 			Password:     tadoPassword,
 			ClientSecret: tadoClientSecret,
 		},
+		tadoBot:   tadoBot,
 		scheduler: &scheduler.Scheduler{},
 	}
 
@@ -43,13 +66,11 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 					ClientSecret: tadoClientSecret,
 				},
 			},
-			Updates:   controller.scheduler.Register(),
-			Scheduler: controller.scheduler,
-			Rules:     *cfg.AutoAwayRules,
+			Updates: controller.scheduler.Register(),
+			Slack:   slackChannel,
+			Rules:   *cfg.AutoAwayRules,
 		}
-		go func() {
-			controller.autoAway.Run()
-		}()
+		go controller.autoAway.Run()
 	}
 
 	if cfg != nil && cfg.OverlayLimitRules != nil {
@@ -62,32 +83,11 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 					ClientSecret: tadoClientSecret,
 				},
 			},
-			Updates:   controller.scheduler.Register(),
-			Scheduler: controller.scheduler,
-			Rules:     *cfg.OverlayLimitRules,
+			Updates: controller.scheduler.Register(),
+			Slack:   slackChannel,
+			Rules:   *cfg.OverlayLimitRules,
 		}
-		go func() {
-			controller.limiter.Run()
-		}()
-	}
-
-	if cfg != nil && cfg.TadoBot.Enabled {
-		callbacks := map[string]tadobot.CommandFunc{
-			"rooms": controller.doRooms,
-			"users": controller.doUsers,
-			// "rules":        controller.doRules,
-			// "autoaway":     controller.doRulesAutoAway,
-			// "limitoverlay": controller.doRulesLimitOverlay,
-			// "set":          controller.doSetTemperature,
-		}
-		if controller.scheduler.TadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
-			go func() {
-				controller.scheduler.TadoBot.Run()
-			}()
-		} else {
-			log.WithField("err", "failed to start TadoBot")
-			controller.scheduler.TadoBot = nil
-		}
+		go controller.limiter.Run()
 	}
 
 	return

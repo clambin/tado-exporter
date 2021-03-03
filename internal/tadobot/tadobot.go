@@ -8,8 +8,11 @@ import (
 )
 
 type CommandFunc func(args ...string) []slack.Attachment
+type PostChannel chan []slack.Attachment
 
 type TadoBot struct {
+	PostChannel PostChannel
+
 	slackClient *slack.Client
 	slackRTM    *slack.RTM
 	slackToken  string
@@ -22,6 +25,7 @@ type TadoBot struct {
 // Create connects to a slackbot designated by token
 func Create(slackToken string, callbacks map[string]CommandFunc) (bot *TadoBot, err error) {
 	bot = &TadoBot{
+		PostChannel: make(chan []slack.Attachment),
 		slackClient: slack.New(slackToken),
 		slackToken:  slackToken,
 	}
@@ -39,28 +43,46 @@ func Create(slackToken string, callbacks map[string]CommandFunc) (bot *TadoBot, 
 }
 
 // Run the slackbot
-func (bot *TadoBot) Run() {
+func (bot *TadoBot) Run() (err error) {
 	bot.slackRTM = bot.slackClient.NewRTM()
 	go bot.slackRTM.ManageConnection()
 
 loop:
-	for msg := range bot.slackRTM.IncomingEvents {
-		channel, attachments, stop := bot.processEvent(msg)
+	for {
+		var (
+			channel     string
+			attachments []slack.Attachment
+			stop        bool
+		)
+
+		select {
+		case msg := <-bot.slackRTM.IncomingEvents:
+			channel, attachments, stop = bot.processEvent(msg)
+			if stop {
+				break loop
+			}
+		case attachments = <-bot.PostChannel:
+		}
 
 		if len(attachments) > 0 {
-			if _, _, err := bot.slackRTM.PostMessage(
-				channel,
-				slack.MsgOptionAttachments(attachments...),
-				slack.MsgOptionAsUser(true),
-			); err != nil {
-				log.WithField("err", err).Warning("failed to send on slack")
+			channels := bot.channelIDs
+			if channel != "" {
+				channels = []string{channel}
 			}
-		}
+			for _, channelID := range channels {
+				if _, _, err = bot.slackRTM.PostMessage(
+					channelID,
+					slack.MsgOptionAttachments(attachments...),
+					slack.MsgOptionAsUser(true),
+				); err != nil {
+					log.WithField("err", err).Warning("failed to send on slack")
+				}
+			}
 
-		if stop {
-			break loop
+			log.WithField("err", err).Debug("sent a message")
 		}
 	}
+	return
 }
 
 func (bot *TadoBot) processEvent(msg slack.RTMEvent) (channel string, attachments []slack.Attachment, stop bool) {
@@ -139,9 +161,7 @@ func (bot *TadoBot) getAllChannels() (channelIDs []string, err error) {
 				"isIM":      channel.IsIM,
 			}).Debug("found a channel")
 
-			// if channel.IsChannel || (channel.IsIM && channel.Conversation.ID == bot.userID) {
 			channelIDs = append(channelIDs, channel.ID)
-			// }
 		}
 	}
 

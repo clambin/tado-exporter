@@ -46,9 +46,8 @@ controller:
 			Actions: actions.Actions{
 				API: &mockapi.MockAPI{},
 			},
-			Updates:   schedule.Register(),
-			Scheduler: &schedule,
-			Rules:     *cfg.Controller.OverlayLimitRules,
+			Updates: schedule.Register(),
+			Rules:   *cfg.Controller.OverlayLimitRules,
 		}
 
 		err = limiter.process(&tadoData)

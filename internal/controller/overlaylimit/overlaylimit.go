@@ -4,18 +4,19 @@ import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/actions"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
+	"github.com/slack-go/slack"
 	"time"
 )
 
 type OverlayLimit struct {
 	actions.Actions
 
-	Updates   chan *scheduler.TadoData
-	Scheduler *scheduler.Scheduler
-	Rules     []*configuration.OverlayLimitRule
-
+	Updates     chan *scheduler.TadoData
+	Slack       tadobot.PostChannel
+	Rules       []*configuration.OverlayLimitRule
 	zoneDetails map[int]zoneDetails
 }
 
@@ -79,9 +80,14 @@ func (overlayLimit *OverlayLimit) updateInfo(tadoData *scheduler.TadoData) (err 
 						"expiry":   details.expiryTimer,
 					}).Info("new zone in overlay")
 					// notify via slack if needed
-					err = overlayLimit.Scheduler.Notify("",
-						"Manual temperature setting detected in zone "+details.zone.Name,
-					)
+					if overlayLimit.Slack != nil {
+						overlayLimit.Slack <- []slack.Attachment{
+							{
+								Color: "good",
+								Title: "Manual temperature setting detected in zone " + details.zone.Name,
+							},
+						}
+					}
 				}
 			} else if details.isOverlay == true {
 				// Zone is not in overlay
@@ -136,9 +142,14 @@ func (overlayLimit *OverlayLimit) getActions() (actionList []actions.Action, err
 			details.isOverlay = false
 			overlayLimit.zoneDetails[id] = details
 			// notify via slack if needed
-			err = overlayLimit.Scheduler.Notify("",
-				"Disabling manual temperature setting in zone "+details.zone.Name,
-			)
+			if overlayLimit.Slack != nil {
+				overlayLimit.Slack <- []slack.Attachment{
+					{
+						Color: "good",
+						Title: "Disabling manual temperature setting in zone " + details.zone.Name,
+					},
+				}
+			}
 		}
 	}
 	return

@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 )
 
@@ -18,7 +17,6 @@ type TadoData struct {
 // Scheduler is the heart of the controller.  On run, it updates all info from Tado
 // and signals any registered rules to run
 type Scheduler struct {
-	TadoBot *tadobot.TadoBot
 	clients []chan *TadoData
 }
 
@@ -48,11 +46,4 @@ func (scheduler *Scheduler) Stop() {
 	for _, client := range scheduler.clients {
 		client <- nil
 	}
-}
-
-func (scheduler *Scheduler) Notify(title, message string) (err error) {
-	if scheduler.TadoBot != nil {
-		err = scheduler.TadoBot.SendMessage(title, message)
-	}
-	return
 }

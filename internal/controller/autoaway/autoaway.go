@@ -1,12 +1,13 @@
 package autoaway
 
 import (
-	"fmt"
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/actions"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
+	"github.com/slack-go/slack"
 	"time"
 )
 
@@ -14,7 +15,7 @@ type AutoAway struct {
 	actions.Actions
 
 	Updates    chan *scheduler.TadoData
-	Scheduler  *scheduler.Scheduler
+	Slack      tadobot.PostChannel
 	Rules      []*configuration.AutoAwayRule
 	deviceInfo map[int]DeviceInfo
 }
@@ -137,12 +138,15 @@ func (autoAway *AutoAway) getActions() (actionList []actions.Action, err error) 
 				"ZoneID":         deviceInfo.zone.ID,
 			}).Info("User returned home. Removing overlay")
 			// notify via slack if needed
-			err = autoAway.Scheduler.Notify("",
-				fmt.Sprintf("%s is home. resetting %s to auto",
-					deviceInfo.mobileDevice.Name,
-					deviceInfo.zone.Name,
-				),
-			)
+			if autoAway.Slack != nil {
+				autoAway.Slack <- []slack.Attachment{
+					{
+						Color: "good",
+						Title: deviceInfo.mobileDevice.Name + " is home",
+						Text:  "resetting " + deviceInfo.zone.Name + " to auto",
+					},
+				}
+			}
 		} else
 		// if the mobile phone is away, mark it as such and set the activation timer
 		if deviceInfo.leftHome() {
@@ -150,9 +154,15 @@ func (autoAway *AutoAway) getActions() (actionList []actions.Action, err error) 
 			deviceInfo.activationTime = time.Now().Add(deviceInfo.rule.WaitTime)
 			autoAway.deviceInfo[id] = deviceInfo
 			// notify via slack if needed
-			err = autoAway.Scheduler.Notify("",
-				deviceInfo.mobileDevice.Name+" is away. will set "+
-					deviceInfo.zone.Name+" to manual in "+deviceInfo.rule.WaitTime.String())
+			if autoAway.Slack != nil {
+				autoAway.Slack <- []slack.Attachment{
+					{
+						Color: "good",
+						Title: deviceInfo.mobileDevice.Name + " is away",
+						Text:  "will set " + deviceInfo.zone.Name + " to manual in " + deviceInfo.rule.WaitTime.String(),
+					},
+				}
+			}
 		} else
 		// if the mobile phone was already away, check the activation timer
 		if deviceInfo.shouldReport() {
@@ -171,12 +181,15 @@ func (autoAway *AutoAway) getActions() (actionList []actions.Action, err error) 
 				"TargetTemperature": deviceInfo.rule.TargetTemperature,
 			}).Info("User left. Setting overlay")
 			// notify via slack if needed
-			err = autoAway.Scheduler.Notify("",
-				fmt.Sprintf("%s is away. activating manual control in zone %s",
-					deviceInfo.mobileDevice.Name,
-					deviceInfo.zone.Name,
-				),
-			)
+			if autoAway.Slack != nil {
+				autoAway.Slack <- []slack.Attachment{
+					{
+						Color: "good",
+						Title: deviceInfo.mobileDevice.Name + " is away",
+						Text:  "activating manual control in zone " + deviceInfo.zone.Name,
+					},
+				}
+			}
 		}
 	}
 	return

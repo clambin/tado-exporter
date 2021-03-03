@@ -68,9 +68,8 @@ controller:
 			Actions: actions.Actions{
 				API: &server,
 			},
-			Updates:   schedule.Register(),
-			Scheduler: &schedule,
-			Rules:     *cfg.Controller.AutoAwayRules,
+			Updates: schedule.Register(),
+			Rules:   *cfg.Controller.AutoAwayRules,
 		}
 
 		err = away.process(&tadoData)
