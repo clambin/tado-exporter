@@ -30,7 +30,7 @@ func TestRegistry(t *testing.T) {
 		},
 	}
 
-	if err := schedule.Run(&inData); assert.Nil(t, err) {
+	if err := schedule.Notify(&inData); assert.Nil(t, err) {
 		if outData = <-client; assert.NotNil(t, outData) {
 
 			assert.Len(t, outData.Zone, 2)

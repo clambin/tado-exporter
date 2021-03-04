@@ -127,5 +127,7 @@ loop:
 		}
 	}
 
+	control.Stop()
+
 	log.Info("tado-monitor exiting")
 }

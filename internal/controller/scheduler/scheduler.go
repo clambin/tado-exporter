@@ -14,26 +14,28 @@ type TadoData struct {
 	MobileDevice map[int]tado.MobileDevice
 }
 
+// UpdateChannel used by scheduler to send updates to the rules
+type UpdateChannel chan *TadoData
+
 // Scheduler is the heart of the controller.  On run, it updates all info from Tado
 // and signals any registered rules to run
 type Scheduler struct {
-	clients []chan *TadoData
+	clients []UpdateChannel
 }
 
 // Register a new client. This allocates a channel that the client should listen on for updates
-func (scheduler *Scheduler) Register() (channel chan *TadoData) {
+func (scheduler *Scheduler) Register() (channel UpdateChannel) {
 	if scheduler.clients == nil {
-		scheduler.clients = make([]chan *TadoData, 0)
+		scheduler.clients = make([]UpdateChannel, 0)
 	}
 
-	channel = make(chan *TadoData, 1)
+	channel = make(UpdateChannel, 1)
 	scheduler.clients = append(scheduler.clients, channel)
 	return channel
 }
 
-// Run an update and signal any clients to evaluate their rules
-func (scheduler *Scheduler) Run(tadoData *TadoData) (err error) {
-	// Notify all clients
+// Notify all clients of the updated data
+func (scheduler *Scheduler) Notify(tadoData *TadoData) (err error) {
 	for _, client := range scheduler.clients {
 		clientTadoData := *tadoData
 		client <- &clientTadoData

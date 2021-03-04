@@ -13,7 +13,7 @@ import (
 type OverlayLimit struct {
 	actions.Actions
 
-	Updates     chan *scheduler.TadoData
+	Updates     scheduler.UpdateChannel
 	Slack       tadobot.PostChannel
 	Rules       []*configuration.OverlayLimitRule
 	zoneDetails map[int]zoneDetails

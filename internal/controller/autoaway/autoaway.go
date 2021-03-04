@@ -13,7 +13,7 @@ import (
 type AutoAway struct {
 	actions.Actions
 
-	Updates    chan *scheduler.TadoData
+	Updates    scheduler.UpdateChannel
 	Slack      tadobot.PostChannel
 	Rules      []*configuration.AutoAwayRule
 	deviceInfo map[int]DeviceInfo

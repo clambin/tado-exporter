@@ -97,9 +97,9 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 func (controller *Controller) Run() (err error) {
 	var tadoData scheduler.TadoData
 
-	tadoData, err = controller.refresh()
-
-	err = controller.scheduler.Run(&tadoData)
+	if tadoData, err = controller.refresh(); err == nil {
+		err = controller.scheduler.Notify(&tadoData)
+	}
 
 	log.WithField("err", err).Debug("Run")
 
@@ -107,9 +107,8 @@ func (controller *Controller) Run() (err error) {
 }
 
 // Stop terminates all components
-func (controller *Controller) Stop() (err error) {
+func (controller *Controller) Stop() {
 	controller.scheduler.Stop()
-	return
 }
 
 // Refresh the Cache
