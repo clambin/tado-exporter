@@ -72,6 +72,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 		controller.autoAway = &autoaway.AutoAway{
 			Updates:    controller.Register(),
 			RoomSetter: controller.roomSetter.ZoneSetter,
+			Commands:   make(commands.RequestChannel),
 			Slack:      slackChannel,
 			Rules:      *cfg.AutoAwayRules,
 		}

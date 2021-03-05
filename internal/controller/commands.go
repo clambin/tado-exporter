@@ -79,35 +79,23 @@ func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
 }
 
 func (controller *Controller) doRules(args ...string) (responses []slack.Attachment) {
-	// awayResponses := controller.doRulesAutoAway(args...)
+	awayResponses := controller.doRulesAutoAway(args...)
 	limitResponses := controller.doRulesLimitOverlay(args...)
 
-	//responses = append(responses, awayResponses[0])
+	responses = append(responses, awayResponses[0])
 	responses = append(responses, limitResponses[0])
 	return
 }
 
-/*
 func (controller *Controller) doRulesAutoAway(_ ...string) []slack.Attachment {
-	output := make([]string, 0)
-	for _, entry := range controller.AutoAwayInfo {
-		var response string
-		switch entry.state {
-		case autoAwayStateUndetermined:
-			response = "undetermined"
-		case autoAwayStateHome:
-			response = "home"
-		case autoAwayStateAway:
-			response = "away. will set " + entry.Zone.Name + " to manual in " +
-				entry.ActivationTime.S3ub(time.Now()).Round(1*time.Minute).String()
-		case autoAwayStateExpired:
-			response = "away. " + entry.Zone.Name + " will be set to manual"
-		case autoAwayStateReported:
-			response = "away. " + entry.Zone.Name + " is set to manual"
-		}
-		output = append(output, entry.MobileDevice.Name+" is "+response)
+	command := commands.Command{
+		Command:  1,
+		Response: make(commands.ResponseChannel),
 	}
-	sort.Strings(output)
+
+	controller.autoAway.Commands <- command
+	output := <-command.Response
+
 	return []slack.Attachment{
 		{
 			Color: "good",
@@ -116,7 +104,6 @@ func (controller *Controller) doRulesAutoAway(_ ...string) []slack.Attachment {
 		},
 	}
 }
-*/
 
 func (controller *Controller) doRulesLimitOverlay(_ ...string) []slack.Attachment {
 	command := commands.Command{

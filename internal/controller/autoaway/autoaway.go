@@ -2,18 +2,21 @@ package autoaway
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/commands"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
+	"sort"
 	"time"
 )
 
 type AutoAway struct {
 	Updates    scheduler.UpdateChannel
 	RoomSetter chan tadosetter.RoomCommand
+	Commands   commands.RequestChannel
 	Slack      tadobot.PostChannel
 	Rules      []*configuration.AutoAwayRule
 	deviceInfo map[int]DeviceInfo
@@ -21,13 +24,22 @@ type AutoAway struct {
 
 // Run waits for updates from the scheduler and evaluates configured autoAway rules
 func (autoAway *AutoAway) Run() {
-	for tadoData := range autoAway.Updates {
-		if tadoData == nil {
-			break
+loop:
+	for {
+		select {
+		case tadoData := <-autoAway.Updates:
+			if tadoData == nil {
+				break loop
+			}
+			log.WithField("object", *tadoData).Debug("got a message")
+			autoAway.updateInfo(tadoData)
+			autoAway.setZones()
+		case cmd := <-autoAway.Commands:
+			switch cmd.Command {
+			case 1:
+				cmd.Response <- autoAway.Report()
+			}
 		}
-		log.WithField("object", *tadoData).Debug("got a message")
-		autoAway.updateInfo(tadoData)
-		autoAway.setZones()
 	}
 }
 
@@ -175,4 +187,27 @@ func (autoAway *AutoAway) setZones() {
 			}
 		}
 	}
+}
+
+func (autoAway *AutoAway) Report() (output []string) {
+	for _, entry := range autoAway.deviceInfo {
+		var response string
+		switch entry.state {
+		case autoAwayStateUndetermined:
+			response = "undetermined"
+		case autoAwayStateHome:
+			response = "home"
+		case autoAwayStateAway:
+			response = "away. will set " + entry.zone.Name + " to manual in " +
+				entry.activationTime.Sub(time.Now()).Round(1*time.Minute).String()
+		case autoAwayStateExpired:
+			response = "away. " + entry.zone.Name + " will be set to manual"
+		case autoAwayStateReported:
+			response = "away. " + entry.zone.Name + " is set to manual"
+		}
+		output = append(output, entry.mobileDevice.Name+" is "+response)
+	}
+	sort.Strings(output)
+
+	return
 }
