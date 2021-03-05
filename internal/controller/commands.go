@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"github.com/clambin/tado-exporter/internal/controller/commands"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/slack-go/slack"
@@ -77,16 +78,16 @@ func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
 	}
 }
 
-/*
 func (controller *Controller) doRules(args ...string) (responses []slack.Attachment) {
-	awayResponses := controller.doRulesAutoAway(args...)
+	// awayResponses := controller.doRulesAutoAway(args...)
 	limitResponses := controller.doRulesLimitOverlay(args...)
 
-	responses = append(responses, awayResponses[0])
+	//responses = append(responses, awayResponses[0])
 	responses = append(responses, limitResponses[0])
 	return
 }
 
+/*
 func (controller *Controller) doRulesAutoAway(_ ...string) []slack.Attachment {
 	output := make([]string, 0)
 	for _, entry := range controller.AutoAwayInfo {
@@ -115,19 +116,17 @@ func (controller *Controller) doRulesAutoAway(_ ...string) []slack.Attachment {
 		},
 	}
 }
+*/
 
 func (controller *Controller) doRulesLimitOverlay(_ ...string) []slack.Attachment {
-	output := make([]string, 0)
-	for zoneID, entry := range controller.Overlays {
-		output = append(output,
-			controller.proxy.Zone[zoneID].Name+" will be reset to auto in "+entry.Sub(time.Now()).Round(1*time.Minute).String(),
-		)
+	command := commands.Command{
+		Command:  1,
+		Response: make(commands.ResponseChannel),
 	}
-	if len(output) > 0 {
-		sort.Strings(output)
-	} else {
-		output = []string{"No rooms in manual control"}
-	}
+
+	controller.limiter.Commands <- command
+	output := <-command.Response
+
 	return []slack.Attachment{
 		{
 			Color: "good",
@@ -136,7 +135,6 @@ func (controller *Controller) doRulesLimitOverlay(_ ...string) []slack.Attachmen
 		},
 	}
 }
-*/
 
 func (controller *Controller) parseSetTemperatureArguments(args ...string) (ok bool, output slack.Attachment, zoneID int, auto bool, temperature float64) {
 	if len(args) != 2 {

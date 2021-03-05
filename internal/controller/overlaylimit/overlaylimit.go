@@ -2,18 +2,21 @@ package overlaylimit
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/commands"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
+	"sort"
 	"time"
 )
 
 type OverlayLimit struct {
 	Updates     scheduler.UpdateChannel
 	RoomSetter  chan tadosetter.RoomCommand
+	Commands    commands.RequestChannel
 	Slack       tadobot.PostChannel
 	Rules       []*configuration.OverlayLimitRule
 	zoneDetails map[int]zoneDetails
@@ -21,13 +24,23 @@ type OverlayLimit struct {
 
 // Run waits for updates data from the scheduler and evaluates configured overlayLimit rules
 func (overlayLimit *OverlayLimit) Run() {
-	for tadoData := range overlayLimit.Updates {
-		if tadoData == nil {
-			break
+loop:
+	for {
+		select {
+		case tadoData := <-overlayLimit.Updates:
+			if tadoData == nil {
+				break loop
+			}
+			log.WithField("object", *tadoData).Debug("got a message")
+			overlayLimit.updateInfo(tadoData)
+			overlayLimit.process(tadoData)
+
+		case cmd := <-overlayLimit.Commands:
+			switch cmd.Command {
+			case 1:
+				cmd.Response <- overlayLimit.Report()
+			}
 		}
-		log.WithField("object", *tadoData).Debug("got a message")
-		overlayLimit.updateInfo(tadoData)
-		overlayLimit.process(tadoData)
 	}
 }
 
@@ -124,4 +137,21 @@ func (overlayLimit *OverlayLimit) process(_ *scheduler.TadoData) {
 		}
 		overlayLimit.zoneDetails[id] = details
 	}
+}
+
+func (overlayLimit *OverlayLimit) Report() (output []string) {
+	for _, entry := range overlayLimit.zoneDetails {
+		if entry.state == zoneStateManual || entry.state == zoneStateReported {
+			output = append(output,
+				entry.zone.Name+" will be reset to auto in "+entry.expiryTimer.Sub(time.Now()).Round(1*time.Minute).String(),
+			)
+		}
+	}
+	if len(output) > 0 {
+		sort.Strings(output)
+	} else {
+		output = append(output, "no rooms in manual control")
+	}
+
+	return
 }

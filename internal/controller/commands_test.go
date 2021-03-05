@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
 	"strings"
@@ -77,9 +78,13 @@ func TestController_doSetTemperature(t *testing.T) {
 	assert.Equal(t, "invalid command:  set <room name> auto|<temperature>", output[0].Text)
 }
 
-/*
 func TestController_doRules(t *testing.T) {
-	cfg, err := configuration.LoadConfiguration([]byte(`
+	var (
+		err     error
+		cfg     *configuration.Configuration
+		control *Controller
+	)
+	cfg, err = configuration.LoadConfiguration([]byte(`
 controller:
   autoAwayRules:
   - zoneName: "foo"
@@ -97,16 +102,23 @@ controller:
     maxTime: 1h
 `))
 	if assert.Nil(t, err); err == nil {
-		control := Controller{
-			Configuration: &cfg.Controller,
-			proxy: tadoproxy.Proxy{
-				API: &mockapi.MockAPI{},
-			},
-		}
-		err = control.Run()
-		if assert.Nil(t, err); err == nil {
+		control, err = New("", "", "", &cfg.Controller)
+	}
 
-			output := control.doRules()
+	if assert.Nil(t, err) && assert.NotNil(t, control) {
+		control.API = &mockapi.MockAPI{}
+
+		//		log.SetLevel(log.DebugLevel)
+		err = control.Run()
+		assert.Nil(t, err)
+
+		output := control.doRules()
+
+		if assert.Len(t, output, 1) {
+			assert.Equal(t, "bar will be reset to auto in 1h0m0s", output[0].Text)
+		}
+
+		/*
 			if assert.Len(t, output, 2) {
 				lines := strings.Split(output[0].Text, "\n")
 				if assert.Len(t, lines, 2) {
@@ -119,35 +131,6 @@ controller:
 					assert.Equal(t, "bar will be reset to auto in 1h0m0s", lines[0])
 				}
 			}
-		}
+		*/
 	}
 }
-
-func TestController_doSetTemperature(t *testing.T) {
-	control := Controller{
-		Configuration: &configuration.ControllerConfiguration{},
-		proxy: tadoproxy.Proxy{
-			API: &mockapi.MockAPI{},
-		},
-	}
-
-	err := control.proxy.Refresh()
-	assert.Nil(t, err)
-
-	output := control.doSetTemperature("FOO", "17.0")
-	if assert.Len(t, output, 1) {
-		assert.Equal(t, "setting temperature in FOO to 17.0", output[0].Text)
-	}
-
-	output = control.doSetTemperature("FOO", "auto")
-	if assert.Len(t, output, 1) {
-		assert.Equal(t, "setting FOO back to auto", output[0].Text)
-	}
-
-	output = control.doSetTemperature("wrong room", "ABC")
-	if assert.Len(t, output, 2) {
-		assert.Equal(t, "invalid temperature ABC", output[0].Text)
-		assert.Equal(t, "unknown room wrong room", output[1].Text)
-	}
-}
-*/
