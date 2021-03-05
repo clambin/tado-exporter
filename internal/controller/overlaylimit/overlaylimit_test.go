@@ -2,17 +2,18 @@ package overlaylimit
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/actions"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
+	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
-	"github.com/clambin/tado-exporter/test/server/mockapi"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
 
-func TestOverlayLimit(t *testing.T) {
-	tadoData := scheduler.TadoData{
+func makeTadoData() scheduler.TadoData {
+	return scheduler.TadoData{
 		Zone: map[int]tado.Zone{
 			1: {ID: 1, Name: "foo"},
 			2: {ID: 2, Name: "bar"},
@@ -26,7 +27,9 @@ func TestOverlayLimit(t *testing.T) {
 			}},
 		},
 	}
+}
 
+func TestOverlayLimit(t *testing.T) {
 	cfg, err := configuration.LoadConfiguration([]byte(`
 controller:
   overlayLimitRules:
@@ -41,61 +44,41 @@ controller:
 	if assert.Nil(t, err) && assert.NotNil(t, cfg) && assert.NotNil(t, cfg.Controller.OverlayLimitRules) {
 
 		schedule := scheduler.Scheduler{}
-
+		setter := make(chan tadosetter.RoomCommand)
 		limiter := OverlayLimit{
-			Actions: actions.Actions{
-				API: &mockapi.MockAPI{},
-			},
-			Updates: schedule.Register(),
-			Rules:   *cfg.Controller.OverlayLimitRules,
+			Updates:    schedule.Register(),
+			RoomSetter: setter,
+			Slack:      make(tadobot.PostChannel),
+			Rules:      *cfg.Controller.OverlayLimitRules,
 		}
+		go limiter.Run()
 
-		err = limiter.process(&tadoData)
+		log.SetLevel(log.DebugLevel)
+
+		// set up the initial state
+		err = schedule.Notify(makeTadoData())
 		assert.Nil(t, err)
 
-		if assert.NotNil(t, limiter.zoneDetails) {
+		slackMsgs := <-limiter.Slack
+		assert.Len(t, slackMsgs, 1)
+		assert.Equal(t, "Manual temperature setting detected in zone bar", slackMsgs[0].Text)
 
-			assert.Len(t, limiter.zoneDetails, 2)
-			assert.False(t, limiter.zoneDetails[1].isOverlay)
-			assert.True(t, limiter.zoneDetails[2].isOverlay)
-
-			// zone 2 no longer on manual
-			zoneInfo, _ := tadoData.ZoneInfo[2]
-			zoneInfo.Overlay.Termination.Type = "TIMER"
-			tadoData.ZoneInfo[2] = zoneInfo
-
-			err = limiter.process(&tadoData)
-
-			assert.Nil(t, err)
-			assert.False(t, limiter.zoneDetails[1].isOverlay)
-			assert.False(t, limiter.zoneDetails[2].isOverlay)
-
-			// zone 2 back to manual
-			zoneInfo, _ = tadoData.ZoneInfo[2]
-			zoneInfo.Overlay.Termination.Type = "MANUAL"
-			tadoData.ZoneInfo[2] = zoneInfo
-			err = limiter.process(&tadoData)
-
-			assert.Nil(t, err)
-			assert.False(t, limiter.zoneDetails[1].isOverlay)
-			assert.True(t, limiter.zoneDetails[2].isOverlay)
-
-			// zone 2 gets expired
-			details, _ := limiter.zoneDetails[2]
-			details.expiryTimer = time.Now().Add(-2 * time.Hour)
+		// fake the zone expiring its timer
+		// not exactly thread-safe, but at this point overlayLimit is waiting on the next update
+		details, ok := limiter.zoneDetails[2]
+		if assert.True(t, ok) {
+			details.expiryTimer = time.Now().Add(-1 * time.Hour)
 			limiter.zoneDetails[2] = details
-
-			err = limiter.process(&tadoData)
-
-			assert.Nil(t, err)
-
-			/*
-				if assert.NotNil(t, server.Overlays) {
-					_, ok := server.Overlays[2]
-					assert.False(t, ok)
-				}
-			*/
 		}
+		_ = schedule.Notify(makeTadoData())
 
+		slackMsgs = <-limiter.Slack
+		assert.Len(t, slackMsgs, 1)
+		assert.Equal(t, "Disabling manual temperature setting in zone bar", slackMsgs[0].Text)
+
+		cmd := <-limiter.RoomSetter
+
+		assert.Equal(t, 2, cmd.ZoneID)
+		assert.True(t, cmd.Auto)
 	}
 }

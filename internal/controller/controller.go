@@ -2,7 +2,6 @@ package controller
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/actions"
 	"github.com/clambin/tado-exporter/internal/controller/autoaway"
 	"github.com/clambin/tado-exporter/internal/controller/overlaylimit"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
@@ -80,17 +79,10 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 
 	if cfg != nil && cfg.OverlayLimitRules != nil {
 		controller.limiter = &overlaylimit.OverlayLimit{
-			Actions: actions.Actions{
-				API: &tado.APIClient{
-					HTTPClient:   &http.Client{},
-					Username:     tadoUsername,
-					Password:     tadoPassword,
-					ClientSecret: tadoClientSecret,
-				},
-			},
-			Updates: controller.Register(),
-			Slack:   slackChannel,
-			Rules:   *cfg.OverlayLimitRules,
+			Updates:    controller.Register(),
+			RoomSetter: controller.roomSetter.ZoneSetter,
+			Slack:      slackChannel,
+			Rules:      *cfg.OverlayLimitRules,
 		}
 		go controller.limiter.Run()
 	}

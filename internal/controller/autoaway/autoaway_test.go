@@ -5,7 +5,6 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/pkg/tado"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -72,8 +71,6 @@ controller:
 			Rules:      *cfg.Controller.AutoAwayRules,
 		}
 		go away.Run()
-
-		log.SetLevel(log.DebugLevel)
 
 		// set up the initial state
 		err = schedule.Notify(makeTadoData())

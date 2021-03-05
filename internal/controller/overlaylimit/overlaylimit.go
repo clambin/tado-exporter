@@ -2,28 +2,21 @@ package overlaylimit
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/actions"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
+	"github.com/slack-go/slack"
 	"time"
 )
 
 type OverlayLimit struct {
-	actions.Actions
-
 	Updates     scheduler.UpdateChannel
+	RoomSetter  chan tadosetter.RoomCommand
 	Slack       tadobot.PostChannel
 	Rules       []*configuration.OverlayLimitRule
 	zoneDetails map[int]zoneDetails
-}
-
-type zoneDetails struct {
-	zone        tado.Zone
-	rule        configuration.OverlayLimitRule
-	isOverlay   bool
-	expiryTimer time.Time
 }
 
 // Run waits for updates data from the scheduler and evaluates configured overlayLimit rules
@@ -32,72 +25,40 @@ func (overlayLimit *OverlayLimit) Run() {
 		if tadoData == nil {
 			break
 		}
-		if err := overlayLimit.process(tadoData); err != nil {
-			log.WithField("err", err).Warning("failed to process autoAway rules")
-		}
+		log.WithField("object", *tadoData).Debug("got a message")
+		overlayLimit.updateInfo(tadoData)
+		overlayLimit.process(tadoData)
 	}
-}
-
-// process sets the state of each zone, checks if have expired and sets them back to auto mode
-func (overlayLimit *OverlayLimit) process(tadoData *scheduler.TadoData) (err error) {
-	var actionList []actions.Action
-
-	_ = overlayLimit.updateInfo(tadoData)
-	if actionList, err = overlayLimit.getActions(); err == nil {
-		if err = overlayLimit.RunActions(actionList); err != nil {
-			log.WithField("err", err).Warning("failed to set action")
-		}
-	}
-
-	return
 }
 
 // updateInfo updates the details on any monitored zone
-func (overlayLimit *OverlayLimit) updateInfo(tadoData *scheduler.TadoData) (err error) {
+func (overlayLimit *OverlayLimit) updateInfo(tadoData *scheduler.TadoData) {
 	if overlayLimit.zoneDetails == nil {
 		overlayLimit.initZoneDetails(tadoData)
 	}
 
+	var (
+		zoneInfo tado.ZoneInfo
+		ok       bool
+	)
 	for id, details := range overlayLimit.zoneDetails {
-		if zoneInfo, ok := tadoData.ZoneInfo[id]; ok {
-			if zoneInfo.Overlay.Type == "MANUAL" &&
-				zoneInfo.Overlay.Setting.Type == "HEATING" &&
-				zoneInfo.Overlay.Termination.Type == "MANUAL" {
-				if details.isOverlay == false {
-
-					// zone in overlay. record when we need to disable the overlay
-
-					log.WithField("overlay", zoneInfo.Overlay.String()).Debug("overlay found")
-
-					details.isOverlay = true
-					details.expiryTimer = time.Now().Add(details.rule.MaxTime)
-					overlayLimit.zoneDetails[id] = details
-
-					log.WithFields(log.Fields{
-						"zoneID":   details.zone.ID,
-						"zoneName": details.zone.Name,
-						"expiry":   details.expiryTimer,
-					}).Info("new zone in overlay")
-					// notify via slack if needed
-					if overlayLimit.Slack != nil {
-						_ = tadobot.SendMessage(overlayLimit.Slack,
-							"good",
-							"",
-							"Manual temperature setting detected in zone "+details.zone.Name,
-						)
-					}
-				}
-			} else if details.isOverlay == true {
-				// Zone is not in overlay
-
-				details.isOverlay = false
+		if zoneInfo, ok = tadoData.ZoneInfo[id]; !ok {
+			continue
+		}
+		if zoneInfo.Overlay.Type == "MANUAL" &&
+			zoneInfo.Overlay.Setting.Type == "HEATING" &&
+			zoneInfo.Overlay.Termination.Type == "MANUAL" {
+			if details.state <= zoneStateAuto {
+				// zone in overlay. record when we need to disable the overlay
+				log.WithField("overlay", zoneInfo.Overlay.String()).Debug("overlay found")
+				details.state = zoneStateManual
+				details.expiryTimer = time.Now().Add(details.rule.MaxTime)
 				overlayLimit.zoneDetails[id] = details
-
-				log.WithFields(log.Fields{
-					"zoneID":   details.zone.ID,
-					"zoneName": details.zone.Name,
-				}).Info("zone no longer in overlay")
 			}
+		} else if details.state > zoneStateAuto {
+			// Zone is no longer in overlay
+			details.state = zoneStateAuto
+			overlayLimit.zoneDetails[id] = details
 		}
 	}
 	return
@@ -121,33 +82,46 @@ func (overlayLimit *OverlayLimit) initZoneDetails(tadoData *scheduler.TadoData) 
 		}
 
 		overlayLimit.zoneDetails[zone.ID] = zoneDetails{
-			zone: *zone,
-			rule: *rule,
+			zone:  *zone,
+			rule:  *rule,
+			state: zoneStateUndetermined,
 		}
 	}
 }
 
 // getActions deletes any overlays that have expired
-func (overlayLimit *OverlayLimit) getActions() (actionList []actions.Action, err error) {
+func (overlayLimit *OverlayLimit) process(_ *scheduler.TadoData) {
 	for id, details := range overlayLimit.zoneDetails {
-		if details.isOverlay && time.Now().After(details.expiryTimer) {
-			actionList = append(actionList, actions.Action{
-				Overlay: false,
-				ZoneID:  id,
-			})
-			log.WithField("zoneID", id).Info("expiring overlay in zone")
-			// Technically not needed (next run will do this automatically, but facilitates unit testing
-			details.isOverlay = false
-			overlayLimit.zoneDetails[id] = details
-			// notify via slack if needed
+		switch details.state {
+		case zoneStateManual:
+			// Zone is now in overlay. Report to slack
 			if overlayLimit.Slack != nil {
-				_ = tadobot.SendMessage(overlayLimit.Slack,
-					"good",
-					"",
-					"Disabling manual temperature setting in zone "+details.zone.Name,
-				)
+				overlayLimit.Slack <- []slack.Attachment{{
+					Color: "good",
+					Title: "new zone in overlay",
+					Text:  "Manual temperature setting detected in zone " + details.zone.Name,
+				}}
+			}
+			details.expiryTimer = time.Now().Add(details.rule.MaxTime)
+			details.state = zoneStateReported
+		case zoneStateReported:
+			// Zone is in overlay. Do we need to reset it?
+			if time.Now().After(details.expiryTimer) {
+				log.WithField("id", id).Debug("expired overlay found. deleting")
+				if overlayLimit.Slack != nil {
+					overlayLimit.Slack <- []slack.Attachment{{
+						Color: "good",
+						Title: "overlay expired",
+						Text:  "Disabling manual temperature setting in zone " + details.zone.Name,
+					}}
+				}
+				overlayLimit.RoomSetter <- tadosetter.RoomCommand{
+					ZoneID: id,
+					Auto:   true,
+				}
+				details.state = zoneStateExpired
 			}
 		}
+		overlayLimit.zoneDetails[id] = details
 	}
-	return
 }

@@ -38,7 +38,6 @@ controller:
 
 			ctrl.API = &mockapi.MockAPI{}
 			ctrl.roomSetter.API = &mockapi.MockAPI{}
-			ctrl.limiter.API = &mockapi.MockAPI{}
 
 			err = ctrl.Run()
 			assert.Nil(t, err)

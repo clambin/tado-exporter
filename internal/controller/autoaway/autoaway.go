@@ -13,8 +13,8 @@ import (
 
 type AutoAway struct {
 	Updates    scheduler.UpdateChannel
-	Slack      tadobot.PostChannel
 	RoomSetter chan tadosetter.RoomCommand
+	Slack      tadobot.PostChannel
 	Rules      []*configuration.AutoAwayRule
 	deviceInfo map[int]DeviceInfo
 }
@@ -43,8 +43,6 @@ func (autoAway *AutoAway) updateInfo(tadoData *scheduler.TadoData) {
 		if mobileDevice, ok := tadoData.MobileDevice[mobileDeviceID]; ok {
 			deviceInfo.mobileDevice = mobileDevice
 			autoAway.deviceInfo[mobileDeviceID] = deviceInfo
-		} else {
-			continue
 		}
 	}
 }
