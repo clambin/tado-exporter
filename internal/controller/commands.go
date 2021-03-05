@@ -3,8 +3,10 @@ package controller
 import (
 	"fmt"
 	"github.com/clambin/tado-exporter/pkg/tado"
+	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -96,7 +98,7 @@ func (controller *Controller) doRulesAutoAway(_ ...string) []slack.Attachment {
 			response = "home"
 		case autoAwayStateAway:
 			response = "away. will set " + entry.Zone.Name + " to manual in " +
-				entry.ActivationTime.Sub(time.Now()).Round(1*time.Minute).String()
+				entry.ActivationTime.S3ub(time.Now()).Round(1*time.Minute).String()
 		case autoAwayStateExpired:
 			response = "away. " + entry.Zone.Name + " will be set to manual"
 		case autoAwayStateReported:
@@ -134,6 +136,7 @@ func (controller *Controller) doRulesLimitOverlay(_ ...string) []slack.Attachmen
 		},
 	}
 }
+*/
 
 func (controller *Controller) doSetTemperature(args ...string) (output []slack.Attachment) {
 	var (
@@ -143,7 +146,9 @@ func (controller *Controller) doSetTemperature(args ...string) (output []slack.A
 		zoneID      int
 		ok          bool
 		auto        bool
+		zones       []*tado.Zone
 	)
+
 	if len(args) >= 2 {
 		zoneName = strings.ToLower(args[0])
 		if strings.ToLower(args[1]) == "auto" {
@@ -157,11 +162,13 @@ func (controller *Controller) doSetTemperature(args ...string) (output []slack.A
 			}
 		}
 	}
-	for _, zone := range controller.proxy.Zone {
-		if strings.ToLower(zone.Name) == zoneName {
-			zoneID = zone.ID
-			ok = true
-			break
+	if zones, err = controller.GetZones(); err == nil {
+		for _, zone := range zones {
+			if strings.ToLower(zone.Name) == zoneName {
+				zoneID = zone.ID
+				ok = true
+				break
+			}
 		}
 	}
 	if !ok {
@@ -173,7 +180,7 @@ func (controller *Controller) doSetTemperature(args ...string) (output []slack.A
 
 	if ok && err == nil {
 		if auto {
-			if err = controller.proxy.DeleteZoneOverlay(zoneID); err == nil {
+			if err = controller.DeleteZoneOverlay(zoneID); err == nil {
 				output = append(output, slack.Attachment{
 					Color: "good",
 					Text:  "setting " + args[0] + " back to auto",
@@ -191,7 +198,7 @@ func (controller *Controller) doSetTemperature(args ...string) (output []slack.A
 				})
 			}
 		} else {
-			if err = controller.proxy.SetZoneOverlay(zoneID, temperature); err == nil {
+			if err = controller.SetZoneOverlay(zoneID, temperature); err == nil {
 				output = append(output, slack.Attachment{
 					Color: "good",
 					Text:  "setting temperature in " + args[0] + " to " + args[1],
@@ -210,4 +217,3 @@ func (controller *Controller) doSetTemperature(args ...string) (output []slack.A
 	}
 	return
 }
-*/

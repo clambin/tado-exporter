@@ -6,6 +6,7 @@ import (
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func TestController_Run(t *testing.T) {
@@ -36,7 +37,7 @@ controller:
 		if assert.Nil(t, err) && assert.NotNil(t, ctrl) {
 
 			ctrl.API = &mockapi.MockAPI{}
-			ctrl.autoAway.API = &mockapi.MockAPI{}
+			ctrl.roomSetter.API = &mockapi.MockAPI{}
 			ctrl.limiter.API = &mockapi.MockAPI{}
 
 			err = ctrl.Run()
@@ -49,10 +50,12 @@ controller:
 			data, err = ctrl.refresh()
 
 			if assert.Nil(t, err) {
-				assert.Len(t, data.Zone, 2)
+				assert.Eventually(t, func() bool { return len(data.Zone) == 2 }, 1*time.Second, 10*time.Millisecond)
 				assert.Len(t, data.ZoneInfo, 2)
 				assert.Len(t, data.MobileDevice, 2)
 			}
+
+			ctrl.Stop()
 		}
 	}
 }

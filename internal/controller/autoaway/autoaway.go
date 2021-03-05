@@ -2,48 +2,33 @@ package autoaway
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/actions"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
+	"github.com/slack-go/slack"
 	"time"
 )
 
 type AutoAway struct {
-	actions.Actions
-
 	Updates    scheduler.UpdateChannel
 	Slack      tadobot.PostChannel
+	RoomSetter chan tadosetter.RoomCommand
 	Rules      []*configuration.AutoAwayRule
 	deviceInfo map[int]DeviceInfo
 }
 
-// Run waits for updates data from the scheduler and evaluates configured autoAway rules
+// Run waits for updates from the scheduler and evaluates configured autoAway rules
 func (autoAway *AutoAway) Run() {
 	for tadoData := range autoAway.Updates {
 		if tadoData == nil {
 			break
 		}
-		if err := autoAway.process(tadoData); err != nil {
-			log.WithField("err", err).Warning("failed to process autoAway rules")
-		}
+		log.WithField("object", *tadoData).Debug("got a message")
+		autoAway.updateInfo(tadoData)
+		autoAway.setZones()
 	}
-}
-
-// process sets the state of each mobileDevice, checks if any have come/left home and performs
-// configured autoAway rules
-func (autoAway *AutoAway) process(tadoData *scheduler.TadoData) (err error) {
-	var actionList []actions.Action
-
-	autoAway.updateInfo(tadoData)
-	if actionList, err = autoAway.getActions(); err == nil {
-		if err = autoAway.RunActions(actionList); err != nil {
-			log.WithField("err", err).Warning("failed to set action")
-		}
-	}
-
-	return
 }
 
 // updateInfo updates the state of each mobileDevice
@@ -102,9 +87,8 @@ func (autoAway *AutoAway) initDeviceInfo(tadoData *scheduler.TadoData) {
 	}
 }
 
-// getActions scans the DeviceInfo map and returns all required actions, i.e. any zones that
-// need to be put in/out of Overlay mode.
-func (autoAway *AutoAway) getActions() (actionList []actions.Action, err error) {
+// setZones scans the DeviceInfo map and switches on/off any overlays
+func (autoAway *AutoAway) setZones() {
 	for id, deviceInfo := range autoAway.deviceInfo {
 		log.WithFields(log.Fields{
 			"mobileDeviceID":   deviceInfo.mobileDevice.ID,
@@ -127,63 +111,70 @@ func (autoAway *AutoAway) getActions() (actionList []actions.Action, err error) 
 			// mark the phone at home
 			deviceInfo.state = autoAwayStateHome
 			autoAway.deviceInfo[id] = deviceInfo
-			// add action to disable the overlay
-			actionList = append(actionList, actions.Action{
-				Overlay: false,
-				ZoneID:  deviceInfo.zone.ID,
-			})
+
+			// disable the overlay
+			autoAway.RoomSetter <- tadosetter.RoomCommand{
+				ZoneID: deviceInfo.zone.ID,
+				Auto:   true,
+			}
+
 			log.WithFields(log.Fields{
 				"MobileDeviceID": id,
 				"ZoneID":         deviceInfo.zone.ID,
 			}).Info("User returned home. Removing overlay")
+
 			// notify via slack if needed
 			if autoAway.Slack != nil {
-				_ = tadobot.SendMessage(autoAway.Slack,
-					"good",
-					deviceInfo.mobileDevice.Name+" is home",
-					"resetting "+deviceInfo.zone.Name+" to auto",
-				)
+				autoAway.Slack <- []slack.Attachment{{
+					Color: "good",
+					Title: deviceInfo.mobileDevice.Name + " is home",
+					Text:  "resetting " + deviceInfo.zone.Name + " to auto",
+				}}
 			}
 		} else
 		// if the mobile phone is away, mark it as such and set the activation timer
 		if deviceInfo.leftHome() {
+			// mark the phone away & set the activation timer
 			deviceInfo.state = autoAwayStateAway
 			deviceInfo.activationTime = time.Now().Add(deviceInfo.rule.WaitTime)
 			autoAway.deviceInfo[id] = deviceInfo
+
 			// notify via slack if needed
 			if autoAway.Slack != nil {
-				_ = tadobot.SendMessage(autoAway.Slack,
-					"good",
-					deviceInfo.mobileDevice.Name+" is away",
-					"will set "+deviceInfo.zone.Name+" to manual in "+deviceInfo.rule.WaitTime.String(),
-				)
+				autoAway.Slack <- []slack.Attachment{{
+					Color: "good",
+					Title: deviceInfo.mobileDevice.Name + " is away",
+					Text:  "will set " + deviceInfo.zone.Name + " to manual in " + deviceInfo.rule.WaitTime.String(),
+				}}
 			}
 		} else
-		// if the mobile phone was already away, check the activation timer
+		// if the mobile phone was already away for the configured time
 		if deviceInfo.shouldReport() {
-
+			// set the state to reported
 			deviceInfo.state = autoAwayStateReported
 			autoAway.deviceInfo[id] = deviceInfo
-			// add action to set the overlay
-			actionList = append(actionList, actions.Action{
-				Overlay:           true,
-				ZoneID:            deviceInfo.zone.ID,
-				TargetTemperature: deviceInfo.rule.TargetTemperature,
-			})
+
+			// set the overlay
+			autoAway.RoomSetter <- tadosetter.RoomCommand{
+				ZoneID:      deviceInfo.zone.ID,
+				Auto:        false,
+				Temperature: deviceInfo.rule.TargetTemperature,
+			}
+
 			log.WithFields(log.Fields{
 				"MobileDeviceID":    id,
 				"ZoneID":            deviceInfo.zone.ID,
 				"TargetTemperature": deviceInfo.rule.TargetTemperature,
 			}).Info("User left. Setting overlay")
+
 			// notify via slack if needed
 			if autoAway.Slack != nil {
-				_ = tadobot.SendMessage(autoAway.Slack,
-					"good",
-					deviceInfo.mobileDevice.Name+" is away",
-					"activating manual control in zone "+deviceInfo.zone.Name,
-				)
+				autoAway.Slack <- []slack.Attachment{{
+					Color: "good",
+					Title: deviceInfo.mobileDevice.Name + " is away",
+					Text:  "activating manual control in zone " + deviceInfo.zone.Name,
+				}}
 			}
 		}
 	}
-	return
 }

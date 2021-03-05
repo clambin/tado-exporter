@@ -9,12 +9,12 @@ import (
 )
 
 func TestAutoAwayInfo(t *testing.T) {
-	info := &DeviceInfo{
+	info := DeviceInfo{
 		mobileDevice: tado.MobileDevice{
 			ID:   1,
 			Name: "foo",
 			Settings: tado.MobileDeviceSettings{
-				GeoTrackingEnabled: true,
+				GeoTrackingEnabled: false,
 			},
 			Location: tado.MobileDeviceLocation{
 				AtHome: true,
@@ -28,9 +28,13 @@ func TestAutoAwayInfo(t *testing.T) {
 			ZoneName:          "bar",
 			TargetTemperature: 0,
 		},
-		state: autoAwayStateUndetermined,
+		// state: autoAwayStateUndetermined,
 	}
 
+	info.state = getInitialState(&info.mobileDevice)
+	assert.Equal(t, autoAwayState(autoAwayStateUndetermined), info.state)
+
+	info.mobileDevice.Settings.GeoTrackingEnabled = true
 	assert.False(t, info.leftHome())
 
 	info.mobileDevice.Location.AtHome = false

@@ -2,17 +2,17 @@ package autoaway
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/actions"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/pkg/tado"
-	"github.com/clambin/tado-exporter/test/server/mockapi"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
 
-func TestAutoAwayConfig(t *testing.T) {
-	tadoData := scheduler.TadoData{
+func makeTadoData() scheduler.TadoData {
+	return scheduler.TadoData{
 		Zone: map[int]tado.Zone{
 			1: {ID: 1, Name: "foo"},
 			2: {ID: 2, Name: "bar"},
@@ -32,7 +32,7 @@ func TestAutoAwayConfig(t *testing.T) {
 				Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
 				Location: tado.MobileDeviceLocation{
 					Stale:  false,
-					AtHome: true,
+					AtHome: false,
 				},
 			},
 			2: {
@@ -46,7 +46,9 @@ func TestAutoAwayConfig(t *testing.T) {
 			},
 		},
 	}
+}
 
+func TestAutoAwayRun(t *testing.T) {
 	cfg, err := configuration.LoadConfiguration([]byte(`
 controller:
   autoAwayRules:
@@ -62,59 +64,59 @@ controller:
 
 	if assert.Nil(t, err) && assert.NotNil(t, cfg) && assert.NotNil(t, cfg.Controller.AutoAwayRules) {
 
-		server := mockapi.MockAPI{}
 		schedule := scheduler.Scheduler{}
+		setter := make(chan tadosetter.RoomCommand, 4096)
 		away := AutoAway{
-			Actions: actions.Actions{
-				API: &server,
-			},
-			Updates: schedule.Register(),
-			Rules:   *cfg.Controller.AutoAwayRules,
+			RoomSetter: setter,
+			Updates:    schedule.Register(),
+			Rules:      *cfg.Controller.AutoAwayRules,
 		}
+		go away.Run()
 
-		err = away.process(&tadoData)
+		log.SetLevel(log.DebugLevel)
+
+		// set up the initial state
+		err = schedule.Notify(makeTadoData())
 		assert.Nil(t, err)
 
-		if assert.NotNil(t, away.deviceInfo) {
+		// device 2 was away. Now mark it being home
+		tadoData := makeTadoData()
+		device := tadoData.MobileDevice[2]
+		device.Location.AtHome = true
+		tadoData.MobileDevice[2] = device
+		err = schedule.Notify(tadoData)
+		assert.Nil(t, err)
 
-			assert.Len(t, away.deviceInfo, 2)
+		// resulting command should to set zone 2 to Auto
+		msg := <-setter
+		assert.True(t, msg.Auto)
+		assert.Equal(t, 2, msg.ZoneID)
 
-			var deviceInfo DeviceInfo
+		// mark device 2 as away again
+		err = schedule.Notify(makeTadoData())
+		assert.Nil(t, err)
 
-			// "bar" was previously home
-			deviceInfo, _ = away.deviceInfo[2]
-			oldActivationTime := deviceInfo.activationTime
-			deviceInfo.state = autoAwayStateHome
-			away.deviceInfo[2] = deviceInfo
-
-			err = away.process(&tadoData)
-
-			assert.Nil(t, err)
-			assert.Equal(t, autoAwayState(autoAwayStateAway), away.deviceInfo[2].state)
-			assert.True(t, away.deviceInfo[2].activationTime.After(oldActivationTime))
-
-			// "bar" has been away for a long time
-			deviceInfo, _ = away.deviceInfo[2]
-			deviceInfo.activationTime = time.Now().Add(-2 * time.Hour)
-			away.deviceInfo[2] = deviceInfo
-
-			err = away.process(&tadoData)
-
-			assert.Nil(t, err)
-			assert.Equal(t, autoAwayState(autoAwayStateReported), away.deviceInfo[2].state)
-			assert.Len(t, server.Overlays, 1)
-			assert.Equal(t, 15.0, server.Overlays[2])
-
-			// "foo" was previously away
-			server.Overlays[1] = 15
-			autoAway, _ := away.deviceInfo[1]
-			autoAway.state = autoAwayStateAway
-			away.deviceInfo[1] = autoAway
-
-			err = away.process(&tadoData)
-			assert.Nil(t, err)
-			_, ok := server.Overlays[1]
-			assert.False(t, ok)
+		// should not result in an action
+		if assert.Eventually(t, func() bool { return len(setter) == 0 }, 500*time.Millisecond, 10*time.Millisecond) == false {
+			panic("unexpected message expected in channel. aborting ...")
 		}
+
+		// fake the device being away for a long time
+		// not exactly thread-safe, but at this point autoAway is waiting on the next update
+		deviceInfo, ok := away.deviceInfo[2]
+		if assert.True(t, ok) {
+			deviceInfo.activationTime = time.Now().Add(-12 * time.Hour)
+			away.deviceInfo[2] = deviceInfo
+		}
+
+		// run another status
+		err = schedule.Notify(makeTadoData())
+		assert.Nil(t, err)
+
+		// resulting command should be to set zone2 to overlay
+		msg = <-setter
+		assert.False(t, msg.Auto)
+		assert.Equal(t, 2, msg.ZoneID)
+		assert.Equal(t, 15.0, msg.Temperature)
 	}
 }

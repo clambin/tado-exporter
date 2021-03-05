@@ -6,6 +6,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/autoaway"
 	"github.com/clambin/tado-exporter/internal/controller/overlaylimit"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
@@ -15,36 +16,20 @@ import (
 // Controller object for tado-controller.
 type Controller struct {
 	tado.API
+	scheduler.Scheduler
 
-	tadoBot   *tadobot.TadoBot
-	scheduler *scheduler.Scheduler
-	autoAway  *autoaway.AutoAway
-	limiter   *overlaylimit.OverlayLimit
+	roomSetter *tadosetter.Setter
+	tadoBot    *tadobot.TadoBot
+	autoAway   *autoaway.AutoAway
+	limiter    *overlaylimit.OverlayLimit
 }
 
 // New creates a new Controller object
 func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration.ControllerConfiguration) (controller *Controller, err error) {
 	var (
 		slackChannel tadobot.PostChannel
-		tadoBot      *tadobot.TadoBot
 	)
-	if cfg != nil && cfg.TadoBot.Enabled {
-		callbacks := map[string]tadobot.CommandFunc{
-			"rooms": controller.doRooms,
-			"users": controller.doUsers,
-			// "rules":        controller.doRules,
-			// "autoaway":     controller.doRulesAutoAway,
-			// "limitoverlay": controller.doRulesLimitOverlay,
-			// "set":          controller.doSetTemperature,
-		}
-		if tadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
-			slackChannel = tadoBot.PostChannel
-			go tadoBot.Run()
-		} else {
-			log.WithField("err", "failed to start TadoBot")
-			tadoBot = nil
-		}
-	}
+
 	controller = &Controller{
 		API: &tado.APIClient{
 			HTTPClient:   &http.Client{},
@@ -52,23 +37,43 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 			Password:     tadoPassword,
 			ClientSecret: tadoClientSecret,
 		},
-		tadoBot:   tadoBot,
-		scheduler: &scheduler.Scheduler{},
+		roomSetter: &tadosetter.Setter{
+			API: &tado.APIClient{
+				HTTPClient:   &http.Client{},
+				Username:     tadoUsername,
+				Password:     tadoPassword,
+				ClientSecret: tadoClientSecret,
+			},
+			ZoneSetter: make(chan tadosetter.RoomCommand),
+			Stop:       make(chan bool),
+		},
+	}
+	go controller.roomSetter.Run()
+
+	if cfg != nil && cfg.TadoBot.Enabled {
+		callbacks := map[string]tadobot.CommandFunc{
+			"rooms": controller.doRooms,
+			"users": controller.doUsers,
+			// "rules":        controller.doRules,
+			// "autoaway":     controller.doRulesAutoAway,
+			// "limitoverlay": controller.doRulesLimitOverlay,
+			"set": controller.doSetTemperature,
+		}
+		if controller.tadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
+			slackChannel = controller.tadoBot.PostChannel
+			go controller.tadoBot.Run()
+		} else {
+			log.WithField("err", "failed to start TadoBot")
+			controller.tadoBot = nil
+		}
 	}
 
 	if cfg != nil && cfg.AutoAwayRules != nil {
 		controller.autoAway = &autoaway.AutoAway{
-			Actions: actions.Actions{
-				API: &tado.APIClient{
-					HTTPClient:   &http.Client{},
-					Username:     tadoUsername,
-					Password:     tadoPassword,
-					ClientSecret: tadoClientSecret,
-				},
-			},
-			Updates: controller.scheduler.Register(),
-			Slack:   slackChannel,
-			Rules:   *cfg.AutoAwayRules,
+			Updates:    controller.Register(),
+			RoomSetter: controller.roomSetter.ZoneSetter,
+			Slack:      slackChannel,
+			Rules:      *cfg.AutoAwayRules,
 		}
 		go controller.autoAway.Run()
 	}
@@ -83,7 +88,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 					ClientSecret: tadoClientSecret,
 				},
 			},
-			Updates: controller.scheduler.Register(),
+			Updates: controller.Register(),
 			Slack:   slackChannel,
 			Rules:   *cfg.OverlayLimitRules,
 		}
@@ -98,17 +103,12 @@ func (controller *Controller) Run() (err error) {
 	var tadoData scheduler.TadoData
 
 	if tadoData, err = controller.refresh(); err == nil {
-		err = controller.scheduler.Notify(&tadoData)
+		err = controller.Notify(tadoData)
 	}
 
 	log.WithField("err", err).Debug("Run")
 
 	return
-}
-
-// Stop terminates all components
-func (controller *Controller) Stop() {
-	controller.scheduler.Stop()
 }
 
 // Refresh the Cache
