@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestController_doRooms(t *testing.T) {
@@ -111,6 +112,8 @@ controller:
 		//		log.SetLevel(log.DebugLevel)
 		err = control.Run()
 		assert.Nil(t, err)
+
+		time.Sleep(500 * time.Millisecond)
 
 		output := control.doRules()
 

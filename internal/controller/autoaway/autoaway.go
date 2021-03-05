@@ -31,7 +31,6 @@ loop:
 			if tadoData == nil {
 				break loop
 			}
-			log.WithField("object", *tadoData).Debug("got a message")
 			autoAway.updateInfo(tadoData)
 			autoAway.setZones()
 		case cmd := <-autoAway.Commands:

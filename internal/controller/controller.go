@@ -52,12 +52,12 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 
 	if cfg != nil && cfg.TadoBot.Enabled {
 		callbacks := map[string]tadobot.CommandFunc{
-			"rooms": controller.doRooms,
-			"users": controller.doUsers,
-			// "rules":        controller.doRules,
-			// "autoaway":     controller.doRulesAutoAway,
-			// "limitoverlay": controller.doRulesLimitOverlay,
-			"set": controller.doSetTemperature,
+			"rooms":        controller.doRooms,
+			"users":        controller.doUsers,
+			"rules":        controller.doRules,
+			"autoaway":     controller.doRulesAutoAway,
+			"limitoverlay": controller.doRulesLimitOverlay,
+			"set":          controller.doSetTemperature,
 		}
 		if controller.tadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
 			slackChannel = controller.tadoBot.PostChannel
