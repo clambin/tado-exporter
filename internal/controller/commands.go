@@ -2,8 +2,8 @@ package controller
 
 import (
 	"fmt"
+	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/pkg/tado"
-	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"sort"
 	"strconv"
@@ -138,82 +138,74 @@ func (controller *Controller) doRulesLimitOverlay(_ ...string) []slack.Attachmen
 }
 */
 
-func (controller *Controller) doSetTemperature(args ...string) (output []slack.Attachment) {
+func (controller *Controller) parseSetTemperatureArguments(args ...string) (ok bool, output slack.Attachment, zoneID int, auto bool, temperature float64) {
+	if len(args) != 2 {
+		output = slack.Attachment{
+			Color: "bad",
+			Text:  "invalid command:  set <room name> auto|<temperature>",
+		}
+		return
+	}
+
 	var (
-		zoneName    string
-		temperature float64
-		err         error
-		zoneID      int
-		ok          bool
-		auto        bool
-		zones       []*tado.Zone
+		zones []*tado.Zone
+		err   error
 	)
 
-	if len(args) >= 2 {
-		zoneName = strings.ToLower(args[0])
-		if strings.ToLower(args[1]) == "auto" {
-			auto = true
-		} else {
-			if temperature, err = strconv.ParseFloat(args[1], 64); err != nil {
-				output = append(output, slack.Attachment{
-					Color: "bad",
-					Text:  "invalid temperature " + args[1],
-				})
-			}
-		}
-	}
+	zoneName := strings.ToLower(args[0])
 	if zones, err = controller.GetZones(); err == nil {
 		for _, zone := range zones {
 			if strings.ToLower(zone.Name) == zoneName {
 				zoneID = zone.ID
-				ok = true
 				break
 			}
 		}
 	}
-	if !ok {
-		output = append(output, slack.Attachment{
+	if zoneID == 0 {
+		output = slack.Attachment{
 			Color: "bad",
-			Text:  "unknown room " + args[0],
-		})
+			Text:  "unknown room name: " + zoneName,
+		}
+		return
 	}
 
-	if ok && err == nil {
-		if auto {
-			if err = controller.DeleteZoneOverlay(zoneID); err == nil {
-				output = append(output, slack.Attachment{
-					Color: "good",
-					Text:  "setting " + args[0] + " back to auto",
-				})
-			} else {
-				log.WithFields(log.Fields{
-					"err":      err,
-					"zoneID":   zoneID,
-					"zoneName": zoneName,
-				}).Warning("failed to set zone back to auto")
-
-				output = append(output, slack.Attachment{
-					Color: "bad",
-					Text:  "failed to set " + args[0] + " back to auto",
-				})
+	if strings.ToLower(args[1]) == "auto" {
+		auto = true
+	} else {
+		if temperature, err = strconv.ParseFloat(args[1], 64); err != nil {
+			output = slack.Attachment{
+				Color: "bad",
+				Text:  "invalid temperature: " + args[1],
 			}
-		} else {
-			if err = controller.SetZoneOverlay(zoneID, temperature); err == nil {
-				output = append(output, slack.Attachment{
-					Color: "good",
-					Text:  "setting temperature in " + args[0] + " to " + args[1],
-				})
-			} else {
-				output = append(output, slack.Attachment{
-					Color: "bad",
-					Text:  "failed to set manual temperature in " + args[0],
-				})
-			}
+			return
 		}
 	}
 
-	if err == nil {
-		err = controller.Run()
+	ok = true
+	return
+}
+
+func (controller *Controller) doSetTemperature(args ...string) (output []slack.Attachment) {
+	ok, errorOutput, zoneID, auto, temperature := controller.parseSetTemperatureArguments(args...)
+
+	if ok {
+		var roomCommand tadosetter.RoomCommand
+		if auto {
+			roomCommand = tadosetter.RoomCommand{ZoneID: zoneID, Auto: true}
+			output = append(output, slack.Attachment{
+				Color: "good",
+				Text:  "setting " + args[0] + " back to auto",
+			})
+		} else {
+			roomCommand = tadosetter.RoomCommand{ZoneID: zoneID, Auto: false, Temperature: temperature}
+			output = append(output, slack.Attachment{
+				Color: "good",
+				Text:  "setting temperature in " + args[0] + " to " + args[1],
+			})
+		}
+		controller.roomSetter.ZoneSetter <- roomCommand
+	} else {
+		output = append(output, errorOutput)
 	}
 	return
 }

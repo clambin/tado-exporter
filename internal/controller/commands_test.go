@@ -47,6 +47,36 @@ func TestController_doUsers(t *testing.T) {
 	}
 }
 
+func TestController_doSetTemperature(t *testing.T) {
+	ctrl, err := New("", "", "", nil)
+	if assert.Nil(t, err) && assert.NotNil(t, ctrl) {
+		ctrl.API = &mockapi.MockAPI{}
+		ctrl.roomSetter.API = &mockapi.MockAPI{}
+		err = ctrl.Run()
+		assert.Nil(t, err)
+	}
+
+	output := ctrl.doSetTemperature("bar", "auto")
+	assert.Len(t, output, 1)
+	assert.Equal(t, "setting bar back to auto", output[0].Text)
+
+	output = ctrl.doSetTemperature("bar", "15.5")
+	assert.Len(t, output, 1)
+	assert.Equal(t, "setting temperature in bar to 15.5", output[0].Text)
+
+	output = ctrl.doSetTemperature("bar", "15,5")
+	assert.Len(t, output, 1)
+	assert.Equal(t, "invalid temperature: 15,5", output[0].Text)
+
+	output = ctrl.doSetTemperature("snafu", "auto")
+	assert.Len(t, output, 1)
+	assert.Equal(t, "unknown room name: snafu", output[0].Text)
+
+	output = ctrl.doSetTemperature("auto")
+	assert.Len(t, output, 1)
+	assert.Equal(t, "invalid command:  set <room name> auto|<temperature>", output[0].Text)
+}
+
 /*
 func TestController_doRules(t *testing.T) {
 	cfg, err := configuration.LoadConfiguration([]byte(`
