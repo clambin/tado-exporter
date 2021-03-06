@@ -34,8 +34,8 @@ func (scheduler *Scheduler) Register() (channel UpdateChannel) {
 	return channel
 }
 
-// Notify all clients of the updated data
-func (scheduler *Scheduler) Notify(tadoData TadoData) {
+// Update all clients with the updated data
+func (scheduler *Scheduler) Update(tadoData TadoData) {
 	for _, client := range scheduler.clients {
 		client <- &tadoData
 	}

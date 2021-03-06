@@ -58,7 +58,7 @@ func TestOverlayLimit(t *testing.T) {
 		go limiter.Run()
 
 		// set up the initial state
-		schedule.Notify(makeTadoData())
+		schedule.Update(makeTadoData())
 
 		slackMsgs := <-limiter.Slack
 		assert.Len(t, slackMsgs, 1)
@@ -75,13 +75,13 @@ func TestOverlayLimit(t *testing.T) {
 			}
 			tadoData.ZoneInfo[1] = zoneInfo
 		}
-		schedule.Notify(tadoData)
+		schedule.Update(tadoData)
 
 		slackMsgs = <-limiter.Slack
 		assert.Len(t, slackMsgs, 1)
 		assert.Equal(t, "Manual temperature setting detected in zone foo", slackMsgs[0].Title)
 
-		schedule.Notify(tadoData)
+		schedule.Update(tadoData)
 
 		// limiter writes to slack first and only then to roomsetter.
 		// check buffering works by reading roomsetter & slack in the inverse order
@@ -143,14 +143,14 @@ controller:
 
 		for i := 0; i < 1000; i++ {
 			// set up the initial state
-			schedule.Notify(withoutOverlay)
+			schedule.Update(withoutOverlay)
 
 			// put in overlay
-			schedule.Notify(withOverlay)
+			schedule.Update(withOverlay)
 			_ = <-limiter.Slack
 
 			// expire
-			schedule.Notify(withOverlay)
+			schedule.Update(withOverlay)
 
 			// validate
 			_ = <-limiter.Slack

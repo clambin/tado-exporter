@@ -25,7 +25,7 @@ type Controller struct {
 }
 
 // New creates a new Controller object
-func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration.ControllerConfiguration) (controller *Controller, err error) {
+func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration.ControllerConfiguration) (controller *Controller) {
 	controller = &Controller{
 		API: &tado.APIClient{
 			HTTPClient:   &http.Client{},
@@ -56,6 +56,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 			"limitoverlay": controller.doRulesLimitOverlay,
 			"set":          controller.doSetTemperature,
 		}
+		var err error
 		if controller.tadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
 			slackChannel = controller.tadoBot.PostChannel
 			go controller.tadoBot.Run()
@@ -95,7 +96,7 @@ func (controller *Controller) Run() (err error) {
 	var tadoData scheduler.TadoData
 
 	if tadoData, err = controller.refresh(); err == nil {
-		controller.Notify(tadoData)
+		controller.Update(tadoData)
 	}
 
 	log.WithField("err", err).Debug("Run")

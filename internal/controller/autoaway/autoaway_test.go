@@ -74,14 +74,14 @@ controller:
 		go away.Run()
 
 		// set up the initial state
-		schedule.Notify(makeTadoData())
+		schedule.Update(makeTadoData())
 
 		// device 2 was away. Now mark it being home
 		tadoData := makeTadoData()
 		device := tadoData.MobileDevice[2]
 		device.Location.AtHome = true
 		tadoData.MobileDevice[2] = device
-		schedule.Notify(tadoData)
+		schedule.Update(tadoData)
 
 		// resulting command should to set zone 2 to Auto
 		msg := <-setter
@@ -95,7 +95,7 @@ controller:
 		}
 
 		// mark device 2 as away again
-		schedule.Notify(makeTadoData())
+		schedule.Update(makeTadoData())
 
 		// should not result in an action
 		if assert.Eventually(t, func() bool { return len(setter) == 0 }, 500*time.Millisecond, 10*time.Millisecond) == false {
@@ -116,12 +116,12 @@ controller:
 		}
 
 		// run 2 status updates. the first sets the user as away.  the second will expire the timer
-		schedule.Notify(tadoData)
+		schedule.Update(tadoData)
 		slackOutput = <-away.Slack
 		if assert.Len(t, slackOutput, 1) {
 			assert.Equal(t, "will set foo to manual in 0s", slackOutput[0].Text)
 		}
-		schedule.Notify(tadoData)
+		schedule.Update(tadoData)
 
 		// resulting command should be to set zone 1 to manual
 		msg = <-setter
@@ -187,7 +187,7 @@ controller:
 		device, _ := tadoData.MobileDevice[1]
 		device.Location.Stale = true
 		tadoData.MobileDevice[1] = device
-		schedule.Notify(tadoData)
+		schedule.Update(tadoData)
 
 		assert.Eventually(t, func() bool {
 			req := commands.Command{

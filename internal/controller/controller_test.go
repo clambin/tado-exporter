@@ -33,28 +33,25 @@ controller:
     maxTime: 1h
 `))
 	if assert.Nil(t, err) && assert.NotNil(t, cfg) {
-		ctrl, err = New("", "", "", &cfg.Controller)
-		if assert.Nil(t, err) && assert.NotNil(t, ctrl) {
+		ctrl = New("", "", "", &cfg.Controller)
+		ctrl.API = &mockapi.MockAPI{}
+		ctrl.roomSetter.API = &mockapi.MockAPI{}
 
-			ctrl.API = &mockapi.MockAPI{}
-			ctrl.roomSetter.API = &mockapi.MockAPI{}
+		err = ctrl.Run()
+		assert.Nil(t, err)
 
-			err = ctrl.Run()
-			assert.Nil(t, err)
+		assert.Len(t, ctrl.autoAway.Rules, 2)
+		assert.Len(t, ctrl.limiter.Rules, 2)
 
-			assert.Len(t, ctrl.autoAway.Rules, 2)
-			assert.Len(t, ctrl.limiter.Rules, 2)
+		var data scheduler.TadoData
+		data, err = ctrl.refresh()
 
-			var data scheduler.TadoData
-			data, err = ctrl.refresh()
-
-			if assert.Nil(t, err) {
-				assert.Eventually(t, func() bool { return len(data.Zone) == 2 }, 1*time.Second, 10*time.Millisecond)
-				assert.Len(t, data.ZoneInfo, 2)
-				assert.Len(t, data.MobileDevice, 2)
-			}
-
-			ctrl.Stop()
+		if assert.Nil(t, err) {
+			assert.Eventually(t, func() bool { return len(data.Zone) == 2 }, 1*time.Second, 10*time.Millisecond)
+			assert.Len(t, data.ZoneInfo, 2)
+			assert.Len(t, data.MobileDevice, 2)
 		}
+
+		ctrl.Stop()
 	}
 }
