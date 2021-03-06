@@ -111,7 +111,7 @@ func (overlayLimit *OverlayLimit) process(_ *scheduler.TadoData) {
 			if overlayLimit.Slack != nil {
 				overlayLimit.Slack <- []slack.Attachment{{
 					Color: "good",
-					Title: "Manual temperature setting detected in zone " + details.zone.Name,
+					Title: "Manual temperature setting detected in " + details.zone.Name,
 					Text:  "will expire in " + details.expiryTimer.Sub(time.Now()).Round(1*time.Minute).String(),
 				}}
 			}
@@ -124,7 +124,7 @@ func (overlayLimit *OverlayLimit) process(_ *scheduler.TadoData) {
 				if overlayLimit.Slack != nil {
 					overlayLimit.Slack <- []slack.Attachment{{
 						Color: "good",
-						Title: "Setting zone " + details.zone.Name + " back to auto mode",
+						Title: "Setting " + details.zone.Name + " back to auto mode",
 						Text:  "overlay expired",
 					}}
 				}
