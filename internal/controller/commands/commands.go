@@ -7,3 +7,5 @@ type Command struct {
 	Command  int
 	Response ResponseChannel
 }
+
+const Report = 1

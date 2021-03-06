@@ -3,10 +3,12 @@ package autoaway_test
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/autoaway"
+	"github.com/clambin/tado-exporter/internal/controller/commands"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/stretchr/testify/assert"
+	"sort"
 	"testing"
 	"time"
 )
@@ -64,6 +66,7 @@ controller:
 		away := autoaway.AutoAway{
 			RoomSetter: setter,
 			Updates:    schedule.Register(),
+			Commands:   make(commands.RequestChannel, 5),
 			Rules:      *cfg.Controller.AutoAwayRules,
 		}
 		go away.Run()
@@ -108,5 +111,19 @@ controller:
 		assert.False(t, msg.Auto)
 		assert.Equal(t, 1, msg.ZoneID)
 		assert.Equal(t, 5.0, msg.Temperature)
+
+		// test report command
+		response := make(commands.ResponseChannel, 1)
+		away.Commands <- commands.Command{
+			Command:  commands.Report,
+			Response: response,
+		}
+		output, gotResponse := <-response
+
+		if assert.True(t, gotResponse) && assert.Len(t, output, 2) {
+			sort.Strings(output)
+			assert.Equal(t, "bar is away. will set bar to manual in 1h0m0s", output[0])
+			assert.Equal(t, "foo is away. foo is set to manual", output[1])
+		}
 	}
 }

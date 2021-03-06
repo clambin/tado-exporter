@@ -2,12 +2,14 @@ package overlaylimit_test
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/commands"
 	"github.com/clambin/tado-exporter/internal/controller/overlaylimit"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/stretchr/testify/assert"
+	"sort"
 	"testing"
 )
 
@@ -47,6 +49,7 @@ controller:
 		limiter := overlaylimit.OverlayLimit{
 			Updates:    schedule.Register(),
 			RoomSetter: setter,
+			Commands:   make(commands.RequestChannel, 5),
 			Slack:      make(tadobot.PostChannel, 5),
 			Rules:      *cfg.Controller.OverlayLimitRules,
 		}
@@ -87,5 +90,19 @@ controller:
 		slackMsgs = <-limiter.Slack
 		assert.Len(t, slackMsgs, 1)
 		assert.Equal(t, "Disabling manual temperature setting in zone foo", slackMsgs[0].Text)
+
+		// test report command
+		response := make(commands.ResponseChannel, 1)
+		limiter.Commands <- commands.Command{
+			Command:  commands.Report,
+			Response: response,
+		}
+		output, gotResponse := <-response
+
+		if assert.True(t, gotResponse) && assert.Len(t, output, 1) {
+			sort.Strings(output)
+			assert.Equal(t, "bar will be reset to auto in 1h0m0s", output[0])
+		}
+
 	}
 }

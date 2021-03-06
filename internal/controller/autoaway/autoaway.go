@@ -35,7 +35,7 @@ loop:
 			autoAway.setZones()
 		case cmd := <-autoAway.Commands:
 			switch cmd.Command {
-			case 1:
+			case commands.Report:
 				cmd.Response <- autoAway.Report()
 			}
 		}
