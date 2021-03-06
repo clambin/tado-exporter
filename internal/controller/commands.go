@@ -2,29 +2,36 @@ package controller
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/clambin/tado-exporter/internal/controller/commands"
+	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
+	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/slack-go/slack"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
+	var (
+		err           error
+		mobileDevices []*tado.MobileDevice
+	)
 	output := make([]string, 0)
-	for _, device := range controller.proxy.MobileDevice {
-		if device.Settings.GeoTrackingEnabled {
-			state := "away"
-			if device.Location.AtHome {
-				state = "home"
+	if mobileDevices, err = controller.GetMobileDevices(); err == nil {
+		for _, device := range mobileDevices {
+			if device.Settings.GeoTrackingEnabled {
+				state := "away"
+				if device.Location.AtHome {
+					state = "home"
+				}
+				if device.Location.Stale {
+					state += " (stale)"
+				}
+				output = append(output, fmt.Sprintf("%s: %s", device.Name, state))
 			}
-			if device.Location.Stale {
-				state += " (stale)"
-			}
-			output = append(output, fmt.Sprintf("%s: %s", device.Name, state))
 		}
+		sort.Strings(output)
 	}
-	sort.Strings(output)
 	return []slack.Attachment{
 		{
 			Color: "good",
@@ -35,27 +42,40 @@ func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
 }
 
 func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
+	var (
+		err      error
+		zones    []*tado.Zone
+		zoneInfo *tado.ZoneInfo
+	)
 	output := make([]string, 0)
-	for zoneID, zoneInfo := range controller.proxy.ZoneInfo {
-		mode := ""
-		if zoneInfo.Overlay.Type == "MANUAL" &&
-			zoneInfo.Overlay.Setting.Type == "HEATING" {
-			mode = " MANUAL"
+
+	if zones, err = controller.GetZones(); err == nil {
+		for _, zone := range zones {
+			if zoneInfo, err = controller.GetZoneInfo(zone.ID); err == nil {
+
+				mode := ""
+				if zoneInfo.Overlay.Type == "MANUAL" &&
+					zoneInfo.Overlay.Setting.Type == "HEATING" {
+					mode = " MANUAL"
+				}
+
+				output = append(output, fmt.Sprintf("%s: %.1fºC (target: %.1fºC%s)",
+					zone.Name,
+					zoneInfo.SensorDataPoints.Temperature.Celsius,
+					zoneInfo.Setting.Temperature.Celsius,
+					mode,
+				))
+			}
 		}
-		output = append(output, fmt.Sprintf("%s: %.1fºC (target: %.1fºC%s)",
-			controller.proxy.Zone[zoneID].Name,
-			zoneInfo.SensorDataPoints.Temperature.Celsius,
-			zoneInfo.Setting.Temperature.Celsius,
-			mode,
-		))
+		sort.Strings(output)
 	}
-	sort.Strings(output)
 	return []slack.Attachment{
 		{
 			Color: "good",
 			Title: "Rooms:",
 			Text:  strings.Join(output, "\n"),
-		}}
+		},
+	}
 }
 
 func (controller *Controller) doRules(args ...string) (responses []slack.Attachment) {
@@ -68,25 +88,14 @@ func (controller *Controller) doRules(args ...string) (responses []slack.Attachm
 }
 
 func (controller *Controller) doRulesAutoAway(_ ...string) []slack.Attachment {
-	output := make([]string, 0)
-	for _, entry := range controller.AutoAwayInfo {
-		var response string
-		switch entry.state {
-		case autoAwayStateUndetermined:
-			response = "undetermined"
-		case autoAwayStateHome:
-			response = "home"
-		case autoAwayStateAway:
-			response = "away. will set " + entry.Zone.Name + " to manual in " +
-				entry.ActivationTime.Sub(time.Now()).Round(1*time.Minute).String()
-		case autoAwayStateExpired:
-			response = "away. " + entry.Zone.Name + " will be set to manual"
-		case autoAwayStateReported:
-			response = "away. " + entry.Zone.Name + " is set to manual"
-		}
-		output = append(output, entry.MobileDevice.Name+" is "+response)
+	command := commands.Command{
+		Command:  1,
+		Response: make(commands.ResponseChannel),
 	}
-	sort.Strings(output)
+
+	controller.autoAway.Commands <- command
+	output := <-command.Response
+
 	return []slack.Attachment{
 		{
 			Color: "good",
@@ -97,17 +106,14 @@ func (controller *Controller) doRulesAutoAway(_ ...string) []slack.Attachment {
 }
 
 func (controller *Controller) doRulesLimitOverlay(_ ...string) []slack.Attachment {
-	output := make([]string, 0)
-	for zoneID, entry := range controller.Overlays {
-		output = append(output,
-			controller.proxy.Zone[zoneID].Name+" will be reset to auto in "+entry.Sub(time.Now()).Round(1*time.Minute).String(),
-		)
+	command := commands.Command{
+		Command:  1,
+		Response: make(commands.ResponseChannel),
 	}
-	if len(output) > 0 {
-		sort.Strings(output)
-	} else {
-		output = []string{"No rooms in manual control"}
-	}
+
+	controller.limiter.Commands <- command
+	output := <-command.Response
+
 	return []slack.Attachment{
 		{
 			Color: "good",
@@ -117,78 +123,74 @@ func (controller *Controller) doRulesLimitOverlay(_ ...string) []slack.Attachmen
 	}
 }
 
-func (controller *Controller) doSetTemperature(args ...string) (output []slack.Attachment) {
-	var (
-		zoneName    string
-		temperature float64
-		err         error
-		zoneID      int
-		ok          bool
-		auto        bool
-	)
-	if len(args) >= 2 {
-		zoneName = strings.ToLower(args[0])
-		if strings.ToLower(args[1]) == "auto" {
-			auto = true
-		} else {
-			if temperature, err = strconv.ParseFloat(args[1], 64); err != nil {
-				output = append(output, slack.Attachment{
-					Color: "bad",
-					Text:  "invalid temperature " + args[1],
-				})
-			}
-		}
-	}
-	for _, zone := range controller.proxy.Zone {
-		if strings.ToLower(zone.Name) == zoneName {
-			zoneID = zone.ID
-			ok = true
-			break
-		}
-	}
-	if !ok {
-		output = append(output, slack.Attachment{
+func (controller *Controller) parseSetTemperatureArguments(args ...string) (ok bool, output slack.Attachment, zoneID int, auto bool, temperature float64) {
+	if len(args) != 2 {
+		output = slack.Attachment{
 			Color: "bad",
-			Text:  "unknown room " + args[0],
-		})
+			Text:  "invalid command:  set <room name> auto|<temperature>",
+		}
+		return
 	}
 
-	if ok && err == nil {
-		if auto {
-			if err = controller.proxy.DeleteZoneOverlay(zoneID); err == nil {
-				output = append(output, slack.Attachment{
-					Color: "good",
-					Text:  "setting " + args[0] + " back to auto",
-				})
-			} else {
-				log.WithFields(log.Fields{
-					"err":      err,
-					"zoneID":   zoneID,
-					"zoneName": zoneName,
-				}).Warning("failed to set zone back to auto")
+	var (
+		zones []*tado.Zone
+		err   error
+	)
 
-				output = append(output, slack.Attachment{
-					Color: "bad",
-					Text:  "failed to set " + args[0] + " back to auto",
-				})
-			}
-		} else {
-			if err = controller.proxy.SetZoneOverlay(zoneID, temperature); err == nil {
-				output = append(output, slack.Attachment{
-					Color: "good",
-					Text:  "setting temperature in " + args[0] + " to " + args[1],
-				})
-			} else {
-				output = append(output, slack.Attachment{
-					Color: "bad",
-					Text:  "failed to set manual temperature in " + args[0],
-				})
+	zoneName := strings.ToLower(args[0])
+	if zones, err = controller.GetZones(); err == nil {
+		for _, zone := range zones {
+			if strings.ToLower(zone.Name) == zoneName {
+				zoneID = zone.ID
+				break
 			}
 		}
 	}
+	if zoneID == 0 {
+		output = slack.Attachment{
+			Color: "bad",
+			Text:  "unknown room name: " + zoneName,
+		}
+		return
+	}
 
-	if err == nil {
-		err = controller.Run()
+	if strings.ToLower(args[1]) == "auto" {
+		auto = true
+	} else {
+		if temperature, err = strconv.ParseFloat(args[1], 64); err != nil {
+			output = slack.Attachment{
+				Color: "bad",
+				Text:  "invalid temperature: " + args[1],
+			}
+			return
+		}
+	}
+
+	ok = true
+	return
+}
+
+func (controller *Controller) doSetTemperature(args ...string) (output []slack.Attachment) {
+	ok, errorOutput, zoneID, auto, temperature := controller.parseSetTemperatureArguments(args...)
+
+	if ok {
+		var roomCommand tadosetter.RoomCommand
+		if auto {
+			roomCommand = tadosetter.RoomCommand{ZoneID: zoneID, Auto: true}
+			output = append(output, slack.Attachment{
+				Color: "good",
+				Text:  "setting " + args[0] + " back to auto",
+			})
+		} else {
+			roomCommand = tadosetter.RoomCommand{ZoneID: zoneID, Auto: false, Temperature: temperature}
+			output = append(output, slack.Attachment{
+				Color: "good",
+				Text:  "setting temperature in " + args[0] + " to " + args[1],
+			})
+		}
+		controller.roomSetter.ZoneSetter <- roomCommand
+	} else {
+		output = append(output, errorOutput)
 	}
 	return
 }

@@ -27,6 +27,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -82,9 +83,11 @@ type APIClient struct {
 	Password     string
 	ClientSecret string
 	AccessToken  string
+
 	Expires      time.Time
 	RefreshToken string
 	HomeID       int
+	lock         sync.RWMutex
 }
 
 const baseAPIURL = "https://my.tado.com"
@@ -134,8 +137,10 @@ func (client *APIClient) initialize() error {
 
 // authenticate logs in to tado.com and gets an Access Token to invoke the API functions.
 // Once logged in, authenticate renews the Access Token if it's expired since the last call.
-func (client *APIClient) authenticate() error {
-	var err error
+func (client *APIClient) authenticate() (err error) {
+	client.lock.Lock()
+	defer client.lock.Unlock()
+
 	if client.ClientSecret == "" {
 		client.ClientSecret = "wZaRN7rpjn3FoNyF5IFuxg9uMzYJcvOoQ8QWiIqS3hfk6gLhVlG57j5YNoZL2Rtc"
 	}
@@ -147,6 +152,12 @@ func (client *APIClient) authenticate() error {
 		err = client.doAuthentication("password", client.Password)
 	}
 	return err
+}
+
+func (client *APIClient) getToken() string {
+	client.lock.RLock()
+	defer client.lock.RUnlock()
+	return client.AccessToken
 }
 
 func (client *APIClient) doAuthentication(grantType, credential string) error {
@@ -206,7 +217,7 @@ func (client *APIClient) call(method string, apiURL string, payload string) ([]b
 
 	req, _ = http.NewRequest(method, apiURL, bytes.NewBufferString(payload))
 	req.Header.Add("Content-Type", "application/json;charset=UTF-8")
-	req.Header.Add("Authorization", "Bearer "+client.AccessToken)
+	req.Header.Add("Authorization", "Bearer "+client.getToken())
 	if resp, err = client.HTTPClient.Do(req); err == nil {
 		defer resp.Body.Close()
 		switch resp.StatusCode {

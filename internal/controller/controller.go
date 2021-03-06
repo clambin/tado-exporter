@@ -2,40 +2,52 @@ package controller
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/autoaway"
+	"github.com/clambin/tado-exporter/internal/controller/commands"
+	"github.com/clambin/tado-exporter/internal/controller/overlaylimit"
+	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/internal/tadobot"
-	"github.com/clambin/tado-exporter/internal/tadoproxy"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"time"
 )
 
 // Controller object for tado-controller.
 type Controller struct {
-	//tado.API
-	Configuration *configuration.ControllerConfiguration
-	TadoBot       *tadobot.TadoBot
+	tado.API
+	scheduler.Scheduler
 
-	proxy        tadoproxy.Proxy
-	AutoAwayInfo map[int]AutoAwayInfo
-	Overlays     map[int]time.Time
+	roomSetter *tadosetter.Setter
+	tadoBot    *tadobot.TadoBot
+	autoAway   *autoaway.AutoAway
+	limiter    *overlaylimit.OverlayLimit
 }
 
 // New creates a new Controller object
 func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration.ControllerConfiguration) (controller *Controller, err error) {
 	controller = &Controller{
-		Configuration: cfg,
-		proxy: tadoproxy.Proxy{
+		API: &tado.APIClient{
+			HTTPClient:   &http.Client{},
+			Username:     tadoUsername,
+			Password:     tadoPassword,
+			ClientSecret: tadoClientSecret,
+		},
+		roomSetter: &tadosetter.Setter{
 			API: &tado.APIClient{
 				HTTPClient:   &http.Client{},
 				Username:     tadoUsername,
 				Password:     tadoPassword,
 				ClientSecret: tadoClientSecret,
 			},
+			ZoneSetter: make(chan tadosetter.RoomCommand),
+			Stop:       make(chan bool),
 		},
 	}
+	go controller.roomSetter.Run()
 
-	if cfg.TadoBot.Enabled {
+	var slackChannel tadobot.PostChannel
+	if cfg != nil && cfg.TadoBot.Enabled {
 		callbacks := map[string]tadobot.CommandFunc{
 			"rooms":        controller.doRooms,
 			"users":        controller.doUsers,
@@ -44,28 +56,46 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 			"limitoverlay": controller.doRulesLimitOverlay,
 			"set":          controller.doSetTemperature,
 		}
-		if controller.TadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
-			go func() {
-				controller.TadoBot.Run()
-			}()
+		if controller.tadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
+			slackChannel = controller.tadoBot.PostChannel
+			go controller.tadoBot.Run()
 		} else {
 			log.WithField("err", "failed to start TadoBot")
+			controller.tadoBot = nil
 		}
+	}
+
+	if cfg != nil && cfg.AutoAwayRules != nil {
+		controller.autoAway = &autoaway.AutoAway{
+			Updates:    controller.Register(),
+			RoomSetter: controller.roomSetter.ZoneSetter,
+			Commands:   make(commands.RequestChannel),
+			Slack:      slackChannel,
+			Rules:      *cfg.AutoAwayRules,
+		}
+		go controller.autoAway.Run()
+	}
+
+	if cfg != nil && cfg.OverlayLimitRules != nil {
+		controller.limiter = &overlaylimit.OverlayLimit{
+			Updates:    controller.Register(),
+			RoomSetter: controller.roomSetter.ZoneSetter,
+			Commands:   make(commands.RequestChannel),
+			Slack:      slackChannel,
+			Rules:      *cfg.OverlayLimitRules,
+		}
+		go controller.limiter.Run()
 	}
 
 	return
 }
 
-// Run executes all controller rules
+// Run runs one update
 func (controller *Controller) Run() (err error) {
-	err = controller.proxy.Refresh()
+	var tadoData scheduler.TadoData
 
-	if err == nil {
-		err = controller.runAutoAway()
-	}
-
-	if err == nil {
-		err = controller.runOverlayLimit()
+	if tadoData, err = controller.refresh(); err == nil {
+		controller.Notify(tadoData)
 	}
 
 	log.WithField("err", err).Debug("Run")
@@ -73,48 +103,48 @@ func (controller *Controller) Run() (err error) {
 	return
 }
 
-// lookupMobileDevice returns the mobile device matching the mobileDeviceID or mobileDeviceName from the list of mobile devices
-func (controller *Controller) lookupMobileDevice(mobileDeviceID int, mobileDeviceName string) (mobileDevice *tado.MobileDevice) {
-	var ok bool
+// Refresh the Cache
+func (controller *Controller) refresh() (tadoData scheduler.TadoData, err error) {
+	var (
+		zones         []*tado.Zone
+		zoneInfo      *tado.ZoneInfo
+		mobileDevices []*tado.MobileDevice
+	)
 
-	if mobileDevice, ok = controller.proxy.MobileDevice[mobileDeviceID]; ok == false {
-		for _, mobileDevice = range controller.proxy.MobileDevice {
-			if mobileDeviceName == mobileDevice.Name {
-				ok = true
-				break
-			}
+	zoneMap := make(map[int]tado.Zone)
+	if zones, err = controller.GetZones(); err == nil {
+		for _, zone := range zones {
+			zoneMap[zone.ID] = *zone
 		}
 	}
+	tadoData.Zone = zoneMap
 
-	if ok == false {
-		mobileDevice = nil
-	}
-	return
-}
-
-// lookupZone returns the zone matching zoneID or zoneName from the list of zones
-func (controller *Controller) lookupZone(zoneID int, zoneName string) (zone *tado.Zone) {
-	var ok bool
-
-	if zone, ok = controller.proxy.Zone[zoneID]; ok == false {
-		for _, zone = range controller.proxy.Zone {
-			if zoneName == zone.Name {
-				ok = true
-				break
+	if err == nil {
+		zoneInfoMap := make(map[int]tado.ZoneInfo)
+		for zoneID := range tadoData.Zone {
+			if zoneInfo, err = controller.GetZoneInfo(zoneID); err == nil {
+				zoneInfoMap[zoneID] = *zoneInfo
 			}
 		}
+		tadoData.ZoneInfo = zoneInfoMap
 	}
 
-	if ok == false {
-		zone = nil
+	if err == nil {
+		mobileDeviceMap := make(map[int]tado.MobileDevice)
+		if mobileDevices, err = controller.GetMobileDevices(); err == nil {
+			for _, mobileDevice := range mobileDevices {
+				mobileDeviceMap[mobileDevice.ID] = *mobileDevice
+			}
+		}
+		tadoData.MobileDevice = mobileDeviceMap
 	}
-	return
-}
 
-// notify sends a message to slack
-func (controller *Controller) notify(message string) (err error) {
-	if controller.TadoBot != nil {
-		err = controller.TadoBot.SendMessage("", message)
-	}
+	log.WithFields(log.Fields{
+		"err":           err,
+		"zones":         len(tadoData.Zone),
+		"zoneInfos":     len(tadoData.ZoneInfo),
+		"mobileDevices": len(tadoData.MobileDevice),
+	}).Debug("updateTadoConfig")
+
 	return
 }

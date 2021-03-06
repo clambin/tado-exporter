@@ -93,6 +93,19 @@ func TestProcessEvent(t *testing.T) {
 	msg = slack.RTMEvent{Type: "message", Data: &slack.MessageEvent{
 		Msg: slack.Msg{
 			Channel: "some_channel",
+			Text:    "<@987654321> help",
+		},
+	}}
+
+	_, attachments, stop = bot.processEvent(msg)
+	assert.False(t, stop)
+	if assert.Len(t, attachments, 1) {
+		assert.Equal(t, "hello, help, version", attachments[0].Text)
+	}
+
+	msg = slack.RTMEvent{Type: "message", Data: &slack.MessageEvent{
+		Msg: slack.Msg{
+			Channel: "some_channel",
 			Text:    "<@987654321> hello how are you",
 		},
 	}}
