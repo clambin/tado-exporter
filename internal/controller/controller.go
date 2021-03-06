@@ -26,10 +26,6 @@ type Controller struct {
 
 // New creates a new Controller object
 func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration.ControllerConfiguration) (controller *Controller, err error) {
-	var (
-		slackChannel tadobot.PostChannel
-	)
-
 	controller = &Controller{
 		API: &tado.APIClient{
 			HTTPClient:   &http.Client{},
@@ -50,6 +46,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 	}
 	go controller.roomSetter.Run()
 
+	var slackChannel tadobot.PostChannel
 	if cfg != nil && cfg.TadoBot.Enabled {
 		callbacks := map[string]tadobot.CommandFunc{
 			"rooms":        controller.doRooms,
@@ -98,7 +95,7 @@ func (controller *Controller) Run() (err error) {
 	var tadoData scheduler.TadoData
 
 	if tadoData, err = controller.refresh(); err == nil {
-		err = controller.Notify(tadoData)
+		controller.Notify(tadoData)
 	}
 
 	log.WithField("err", err).Debug("Run")

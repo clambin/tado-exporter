@@ -1,15 +1,14 @@
-package overlaylimit
+package overlaylimit_test
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/overlaylimit"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"time"
 )
 
 func makeTadoData() scheduler.TadoData {
@@ -34,7 +33,7 @@ func TestOverlayLimit(t *testing.T) {
 controller:
   overlayLimitRules:
   - zoneName: "foo"
-    maxTime: 1h
+    maxTime: 0s
   - zoneName: "bar"
     maxTime: 1h
   - zoneName: "not-a-zone"
@@ -45,19 +44,16 @@ controller:
 
 		schedule := scheduler.Scheduler{}
 		setter := make(chan tadosetter.RoomCommand)
-		limiter := OverlayLimit{
+		limiter := overlaylimit.OverlayLimit{
 			Updates:    schedule.Register(),
 			RoomSetter: setter,
-			Slack:      make(tadobot.PostChannel),
+			Slack:      make(tadobot.PostChannel, 5),
 			Rules:      *cfg.Controller.OverlayLimitRules,
 		}
 		go limiter.Run()
 
-		log.SetLevel(log.DebugLevel)
-
 		// set up the initial state
-		err = schedule.Notify(makeTadoData())
-		assert.Nil(t, err)
+		schedule.Notify(makeTadoData())
 
 		slackMsgs := <-limiter.Slack
 		assert.Len(t, slackMsgs, 1)
@@ -65,20 +61,31 @@ controller:
 
 		// fake the zone expiring its timer
 		// not exactly thread-safe, but at this point overlayLimit is waiting on the next update
-		details, ok := limiter.zoneDetails[2]
-		if assert.True(t, ok) {
-			details.expiryTimer = time.Now().Add(-1 * time.Hour)
-			limiter.zoneDetails[2] = details
+		tadoData := makeTadoData()
+		if zoneInfo, ok := tadoData.ZoneInfo[1]; assert.True(t, ok) {
+			zoneInfo.Overlay = tado.ZoneInfoOverlay{
+				Type:        "MANUAL",
+				Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING"},
+				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+			}
+			tadoData.ZoneInfo[1] = zoneInfo
 		}
-		_ = schedule.Notify(makeTadoData())
+		schedule.Notify(tadoData)
 
 		slackMsgs = <-limiter.Slack
 		assert.Len(t, slackMsgs, 1)
-		assert.Equal(t, "Disabling manual temperature setting in zone bar", slackMsgs[0].Text)
+		assert.Equal(t, "Manual temperature setting detected in zone foo", slackMsgs[0].Text)
 
+		schedule.Notify(tadoData)
+
+		// limiter writes to slack first and only then to roomsetter.
+		// check buffering works by reading roomsetter & slack in the inverse order
 		cmd := <-limiter.RoomSetter
-
-		assert.Equal(t, 2, cmd.ZoneID)
+		assert.Equal(t, 1, cmd.ZoneID)
 		assert.True(t, cmd.Auto)
+
+		slackMsgs = <-limiter.Slack
+		assert.Len(t, slackMsgs, 1)
+		assert.Equal(t, "Disabling manual temperature setting in zone foo", slackMsgs[0].Text)
 	}
 }

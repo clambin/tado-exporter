@@ -35,11 +35,10 @@ func (scheduler *Scheduler) Register() (channel UpdateChannel) {
 }
 
 // Notify all clients of the updated data
-func (scheduler *Scheduler) Notify(tadoData TadoData) (err error) {
+func (scheduler *Scheduler) Notify(tadoData TadoData) {
 	for _, client := range scheduler.clients {
 		client <- &tadoData
 	}
-	return
 }
 
 // Stop signals all clients to shut down

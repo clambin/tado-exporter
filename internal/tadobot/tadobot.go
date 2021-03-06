@@ -1,10 +1,10 @@
 package tadobot
 
 import (
-	"errors"
 	"github.com/clambin/tado-exporter/internal/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
+	"sort"
 	"strings"
 )
 
@@ -26,7 +26,7 @@ type TadoBot struct {
 // Create connects to a slackbot designated by token
 func Create(slackToken string, callbacks map[string]CommandFunc) (bot *TadoBot, err error) {
 	bot = &TadoBot{
-		PostChannel: make(chan []slack.Attachment),
+		PostChannel: make(chan []slack.Attachment, 5),
 		slackClient: slack.New(slackToken),
 		slackToken:  slackToken,
 	}
@@ -179,6 +179,8 @@ func (bot *TadoBot) doHelp(_ ...string) []slack.Attachment {
 	for command := range bot.callbacks {
 		commands = append(commands, command)
 	}
+	sort.Strings(commands)
+
 	return []slack.Attachment{
 		{
 			Color: "good",
@@ -195,22 +197,4 @@ func (bot *TadoBot) doVersion(_ ...string) []slack.Attachment {
 			Text:  "tado " + version.BuildVersion,
 		},
 	}
-}
-
-func SendMessage(postChannel PostChannel, color, title, text string) (err error) {
-	if postChannel != nil {
-		postChannel <- []slack.Attachment{
-			{
-				Color: color,
-				Title: title,
-				Text:  text,
-			},
-		}
-	} else {
-		err = errors.New("invalid channel supplied")
-	}
-
-	log.WithField("err", err).Debug("sent a message")
-
-	return
 }

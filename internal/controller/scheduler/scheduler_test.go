@@ -30,27 +30,26 @@ func TestRegistry(t *testing.T) {
 		},
 	}
 
-	if err := schedule.Notify(inData); assert.Nil(t, err) {
-		if outData = <-client; assert.NotNil(t, outData) {
+	schedule.Notify(inData)
+	if outData = <-client; assert.NotNil(t, outData) {
 
-			assert.Len(t, outData.Zone, 2)
-			_, ok := outData.Zone[1]
-			assert.True(t, ok)
-			_, ok = outData.Zone[2]
-			assert.True(t, ok)
+		assert.Len(t, outData.Zone, 2)
+		_, ok := outData.Zone[1]
+		assert.True(t, ok)
+		_, ok = outData.Zone[2]
+		assert.True(t, ok)
 
-			assert.Len(t, outData.ZoneInfo, 2)
-			_, ok = outData.ZoneInfo[1]
-			assert.True(t, ok)
-			_, ok = outData.ZoneInfo[2]
-			assert.True(t, ok)
+		assert.Len(t, outData.ZoneInfo, 2)
+		_, ok = outData.ZoneInfo[1]
+		assert.True(t, ok)
+		_, ok = outData.ZoneInfo[2]
+		assert.True(t, ok)
 
-			assert.Len(t, outData.MobileDevice, 2)
-			_, ok = outData.MobileDevice[1]
-			assert.True(t, ok)
-			_, ok = outData.MobileDevice[2]
-			assert.True(t, ok)
-		}
+		assert.Len(t, outData.MobileDevice, 2)
+		_, ok = outData.MobileDevice[1]
+		assert.True(t, ok)
+		_, ok = outData.MobileDevice[2]
+		assert.True(t, ok)
 	}
 
 	schedule.Stop()

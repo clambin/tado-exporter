@@ -1,7 +1,8 @@
-package autoaway
+package autoaway_test
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/autoaway"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
 	"github.com/clambin/tado-exporter/pkg/tado"
@@ -30,18 +31,13 @@ func makeTadoData() scheduler.TadoData {
 				Name:     "foo",
 				Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
 				Location: tado.MobileDeviceLocation{
-					Stale:  false,
-					AtHome: false,
+					AtHome: true,
 				},
 			},
 			2: {
 				ID:       2,
 				Name:     "bar",
 				Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
-				Location: tado.MobileDeviceLocation{
-					Stale:  false,
-					AtHome: false,
-				},
 			},
 		},
 	}
@@ -53,7 +49,7 @@ controller:
   autoAwayRules:
   - zoneName: "foo"
     mobileDeviceName: "foo"
-    waitTime: 1h
+    waitTime: 0s
     targetTemperature: 5.0
   - zoneName: "bar"
     mobileDeviceName: "bar"
@@ -65,7 +61,7 @@ controller:
 
 		schedule := scheduler.Scheduler{}
 		setter := make(chan tadosetter.RoomCommand, 4096)
-		away := AutoAway{
+		away := autoaway.AutoAway{
 			RoomSetter: setter,
 			Updates:    schedule.Register(),
 			Rules:      *cfg.Controller.AutoAwayRules,
@@ -73,16 +69,14 @@ controller:
 		go away.Run()
 
 		// set up the initial state
-		err = schedule.Notify(makeTadoData())
-		assert.Nil(t, err)
+		schedule.Notify(makeTadoData())
 
 		// device 2 was away. Now mark it being home
 		tadoData := makeTadoData()
 		device := tadoData.MobileDevice[2]
 		device.Location.AtHome = true
 		tadoData.MobileDevice[2] = device
-		err = schedule.Notify(tadoData)
-		assert.Nil(t, err)
+		schedule.Notify(tadoData)
 
 		// resulting command should to set zone 2 to Auto
 		msg := <-setter
@@ -90,30 +84,29 @@ controller:
 		assert.Equal(t, 2, msg.ZoneID)
 
 		// mark device 2 as away again
-		err = schedule.Notify(makeTadoData())
-		assert.Nil(t, err)
+		schedule.Notify(makeTadoData())
 
 		// should not result in an action
 		if assert.Eventually(t, func() bool { return len(setter) == 0 }, 500*time.Millisecond, 10*time.Millisecond) == false {
 			panic("unexpected message expected in channel. aborting ...")
 		}
 
-		// fake the device being away for a long time
-		// not exactly thread-safe, but at this point autoAway is waiting on the next update
-		deviceInfo, ok := away.deviceInfo[2]
+		// device 1 was home. mark it as away
+		tadoData = makeTadoData()
+		mobileDevice, ok := tadoData.MobileDevice[1]
 		if assert.True(t, ok) {
-			deviceInfo.activationTime = time.Now().Add(-12 * time.Hour)
-			away.deviceInfo[2] = deviceInfo
+			mobileDevice.Location.AtHome = false
+			tadoData.MobileDevice[1] = mobileDevice
 		}
 
-		// run another status
-		err = schedule.Notify(makeTadoData())
-		assert.Nil(t, err)
+		// run 2 status updates. the first sets the user as away.  the second will expire the timer
+		schedule.Notify(tadoData)
+		schedule.Notify(tadoData)
 
-		// resulting command should be to set zone2 to overlay
+		// resulting command should be to set zone 1 to manual
 		msg = <-setter
 		assert.False(t, msg.Auto)
-		assert.Equal(t, 2, msg.ZoneID)
-		assert.Equal(t, 15.0, msg.Temperature)
+		assert.Equal(t, 1, msg.ZoneID)
+		assert.Equal(t, 5.0, msg.Temperature)
 	}
 }
