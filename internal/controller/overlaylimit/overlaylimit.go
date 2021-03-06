@@ -112,7 +112,7 @@ func (overlayLimit *OverlayLimit) process(_ *scheduler.TadoData) {
 				overlayLimit.Slack <- []slack.Attachment{{
 					Color: "good",
 					Title: "Manual temperature setting detected in zone " + details.zone.Name,
-					Text:  "will expire in " + details.expiryTimer.Sub(time.Now()).String(),
+					Text:  "will expire in " + details.expiryTimer.Sub(time.Now()).Round(1*time.Minute).String(),
 				}}
 			}
 			details.expiryTimer = time.Now().Add(details.rule.MaxTime)
