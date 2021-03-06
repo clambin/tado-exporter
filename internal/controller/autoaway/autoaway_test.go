@@ -6,6 +6,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/commands"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
+	"github.com/clambin/tado-exporter/internal/tadobot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/stretchr/testify/assert"
 	"sort"
@@ -67,6 +68,7 @@ controller:
 			RoomSetter: setter,
 			Updates:    schedule.Register(),
 			Commands:   make(commands.RequestChannel, 5),
+			Slack:      make(tadobot.PostChannel, 5),
 			Rules:      *cfg.Controller.AutoAwayRules,
 		}
 		go away.Run()
@@ -86,12 +88,23 @@ controller:
 		assert.True(t, msg.Auto)
 		assert.Equal(t, 2, msg.ZoneID)
 
+		// check slack output
+		slackOutput := <-away.Slack
+		if assert.Len(t, slackOutput, 1) {
+			assert.Equal(t, "resetting bar to auto", slackOutput[0].Text)
+		}
+
 		// mark device 2 as away again
 		schedule.Notify(makeTadoData())
 
 		// should not result in an action
 		if assert.Eventually(t, func() bool { return len(setter) == 0 }, 500*time.Millisecond, 10*time.Millisecond) == false {
 			panic("unexpected message expected in channel. aborting ...")
+		}
+		// check slack output
+		slackOutput = <-away.Slack
+		if assert.Len(t, slackOutput, 1) {
+			assert.Equal(t, "will set bar to manual in 1h0m0s", slackOutput[0].Text)
 		}
 
 		// device 1 was home. mark it as away
@@ -104,6 +117,10 @@ controller:
 
 		// run 2 status updates. the first sets the user as away.  the second will expire the timer
 		schedule.Notify(tadoData)
+		slackOutput = <-away.Slack
+		if assert.Len(t, slackOutput, 1) {
+			assert.Equal(t, "will set foo to manual in 0s", slackOutput[0].Text)
+		}
 		schedule.Notify(tadoData)
 
 		// resulting command should be to set zone 1 to manual
@@ -111,6 +128,12 @@ controller:
 		assert.False(t, msg.Auto)
 		assert.Equal(t, 1, msg.ZoneID)
 		assert.Equal(t, 5.0, msg.Temperature)
+
+		// check slack output
+		slackOutput = <-away.Slack
+		if assert.Len(t, slackOutput, 1) {
+			assert.Equal(t, "activating manual control in zone foo", slackOutput[0].Text)
+		}
 
 		// test report command
 		response := make(commands.ResponseChannel, 1)
