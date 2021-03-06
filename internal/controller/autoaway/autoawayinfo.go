@@ -28,7 +28,7 @@ type DeviceInfo struct {
 }
 
 func getInitialState(device *tado.MobileDevice) autoAwayState {
-	if device == nil || device.Settings.GeoTrackingEnabled == false {
+	if device == nil || !device.Settings.GeoTrackingEnabled || device.Location.Stale {
 		return autoAwayStateUndetermined
 	} else if device.Location.AtHome {
 		return autoAwayStateHome

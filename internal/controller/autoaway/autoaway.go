@@ -74,7 +74,6 @@ func (autoAway *AutoAway) initDeviceInfo(tadoData *scheduler.TadoData) {
 				"deviceID":   rule.MobileDeviceID,
 				"deviceName": rule.MobileDeviceName,
 			}).Warning("skipping unknown mobile device in AutoAway rule")
-
 			continue
 		}
 

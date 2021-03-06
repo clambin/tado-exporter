@@ -111,8 +111,8 @@ func (overlayLimit *OverlayLimit) process(_ *scheduler.TadoData) {
 			if overlayLimit.Slack != nil {
 				overlayLimit.Slack <- []slack.Attachment{{
 					Color: "good",
-					Title: "new zone in overlay",
-					Text:  "Manual temperature setting detected in zone " + details.zone.Name,
+					Title: "Manual temperature setting detected in zone " + details.zone.Name,
+					Text:  "will expire in " + details.expiryTimer.Sub(time.Now()).String(),
 				}}
 			}
 			details.expiryTimer = time.Now().Add(details.rule.MaxTime)
@@ -124,8 +124,8 @@ func (overlayLimit *OverlayLimit) process(_ *scheduler.TadoData) {
 				if overlayLimit.Slack != nil {
 					overlayLimit.Slack <- []slack.Attachment{{
 						Color: "good",
-						Title: "overlay expired",
-						Text:  "Disabling manual temperature setting in zone " + details.zone.Name,
+						Title: "Setting zone " + details.zone.Name + " back to auto mode",
+						Text:  "overlay expired",
 					}}
 				}
 				overlayLimit.RoomSetter <- tadosetter.RoomCommand{

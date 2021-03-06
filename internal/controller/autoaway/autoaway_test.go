@@ -150,3 +150,55 @@ controller:
 		}
 	}
 }
+
+func TestAutoAway_InvalidEntries(t *testing.T) {
+	cfg, err := configuration.LoadConfiguration([]byte(`
+controller:
+  autoAwayRules:
+  - zoneName: "foo"
+    mobileDeviceName: "foo"
+    waitTime: 0s
+    targetTemperature: 5.0
+  - zoneName: "bar"
+    mobileDeviceName: "bad_bar"
+    waitTime: 1h
+    targetTemperature: 15.0
+  - zoneName: "bad_bar"
+    mobileDeviceName: "bar"
+    waitTime: 1h
+    targetTemperature: 15.0
+`))
+
+	if assert.Nil(t, err) && assert.NotNil(t, cfg) && assert.NotNil(t, cfg.Controller.AutoAwayRules) {
+
+		schedule := scheduler.Scheduler{}
+		setter := make(chan tadosetter.RoomCommand, 4096)
+		away := autoaway.AutoAway{
+			RoomSetter: setter,
+			Updates:    schedule.Register(),
+			Commands:   make(commands.RequestChannel, 5),
+			Slack:      make(tadobot.PostChannel, 5),
+			Rules:      *cfg.Controller.AutoAwayRules,
+		}
+		go away.Run()
+
+		// set up the initial state
+		tadoData := makeTadoData()
+		device, _ := tadoData.MobileDevice[1]
+		device.Location.Stale = true
+		tadoData.MobileDevice[1] = device
+		schedule.Notify(tadoData)
+
+		assert.Eventually(t, func() bool {
+			req := commands.Command{
+				Command:  commands.Report,
+				Response: make(commands.ResponseChannel),
+			}
+			away.Commands <- req
+			output := <-req.Response
+
+			return len(output) == 1 && output[0] == "foo is undetermined"
+
+		}, 1*time.Second, 10*time.Millisecond)
+	}
+}

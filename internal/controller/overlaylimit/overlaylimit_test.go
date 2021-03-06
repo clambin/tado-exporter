@@ -62,7 +62,7 @@ func TestOverlayLimit(t *testing.T) {
 
 		slackMsgs := <-limiter.Slack
 		assert.Len(t, slackMsgs, 1)
-		assert.Equal(t, "Manual temperature setting detected in zone bar", slackMsgs[0].Text)
+		assert.Equal(t, "Manual temperature setting detected in zone bar", slackMsgs[0].Title)
 
 		// fake the zone expiring its timer
 		// not exactly thread-safe, but at this point overlayLimit is waiting on the next update
@@ -79,7 +79,7 @@ func TestOverlayLimit(t *testing.T) {
 
 		slackMsgs = <-limiter.Slack
 		assert.Len(t, slackMsgs, 1)
-		assert.Equal(t, "Manual temperature setting detected in zone foo", slackMsgs[0].Text)
+		assert.Equal(t, "Manual temperature setting detected in zone foo", slackMsgs[0].Title)
 
 		schedule.Notify(tadoData)
 
@@ -91,7 +91,7 @@ func TestOverlayLimit(t *testing.T) {
 
 		slackMsgs = <-limiter.Slack
 		assert.Len(t, slackMsgs, 1)
-		assert.Equal(t, "Disabling manual temperature setting in zone foo", slackMsgs[0].Text)
+		assert.Equal(t, "Setting zone foo back to auto mode", slackMsgs[0].Title)
 
 		// test report command
 		response := make(commands.ResponseChannel, 1)
