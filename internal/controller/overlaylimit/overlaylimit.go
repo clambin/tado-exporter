@@ -31,7 +31,7 @@ loop:
 			if tadoData == nil {
 				break loop
 			}
-			log.WithField("object", *tadoData).Debug("got a message")
+			// log.WithField("object", *tadoData).Debug("got a message")
 			overlayLimit.updateInfo(tadoData)
 			overlayLimit.process(tadoData)
 
@@ -63,7 +63,7 @@ func (overlayLimit *OverlayLimit) updateInfo(tadoData *scheduler.TadoData) {
 			zoneInfo.Overlay.Termination.Type == "MANUAL" {
 			if details.state <= zoneStateAuto {
 				// zone in overlay. record when we need to disable the overlay
-				log.WithField("overlay", zoneInfo.Overlay.String()).Debug("overlay found")
+				log.WithField("id", id).Debug("overlay found")
 				details.state = zoneStateManual
 				details.expiryTimer = time.Now().Add(details.rule.MaxTime)
 				overlayLimit.zoneDetails[id] = details

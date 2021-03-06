@@ -30,8 +30,7 @@ func makeTadoData() scheduler.TadoData {
 	}
 }
 
-func TestOverlayLimit(t *testing.T) {
-	cfg, err := configuration.LoadConfiguration([]byte(`
+const config = `
 controller:
   overlayLimitRules:
   - zoneName: "foo"
@@ -40,7 +39,10 @@ controller:
     maxTime: 1h
   - zoneName: "not-a-zone"
     maxTime: 1h
-`))
+`
+
+func TestOverlayLimit(t *testing.T) {
+	cfg, err := configuration.LoadConfiguration([]byte(config))
 
 	if assert.Nil(t, err) && assert.NotNil(t, cfg) && assert.NotNil(t, cfg.Controller.OverlayLimitRules) {
 
@@ -102,6 +104,60 @@ controller:
 		if assert.True(t, gotResponse) && assert.Len(t, output, 1) {
 			sort.Strings(output)
 			assert.Equal(t, "bar will be reset to auto in 1h0m0s", output[0])
+		}
+
+	}
+}
+
+func BenchmarkOverlayLimit_Run(b *testing.B) {
+	cfg, err := configuration.LoadConfiguration([]byte(`
+controller:
+  overlayLimitRules:
+    - zoneName: "foo"
+      maxTime: 0s
+`))
+
+	if assert.Nil(b, err) && assert.NotNil(b, cfg) && assert.NotNil(b, cfg.Controller.OverlayLimitRules) {
+
+		schedule := scheduler.Scheduler{}
+		setter := make(chan tadosetter.RoomCommand)
+		limiter := overlaylimit.OverlayLimit{
+			Updates:    schedule.Register(),
+			RoomSetter: setter,
+			Commands:   make(commands.RequestChannel, 5),
+			Slack:      make(tadobot.PostChannel, 5),
+			Rules:      *cfg.Controller.OverlayLimitRules,
+		}
+		go limiter.Run()
+
+		withoutOverlay := makeTadoData()
+		withOverlay := makeTadoData()
+		if zoneInfo, ok := withOverlay.ZoneInfo[1]; assert.True(b, ok) {
+			zoneInfo.Overlay = tado.ZoneInfoOverlay{
+				Type:        "MANUAL",
+				Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING"},
+				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+			}
+			withOverlay.ZoneInfo[1] = zoneInfo
+		}
+
+		for i := 0; i < 1000; i++ {
+			// set up the initial state
+			schedule.Notify(withoutOverlay)
+
+			// put in overlay
+			schedule.Notify(withOverlay)
+			_ = <-limiter.Slack
+
+			// expire
+			schedule.Notify(withOverlay)
+
+			// validate
+			_ = <-limiter.Slack
+			cmd := <-setter
+
+			assert.True(b, cmd.Auto)
+			assert.Len(b, limiter.Slack, 0)
 		}
 
 	}
