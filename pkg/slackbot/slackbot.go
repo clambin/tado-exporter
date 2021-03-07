@@ -1,3 +1,22 @@
+// Package slackbot provides a basic slackbot implementation.
+// Using this package typically involves creating an Bot as follows:
+//
+//     bot := slackbot.New(botName, slackToken, callbacks)
+//     go bot.Run()
+//
+// Once running, the bot will listen for any commands specified on the channel and execute them. Slackbot itself
+// implements two commands: "version" (which responds with botName) and "help" (which shows all implemented commands).
+// Additional commands can be added through the callbacks parameter (see Create & CommandFunc):
+//
+//     func doHello(args ...string) []slack.Attachment {
+//	       return []slack.Attachment{{Text: "hello world " + strings.Join(args, ", ")}}
+//     }
+//
+// The returned attachments will be sent to the slack channel where the command was issued.
+//
+// Additionally, output can be sent to the slack channel(s) using PostChannel, e.g.:
+//
+//     bot.PostChannel <- []slack.Attachment{{Text: "Hello world"}}
 package slackbot
 
 import (
@@ -7,31 +26,43 @@ import (
 	"strings"
 )
 
-type CommandFunc func(args ...string) []slack.Attachment
-type PostChannel chan []slack.Attachment
-
+// SlackBot structure
 type SlackBot struct {
 	PostChannel PostChannel
 
 	name        string
-	slackClient *SlackClient
+	slackClient *slackClient
 	events      chan slack.RTMEvent
-	messages    chan Message
+	messages    chan slackMessage
 	userID      string
 	callbacks   map[string]CommandFunc
 	reconnect   bool
 }
 
-// Create connects to a slackbot designated by token
+// CommandFunc signature for command callback functions
+//
+// args will contain any additional tokens after the command, e.g.:
+//
+//      @slackbot say 1 2 3
+//
+// args will be []string{"1", "2", "3"}
+//
+// returns a slice of Attachments, which will be sent to slack as one message
+type CommandFunc func(args ...string) []slack.Attachment
+
+// PostChannel to send output to slack
+type PostChannel chan []slack.Attachment
+
+// Create a slackbot
 func Create(name string, slackToken string, callbacks map[string]CommandFunc) (bot *SlackBot, err error) {
 	bot = &SlackBot{
 		PostChannel: make(chan []slack.Attachment, 5),
 		name:        name,
 		events:      make(chan slack.RTMEvent),
-		messages:    make(chan Message),
+		messages:    make(chan slackMessage),
 	}
 	if slackToken != "" {
-		bot.slackClient = NewClient(slackToken, bot.events, bot.messages)
+		bot.slackClient = newClient(slackToken, bot.events, bot.messages)
 	}
 	bot.callbacks = map[string]CommandFunc{
 		"help":    bot.doHelp,
@@ -46,7 +77,7 @@ func Create(name string, slackToken string, callbacks map[string]CommandFunc) (b
 // Run the slackbot
 func (bot *SlackBot) Run() (err error) {
 	if bot.slackClient != nil {
-		go bot.slackClient.Run()
+		go bot.slackClient.run()
 	}
 
 loop:
@@ -67,7 +98,7 @@ loop:
 		}
 
 		if len(attachments) > 0 {
-			bot.messages <- Message{Channel: channel, Attachments: attachments}
+			bot.messages <- slackMessage{Channel: channel, Attachments: attachments}
 		}
 	}
 

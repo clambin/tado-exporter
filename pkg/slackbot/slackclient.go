@@ -5,25 +5,24 @@ import (
 	"github.com/slack-go/slack"
 )
 
-// SlackClient abstracts the interface to/from slack so it can be stubbed in unit tests
-type SlackClient struct {
+// slackClient abstracts the interface to/from slack so it can be stubbed in unit tests
+type slackClient struct {
 	NextEvent chan slack.RTMEvent
-	Messages  chan Message
+	Messages  chan slackMessage
 
 	slackClient *slack.Client
 	slackRTM    *slack.RTM
 	channels    []string
 }
 
-// Message contains a message to be sent to slack
-type Message struct {
+// slackMessage contains a message to be sent to slack
+type slackMessage struct {
 	Channel     string
 	Attachments []slack.Attachment
 }
 
-// NewClient creates a new SlackClient
-func NewClient(token string, events chan slack.RTMEvent, messages chan Message) (client *SlackClient) {
-	client = &SlackClient{
+func newClient(token string, events chan slack.RTMEvent, messages chan slackMessage) (client *slackClient) {
+	client = &slackClient{
 		NextEvent:   events,
 		Messages:    messages,
 		slackClient: slack.New(token),
@@ -35,7 +34,7 @@ func NewClient(token string, events chan slack.RTMEvent, messages chan Message) 
 	return
 }
 
-func (client *SlackClient) Run() {
+func (client *slackClient) run() {
 	client.slackRTM = client.slackClient.NewRTM()
 	go client.slackRTM.ManageConnection()
 
@@ -51,7 +50,7 @@ func (client *SlackClient) Run() {
 
 // getAllChannels returns all channels the bot can post on.
 // This is either the bot's direct channel or any channels the bot has been invited to
-func (client *SlackClient) getAllChannels() (channelIDs []string, err error) {
+func (client *slackClient) getAllChannels() (channelIDs []string, err error) {
 	params := &slack.GetConversationsForUserParameters{
 		Types: []string{"public_channel", "private_channel", "im"},
 	}
@@ -70,7 +69,7 @@ func (client *SlackClient) getAllChannels() (channelIDs []string, err error) {
 }
 
 // send a message to slack.  if no channel is specified, the message is broadcast to all channels
-func (client *SlackClient) send(message Message) (err error) {
+func (client *slackClient) send(message slackMessage) (err error) {
 	channels := client.channels
 	if message.Channel != "" {
 		channels = []string{message.Channel}
