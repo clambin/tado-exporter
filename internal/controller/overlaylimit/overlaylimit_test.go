@@ -83,7 +83,9 @@ func TestOverlayLimit(t *testing.T) {
 
 		// foo moves back to auto before the overlay expires
 		schedule.Update(withoutOverlay)
-		assert.Len(t, limiter.Slack, 0)
+		slackMsgs = <-limiter.Slack
+		assert.Len(t, slackMsgs, 1)
+		assert.Equal(t, "Manual temperature setting removed in foo", slackMsgs[0].Title)
 
 		// foo goes back in overlay
 		schedule.Update(withOverlay)

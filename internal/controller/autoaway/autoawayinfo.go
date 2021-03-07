@@ -19,7 +19,6 @@ const (
 // DeviceInfo contains the user we are tracking, and what zone to set to which temperature
 // when ActivationTime occurs
 type DeviceInfo struct {
-	// TODO: can this be a pointer?
 	mobileDevice   tado.MobileDevice
 	zone           tado.Zone
 	rule           configuration.AutoAwayRule

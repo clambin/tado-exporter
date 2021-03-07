@@ -10,10 +10,11 @@ type zoneState int
 
 const (
 	zoneStateUndetermined = 0
-	zoneStateAuto         = 1
-	zoneStateManual       = 2
-	zoneStateReported     = 3
-	zoneStateExpired      = 4
+	zoneStateReverted     = 1
+	zoneStateAuto         = 2
+	zoneStateManual       = 3
+	zoneStateReported     = 4
+	zoneStateExpired      = 5
 )
 
 type zoneDetails struct {

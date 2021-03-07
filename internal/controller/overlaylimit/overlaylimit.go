@@ -71,7 +71,7 @@ func (overlayLimit *OverlayLimit) updateInfo(tadoData *scheduler.TadoData) {
 		} else if details.state > zoneStateAuto {
 			// Zone is no longer in overlay
 			// TODO: this should generate a slack notification
-			details.state = zoneStateAuto
+			details.state = zoneStateReverted
 			overlayLimit.zoneDetails[id] = details
 		}
 	}
@@ -107,6 +107,16 @@ func (overlayLimit *OverlayLimit) initZoneDetails(tadoData *scheduler.TadoData) 
 func (overlayLimit *OverlayLimit) process(_ *scheduler.TadoData) {
 	for id, details := range overlayLimit.zoneDetails {
 		switch details.state {
+		case zoneStateReverted:
+			// Zone was in overlay, but moved back to auto. Report to slack
+			if overlayLimit.Slack != nil {
+				overlayLimit.Slack <- []slack.Attachment{{
+					Color: "good",
+					Title: "Manual temperature setting removed in " + details.zone.Name,
+					Text:  "overlay removed",
+				}}
+			}
+			details.state = zoneStateAuto
 		case zoneStateManual:
 			// Zone is now in overlay. Report to slack
 			if overlayLimit.Slack != nil {
