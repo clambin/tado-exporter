@@ -1,4 +1,4 @@
-package tadobot
+package slackbot
 
 import (
 	log "github.com/sirupsen/logrus"
@@ -20,7 +20,7 @@ func parseText(input string) (output []string) {
 	return
 }
 
-func (bot *TadoBot) parseCommand(input string) (command string, args []string) {
+func (bot *SlackBot) parseCommand(input string) (command string, args []string) {
 	words := parseText(input)
 	if len(words) > 1 && words[0] == "<@"+bot.userID+">" {
 		command = words[1]

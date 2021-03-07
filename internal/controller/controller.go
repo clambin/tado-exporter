@@ -7,7 +7,8 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/overlaylimit"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
-	"github.com/clambin/tado-exporter/internal/tadobot"
+	"github.com/clambin/tado-exporter/internal/version"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -19,7 +20,7 @@ type Controller struct {
 	scheduler.Scheduler
 
 	roomSetter *tadosetter.Setter
-	tadoBot    *tadobot.TadoBot
+	tadoBot    *slackbot.SlackBot
 	autoAway   *autoaway.AutoAway
 	limiter    *overlaylimit.OverlayLimit
 }
@@ -46,9 +47,9 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 	}
 	go controller.roomSetter.Run()
 
-	var slackChannel tadobot.PostChannel
+	var slackChannel slackbot.PostChannel
 	if cfg != nil && cfg.TadoBot.Enabled {
-		callbacks := map[string]tadobot.CommandFunc{
+		callbacks := map[string]slackbot.CommandFunc{
 			"rooms":        controller.doRooms,
 			"users":        controller.doUsers,
 			"rules":        controller.doRules,
@@ -57,7 +58,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 			"set":          controller.doSetTemperature,
 		}
 		var err error
-		if controller.tadoBot, err = tadobot.Create(cfg.TadoBot.Token.Value, callbacks); err == nil {
+		if controller.tadoBot, err = slackbot.Create("tado "+version.BuildVersion, cfg.TadoBot.Token.Value, callbacks); err == nil {
 			slackChannel = controller.tadoBot.PostChannel
 			go controller.tadoBot.Run()
 		} else {

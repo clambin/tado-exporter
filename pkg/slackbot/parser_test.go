@@ -1,4 +1,4 @@
-package tadobot
+package slackbot
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -44,7 +44,7 @@ func TestParseCommand(t *testing.T) {
 		args    []string
 	)
 
-	bot := TadoBot{
+	bot := SlackBot{
 		userID: "123",
 	}
 

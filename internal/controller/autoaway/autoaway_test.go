@@ -6,7 +6,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/commands"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
-	"github.com/clambin/tado-exporter/internal/tadobot"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/stretchr/testify/assert"
 	"sort"
@@ -68,7 +68,7 @@ controller:
 			RoomSetter: setter,
 			Updates:    schedule.Register(),
 			Commands:   make(commands.RequestChannel, 5),
-			Slack:      make(tadobot.PostChannel, 5),
+			Slack:      make(slackbot.PostChannel, 5),
 			Rules:      *cfg.Controller.AutoAwayRules,
 		}
 		go away.Run()
@@ -177,7 +177,7 @@ controller:
 			RoomSetter: setter,
 			Updates:    schedule.Register(),
 			Commands:   make(commands.RequestChannel, 5),
-			Slack:      make(tadobot.PostChannel, 5),
+			Slack:      make(slackbot.PostChannel, 5),
 			Rules:      *cfg.Controller.AutoAwayRules,
 		}
 		go away.Run()

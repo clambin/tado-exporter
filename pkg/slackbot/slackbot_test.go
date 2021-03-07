@@ -1,24 +1,17 @@
-package tadobot
+package slackbot
 
 import (
-	"github.com/clambin/tado-exporter/internal/version"
+	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
-func TestDoVersion(t *testing.T) {
-	bot := TadoBot{}
-
-	responses := bot.doVersion()
-	if assert.Len(t, responses, 1) {
-		assert.Equal(t, "tado "+version.BuildVersion, responses[0].Text)
-	}
-}
-
 func TestProcessMessage(t *testing.T) {
-	bot, _ := Create("", nil)
+	bot, _ := Create("testBot", "", map[string]CommandFunc{})
 	bot.userID = "12345678"
 
 	var attachments []slack.Attachment
@@ -30,11 +23,11 @@ func TestProcessMessage(t *testing.T) {
 	assert.Equal(t, "invalid command", attachments[0].Text)
 	attachments = bot.processMessage("<@12345678> version")
 	assert.Len(t, attachments, 1)
-	assert.Equal(t, "tado "+version.BuildVersion, attachments[0].Text)
+	assert.Equal(t, "testBot", attachments[0].Text)
 }
 
 func TestProcessEvent(t *testing.T) {
-	bot, _ := Create("", map[string]CommandFunc{
+	bot, _ := Create("testBot", "", map[string]CommandFunc{
 		"hello": doHello,
 	})
 
@@ -87,7 +80,7 @@ func TestProcessEvent(t *testing.T) {
 	_, attachments, stop = bot.processEvent(msg)
 	assert.False(t, stop)
 	if assert.Len(t, attachments, 1) {
-		assert.Equal(t, "tado "+version.BuildVersion, attachments[0].Text)
+		assert.Equal(t, "testBot", attachments[0].Text)
 	}
 
 	msg = slack.RTMEvent{Type: "message", Data: &slack.MessageEvent{
@@ -129,4 +122,71 @@ func doHello(args ...string) (responses []slack.Attachment) {
 		},
 	}
 	return
+}
+
+func TestSlackBot_Run(t *testing.T) {
+	log.SetLevel(log.DebugLevel)
+	bot, err := Create("testBot", "", nil)
+	if assert.Nil(t, err) {
+		go bot.Run()
+
+		// we're connected to slack
+		bot.events <- slack.RTMEvent{Type: "connected", Data: &slack.ConnectedEvent{
+			ConnectionCount: 1,
+			Info: &slack.Info{
+				User: &slack.UserDetails{ID: "987654321"},
+			},
+		}}
+		// some non-actionable chatter
+		bot.events <- slack.RTMEvent{Type: "message", Data: &slack.MessageEvent{
+			Msg: slack.Msg{
+				Channel: "some_channel",
+				Text:    "some text",
+			},
+		}}
+		// ask for version
+		bot.events <- slack.RTMEvent{Type: "message", Data: &slack.MessageEvent{
+			Msg: slack.Msg{
+				Channel: "some_channel",
+				Text:    "<@987654321> version",
+			},
+		}}
+		response := <-bot.messages
+
+		assert.Equal(t, "some_channel", response.Channel)
+		if assert.Len(t, response.Attachments, 1) {
+			assert.Equal(t, "testBot", response.Attachments[0].Text)
+		}
+
+		// check posting works
+		bot.PostChannel <- []slack.Attachment{
+			{
+				Color: "good",
+				Text:  "hello world",
+			},
+		}
+		response = <-bot.messages
+
+		if assert.Len(t, response.Attachments, 1) {
+			assert.Equal(t, "hello world", response.Attachments[0].Text)
+		}
+
+		// check that the bot will stop
+		bot.events <- slack.RTMEvent{Type: "invalid_auth", Data: &slack.InvalidAuthEvent{}}
+
+		assert.Eventually(t, func() bool {
+			_, ok := <-bot.messages
+			return !ok
+		}, 1*time.Second, 10*time.Millisecond)
+	}
+}
+
+func TestEndToEnd(t *testing.T) {
+	if token := os.Getenv("SLACK_TOKEN"); token != "" {
+		bot, err := Create("testBot", token, nil)
+
+		if assert.Nil(t, err) {
+			bot.Run()
+		}
+	}
 }

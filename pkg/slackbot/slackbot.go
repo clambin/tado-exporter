@@ -1,7 +1,6 @@
-package tadobot
+package slackbot
 
 import (
-	"github.com/clambin/tado-exporter/internal/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"sort"
@@ -11,42 +10,44 @@ import (
 type CommandFunc func(args ...string) []slack.Attachment
 type PostChannel chan []slack.Attachment
 
-type TadoBot struct {
+type SlackBot struct {
 	PostChannel PostChannel
 
-	slackClient *slack.Client
-	slackRTM    *slack.RTM
-	slackToken  string
+	name        string
+	slackClient *SlackClient
+	events      chan slack.RTMEvent
+	messages    chan Message
 	userID      string
-	channelIDs  []string
 	callbacks   map[string]CommandFunc
 	reconnect   bool
 }
 
 // Create connects to a slackbot designated by token
-func Create(slackToken string, callbacks map[string]CommandFunc) (bot *TadoBot, err error) {
-	bot = &TadoBot{
+func Create(name string, slackToken string, callbacks map[string]CommandFunc) (bot *SlackBot, err error) {
+	bot = &SlackBot{
 		PostChannel: make(chan []slack.Attachment, 5),
-		slackClient: slack.New(slackToken),
-		slackToken:  slackToken,
+		name:        name,
+		events:      make(chan slack.RTMEvent),
+		messages:    make(chan Message),
+	}
+	if slackToken != "" {
+		bot.slackClient = NewClient(slackToken, bot.events, bot.messages)
 	}
 	bot.callbacks = map[string]CommandFunc{
 		"help":    bot.doHelp,
 		"version": bot.doVersion,
 	}
-	if callbacks != nil {
-		for name, callbackFunction := range callbacks {
-			bot.callbacks[name] = callbackFunction
-		}
+	for cmd, callbackFunction := range callbacks {
+		bot.callbacks[cmd] = callbackFunction
 	}
-	bot.channelIDs, err = bot.getAllChannels()
 	return
 }
 
 // Run the slackbot
-func (bot *TadoBot) Run() (err error) {
-	bot.slackRTM = bot.slackClient.NewRTM()
-	go bot.slackRTM.ManageConnection()
+func (bot *SlackBot) Run() (err error) {
+	if bot.slackClient != nil {
+		go bot.slackClient.Run()
+	}
 
 loop:
 	for {
@@ -57,8 +58,8 @@ loop:
 		)
 
 		select {
-		case msg := <-bot.slackRTM.IncomingEvents:
-			channel, attachments, stop = bot.processEvent(msg)
+		case event := <-bot.events:
+			channel, attachments, stop = bot.processEvent(event)
 			if stop {
 				break loop
 			}
@@ -66,27 +67,18 @@ loop:
 		}
 
 		if len(attachments) > 0 {
-			channels := bot.channelIDs
-			if channel != "" {
-				channels = []string{channel}
-			}
-			for _, channelID := range channels {
-				if _, _, err = bot.slackRTM.PostMessage(
-					channelID,
-					slack.MsgOptionAttachments(attachments...),
-					slack.MsgOptionAsUser(true),
-				); err != nil {
-					log.WithField("err", err).Warning("failed to send on slack")
-				}
-			}
-
-			log.WithField("err", err).Debug("sent a message")
+			bot.messages <- Message{Channel: channel, Attachments: attachments}
 		}
 	}
+
+	close(bot.events)
+	close(bot.messages)
+	close(bot.PostChannel)
+
 	return
 }
 
-func (bot *TadoBot) processEvent(msg slack.RTMEvent) (channel string, attachments []slack.Attachment, stop bool) {
+func (bot *SlackBot) processEvent(msg slack.RTMEvent) (channel string, attachments []slack.Attachment, stop bool) {
 	switch ev := msg.Data.(type) {
 	// case *slack.HelloEvent:
 	//	log.WithField("ev", ev).Debug("hello")
@@ -118,7 +110,7 @@ func (bot *TadoBot) processEvent(msg slack.RTMEvent) (channel string, attachment
 	return
 }
 
-func (bot *TadoBot) processMessage(text string) (attachments []slack.Attachment) {
+func (bot *SlackBot) processMessage(text string) (attachments []slack.Attachment) {
 	// check if we're mentioned
 	log.WithField("text", text).Debug("processing slack chatter")
 	command, args := bot.parseCommand(text)
@@ -139,42 +131,7 @@ func (bot *TadoBot) processMessage(text string) (attachments []slack.Attachment)
 	return
 }
 
-// getAllChannels returns all channels the bot can post on.
-// This is either the bot's direct channel or any channels the bot has been invited to
-func (bot *TadoBot) getAllChannels() (channelIDs []string, err error) {
-	params := &slack.GetConversationsForUserParameters{
-		Cursor: "",
-		Limit:  0,
-		Types: []string{
-			"public_channel", "private_channel", "im",
-		},
-	}
-
-	var channels []slack.Channel
-	if channels, _, err = bot.slackClient.GetConversationsForUser(params); err == nil {
-
-		for _, channel := range channels {
-			log.WithFields(log.Fields{
-				"name":      channel.Name,
-				"id":        channel.ID,
-				"isChannel": channel.IsChannel,
-				"isPrivate": channel.IsPrivate,
-				"isIM":      channel.IsIM,
-			}).Debug("found a channel")
-
-			channelIDs = append(channelIDs, channel.ID)
-		}
-	}
-
-	log.WithFields(log.Fields{
-		"channelIDs": channelIDs,
-		"err":        err,
-	}).Debug("found channels")
-
-	return
-}
-
-func (bot *TadoBot) doHelp(_ ...string) []slack.Attachment {
+func (bot *SlackBot) doHelp(_ ...string) []slack.Attachment {
 	var commands = make([]string, 0)
 	for command := range bot.callbacks {
 		commands = append(commands, command)
@@ -190,11 +147,11 @@ func (bot *TadoBot) doHelp(_ ...string) []slack.Attachment {
 	}
 }
 
-func (bot *TadoBot) doVersion(_ ...string) []slack.Attachment {
+func (bot *SlackBot) doVersion(_ ...string) []slack.Attachment {
 	return []slack.Attachment{
 		{
 			Color: "good",
-			Text:  "tado " + version.BuildVersion,
+			Text:  bot.name,
 		},
 	}
 }

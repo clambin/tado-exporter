@@ -5,7 +5,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/commands"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
-	"github.com/clambin/tado-exporter/internal/tadobot"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
@@ -17,7 +17,7 @@ type OverlayLimit struct {
 	Updates     scheduler.UpdateChannel
 	RoomSetter  chan tadosetter.RoomCommand
 	Commands    commands.RequestChannel
-	Slack       tadobot.PostChannel
+	Slack       slackbot.PostChannel
 	Rules       []*configuration.OverlayLimitRule
 	zoneDetails map[int]zoneDetails
 }
