@@ -57,34 +57,45 @@ func TestOverlayLimit(t *testing.T) {
 		}
 		go limiter.Run()
 
-		// set up the initial state
-		schedule.Update(makeTadoData())
+		// set up data structures. to test expiry we have two datasets: one with foo in auto and one with foo in overlay
+		// expiry for foo is set to 0, so a second call to update will immediately expire the overlay
+		withoutOverlay := makeTadoData()
+		withOverlay := makeTadoData()
+		zoneInfo := withOverlay.ZoneInfo[1]
+		zoneInfo.Overlay = tado.ZoneInfoOverlay{
+			Type:        "MANUAL",
+			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING"},
+			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+		}
+		withOverlay.ZoneInfo[1] = zoneInfo
 
+		// set up the initial state
+		schedule.Update(withoutOverlay)
 		slackMsgs := <-limiter.Slack
 		assert.Len(t, slackMsgs, 1)
 		assert.Equal(t, "Manual temperature setting detected in bar", slackMsgs[0].Title)
 
-		// fake the zone expiring its timer
-		// not exactly thread-safe, but at this point overlayLimit is waiting on the next update
-		tadoData := makeTadoData()
-		if zoneInfo, ok := tadoData.ZoneInfo[1]; assert.True(t, ok) {
-			zoneInfo.Overlay = tado.ZoneInfoOverlay{
-				Type:        "MANUAL",
-				Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING"},
-				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-			}
-			tadoData.ZoneInfo[1] = zoneInfo
-		}
-		schedule.Update(tadoData)
-
+		// foo goes in overlay
+		schedule.Update(withOverlay)
 		slackMsgs = <-limiter.Slack
 		assert.Len(t, slackMsgs, 1)
 		assert.Equal(t, "Manual temperature setting detected in foo", slackMsgs[0].Title)
 
-		schedule.Update(tadoData)
+		// foo moves back to auto before the overlay expires
+		schedule.Update(withoutOverlay)
+		assert.Len(t, limiter.Slack, 0)
+
+		// foo goes back in overlay
+		schedule.Update(withOverlay)
+		slackMsgs = <-limiter.Slack
+		assert.Len(t, slackMsgs, 1)
+		assert.Equal(t, "Manual temperature setting detected in foo", slackMsgs[0].Title)
+
+		// foo's overlay expires
+		schedule.Update(withOverlay)
 
 		// limiter writes to slack first and only then to roomsetter.
-		// check buffering works by reading roomsetter & slack in the inverse order
+		// check buffering works by reading roomsetter & slack in reverse order
 		cmd := <-limiter.RoomSetter
 		assert.Equal(t, 1, cmd.ZoneID)
 		assert.True(t, cmd.Auto)

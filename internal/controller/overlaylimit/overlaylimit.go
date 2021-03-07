@@ -70,6 +70,7 @@ func (overlayLimit *OverlayLimit) updateInfo(tadoData *scheduler.TadoData) {
 			}
 		} else if details.state > zoneStateAuto {
 			// Zone is no longer in overlay
+			// TODO: this should generate a slack notification
 			details.state = zoneStateAuto
 			overlayLimit.zoneDetails[id] = details
 		}
