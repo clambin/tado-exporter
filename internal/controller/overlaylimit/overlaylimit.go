@@ -86,7 +86,7 @@ func (overlayLimit *OverlayLimit) initZoneDetails(tadoData *scheduler.TadoData) 
 		// Rules file can contain either zone ID or Name. Retrieve the ID for each of these
 		// and discard any that aren't valid.
 
-		if zone = scheduler.LookupZone(tadoData, rule.ZoneID, rule.ZoneName); zone == nil {
+		if zone = tadoData.LookupZone(rule.ZoneID, rule.ZoneName); zone == nil {
 			log.WithFields(log.Fields{
 				"zoneID":   rule.ZoneID,
 				"zoneName": rule.ZoneName,

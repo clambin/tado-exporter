@@ -1,19 +1,5 @@
 package scheduler
 
-import (
-	"github.com/clambin/tado-exporter/pkg/tado"
-)
-
-// TadoData contains all data retrieved from Tado and needed to evaluate rules.
-//
-// This allows data to be shared between the scheduler and its clients without locking mechanisms: each client
-// gets its own copy of the data without having to worry if its changed by a subsequent refresh
-type TadoData struct {
-	Zone         map[int]tado.Zone
-	ZoneInfo     map[int]tado.ZoneInfo
-	MobileDevice map[int]tado.MobileDevice
-}
-
 // UpdateChannel used by scheduler to send updates to the rules
 type UpdateChannel chan *TadoData
 

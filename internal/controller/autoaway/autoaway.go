@@ -69,7 +69,7 @@ func (autoAway *AutoAway) initDeviceInfo(tadoData *scheduler.TadoData) {
 		// Rules file can contain either mobileDevice/zone ID or Name. Retrieve the ID for each of these
 		// and discard any that aren't valid.  Update the mobileDevice/zone ID so we only need to do this once
 
-		if mobileDevice = scheduler.LookupMobileDevice(tadoData, rule.MobileDeviceID, rule.MobileDeviceName); mobileDevice == nil {
+		if mobileDevice = tadoData.LookupMobileDevice(rule.MobileDeviceID, rule.MobileDeviceName); mobileDevice == nil {
 			log.WithFields(log.Fields{
 				"deviceID":   rule.MobileDeviceID,
 				"deviceName": rule.MobileDeviceName,
@@ -77,7 +77,7 @@ func (autoAway *AutoAway) initDeviceInfo(tadoData *scheduler.TadoData) {
 			continue
 		}
 
-		if zone = scheduler.LookupZone(tadoData, rule.ZoneID, rule.ZoneName); zone == nil {
+		if zone = tadoData.LookupZone(rule.ZoneID, rule.ZoneName); zone == nil {
 			log.WithFields(log.Fields{
 				"zoneID":   rule.ZoneID,
 				"zoneName": rule.ZoneName,
