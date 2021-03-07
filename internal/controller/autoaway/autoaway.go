@@ -142,6 +142,7 @@ func (autoAway *AutoAway) setZones() {
 		} else
 		// if the mobile phone is away, mark it as such and set the activation timer
 		if deviceInfo.leftHome() {
+			// FIXME: zone may already be in overlay
 			// mark the phone away & set the activation timer
 			deviceInfo.state = autoAwayStateAway
 			deviceInfo.activationTime = time.Now().Add(deviceInfo.rule.WaitTime)
