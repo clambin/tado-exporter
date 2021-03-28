@@ -37,7 +37,7 @@ loop:
 
 		case cmd := <-overlayLimit.Commands:
 			switch cmd.Command {
-			case 1:
+			case commands.Report:
 				cmd.Response <- overlayLimit.Report()
 			}
 		}
