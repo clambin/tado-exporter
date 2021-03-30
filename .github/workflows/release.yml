@@ -77,9 +77,9 @@ jobs:
         uses: crazy-max/ghaction-docker-meta@v2.1.0
         with:
           images: clambin/tado-monitor
-          tag-sha: True
-          tag-semver: |
-            {{version}}
+          tags: |
+            type=sha
+            type=semver,pattern={{version}}
       - name: Docker build
         uses: docker/build-push-action@v2
         with:
