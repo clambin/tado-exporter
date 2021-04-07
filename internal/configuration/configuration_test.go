@@ -25,20 +25,17 @@ controller:
     enabled: true
     token:
       value: "1234"
-  overlayLimitRules:
-  - zoneName: "foo"
-    maxTime: 2h
-  - zoneID: 1
-    maxTime: 30m
-  autoAwayRules:
-  - zoneName: "foo"
-    mobileDeviceName: "bar"
-    waitTime: 1h
-    targetTemperature: 5.0
-  - zoneID: 2
-    mobileDeviceID: 20
-    waitTime: 2h
-    targetTemperature: 18.0
+  zones:
+  - id: 1
+    users:
+    - id: 1
+    - name: bar
+    limitOverlay:
+      enabled: true
+      limit: 1h
+    nightTime:
+      enabled: true
+      time: "23:30:15"
 `)
 
 	f, err := ioutil.TempFile("", "tmp")
@@ -64,32 +61,26 @@ controller:
 		assert.True(t, cfg.Controller.TadoBot.Enabled)
 		assert.Equal(t, "1234", cfg.Controller.TadoBot.Token.Value)
 
-		if assert.NotNil(t, cfg.Controller.OverlayLimitRules) &&
-			assert.Len(t, *cfg.Controller.OverlayLimitRules, 2) {
-			assert.Equal(t, "foo", (*cfg.Controller.OverlayLimitRules)[0].ZoneName)
-			assert.Equal(t, 0, (*cfg.Controller.OverlayLimitRules)[0].ZoneID)
-			assert.Equal(t, 2*time.Hour, (*cfg.Controller.OverlayLimitRules)[0].MaxTime)
+		if assert.NotNil(t, cfg.Controller.ZoneConfig) && assert.Len(t, *cfg.Controller.ZoneConfig, 1) {
+			assert.Equal(t, 1, (*cfg.Controller.ZoneConfig)[0].ZoneID)
+			assert.Equal(t, "", (*cfg.Controller.ZoneConfig)[0].ZoneName)
 
-			assert.Equal(t, "", (*cfg.Controller.OverlayLimitRules)[1].ZoneName)
-			assert.Equal(t, 1, (*cfg.Controller.OverlayLimitRules)[1].ZoneID)
-			assert.Equal(t, 30*time.Minute, (*cfg.Controller.OverlayLimitRules)[1].MaxTime)
-		}
+			if assert.Len(t, (*cfg.Controller.ZoneConfig)[0].Users, 2) {
+				assert.Equal(t, 1, (*cfg.Controller.ZoneConfig)[0].Users[0].MobileDeviceID)
+				assert.Equal(t, "", (*cfg.Controller.ZoneConfig)[0].Users[0].MobileDeviceName)
 
-		if assert.NotNil(t, cfg.Controller.AutoAwayRules) &&
-			assert.Len(t, *cfg.Controller.AutoAwayRules, 2) {
-			assert.Equal(t, "foo", (*cfg.Controller.AutoAwayRules)[0].ZoneName)
-			assert.Equal(t, 0, (*cfg.Controller.AutoAwayRules)[0].ZoneID)
-			assert.Equal(t, "bar", (*cfg.Controller.AutoAwayRules)[0].MobileDeviceName)
-			assert.Equal(t, 0, (*cfg.Controller.AutoAwayRules)[0].MobileDeviceID)
-			assert.Equal(t, 1*time.Hour, (*cfg.Controller.AutoAwayRules)[0].WaitTime)
-			assert.Equal(t, 5.0, (*cfg.Controller.AutoAwayRules)[0].TargetTemperature)
+				assert.Equal(t, 0, (*cfg.Controller.ZoneConfig)[0].Users[1].MobileDeviceID)
+				assert.Equal(t, "bar", (*cfg.Controller.ZoneConfig)[0].Users[1].MobileDeviceName)
 
-			assert.Equal(t, "", (*cfg.Controller.AutoAwayRules)[1].ZoneName)
-			assert.Equal(t, 2, (*cfg.Controller.AutoAwayRules)[1].ZoneID)
-			assert.Equal(t, "", (*cfg.Controller.AutoAwayRules)[1].MobileDeviceName)
-			assert.Equal(t, 20, (*cfg.Controller.AutoAwayRules)[1].MobileDeviceID)
-			assert.Equal(t, 2*time.Hour, (*cfg.Controller.AutoAwayRules)[1].WaitTime)
-			assert.Equal(t, 18.0, (*cfg.Controller.AutoAwayRules)[1].TargetTemperature)
+			}
+
+			assert.True(t, (*cfg.Controller.ZoneConfig)[0].LimitOverlay.Enabled)
+			assert.Equal(t, 1*time.Hour, (*cfg.Controller.ZoneConfig)[0].LimitOverlay.Limit)
+
+			assert.True(t, (*cfg.Controller.ZoneConfig)[0].NightTime.Enabled)
+			assert.Equal(t, 23, (*cfg.Controller.ZoneConfig)[0].NightTime.Time.Hour)
+			assert.Equal(t, 30, (*cfg.Controller.ZoneConfig)[0].NightTime.Time.Minutes)
+			assert.Equal(t, 15, (*cfg.Controller.ZoneConfig)[0].NightTime.Time.Seconds)
 		}
 	}
 }
@@ -106,8 +97,7 @@ func TestConfigLoader_Defaults(t *testing.T) {
 	assert.False(t, cfg.Controller.Enabled)
 	assert.Equal(t, 5*time.Minute, cfg.Controller.Interval)
 	assert.False(t, cfg.Controller.TadoBot.Enabled)
-	assert.Nil(t, cfg.Controller.AutoAwayRules)
-	assert.Nil(t, cfg.Controller.OverlayLimitRules)
+	assert.Nil(t, cfg.Controller.ZoneConfig)
 }
 
 func TestConfigLoader_Tadobot(t *testing.T) {

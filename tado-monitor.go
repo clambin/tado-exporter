@@ -83,6 +83,8 @@ func main() {
 	if cfg.Controller.Enabled {
 		control = controller.New(username, password, clientSecret, &cfg.Controller)
 		log.WithField("interval", cfg.Controller.Interval).Info("controller created")
+
+		go control.Run()
 	}
 
 	go func() {
@@ -97,12 +99,6 @@ func main() {
 		}
 	}
 
-	if control != nil {
-		if err = control.Run(); err != nil {
-			log.WithField("err", err).Warning("controller failed. Will keep retrying")
-		}
-	}
-
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
@@ -113,12 +109,6 @@ loop:
 			if export != nil {
 				if err = export.Run(); err != nil {
 					log.WithField("err", err).Warning("exporter failed")
-				}
-			}
-		case <-controlTicker.C:
-			if control != nil {
-				if err = control.Run(); err != nil {
-					log.WithField("err", err).Warning("controller failed")
 				}
 			}
 		case <-interrupt:

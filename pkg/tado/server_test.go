@@ -181,7 +181,7 @@ var responses = map[string]string{
 	//type ZoneInfoOpenWindow struct {
 	//	DetectedTime           time.Time `json:"detectedTime"`
 	//	DurationInSeconds      int       `json:"durationInSeconds"`
-	//	Expiry                 time.Time `json:"expiry"`
+	//	Limit                 time.Time `json:"expiry"`
 	//	RemainingTimeInSeconds int       `json:"remainingTimeInSeconds"`
 	//}
 	"/api/v2/homes/242/weather": `{

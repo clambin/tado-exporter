@@ -1,10 +1,13 @@
 package configuration
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -24,11 +27,10 @@ type ExporterConfiguration struct {
 
 // ControllerConfiguration structure for controller
 type ControllerConfiguration struct {
-	Enabled           bool
-	Interval          time.Duration
-	TadoBot           TadoBotConfiguration `yaml:"tadoBot"`
-	AutoAwayRules     *[]*AutoAwayRule     `yaml:"autoAwayRules"`
-	OverlayLimitRules *[]*OverlayLimitRule `yaml:"overlayLimitRules"`
+	Enabled    bool
+	Interval   time.Duration
+	TadoBot    TadoBotConfiguration `yaml:"tadoBot"`
+	ZoneConfig *[]ZoneConfig        `yaml:"zones"`
 }
 
 // TadoBotConfiguration structure for TadoBot
@@ -40,22 +42,66 @@ type TadoBotConfiguration struct {
 	} `yaml:"token"`
 }
 
-// OverlayLimitRule removes an overlay from ZoneID/ZoneName after it's been active for MaxTime
-type OverlayLimitRule struct {
-	ZoneID   int           `yaml:"zoneID"`
-	ZoneName string        `yaml:"zoneName"`
-	MaxTime  time.Duration `yaml:"maxTime"`
+// ZoneConfig contains the rules for a zone
+type ZoneConfig struct {
+	ZoneID       int              `yaml:"id"`
+	ZoneName     string           `yaml:"name"`
+	Users        []ZoneUser       `yaml:"users"`
+	LimitOverlay ZoneLimitOverlay `yaml:"limitOverlay"`
+	NightTime    ZoneNightTime    `yaml:"nightTime"`
 }
 
-// AutoAwayRule sets a zone (ZoneID/ZoneName) to TargetTemperature when the user (MobileDeviceID/MobileDeviceName)
-// has been away for WaitTime
-type AutoAwayRule struct {
-	MobileDeviceID    int           `yaml:"mobileDeviceID"`
-	MobileDeviceName  string        `yaml:"mobileDeviceName"`
-	WaitTime          time.Duration `yaml:"waitTime"`
-	ZoneID            int           `yaml:"zoneID"`
-	ZoneName          string        `yaml:"zoneName"`
-	TargetTemperature float64       `yaml:"targetTemperature"`
+// ZoneUser contains a user linked to a zone
+type ZoneUser struct {
+	MobileDeviceID   int    `yaml:"id"`
+	MobileDeviceName string `yaml:"name"`
+}
+
+// ZoneLimitOverlay configures how long a zone will be allowed in manual control
+type ZoneLimitOverlay struct {
+	Enabled bool          `yaml:"enabled"`
+	Limit   time.Duration `yaml:"limit"`
+}
+
+// ZoneNightTime configures a timestamp when the zone will be set back to automatic
+type ZoneNightTime struct {
+	Enabled bool                   `yaml:"enabled"`
+	Time    ZoneNightTimeTimestamp `yaml:"time"`
+}
+
+type ZoneNightTimeTimestamp struct {
+	Hour    int
+	Minutes int
+	Seconds int
+}
+
+func (ts *ZoneNightTimeTimestamp) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	var buf string
+	if err = unmarshal(&buf); err == nil {
+		parts := strings.Split(buf, ":")
+		if len(parts) < 2 || len(parts) > 3 {
+			err = fmt.Errorf("invalid time format: %s", buf)
+		} else {
+			hour, err2 := strconv.Atoi(parts[0])
+			minutes, err3 := strconv.Atoi(parts[1])
+			var seconds int
+			var err4 error
+			if len(parts) == 3 {
+				seconds, err4 = strconv.Atoi(parts[2])
+			}
+
+			if err2 == nil && hour >= 0 && hour <= 23 &&
+				err3 == nil && minutes >= 0 && minutes <= 59 &&
+				err4 == nil && seconds >= 0 && seconds <= 59 {
+				ts.Hour = hour
+				ts.Minutes = minutes
+				ts.Seconds = seconds
+			} else {
+				err = fmt.Errorf("invalid time format: %s", buf)
+			}
+		}
+	}
+	return
 }
 
 // LoadConfigurationFile loads the tado-monitor configuration file from file

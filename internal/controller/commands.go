@@ -1,5 +1,6 @@
 package controller
 
+/*
 import (
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/controller/commands"
@@ -194,3 +195,5 @@ func (controller *Controller) doSetTemperature(args ...string) (output []slack.A
 	}
 	return
 }
+
+*/
