@@ -10,11 +10,11 @@ import (
 type Proxy struct {
 	tado.API
 
-	GetZones    chan chan map[int]model.ZoneState
-	SetZones    chan map[int]model.ZoneState
-	GetUsers    chan chan map[int]model.UserState
-	GetAllZones chan chan map[int]string
-	GetAllUsers chan chan map[int]string
+	GetZones chan chan map[int]model.ZoneState
+	SetZones chan map[int]model.ZoneState
+	GetUsers chan chan map[int]model.UserState
+	AllZones chan chan map[int]string
+	AllUsers chan chan map[int]string
 
 	Stop chan struct{}
 }
@@ -27,12 +27,12 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string) *Proxy {
 			Password:     tadoPassword,
 			ClientSecret: tadoClientSecret,
 		},
-		GetZones:    make(chan chan map[int]model.ZoneState),
-		SetZones:    make(chan map[int]model.ZoneState),
-		GetUsers:    make(chan chan map[int]model.UserState),
-		GetAllZones: make(chan chan map[int]string),
-		GetAllUsers: make(chan chan map[int]string),
-		Stop:        make(chan struct{}),
+		GetZones: make(chan chan map[int]model.ZoneState),
+		SetZones: make(chan map[int]model.ZoneState),
+		GetUsers: make(chan chan map[int]model.UserState),
+		AllZones: make(chan chan map[int]string),
+		AllUsers: make(chan chan map[int]string),
+		Stop:     make(chan struct{}),
 	}
 }
 
@@ -46,9 +46,9 @@ loop:
 			responseChannel <- proxy.getZoneStates()
 		case responseChannel := <-proxy.GetUsers:
 			responseChannel <- proxy.getUserStates()
-		case responseChannel := <-proxy.GetAllZones:
+		case responseChannel := <-proxy.AllZones:
 			responseChannel <- proxy.getAllZones()
-		case responseChannel := <-proxy.GetAllUsers:
+		case responseChannel := <-proxy.AllUsers:
 			responseChannel <- proxy.getAllUsers()
 		case <-proxy.Stop:
 			break loop

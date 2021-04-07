@@ -8,9 +8,10 @@ import (
 type ZoneStateEnum int
 
 const (
-	Off    ZoneStateEnum = 0
-	Auto   ZoneStateEnum = 1
-	Manual ZoneStateEnum = 2
+	Unknown ZoneStateEnum = 0
+	Off     ZoneStateEnum = 1
+	Auto    ZoneStateEnum = 2
+	Manual  ZoneStateEnum = 3
 )
 
 type ZoneState struct {
@@ -26,7 +27,6 @@ func (state ZoneState) String() string {
 		return "auto"
 	case Manual:
 		return fmt.Sprintf("manual (%.1f)", state.Temperature.Celsius)
-	default:
-		return "unknown"
 	}
+	return "unknown"
 }

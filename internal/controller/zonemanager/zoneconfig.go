@@ -46,3 +46,15 @@ func makeZoneConfig(config []configuration.ZoneConfig, allZones, allUsers map[in
 	}
 	return
 }
+
+func lookup(table map[int]string, id int, name string) (int, bool) {
+	if _, ok := table[id]; ok == true {
+		return id, true
+	}
+	for entryID, entryName := range table {
+		if entryName == name {
+			return entryID, true
+		}
+	}
+	return 0, false
+}

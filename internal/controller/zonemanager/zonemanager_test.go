@@ -13,7 +13,33 @@ import (
 )
 
 // TODO: timing-based testing can be unreliable
-// Could refactor to stub the Proxy and monitor the commands it receives?
+
+func TestZoneManager_Load(t *testing.T) {
+	proxy := tadoproxy.New("", "", "")
+	proxy.API = &mockapi.MockAPI{}
+	go proxy.Run()
+
+	zoneConfig := []configuration.ZoneConfig{
+		{
+			ZoneName: "bar",
+			Users:    []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+		},
+		{
+			ZoneName: "invalid",
+			Users:    []configuration.ZoneUser{{MobileDeviceName: "invalid"}},
+		},
+	}
+
+	mgr := zonemanager.New(zoneConfig, proxy)
+
+	if assert.Len(t, mgr.ZoneConfig, 1) {
+		if zone, ok := mgr.ZoneConfig[2]; assert.True(t, ok) {
+			if assert.Len(t, zone.Users, 1) {
+				assert.Equal(t, 2, zone.Users[0])
+			}
+		}
+	}
+}
 
 func TestZoneManager_AutoAway(t *testing.T) {
 	proxy := tadoproxy.New("", "", "")
@@ -25,21 +51,15 @@ func TestZoneManager_AutoAway(t *testing.T) {
 		Users:    []configuration.ZoneUser{{MobileDeviceName: "bar"}},
 	}}
 
-	mgr := zonemanager.New(zoneConfig, 10*time.Millisecond, proxy)
-	go mgr.Run()
+	mgr := zonemanager.New(zoneConfig, proxy)
 
-	assert.Eventually(t, func() bool {
-		response := make(chan map[int]model.ZoneState)
-		proxy.GetZones <- response
-		if states, ok := <-response; ok == true {
-			if state, ok := states[2]; ok == true {
-				if state.State == model.Off {
-					return true
-				}
-			}
+	updates := mgr.Update()
+
+	if assert.Len(t, updates, 1) {
+		if state, ok := updates[2]; assert.True(t, ok) {
+			assert.Equal(t, model.Off, state.State)
 		}
-		return false
-	}, 500*time.Millisecond, 10*time.Millisecond)
+	}
 
 	// TODO: test when a user comes home
 }
@@ -59,7 +79,7 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 	response := make(chan map[int]model.ZoneState)
 	proxy.GetZones <- response
 	if states, ok := <-response; assert.True(t, ok) {
-		if state, ok := states[2]; assert.True(t, ok) {
+		if state, ok2 := states[2]; assert.True(t, ok2) {
 			assert.Equal(t, model.Manual, state.State)
 		}
 	}
@@ -72,20 +92,11 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 		},
 	}}
 
-	mgr := zonemanager.New(zoneConfig, 10*time.Millisecond, proxy)
-	go mgr.Run()
+	mgr := zonemanager.New(zoneConfig, proxy)
 
 	assert.Eventually(t, func() bool {
-		response = make(chan map[int]model.ZoneState)
-		proxy.GetZones <- response
-		if states, ok := <-response; ok == true {
-			if state, ok := states[2]; ok == true {
-				if state.State == model.Auto {
-					return true
-				}
-			}
-		}
-		return false
+		updates := mgr.Update()
+		return len(updates) == 1 && updates[2].State == model.Auto
 	}, 500*time.Millisecond, 10*time.Millisecond)
 }
 
@@ -104,7 +115,7 @@ func TestZoneManager_NightTime(t *testing.T) {
 	response := make(chan map[int]model.ZoneState)
 	proxy.GetZones <- response
 	if states, ok := <-response; assert.True(t, ok) {
-		if state, ok := states[2]; assert.True(t, ok) {
+		if state, ok2 := states[2]; assert.True(t, ok2) {
 			assert.Equal(t, model.Manual, state.State)
 		}
 	}
@@ -122,20 +133,11 @@ func TestZoneManager_NightTime(t *testing.T) {
 		},
 	}}
 
-	mgr := zonemanager.New(zoneConfig, 10*time.Millisecond, proxy)
-	go mgr.Run()
+	mgr := zonemanager.New(zoneConfig, proxy)
 
 	assert.Eventually(t, func() bool {
-		response = make(chan map[int]model.ZoneState)
-		proxy.GetZones <- response
-		if states, ok := <-response; ok == true {
-			if state, ok := states[2]; ok == true {
-				if state.State == model.Auto {
-					return true
-				}
-			}
-		}
-		return false
+		updates := mgr.Update()
+		return len(updates) == 1 && updates[2].State == model.Auto
 	}, 2000*time.Millisecond, 10*time.Millisecond)
 }
 
@@ -154,7 +156,7 @@ func TestZoneManager_NightTime_Fail(t *testing.T) {
 	response := make(chan map[int]model.ZoneState)
 	proxy.GetZones <- response
 	if states, ok := <-response; assert.True(t, ok) {
-		if state, ok := states[2]; assert.True(t, ok) {
+		if state, ok2 := states[2]; assert.True(t, ok2) {
 			assert.Equal(t, model.Manual, state.State)
 		}
 	}
@@ -172,19 +174,10 @@ func TestZoneManager_NightTime_Fail(t *testing.T) {
 		},
 	}}
 
-	mgr := zonemanager.New(zoneConfig, 10*time.Millisecond, proxy)
-	go mgr.Run()
+	mgr := zonemanager.New(zoneConfig, proxy)
 
 	assert.Never(t, func() bool {
-		response = make(chan map[int]model.ZoneState)
-		proxy.GetZones <- response
-		if states, ok := <-response; ok == true {
-			if state, ok := states[2]; ok == true {
-				if state.State == model.Auto {
-					return true
-				}
-			}
-		}
-		return false
+		updates := mgr.Update()
+		return len(updates) == 1 && updates[2].State == model.Auto
 	}, 500*time.Millisecond, 10*time.Millisecond)
 }

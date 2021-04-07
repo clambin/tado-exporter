@@ -9,46 +9,31 @@ import (
 )
 
 type Manager struct {
-	Stop       chan struct{}
 	ZoneConfig map[int]model.ZoneConfig
 
 	proxy     *tadoproxy.Proxy
-	ticker    *time.Ticker
 	expiry    map[int]time.Time
 	nightTime map[int]time.Time
-	allZones  map[int]string
-	allUsers  map[int]string
+	AllZones  map[int]string
+	AllUsers  map[int]string
 }
 
-func New(zoneConfig []configuration.ZoneConfig, interval time.Duration, proxy *tadoproxy.Proxy) *Manager {
+func New(zoneConfig []configuration.ZoneConfig, proxy *tadoproxy.Proxy) *Manager {
 	mgr := &Manager{
-		Stop:      make(chan struct{}),
 		proxy:     proxy,
-		ticker:    time.NewTicker(interval),
 		expiry:    make(map[int]time.Time),
 		nightTime: make(map[int]time.Time),
-		allZones:  buildZoneLookup(proxy),
-		allUsers:  buildUserLookup(proxy),
+		AllZones:  proxy.GetAllZones(),
+		AllUsers:  proxy.GetAllUsers(),
 	}
-	mgr.ZoneConfig = makeZoneConfig(zoneConfig, mgr.allZones, mgr.allUsers)
+	mgr.ZoneConfig = makeZoneConfig(zoneConfig, mgr.AllZones, mgr.AllUsers)
 
 	return mgr
 }
 
-func (mgr *Manager) Run() {
-loop:
-	for {
-		select {
-		case <-mgr.ticker.C:
-			mgr.evaluateZones()
-		case <-mgr.Stop:
-			break loop
-		}
-	}
-	close(mgr.Stop)
-}
+func (mgr *Manager) Update() (changes map[int]model.ZoneState) {
+	changes = make(map[int]model.ZoneState)
 
-func (mgr *Manager) evaluateZones() {
 	response := make(chan map[int]model.ZoneState)
 	mgr.proxy.GetZones <- response
 
@@ -56,16 +41,10 @@ func (mgr *Manager) evaluateZones() {
 		newState := mgr.newZoneState(zoneID, state)
 
 		if newState != state {
-			mgr.proxy.SetZones <- map[int]model.ZoneState{zoneID: newState}
-
-			log.WithFields(log.Fields{
-				"zone":  mgr.allZones[zoneID],
-				"state": newState.String(),
-			}).Info("setting zone state")
-
-			// TODO: send a message to slack
+			changes[zoneID] = newState
 		}
 	}
+	return
 }
 
 func (mgr *Manager) newZoneState(zoneID int, state model.ZoneState) (newState model.ZoneState) {
@@ -120,7 +99,7 @@ func (mgr *Manager) isZoneOverlayExpired(zoneID int) (expired bool) {
 			mgr.expiry[zoneID] = time.Now().Add(config.LimitOverlay.Limit)
 
 			log.WithFields(log.Fields{
-				"zone":  mgr.allZones[zoneID],
+				"zone":  mgr.AllZones[zoneID],
 				"timer": mgr.expiry[zoneID],
 			}).Info("setting expiry timer for zone in overlay")
 		} else {
@@ -129,7 +108,7 @@ func (mgr *Manager) isZoneOverlayExpired(zoneID int) (expired bool) {
 				delete(mgr.expiry, zoneID)
 				expired = true
 
-				log.WithField("zone", mgr.allZones[zoneID]).Info("timer expired for zone in overlay")
+				log.WithField("zone", mgr.AllZones[zoneID]).Info("timer expired for zone in overlay")
 			}
 		}
 	}

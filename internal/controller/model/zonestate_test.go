@@ -17,6 +17,11 @@ func TestZoneState_String(t *testing.T) {
 		want   string
 	}{
 		{
+			name:   "unknown",
+			fields: fields{State: model.Unknown},
+			want:   "unknown",
+		},
+		{
 			name:   "auto",
 			fields: fields{State: model.Auto},
 			want:   "auto",

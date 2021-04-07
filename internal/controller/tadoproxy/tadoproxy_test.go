@@ -99,17 +99,15 @@ func TestAllZones(t *testing.T) {
 
 	go proxy.Run()
 
-	response := make(chan map[int]string)
+	zones := proxy.GetAllZones()
 
-	proxy.GetAllZones <- response
-	zones := <-response
-
-	assert.Len(t, zones, 2)
-	if name, ok := zones[1]; assert.True(t, ok) {
-		assert.Equal(t, "foo", name)
-	}
-	if name, ok := zones[2]; assert.True(t, ok) {
-		assert.Equal(t, "bar", name)
+	if assert.Len(t, zones, 2) {
+		if name, ok := zones[1]; assert.True(t, ok) {
+			assert.Equal(t, "foo", name)
+		}
+		if name, ok := zones[2]; assert.True(t, ok) {
+			assert.Equal(t, "bar", name)
+		}
 	}
 
 	proxy.Stop <- struct{}{}
@@ -126,17 +124,15 @@ func TestAllUsers(t *testing.T) {
 
 	go proxy.Run()
 
-	response := make(chan map[int]string)
+	users := proxy.GetAllUsers()
 
-	proxy.GetAllUsers <- response
-	users := <-response
-
-	assert.Len(t, users, 2)
-	if name, ok := users[1]; assert.True(t, ok) {
-		assert.Equal(t, "foo", name)
-	}
-	if name, ok := users[2]; assert.True(t, ok) {
-		assert.Equal(t, "bar", name)
+	if assert.Len(t, users, 2) {
+		if name, ok := users[1]; assert.True(t, ok) {
+			assert.Equal(t, "foo", name)
+		}
+		if name, ok := users[2]; assert.True(t, ok) {
+			assert.Equal(t, "bar", name)
+		}
 	}
 
 	proxy.Stop <- struct{}{}
