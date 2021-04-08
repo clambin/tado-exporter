@@ -34,7 +34,7 @@ func TestZoneState_String(t *testing.T) {
 		{
 			name:   "manual",
 			fields: fields{State: model.Manual, Temperature: tado.Temperature{Celsius: 18.0}},
-			want:   "manual (18.0)",
+			want:   "manual (18.0ºC)",
 		},
 	}
 	for _, tt := range tests {

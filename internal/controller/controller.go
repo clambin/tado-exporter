@@ -1,7 +1,10 @@
 package controller
 
 import (
+	"fmt"
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/slack-go/slack"
 	"time"
 
 	//"github.com/clambin/tado-exporter/internal/controller/commands"
@@ -24,9 +27,17 @@ type Controller struct {
 // New creates a new Controller object
 func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration.ControllerConfiguration) (controller *Controller) {
 	if cfg != nil && cfg.Enabled {
-
 		proxy := tadoproxy.New(tadoUsername, tadoPassword, tadoClientSecret)
 		go proxy.Run()
+
+		controller = NewWithProxy(proxy, cfg)
+	}
+	return
+}
+
+// NewWithProxy creates a controller with a pre-existing proxy
+func NewWithProxy(proxy *tadoproxy.Proxy, cfg *configuration.ControllerConfiguration) (controller *Controller) {
+	if cfg != nil && cfg.Enabled {
 
 		controller = &Controller{
 			proxy:  proxy,
@@ -36,12 +47,12 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 		}
 
 		if cfg.TadoBot.Enabled {
-			callbacks := map[string]slackbot.CommandFunc{}
-			//	"rooms":        controller.doRooms,
-			//	"users":        controller.doUsers,
-			//	"rules":        controller.doRules,
-			//	// "set":          controller.doSetTemperature,
-			//}
+			callbacks := map[string]slackbot.CommandFunc{
+				"rooms": controller.doRooms,
+				"users": controller.doUsers,
+				//	"rules":        controller.doRules,
+				//	// "set":          controller.doSetTemperature,
+			}
 			var err error
 			if controller.tadoBot, err = slackbot.Create("tado "+version.BuildVersion, cfg.TadoBot.Token.Value, callbacks); err == nil {
 				go controller.tadoBot.Run()
@@ -56,22 +67,12 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 
 // Run the controller
 func (controller *Controller) Run() {
+	controller.update()
 loop:
 	for {
 		select {
 		case <-controller.ticker.C:
-			if updates := controller.mgr.Update(); len(updates) > 0 {
-				controller.proxy.SetZones <- updates
-
-				for id, state := range updates {
-					log.WithFields(log.Fields{
-						"zone":  controller.mgr.AllZones[id],
-						"state": state.String(),
-					}).Info("setting zone state")
-
-					// TODO: send a message to slack
-				}
-			}
+			controller.update()
 		case <-controller.stop:
 			break loop
 		}
@@ -82,4 +83,40 @@ loop:
 // Stop the controller
 func (controller *Controller) Stop() {
 	controller.stop <- struct{}{}
+}
+
+func (controller *Controller) update() {
+	updates := controller.mgr.Update()
+
+	if len(updates) > 0 {
+		controller.proxy.SetZones <- updates
+
+		if controller.tadoBot != nil {
+			controller.tadoBot.PostChannel <- controller.makeAttachments(updates)
+		}
+	}
+}
+
+func (controller *Controller) makeAttachments(updates map[int]model.ZoneState) (attachments []slack.Attachment) {
+	for id, state := range updates {
+		log.WithFields(log.Fields{
+			"zone":  controller.mgr.AllZones[id],
+			"state": state.String(),
+		}).Info("setting zone state")
+
+		var title string
+		switch state.State {
+		case model.Off:
+			title = "switching off heating in " + controller.mgr.AllZones[id]
+		case model.Auto:
+			title = "switching off manual temperature control in " + controller.mgr.AllZones[id]
+		case model.Manual:
+			title = fmt.Sprintf("setting %s to %.1fº", controller.mgr.AllZones[id], state.Temperature.Celsius)
+		default:
+			title = "unknown state detected for " + controller.mgr.AllZones[id]
+		}
+		attachments = append(attachments, slack.Attachment{Color: "good", Title: title})
+	}
+
+	return
 }

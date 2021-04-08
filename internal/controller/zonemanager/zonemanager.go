@@ -48,29 +48,32 @@ func (mgr *Manager) Update() (changes map[int]model.ZoneState) {
 }
 
 func (mgr *Manager) newZoneState(zoneID int, state model.ZoneState) (newState model.ZoneState) {
-	// if we don't trigger any rules, keep the same proxy
+	// if we don't trigger any rules, keep the same state
 	newState = state
 
 	// if all users are away -> set 'off'
 	if mgr.allUsersAway(zoneID) {
 		newState.State = model.Off
-	} else if state.State != model.Auto {
-		// if manual and after next nighttime -> set to auto
-		if state.State == model.Manual && mgr.isNightTime(zoneID) {
-			newState.State = model.Auto
-		}
-
-		// if manual & longer than max time -> set to auto
-		if state.State == model.Manual && mgr.isZoneOverlayExpired(zoneID) {
-			newState.State = model.Auto
-		}
-
 	} else {
-		// zone is in auto mode, so remove any timers
-		delete(mgr.expiry, zoneID)
-		delete(mgr.nightTime, zoneID)
+		switch state.State {
+		case model.Off:
+			// one or more users are now home. switch back to auto
+			newState.State = model.Auto
+		case model.Manual:
+			// in manual and after next nighttime. set to auto
+			if mgr.isNightTime(zoneID) {
+				newState.State = model.Auto
+			}
+			// if manual & longer than max time -> set to auto
+			if mgr.isZoneOverlayExpired(zoneID) {
+				newState.State = model.Auto
+			}
+		case model.Auto:
+			// zone is in auto mode, so remove any timers
+			delete(mgr.expiry, zoneID)
+			delete(mgr.nightTime, zoneID)
+		}
 	}
-
 	return
 }
 

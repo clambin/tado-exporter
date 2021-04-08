@@ -35,7 +35,7 @@ controller:
       limit: 1h
     nightTime:
       enabled: true
-      time: "23:30:15"
+      time: "23:30"
 `)
 
 	f, err := ioutil.TempFile("", "tmp")
@@ -80,7 +80,7 @@ controller:
 			assert.True(t, (*cfg.Controller.ZoneConfig)[0].NightTime.Enabled)
 			assert.Equal(t, 23, (*cfg.Controller.ZoneConfig)[0].NightTime.Time.Hour)
 			assert.Equal(t, 30, (*cfg.Controller.ZoneConfig)[0].NightTime.Time.Minutes)
-			assert.Equal(t, 15, (*cfg.Controller.ZoneConfig)[0].NightTime.Time.Seconds)
+			assert.Equal(t, 0, (*cfg.Controller.ZoneConfig)[0].NightTime.Time.Seconds)
 		}
 	}
 }

@@ -26,7 +26,7 @@ func (state ZoneState) String() string {
 	case Auto:
 		return "auto"
 	case Manual:
-		return fmt.Sprintf("manual (%.1f)", state.Temperature.Celsius)
+		return fmt.Sprintf("manual (%.1fºC)", state.Temperature.Celsius)
 	}
 	return "unknown"
 }

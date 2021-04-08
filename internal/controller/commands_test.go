@@ -1,8 +1,10 @@
 package controller
 
-/*
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/tadoproxy"
+	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
 	"strings"
@@ -11,28 +13,48 @@ import (
 )
 
 func TestController_doRooms(t *testing.T) {
-	ctrl := New("", "", "", nil)
-	ctrl.API = &mockapi.MockAPI{}
+	cfg := &configuration.ControllerConfiguration{
+		Enabled:    true,
+		Interval:   1 * time.Minute,
+		ZoneConfig: &[]configuration.ZoneConfig{},
+	}
 
-	err := ctrl.Run()
-	assert.Nil(t, err)
+	proxy := tadoproxy.New("", "", "")
+	proxy.API = &mockapi.MockAPI{}
+	go proxy.Run()
+
+	ctrl := NewWithProxy(proxy, cfg)
+	go ctrl.Run()
+
+	ctrl.proxy.SetZones <- map[int]model.ZoneState{
+		2: {State: model.Manual, Temperature: tado.Temperature{Celsius: 25.0}},
+	}
 
 	output := ctrl.doRooms()
 	if assert.Len(t, output, 1) {
 		lines := strings.Split(output[0].Text, "\n")
 		if assert.Len(t, lines, 2) {
-			assert.Equal(t, "bar: 19.9ºC (target: 25.0ºC MANUAL)", lines[0])
-			assert.Equal(t, "foo: 19.9ºC (target: 20.0ºC MANUAL)", lines[1])
+			assert.Equal(t, "bar: manual (25.0ºC)", lines[0])
+			assert.Equal(t, "foo: auto", lines[1])
 		}
 	}
+
+	ctrl.Stop()
 }
 
 func TestController_doUsers(t *testing.T) {
-	ctrl := New("", "", "", nil)
-	ctrl.API = &mockapi.MockAPI{}
+	cfg := &configuration.ControllerConfiguration{
+		Enabled:    true,
+		Interval:   1 * time.Minute,
+		ZoneConfig: &[]configuration.ZoneConfig{},
+	}
 
-	err := ctrl.Run()
-	assert.Nil(t, err)
+	proxy := tadoproxy.New("", "", "")
+	proxy.API = &mockapi.MockAPI{}
+	go proxy.Run()
+
+	ctrl := NewWithProxy(proxy, cfg)
+	go ctrl.Run()
 
 	output := ctrl.doUsers()
 	if assert.Len(t, output, 1) {
@@ -42,8 +64,11 @@ func TestController_doUsers(t *testing.T) {
 			assert.Equal(t, "foo: home", lines[1])
 		}
 	}
+
+	ctrl.Stop()
 }
 
+/*
 func TestController_doSetTemperature(t *testing.T) {
 	ctrl := New("", "", "", nil)
 	ctrl.API = &mockapi.MockAPI{}

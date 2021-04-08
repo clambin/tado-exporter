@@ -1,13 +1,10 @@
 package configuration
 
 import (
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -78,28 +75,21 @@ type ZoneNightTimeTimestamp struct {
 func (ts *ZoneNightTimeTimestamp) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	var buf string
 	if err = unmarshal(&buf); err == nil {
-		parts := strings.Split(buf, ":")
-		if len(parts) < 2 || len(parts) > 3 {
-			err = fmt.Errorf("invalid time format: %s", buf)
-		} else {
-			hour, err2 := strconv.Atoi(parts[0])
-			minutes, err3 := strconv.Atoi(parts[1])
-			var seconds int
-			var err4 error
-			if len(parts) == 3 {
-				seconds, err4 = strconv.Atoi(parts[2])
-			}
+		ts.Hour, ts.Minutes, ts.Seconds, err = parseTimestamp(buf)
+	}
+	return
+}
 
-			if err2 == nil && hour >= 0 && hour <= 23 &&
-				err3 == nil && minutes >= 0 && minutes <= 59 &&
-				err4 == nil && seconds >= 0 && seconds <= 59 {
-				ts.Hour = hour
-				ts.Minutes = minutes
-				ts.Seconds = seconds
-			} else {
-				err = fmt.Errorf("invalid time format: %s", buf)
-			}
-		}
+func parseTimestamp(buf string) (hour, minute, second int, err error) {
+	var timestamp time.Time
+	timestamp, err = time.Parse("15:04:05", buf)
+	if err != nil {
+		timestamp, err = time.Parse("15:04", buf)
+	}
+	if err == nil {
+		hour = timestamp.Hour()
+		minute = timestamp.Minute()
+		second = timestamp.Second()
 	}
 	return
 }

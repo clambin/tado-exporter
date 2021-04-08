@@ -1,38 +1,34 @@
 package controller
 
-/*
 import (
-	"fmt"
-	"github.com/clambin/tado-exporter/internal/controller/commands"
-	"github.com/clambin/tado-exporter/internal/controller/tadosetter"
-	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/slack-go/slack"
 	"sort"
-	"strconv"
 	"strings"
 )
 
-func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
-	var (
-		err           error
-		mobileDevices []*tado.MobileDevice
-	)
+func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
 	output := make([]string, 0)
-	if mobileDevices, err = controller.GetMobileDevices(); err == nil {
-		for _, device := range mobileDevices {
-			if device.Settings.GeoTrackingEnabled {
-				state := "away"
-				if device.Location.AtHome {
-					state = "home"
-				}
-				if device.Location.Stale {
-					state += " (stale)"
-				}
-				output = append(output, fmt.Sprintf("%s: %s", device.Name, state))
-			}
-		}
-		sort.Strings(output)
+	for id, zoneState := range controller.proxy.GetAllZoneStates() {
+		zoneName := controller.mgr.AllZones[id]
+		output = append(output, zoneName+": "+zoneState.String())
 	}
+	sort.Strings(output)
+	return []slack.Attachment{
+		{
+			Color: "good",
+			Title: "Rooms:",
+			Text:  strings.Join(output, "\n"),
+		},
+	}
+}
+
+func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
+	output := make([]string, 0)
+	for id, userState := range controller.proxy.GetAllUserStates() {
+		userName := controller.mgr.AllUsers[id]
+		output = append(output, userName+": "+userState.String())
+	}
+	sort.Strings(output)
 	return []slack.Attachment{
 		{
 			Color: "good",
@@ -41,6 +37,8 @@ func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
 		},
 	}
 }
+
+/*
 
 func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
 	var (
