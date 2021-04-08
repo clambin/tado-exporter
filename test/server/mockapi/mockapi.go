@@ -9,14 +9,8 @@ type MockAPI struct {
 
 func (client *MockAPI) GetZones() ([]*tado.Zone, error) {
 	return []*tado.Zone{
-		{
-			ID:   1,
-			Name: "foo",
-		},
-		{
-			ID:   2,
-			Name: "bar",
-		},
+		{ID: 1, Name: "foo"},
+		{ID: 2, Name: "bar"},
 	}, nil
 }
 

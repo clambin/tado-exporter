@@ -181,3 +181,29 @@ func TestZoneManager_NightTime_Fail(t *testing.T) {
 		return len(updates) == 1 && updates[2].State == model.Auto
 	}, 500*time.Millisecond, 10*time.Millisecond)
 }
+
+func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
+	proxy := tadoproxy.New("", "", "")
+	proxy.API = &mockapi.MockAPI{}
+	go proxy.Run()
+
+	proxy.SetZones <- map[int]model.ZoneState{2: {State: model.Manual, Temperature: tado.Temperature{Celsius: 18.5}}}
+
+	zoneConfig := []configuration.ZoneConfig{{
+		ZoneName: "bar",
+		LimitOverlay: configuration.ZoneLimitOverlay{
+			Enabled: true,
+			Limit:   100 * time.Millisecond,
+		},
+	}}
+
+	mgr := zonemanager.New(zoneConfig, proxy)
+
+	b.ResetTimer()
+	for {
+		updates := mgr.Update()
+		if len(updates) == 1 && updates[2].State == model.Auto {
+			break
+		}
+	}
+}

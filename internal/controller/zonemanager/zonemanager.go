@@ -14,8 +14,6 @@ type Manager struct {
 	proxy     *tadoproxy.Proxy
 	expiry    map[int]time.Time
 	nightTime map[int]time.Time
-	AllZones  map[int]string
-	AllUsers  map[int]string
 }
 
 func New(zoneConfig []configuration.ZoneConfig, proxy *tadoproxy.Proxy) *Manager {
@@ -23,10 +21,8 @@ func New(zoneConfig []configuration.ZoneConfig, proxy *tadoproxy.Proxy) *Manager
 		proxy:     proxy,
 		expiry:    make(map[int]time.Time),
 		nightTime: make(map[int]time.Time),
-		AllZones:  proxy.GetAllZones(),
-		AllUsers:  proxy.GetAllUsers(),
 	}
-	mgr.ZoneConfig = makeZoneConfig(zoneConfig, mgr.AllZones, mgr.AllUsers)
+	mgr.ZoneConfig = makeZoneConfig(zoneConfig, mgr.proxy.GetAllZones(), mgr.proxy.GetAllUsers())
 
 	return mgr
 }
@@ -53,6 +49,7 @@ func (mgr *Manager) newZoneState(zoneID int, state model.ZoneState) (newState mo
 
 	// if all users are away -> set 'off'
 	if mgr.allUsersAway(zoneID) {
+		// TODO: this ignored waitTime
 		newState.State = model.Off
 	} else {
 		switch state.State {
@@ -102,7 +99,7 @@ func (mgr *Manager) isZoneOverlayExpired(zoneID int) (expired bool) {
 			mgr.expiry[zoneID] = time.Now().Add(config.LimitOverlay.Limit)
 
 			log.WithFields(log.Fields{
-				"zone":  mgr.AllZones[zoneID],
+				"zone":  mgr.proxy.GetAllZones()[zoneID],
 				"timer": mgr.expiry[zoneID],
 			}).Info("setting expiry timer for zone in overlay")
 		} else {
@@ -111,7 +108,7 @@ func (mgr *Manager) isZoneOverlayExpired(zoneID int) (expired bool) {
 				delete(mgr.expiry, zoneID)
 				expired = true
 
-				log.WithField("zone", mgr.AllZones[zoneID]).Info("timer expired for zone in overlay")
+				log.WithField("zone", mgr.proxy.GetAllZones()[zoneID]).Info("timer expired for zone in overlay")
 			}
 		}
 	}

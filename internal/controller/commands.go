@@ -8,8 +8,9 @@ import (
 
 func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
 	output := make([]string, 0)
+	zoneNames := controller.proxy.GetAllZones()
 	for id, zoneState := range controller.proxy.GetAllZoneStates() {
-		zoneName := controller.mgr.AllZones[id]
+		zoneName := zoneNames[id]
 		output = append(output, zoneName+": "+zoneState.String())
 	}
 	sort.Strings(output)
@@ -24,8 +25,9 @@ func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
 
 func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
 	output := make([]string, 0)
+	userNames := controller.proxy.GetAllUsers()
 	for id, userState := range controller.proxy.GetAllUserStates() {
-		userName := controller.mgr.AllUsers[id]
+		userName := userNames[id]
 		output = append(output, userName+": "+userState.String())
 	}
 	sort.Strings(output)

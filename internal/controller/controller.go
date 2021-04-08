@@ -99,21 +99,24 @@ func (controller *Controller) update() {
 
 func (controller *Controller) makeAttachments(updates map[int]model.ZoneState) (attachments []slack.Attachment) {
 	for id, state := range updates {
+
+		zoneName := controller.proxy.GetAllZones()[id]
+
 		log.WithFields(log.Fields{
-			"zone":  controller.mgr.AllZones[id],
+			"zone":  zoneName,
 			"state": state.String(),
 		}).Info("setting zone state")
 
 		var title string
 		switch state.State {
 		case model.Off:
-			title = "switching off heating in " + controller.mgr.AllZones[id]
+			title = "switching off heating in " + zoneName
 		case model.Auto:
-			title = "switching off manual temperature control in " + controller.mgr.AllZones[id]
+			title = "switching off manual temperature control in " + zoneName
 		case model.Manual:
-			title = fmt.Sprintf("setting %s to %.1fº", controller.mgr.AllZones[id], state.Temperature.Celsius)
+			title = fmt.Sprintf("setting %s to %.1fº", zoneName, state.Temperature.Celsius)
 		default:
-			title = "unknown state detected for " + controller.mgr.AllZones[id]
+			title = "unknown state detected for " + zoneName
 		}
 		attachments = append(attachments, slack.Attachment{Color: "good", Title: title})
 	}
