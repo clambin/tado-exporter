@@ -7,36 +7,73 @@ import (
 	"github.com/slack-go/slack"
 )
 
-func (scheduler *Scheduler) makeAttachment(task *Task) (attachments []slack.Attachment) {
+func (scheduler *Scheduler) notifyPendingTask(task *Task) (attachments []slack.Attachment) {
+	zoneName := scheduler.getZoneName(task.ZoneID)
+
+	log.WithFields(log.Fields{"zone": zoneName, "state": task.State.String()}).Debug("queuing zone state change")
+
+	var title, text string
+	switch task.State.State {
+	case model.Off:
+		title = zoneName + " users not home"
+		text = "switching off heating in " + task.When.String()
+	case model.Auto:
+		title = "manual temperature setting detected in " + zoneName
+		text = "will move back to auto mode in " + task.When.String()
+	case model.Manual:
+		title = "setting " + zoneName + " to manual temperature setting"
+		text = fmt.Sprintf("setting to %.1fº in %s",
+			task.State.Temperature.Celsius,
+			task.When.String(),
+		)
+	default:
+		title = "unknown state detected for " + zoneName
+	}
+
+	return []slack.Attachment{{
+		Color: "good",
+		Title: title,
+		Text:  text,
+	}}
+}
+
+func (scheduler *Scheduler) notifyExecutedTask(task *Task) (attachments []slack.Attachment) {
 	zoneName := scheduler.getZoneName(task.ZoneID)
 
 	log.WithFields(log.Fields{"zone": zoneName, "state": task.State.String()}).Info("setting zone state")
 
-	var title string
+	var title, text string
 	switch task.State.State {
 	case model.Off:
 		title = "switching off heating in " + zoneName
+		text = "users not home"
 	case model.Auto:
-		title = "switching off manual temperature control in " + zoneName
+		title = "Setting " + zoneName + " back to auto mode"
+		text = "overlay expired"
 	case model.Manual:
-		title = fmt.Sprintf("setting %s to %.1fº", zoneName, task.State.Temperature.Celsius)
+		title = "setting " + zoneName + " to manual temperature"
+		text = fmt.Sprintf("setting to %.1fº", task.State.Temperature.Celsius)
 	default:
 		title = "unknown state detected for " + zoneName
 	}
 	return []slack.Attachment{{
 		Color: "good",
 		Title: title,
+		Text:  text,
 	}}
 }
 
 func (scheduler *Scheduler) getZoneName(zoneID int) (name string) {
-	// TODO: cache this?
-	name = "unknown"
-	if zones, err := scheduler.API.GetZones(); err == nil {
-		for _, zone := range zones {
-			if zone.ID == zoneID {
-				name = zone.Name
-				break
+	var ok bool
+	if name, ok = scheduler.nameCache[zoneID]; ok == false {
+		name = "unknown"
+		if zones, err := scheduler.API.GetZones(); err == nil {
+			for _, zone := range zones {
+				if zone.ID == zoneID {
+					name = zone.Name
+					scheduler.nameCache[zoneID] = name
+					break
+				}
 			}
 		}
 	}

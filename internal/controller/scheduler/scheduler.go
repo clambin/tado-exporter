@@ -15,6 +15,7 @@ type Scheduler struct {
 	fire        chan *Task
 	tasks       map[int]*scheduledTask
 	postChannel slackbot.PostChannel
+	nameCache   map[int]string
 }
 
 type Task struct {
@@ -31,6 +32,7 @@ func New(API tado.API, postChannel slackbot.PostChannel) *Scheduler {
 		fire:        make(chan *Task),
 		tasks:       make(map[int]*scheduledTask),
 		postChannel: postChannel,
+		nameCache:   make(map[int]string),
 	}
 }
 
@@ -70,6 +72,10 @@ func (scheduler *Scheduler) schedule(task *Task) {
 		"state": task.State.String(),
 		"when":  task.When.String(),
 	}).Debug("scheduled task")
+
+	if scheduler.postChannel != nil {
+		scheduler.postChannel <- scheduler.notifyPendingTask(task)
+	}
 }
 
 func (scheduler *Scheduler) runTask(task *Task) {
@@ -84,7 +90,7 @@ func (scheduler *Scheduler) runTask(task *Task) {
 	}
 	if err == nil {
 		if scheduler.postChannel != nil {
-			scheduler.postChannel <- scheduler.makeAttachment(task)
+			scheduler.postChannel <- scheduler.notifyExecutedTask(task)
 		}
 	} else {
 		log.WithField("err", err).Debug("unable to update zone")

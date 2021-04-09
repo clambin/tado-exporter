@@ -75,5 +75,5 @@ func TestScheduler_Run(t *testing.T) {
 		return !ok
 	}, 500*time.Millisecond, 10*time.Millisecond)
 
-	assert.Len(t, postChannel, 3)
+	assert.Len(t, postChannel, 7)
 }

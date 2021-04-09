@@ -59,6 +59,12 @@ func (mgr *Manager) update(update poller.Update) {
 				mgr.queued[zoneID] = newState
 			}
 		}
+
+		// if we're back in auto mode, delete the queued state so we can switch back to overlay
+		// would be cleaner to do this when the auto task has been processed by the scheduler
+		if state.State == model.Auto && newState.State == model.Auto {
+			delete(mgr.queued, zoneID)
+		}
 	}
 	return
 }

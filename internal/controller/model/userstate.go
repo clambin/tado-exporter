@@ -8,6 +8,7 @@ const (
 	UserAway    UserState = 2
 )
 
+/*
 func (state UserState) String() string {
 	switch state {
 	case UserHome:
@@ -17,3 +18,4 @@ func (state UserState) String() string {
 	}
 	return "unknown"
 }
+*/

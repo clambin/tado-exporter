@@ -61,6 +61,10 @@ var fakeUpdates = []poller.Update{
 		ZoneStates: map[int]model.ZoneState{2: {State: model.Manual, Temperature: tado.Temperature{Celsius: 20.0}}},
 		UserStates: map[int]model.UserState{2: model.UserHome},
 	},
+	{
+		ZoneStates: map[int]model.ZoneState{2: {State: model.Auto, Temperature: tado.Temperature{Celsius: 25.0}}},
+		UserStates: map[int]model.UserState{2: model.UserHome},
+	},
 }
 
 func TestZoneManager_AutoAway(t *testing.T) {
@@ -80,7 +84,7 @@ func TestZoneManager_AutoAway(t *testing.T) {
 	if assert.Nil(t, err) {
 		go mgr.Run()
 
-		// user comes home
+		// user is away
 		updates <- fakeUpdates[0]
 		updated, ok := <-result
 
@@ -118,8 +122,24 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 	if assert.Nil(t, err) {
 		go mgr.Run()
 
+		// manual mode
 		updates <- fakeUpdates[2]
 		updated, ok := <-result
+
+		assert.True(t, ok)
+		assert.Equal(t, 2, updated.ZoneID)
+		assert.Equal(t, model.Auto, updated.State.State)
+		assert.Equal(t, 20*time.Minute, updated.When)
+
+		// back to auto mode
+		updates <- fakeUpdates[3]
+		assert.Never(t, func() bool {
+			return len(result) > 0
+		}, 100*time.Millisecond, 10*time.Millisecond)
+
+		// back to manual mode
+		updates <- fakeUpdates[2]
+		updated, ok = <-result
 
 		assert.True(t, ok)
 		assert.Equal(t, 2, updated.ZoneID)
