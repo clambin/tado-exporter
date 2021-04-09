@@ -15,14 +15,14 @@ func TestWeatherInfoState(t *testing.T) {
 		SolarIntensity:     tado.Percentage{Percentage: 50.0},
 		WeatherState:       tado.Value{Value: "SUNNY"},
 	}
-	exporter.reportWeather(&weatherInfo)
+	exporter.reportWeather(weatherInfo)
 
 	value, err := metrics.LoadValue("tado_weather", "SUNNY")
 	assert.Nil(t, err)
 	assert.Equal(t, 1.0, value)
 
 	weatherInfo.WeatherState.Value = "RAINING"
-	exporter.reportWeather(&weatherInfo)
+	exporter.reportWeather(weatherInfo)
 
 	value, err = metrics.LoadValue("tado_weather", "RAINING")
 	assert.Nil(t, err)

@@ -3,132 +3,116 @@ package zonemanager
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/model"
-	"github.com/clambin/tado-exporter/internal/controller/tadoproxy"
-	log "github.com/sirupsen/logrus"
+	"github.com/clambin/tado-exporter/internal/controller/poller"
+	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/pkg/tado"
 	"time"
 )
 
 type Manager struct {
+	API        tado.API
 	ZoneConfig map[int]model.ZoneConfig
-
-	proxy     *tadoproxy.Proxy
-	expiry    map[int]time.Time
-	nightTime map[int]time.Time
+	Cancel     chan struct{}
+	Update     chan poller.Update
+	queued     map[int]model.ZoneState
+	scheduler  chan *scheduler.Task
 }
 
-func New(zoneConfig []configuration.ZoneConfig, proxy *tadoproxy.Proxy) *Manager {
-	mgr := &Manager{
-		proxy:     proxy,
-		expiry:    make(map[int]time.Time),
-		nightTime: make(map[int]time.Time),
+func New(API tado.API, zoneConfig []configuration.ZoneConfig, updater chan poller.Update, scheduler chan *scheduler.Task) (mgr *Manager, err error) {
+	mgr = &Manager{
+		API:       API,
+		Cancel:    make(chan struct{}),
+		Update:    updater,
+		queued:    make(map[int]model.ZoneState),
+		scheduler: scheduler,
 	}
-	mgr.ZoneConfig = makeZoneConfig(zoneConfig, mgr.proxy.GetAllZones(), mgr.proxy.GetAllUsers())
+	mgr.ZoneConfig, err = mgr.makeZoneConfig(zoneConfig)
 
-	return mgr
+	return
 }
 
-func (mgr *Manager) Update() (changes map[int]model.ZoneState) {
-	changes = make(map[int]model.ZoneState)
+func (mgr *Manager) Run() {
+loop:
+	for {
+		select {
+		case <-mgr.Cancel:
+			break loop
+		case update := <-mgr.Update:
+			mgr.update(update)
+		}
+	}
+}
 
-	response := make(chan map[int]model.ZoneState)
-	mgr.proxy.GetZones <- response
-
-	for zoneID, state := range <-response {
-		newState := mgr.newZoneState(zoneID, state)
+func (mgr *Manager) update(update poller.Update) {
+	for zoneID, state := range update.ZoneStates {
+		newState, when := mgr.newZoneState(zoneID, update)
 
 		if newState != state {
-			changes[zoneID] = newState
+			// check if we've already queued this update with the scheduler
+			if queuedState, ok := mgr.queued[zoneID]; !ok || queuedState != newState {
+				// queue the update
+				mgr.scheduler <- &scheduler.Task{
+					ZoneID: zoneID,
+					State:  newState,
+					When:   when,
+				}
+				mgr.queued[zoneID] = newState
+			}
 		}
 	}
 	return
 }
 
-func (mgr *Manager) newZoneState(zoneID int, state model.ZoneState) (newState model.ZoneState) {
+func (mgr *Manager) newZoneState(zoneID int, update poller.Update) (newState model.ZoneState, when time.Duration) {
 	// if we don't trigger any rules, keep the same state
-	newState = state
+	newState = update.ZoneStates[zoneID]
 
 	// if all users are away -> set 'off'
-	if mgr.allUsersAway(zoneID) {
-		// TODO: this ignored waitTime
-		newState.State = model.Off
-	} else {
-		switch state.State {
-		case model.Off:
-			// one or more users are now home. switch back to auto
-			newState.State = model.Auto
-		case model.Manual:
-			// in manual and after next nighttime. set to auto
-			if mgr.isNightTime(zoneID) {
-				newState.State = model.Auto
-			}
-			// if manual & longer than max time -> set to auto
-			if mgr.isZoneOverlayExpired(zoneID) {
-				newState.State = model.Auto
-			}
-		case model.Auto:
-			// zone is in auto mode, so remove any timers
-			delete(mgr.expiry, zoneID)
-			delete(mgr.nightTime, zoneID)
-		}
-	}
-	return
-}
-
-func (mgr *Manager) allUsersAway(zoneID int) (away bool) {
-	if config, ok := mgr.ZoneConfig[zoneID]; ok == true && len(config.Users) > 0 {
-
-		responseChannel := make(chan map[int]model.UserState)
-		mgr.proxy.GetUsers <- responseChannel
-		userStates := <-responseChannel
-
-		away = true
-
-		for _, userID := range config.Users {
-			if userStates[userID] != model.UserAway {
-				away = false
-				break
-			}
-		}
-	}
-	return
-}
-
-func (mgr *Manager) isZoneOverlayExpired(zoneID int) (expired bool) {
-	if config, configured := mgr.ZoneConfig[zoneID]; configured == true && config.LimitOverlay.Enabled == true {
-		if expiry, ok := mgr.expiry[zoneID]; ok == false {
-			mgr.expiry[zoneID] = time.Now().Add(config.LimitOverlay.Limit)
-
-			log.WithFields(log.Fields{
-				"zone":  mgr.proxy.GetAllZones()[zoneID],
-				"timer": mgr.expiry[zoneID],
-			}).Info("setting expiry timer for zone in overlay")
+	if mgr.ZoneConfig[zoneID].AutoAway.Enabled {
+		if mgr.allUsersAway(zoneID, update) {
+			newState.State = model.Off
+			when = mgr.ZoneConfig[zoneID].AutoAway.Delay
 		} else {
-			now := time.Now()
-			if now.After(expiry) {
-				delete(mgr.expiry, zoneID)
-				expired = true
+			newState.State = model.Auto
+		}
+	}
 
-				log.WithField("zone", mgr.proxy.GetAllZones()[zoneID]).Info("timer expired for zone in overlay")
+	if update.ZoneStates[zoneID].State == model.Manual && newState.State != model.Off {
+		// determine if/when to set back to auto
+		if mgr.ZoneConfig[zoneID].NightTime.Enabled && mgr.ZoneConfig[zoneID].LimitOverlay.Enabled {
+			newState.State = model.Auto
+			when = nightTimeDelay(mgr.ZoneConfig[zoneID].NightTime.Time)
+			if mgr.ZoneConfig[zoneID].LimitOverlay.Delay < when {
+				when = mgr.ZoneConfig[zoneID].LimitOverlay.Delay
 			}
+		} else if mgr.ZoneConfig[zoneID].NightTime.Enabled {
+			newState.State = model.Auto
+			when = nightTimeDelay(mgr.ZoneConfig[zoneID].NightTime.Time)
+		} else if mgr.ZoneConfig[zoneID].LimitOverlay.Enabled {
+			newState.State = model.Auto
+			when = mgr.ZoneConfig[zoneID].LimitOverlay.Delay
 		}
 	}
 	return
 }
 
-func (mgr *Manager) isNightTime(zoneID int) (nightMode bool) {
-	if config, configured := mgr.ZoneConfig[zoneID]; configured && config.NightTime.Enabled {
-		if nightTime, ok := mgr.nightTime[zoneID]; ok == false {
-			now := time.Now()
-			nightTime = time.Date(
-				now.Year(), now.Month(), now.Day(),
-				config.NightTime.Time.Hour, config.NightTime.Time.Minutes, 0, 0, time.Local)
-			if now.After(nightTime) {
-				nightTime.Add(24 * time.Hour)
-			}
-			mgr.nightTime[zoneID] = nightTime
-		} else if time.Now().After(nightTime) {
-			delete(mgr.nightTime, zoneID)
-			nightMode = true
+func nightTimeDelay(nightTime model.ZoneNightTimestamp) (delay time.Duration) {
+	now := time.Now()
+	next := time.Date(
+		now.Year(), now.Month(), now.Day(),
+		nightTime.Hour, nightTime.Minutes, 0, 0, time.Local)
+	if now.After(next) {
+		next = next.Add(24 * time.Hour)
+	}
+	return next.Sub(now)
+}
+
+func (mgr *Manager) allUsersAway(zoneID int, update poller.Update) (away bool) {
+	away = true
+	for _, user := range mgr.ZoneConfig[zoneID].AutoAway.Users {
+		if update.UserStates[user] == model.UserHome {
+			away = false
+			break
 		}
 	}
 	return

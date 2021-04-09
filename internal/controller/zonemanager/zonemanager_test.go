@@ -3,7 +3,8 @@ package zonemanager_test
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/model"
-	"github.com/clambin/tado-exporter/internal/controller/tadoproxy"
+	"github.com/clambin/tado-exporter/internal/controller/poller"
+	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/zonemanager"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
@@ -15,195 +16,232 @@ import (
 // TODO: timing-based testing can be unreliable
 
 func TestZoneManager_Load(t *testing.T) {
-	proxy := tadoproxy.New("", "", "")
-	proxy.API = &mockapi.MockAPI{}
-	go proxy.Run()
-
 	zoneConfig := []configuration.ZoneConfig{
 		{
 			ZoneName: "bar",
-			Users:    []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+			AutoAway: configuration.ZoneAutoAway{
+				Enabled: true,
+				Users:   []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+				Delay:   1 * time.Hour,
+			},
 		},
 		{
 			ZoneName: "invalid",
-			Users:    []configuration.ZoneUser{{MobileDeviceName: "invalid"}},
+			AutoAway: configuration.ZoneAutoAway{
+				Enabled: true,
+				Users:   []configuration.ZoneUser{{MobileDeviceName: "invalid"}},
+				Delay:   1 * time.Hour,
+			},
 		},
 	}
 
-	mgr := zonemanager.New(zoneConfig, proxy)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, nil, nil)
+
+	assert.Nil(t, err)
 
 	if assert.Len(t, mgr.ZoneConfig, 1) {
 		if zone, ok := mgr.ZoneConfig[2]; assert.True(t, ok) {
-			if assert.Len(t, zone.Users, 1) {
-				assert.Equal(t, 2, zone.Users[0])
+			if assert.Len(t, zone.AutoAway.Users, 1) {
+				assert.Equal(t, 2, zone.AutoAway.Users[0])
 			}
 		}
 	}
 }
 
-func TestZoneManager_AutoAway(t *testing.T) {
-	proxy := tadoproxy.New("", "", "")
-	proxy.API = &mockapi.MockAPI{}
-	go proxy.Run()
+var fakeUpdates = []poller.Update{
+	{
+		ZoneStates: map[int]model.ZoneState{2: {State: model.Auto, Temperature: tado.Temperature{Celsius: 25.0}}},
+		UserStates: map[int]model.UserState{2: model.UserAway},
+	},
+	{
+		ZoneStates: map[int]model.ZoneState{2: {State: model.Off, Temperature: tado.Temperature{Celsius: 15.0}}},
+		UserStates: map[int]model.UserState{2: model.UserHome},
+	},
+	{
+		ZoneStates: map[int]model.ZoneState{2: {State: model.Manual, Temperature: tado.Temperature{Celsius: 20.0}}},
+		UserStates: map[int]model.UserState{2: model.UserHome},
+	},
+}
 
+func TestZoneManager_AutoAway(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
-		Users:    []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+		AutoAway: configuration.ZoneAutoAway{
+			Enabled: true,
+			Delay:   1 * time.Hour,
+			Users:   []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+		},
 	}}
 
-	mgr := zonemanager.New(zoneConfig, proxy)
+	updates := make(chan poller.Update)
+	result := make(chan *scheduler.Task)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, result)
 
-	updates := mgr.Update()
+	if assert.Nil(t, err) {
+		go mgr.Run()
 
-	if assert.Len(t, updates, 1) {
-		if state, ok := updates[2]; assert.True(t, ok) {
-			assert.Equal(t, model.Off, state.State)
-		}
+		// user comes home
+		updates <- fakeUpdates[0]
+		updated, ok := <-result
+
+		assert.True(t, ok)
+		assert.Equal(t, 2, updated.ZoneID)
+		assert.Equal(t, model.Off, updated.State.State)
+		assert.Equal(t, 1*time.Hour, updated.When)
+
+		// user comes home
+		updates <- fakeUpdates[1]
+		updated, ok = <-result
+
+		assert.True(t, ok)
+		assert.Equal(t, 2, updated.ZoneID)
+		assert.Equal(t, model.Auto, updated.State.State)
+		assert.Equal(t, 0*time.Second, updated.When)
+
+		mgr.Cancel <- struct{}{}
 	}
-
-	// TODO: test when a user comes home
 }
 
 func TestZoneManager_LimitOverlay(t *testing.T) {
-	proxy := tadoproxy.New("", "", "")
-	proxy.API = &mockapi.MockAPI{}
-	go proxy.Run()
-
-	proxy.SetZones <- map[int]model.ZoneState{
-		2: {
-			State:       model.Manual,
-			Temperature: tado.Temperature{Celsius: 18.5},
-		},
-	}
-
-	response := make(chan map[int]model.ZoneState)
-	proxy.GetZones <- response
-	if states, ok := <-response; assert.True(t, ok) {
-		if state, ok2 := states[2]; assert.True(t, ok2) {
-			assert.Equal(t, model.Manual, state.State)
-		}
-	}
-
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
 		LimitOverlay: configuration.ZoneLimitOverlay{
 			Enabled: true,
-			Limit:   100 * time.Millisecond,
+			Delay:   20 * time.Minute,
 		},
 	}}
 
-	mgr := zonemanager.New(zoneConfig, proxy)
+	updates := make(chan poller.Update)
+	result := make(chan *scheduler.Task)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, result)
 
-	assert.Eventually(t, func() bool {
-		updates := mgr.Update()
-		return len(updates) == 1 && updates[2].State == model.Auto
-	}, 500*time.Millisecond, 10*time.Millisecond)
+	if assert.Nil(t, err) {
+		go mgr.Run()
+
+		updates <- fakeUpdates[2]
+		updated, ok := <-result
+
+		assert.True(t, ok)
+		assert.Equal(t, 2, updated.ZoneID)
+		assert.Equal(t, model.Auto, updated.State.State)
+		assert.Equal(t, 20*time.Minute, updated.When)
+
+		mgr.Cancel <- struct{}{}
+	}
 }
 
 func TestZoneManager_NightTime(t *testing.T) {
-	proxy := tadoproxy.New("", "", "")
-	proxy.API = &mockapi.MockAPI{}
-	go proxy.Run()
-
-	proxy.SetZones <- map[int]model.ZoneState{
-		2: {
-			State:       model.Manual,
-			Temperature: tado.Temperature{Celsius: 18.5},
-		},
-	}
-
-	response := make(chan map[int]model.ZoneState)
-	proxy.GetZones <- response
-	if states, ok := <-response; assert.True(t, ok) {
-		if state, ok2 := states[2]; assert.True(t, ok2) {
-			assert.Equal(t, model.Manual, state.State)
-		}
-	}
-
-	now := time.Now()
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
 		NightTime: configuration.ZoneNightTime{
 			Enabled: true,
 			Time: configuration.ZoneNightTimeTimestamp{
-				Hour:    now.Hour(),
-				Minutes: now.Minute(),
-				Seconds: now.Second() + 1,
+				Hour:    23,
+				Minutes: 30,
 			},
 		},
 	}}
 
-	mgr := zonemanager.New(zoneConfig, proxy)
+	updates := make(chan poller.Update)
+	result := make(chan *scheduler.Task)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, result)
 
-	assert.Eventually(t, func() bool {
-		updates := mgr.Update()
-		return len(updates) == 1 && updates[2].State == model.Auto
-	}, 2000*time.Millisecond, 10*time.Millisecond)
+	if assert.Nil(t, err) {
+		go mgr.Run()
+
+		updates <- fakeUpdates[2]
+		updated, ok := <-result
+
+		assert.True(t, ok)
+		assert.Equal(t, 2, updated.ZoneID)
+		assert.Equal(t, model.Auto, updated.State.State)
+		assert.Greater(t, updated.When, 0*time.Second)
+
+		mgr.Cancel <- struct{}{}
+	}
 }
 
-func TestZoneManager_NightTime_Fail(t *testing.T) {
-	proxy := tadoproxy.New("", "", "")
-	proxy.API = &mockapi.MockAPI{}
-	go proxy.Run()
-
-	proxy.SetZones <- map[int]model.ZoneState{
-		2: {
-			State:       model.Manual,
-			Temperature: tado.Temperature{Celsius: 18.5},
-		},
-	}
-
-	response := make(chan map[int]model.ZoneState)
-	proxy.GetZones <- response
-	if states, ok := <-response; assert.True(t, ok) {
-		if state, ok2 := states[2]; assert.True(t, ok2) {
-			assert.Equal(t, model.Manual, state.State)
-		}
-	}
-
-	now := time.Now()
+func TestZoneManager_Combined(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
-		NightTime: configuration.ZoneNightTime{
+		AutoAway: configuration.ZoneAutoAway{
 			Enabled: true,
-			Time: configuration.ZoneNightTimeTimestamp{
-				Hour:    now.Hour() + 1,
-				Minutes: now.Minute(),
-				Seconds: now.Second(),
-			},
+			Delay:   1 * time.Hour,
+			Users:   []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+		},
+		LimitOverlay: configuration.ZoneLimitOverlay{
+			Enabled: true,
+			Delay:   20 * time.Minute,
 		},
 	}}
 
-	mgr := zonemanager.New(zoneConfig, proxy)
+	updates := make(chan poller.Update)
+	result := make(chan *scheduler.Task)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, result)
 
-	assert.Never(t, func() bool {
-		updates := mgr.Update()
-		return len(updates) == 1 && updates[2].State == model.Auto
-	}, 500*time.Millisecond, 10*time.Millisecond)
+	if assert.Nil(t, err) {
+		go mgr.Run()
+
+		// user comes home
+		updates <- fakeUpdates[0]
+		updated, ok := <-result
+
+		assert.True(t, ok)
+		assert.Equal(t, 2, updated.ZoneID)
+		assert.Equal(t, model.Off, updated.State.State)
+		assert.Equal(t, 1*time.Hour, updated.When)
+
+		// user comes home
+		updates <- fakeUpdates[1]
+		updated, ok = <-result
+
+		assert.True(t, ok)
+		assert.Equal(t, 2, updated.ZoneID)
+		assert.Equal(t, model.Auto, updated.State.State)
+		assert.Equal(t, 0*time.Second, updated.When)
+
+		updates <- fakeUpdates[2]
+		updated, ok = <-result
+
+		assert.True(t, ok)
+		assert.Equal(t, 2, updated.ZoneID)
+		assert.Equal(t, model.Auto, updated.State.State)
+		assert.Equal(t, 20*time.Minute, updated.When)
+
+		mgr.Cancel <- struct{}{}
+	}
 }
 
 func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
-	proxy := tadoproxy.New("", "", "")
-	proxy.API = &mockapi.MockAPI{}
-	go proxy.Run()
-
-	proxy.SetZones <- map[int]model.ZoneState{2: {State: model.Manual, Temperature: tado.Temperature{Celsius: 18.5}}}
-
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
 		LimitOverlay: configuration.ZoneLimitOverlay{
 			Enabled: true,
-			Limit:   100 * time.Millisecond,
+			Delay:   20 * time.Minute,
 		},
 	}}
 
-	mgr := zonemanager.New(zoneConfig, proxy)
+	server := &mockapi.MockAPI{}
+	updates := make(chan poller.Update)
+	result := make(chan *scheduler.Task)
+	mgr, err := zonemanager.New(server, zoneConfig, updates, result)
 
-	b.ResetTimer()
-	for {
-		updates := mgr.Update()
-		if len(updates) == 1 && updates[2].State == model.Auto {
-			break
+	if assert.Nil(b, err) {
+		go mgr.Run()
+		b.ResetTimer()
+
+		for i := 0; i < 100; i++ {
+			updates <- fakeUpdates[2]
+			if i == 0 {
+				updates, ok := <-result
+
+				assert.True(b, ok)
+				assert.Equal(b, 2, updates.ZoneID)
+				assert.Equal(b, model.Auto, updates.State.State)
+				assert.Equal(b, 20*time.Minute, updates.When)
+			}
 		}
+
+		mgr.Cancel <- struct{}{}
 	}
 }

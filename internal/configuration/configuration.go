@@ -43,7 +43,7 @@ type TadoBotConfiguration struct {
 type ZoneConfig struct {
 	ZoneID       int              `yaml:"id"`
 	ZoneName     string           `yaml:"name"`
-	Users        []ZoneUser       `yaml:"users"`
+	AutoAway     ZoneAutoAway     `yaml:"autoAway"`
 	LimitOverlay ZoneLimitOverlay `yaml:"limitOverlay"`
 	NightTime    ZoneNightTime    `yaml:"nightTime"`
 }
@@ -54,10 +54,17 @@ type ZoneUser struct {
 	MobileDeviceName string `yaml:"name"`
 }
 
+// ZoneAutoAway configures when to switch a zone off if all linked users are away from home
+type ZoneAutoAway struct {
+	Enabled bool          `yaml:"enabled"`
+	Delay   time.Duration `yaml:"delay"`
+	Users   []ZoneUser    `yaml:"users"`
+}
+
 // ZoneLimitOverlay configures how long a zone will be allowed in manual control
 type ZoneLimitOverlay struct {
 	Enabled bool          `yaml:"enabled"`
-	Limit   time.Duration `yaml:"limit"`
+	Delay   time.Duration `yaml:"delay"`
 }
 
 // ZoneNightTime configures a timestamp when the zone will be set back to automatic

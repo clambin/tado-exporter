@@ -1,8 +1,11 @@
 package controller
 
+/*
 import (
+	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/slack-go/slack"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -23,6 +26,7 @@ func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
 	}
 }
 
+
 func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
 	output := make([]string, 0)
 	userNames := controller.proxy.GetAllUsers()
@@ -39,8 +43,6 @@ func (controller *Controller) doUsers(_ ...string) []slack.Attachment {
 		},
 	}
 }
-
-/*
 
 func (controller *Controller) doRooms(_ ...string) []slack.Attachment {
 	var (

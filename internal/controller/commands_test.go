@@ -1,5 +1,6 @@
 package controller
 
+/*
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/model"

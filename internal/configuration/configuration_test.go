@@ -27,12 +27,15 @@ controller:
       value: "1234"
   zones:
   - id: 1
-    users:
-    - id: 1
-    - name: bar
+    autoAway:
+      enabled: true
+      delay: 1h
+      users:
+       - id: 1
+       - name: bar
     limitOverlay:
       enabled: true
-      limit: 1h
+      delay: 1h
     nightTime:
       enabled: true
       time: "23:30"
@@ -65,17 +68,17 @@ controller:
 			assert.Equal(t, 1, (*cfg.Controller.ZoneConfig)[0].ZoneID)
 			assert.Equal(t, "", (*cfg.Controller.ZoneConfig)[0].ZoneName)
 
-			if assert.Len(t, (*cfg.Controller.ZoneConfig)[0].Users, 2) {
-				assert.Equal(t, 1, (*cfg.Controller.ZoneConfig)[0].Users[0].MobileDeviceID)
-				assert.Equal(t, "", (*cfg.Controller.ZoneConfig)[0].Users[0].MobileDeviceName)
+			assert.True(t, (*cfg.Controller.ZoneConfig)[0].AutoAway.Enabled)
+			if assert.Len(t, (*cfg.Controller.ZoneConfig)[0].AutoAway.Users, 2) {
+				assert.Equal(t, 1, (*cfg.Controller.ZoneConfig)[0].AutoAway.Users[0].MobileDeviceID)
+				assert.Equal(t, "", (*cfg.Controller.ZoneConfig)[0].AutoAway.Users[0].MobileDeviceName)
 
-				assert.Equal(t, 0, (*cfg.Controller.ZoneConfig)[0].Users[1].MobileDeviceID)
-				assert.Equal(t, "bar", (*cfg.Controller.ZoneConfig)[0].Users[1].MobileDeviceName)
-
+				assert.Equal(t, 0, (*cfg.Controller.ZoneConfig)[0].AutoAway.Users[1].MobileDeviceID)
+				assert.Equal(t, "bar", (*cfg.Controller.ZoneConfig)[0].AutoAway.Users[1].MobileDeviceName)
 			}
 
 			assert.True(t, (*cfg.Controller.ZoneConfig)[0].LimitOverlay.Enabled)
-			assert.Equal(t, 1*time.Hour, (*cfg.Controller.ZoneConfig)[0].LimitOverlay.Limit)
+			assert.Equal(t, 1*time.Hour, (*cfg.Controller.ZoneConfig)[0].LimitOverlay.Delay)
 
 			assert.True(t, (*cfg.Controller.ZoneConfig)[0].NightTime.Enabled)
 			assert.Equal(t, 23, (*cfg.Controller.ZoneConfig)[0].NightTime.Time.Hour)

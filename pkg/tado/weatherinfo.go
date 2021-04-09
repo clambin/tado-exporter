@@ -18,7 +18,7 @@ type WeatherInfo struct {
 }
 
 // GetWeatherInfo retrieves weather information for the user's Home.
-func (client *APIClient) GetWeatherInfo() (*WeatherInfo, error) {
+func (client *APIClient) GetWeatherInfo() (WeatherInfo, error) {
 	var (
 		err             error
 		tadoWeatherInfo WeatherInfo
@@ -30,7 +30,7 @@ func (client *APIClient) GetWeatherInfo() (*WeatherInfo, error) {
 			err = json.Unmarshal(body, &tadoWeatherInfo)
 		}
 	}
-	return &tadoWeatherInfo, err
+	return tadoWeatherInfo, err
 }
 
 // String converts WeatherInfo to a loggable string

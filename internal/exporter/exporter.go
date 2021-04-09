@@ -29,7 +29,7 @@ func (export *Exporter) Run() error {
 
 func (export *Exporter) runWeather() error {
 	var err error
-	var weatherInfo *tado.WeatherInfo
+	var weatherInfo tado.WeatherInfo
 
 	if weatherInfo, err = export.GetWeatherInfo(); err == nil {
 		export.reportWeather(weatherInfo)
@@ -39,7 +39,7 @@ func (export *Exporter) runWeather() error {
 	return err
 }
 
-func (export *Exporter) reportWeather(weatherInfo *tado.WeatherInfo) {
+func (export *Exporter) reportWeather(weatherInfo tado.WeatherInfo) {
 	if export.weatherStates == nil {
 		export.weatherStates = make(map[string]float64)
 	}
@@ -57,7 +57,7 @@ func (export *Exporter) reportWeather(weatherInfo *tado.WeatherInfo) {
 
 func (export *Exporter) runMobileDevices() error {
 	var err error
-	var mobileDevices []*tado.MobileDevice
+	var mobileDevices []tado.MobileDevice
 
 	if mobileDevices, err = export.GetMobileDevices(); err == nil {
 		for _, mobileDevice := range mobileDevices {
@@ -69,7 +69,7 @@ func (export *Exporter) runMobileDevices() error {
 	return err
 }
 
-func (export *Exporter) reportMobileDevice(mobileDevice *tado.MobileDevice) {
+func (export *Exporter) reportMobileDevice(mobileDevice tado.MobileDevice) {
 	if mobileDevice.Settings.GeoTrackingEnabled {
 		value := 0.0
 		if mobileDevice.Location.AtHome && !mobileDevice.Location.Stale {
@@ -82,8 +82,8 @@ func (export *Exporter) reportMobileDevice(mobileDevice *tado.MobileDevice) {
 func (export *Exporter) runZones() error {
 	var (
 		err   error
-		zones []*tado.Zone
-		info  *tado.ZoneInfo
+		zones []tado.Zone
+		info  tado.ZoneInfo
 	)
 
 	if zones, err = export.GetZones(); err == nil {
@@ -99,7 +99,7 @@ func (export *Exporter) runZones() error {
 	return err
 }
 
-func (export *Exporter) reportZone(zone *tado.Zone, info *tado.ZoneInfo) {
+func (export *Exporter) reportZone(zone tado.Zone, info tado.ZoneInfo) {
 	tadoZoneTargetTempCelsius.WithLabelValues(zone.Name).Set(info.Setting.Temperature.Celsius)
 	manualMode := 0.0
 	if info.Overlay.Type == "MANUAL" {

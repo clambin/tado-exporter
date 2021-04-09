@@ -81,10 +81,13 @@ func main() {
 
 	var control *controller.Controller
 	if cfg.Controller.Enabled {
-		control = controller.New(username, password, clientSecret, &cfg.Controller)
-		log.WithField("interval", cfg.Controller.Interval).Info("controller created")
+		if control, err = controller.New(username, password, clientSecret, &cfg.Controller); err == nil {
+			log.WithField("interval", cfg.Controller.Interval).Info("controller created")
 
-		go control.Run()
+			go control.Run()
+		} else {
+			log.WithField("err", err).Fatal("failed to create controller")
+		}
 	}
 
 	go func() {

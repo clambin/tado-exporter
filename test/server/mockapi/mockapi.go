@@ -1,21 +1,25 @@
 package mockapi
 
-import "github.com/clambin/tado-exporter/pkg/tado"
+import (
+	"github.com/clambin/tado-exporter/pkg/tado"
+	"sync"
+)
 
 // MockAPI mocks the tado Client API
 type MockAPI struct {
 	Overlays map[int]float64
+	lock     sync.RWMutex
 }
 
-func (client *MockAPI) GetZones() ([]*tado.Zone, error) {
-	return []*tado.Zone{
+func (client *MockAPI) GetZones() ([]tado.Zone, error) {
+	return []tado.Zone{
 		{ID: 1, Name: "foo"},
 		{ID: 2, Name: "bar"},
 	}, nil
 }
 
-func (client *MockAPI) GetZoneInfo(zoneID int) (*tado.ZoneInfo, error) {
-	info := tado.ZoneInfo{
+func (client *MockAPI) GetZoneInfo(zoneID int) (info tado.ZoneInfo, err error) {
+	info = tado.ZoneInfo{
 		Setting: tado.ZoneInfoSetting{
 			Power:       "ON",
 			Temperature: tado.Temperature{Celsius: 20.0},
@@ -33,6 +37,9 @@ func (client *MockAPI) GetZoneInfo(zoneID int) (*tado.ZoneInfo, error) {
 		},
 	}
 
+	client.lock.RLock()
+	defer client.lock.RUnlock()
+
 	if temperature, ok := client.Overlays[zoneID]; ok == true {
 		info.Overlay = tado.ZoneInfoOverlay{
 			Type: "MANUAL",
@@ -47,19 +54,19 @@ func (client *MockAPI) GetZoneInfo(zoneID int) (*tado.ZoneInfo, error) {
 		}
 	}
 
-	return &info, nil
+	return
 }
 
-func (client *MockAPI) GetWeatherInfo() (*tado.WeatherInfo, error) {
-	return &tado.WeatherInfo{
+func (client *MockAPI) GetWeatherInfo() (tado.WeatherInfo, error) {
+	return tado.WeatherInfo{
 		OutsideTemperature: tado.Temperature{Celsius: 3.4},
 		SolarIntensity:     tado.Percentage{Percentage: 13.3},
 		WeatherState:       tado.Value{Value: "CLOUDY_MOSTLY"},
 	}, nil
 }
 
-func (client *MockAPI) GetMobileDevices() ([]*tado.MobileDevice, error) {
-	return []*tado.MobileDevice{
+func (client *MockAPI) GetMobileDevices() ([]tado.MobileDevice, error) {
+	return []tado.MobileDevice{
 		{
 			ID:       1,
 			Name:     "foo",
@@ -76,6 +83,9 @@ func (client *MockAPI) GetMobileDevices() ([]*tado.MobileDevice, error) {
 }
 
 func (client *MockAPI) SetZoneOverlay(zoneID int, temperature float64) error {
+	client.lock.Lock()
+	defer client.lock.Unlock()
+
 	if client.Overlays == nil {
 		client.Overlays = make(map[int]float64)
 	}
@@ -85,6 +95,9 @@ func (client *MockAPI) SetZoneOverlay(zoneID int, temperature float64) error {
 }
 
 func (client *MockAPI) DeleteZoneOverlay(zoneID int) error {
+	client.lock.Lock()
+	defer client.lock.Unlock()
+
 	if client.Overlays == nil {
 		client.Overlays = make(map[int]float64)
 	}

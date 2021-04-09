@@ -52,11 +52,13 @@ func TestRunProbe(t *testing.T) {
 	}
 }
 
+// TODO: replace this with test/server/mockapi
+
 type mockAPI struct {
 }
 
-func (client *mockAPI) GetZones() ([]*tado.Zone, error) {
-	return []*tado.Zone{
+func (client *mockAPI) GetZones() ([]tado.Zone, error) {
+	return []tado.Zone{
 		{
 			ID:   1,
 			Name: "Living room",
@@ -88,7 +90,7 @@ func (client *mockAPI) GetZones() ([]*tado.Zone, error) {
 	}, nil
 }
 
-func (client *mockAPI) GetZoneInfo(zoneID int) (*tado.ZoneInfo, error) {
+func (client *mockAPI) GetZoneInfo(zoneID int) (tado.ZoneInfo, error) {
 	info := tado.ZoneInfo{
 		Setting: tado.ZoneInfoSetting{
 			Power:       "ON",
@@ -119,19 +121,19 @@ func (client *mockAPI) GetZoneInfo(zoneID int) (*tado.ZoneInfo, error) {
 		}
 	}
 
-	return &info, nil
+	return info, nil
 }
 
-func (client *mockAPI) GetWeatherInfo() (*tado.WeatherInfo, error) {
-	return &tado.WeatherInfo{
+func (client *mockAPI) GetWeatherInfo() (tado.WeatherInfo, error) {
+	return tado.WeatherInfo{
 		OutsideTemperature: tado.Temperature{Celsius: 3.4},
 		SolarIntensity:     tado.Percentage{Percentage: 13.3},
 		WeatherState:       tado.Value{Value: "CLOUDY_MOSTLY"},
 	}, nil
 }
 
-func (client *mockAPI) GetMobileDevices() ([]*tado.MobileDevice, error) {
-	return []*tado.MobileDevice{
+func (client *mockAPI) GetMobileDevices() ([]tado.MobileDevice, error) {
+	return []tado.MobileDevice{
 		{
 			ID:       1,
 			Name:     "Phone 1",

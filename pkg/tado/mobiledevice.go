@@ -25,10 +25,10 @@ type MobileDeviceLocation struct {
 }
 
 // GetMobileDevices retrieves the status of all registered mobile devices.
-func (client *APIClient) GetMobileDevices() ([]*MobileDevice, error) {
+func (client *APIClient) GetMobileDevices() ([]MobileDevice, error) {
 	var (
 		err               error
-		tadoMobileDevices []*MobileDevice
+		tadoMobileDevices []MobileDevice
 		body              []byte
 	)
 	if err = client.initialize(); err == nil {

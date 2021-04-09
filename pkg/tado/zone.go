@@ -29,22 +29,18 @@ type ConnectionState struct {
 }
 
 // GetZones retrieves the different Zones configured for the user's Home ID
-func (client *APIClient) GetZones() ([]*Zone, error) {
+func (client *APIClient) GetZones() ([]Zone, error) {
 	var (
 		err  error
 		body []byte
 	)
-	zones := make([]*Zone, 0)
+	zones := make([]Zone, 0)
 
 	if err = client.initialize(); err == nil {
 		if body, err = client.call("GET", client.apiURL("/zones"), ""); err == nil {
 			err = json.Unmarshal(body, &zones)
 		}
 	}
-
-	//for _, zone := range zones {
-	//	log.WithFields(log.Fields{"err": err, "zone": zone}).Debug("GetZones")
-	//}
 
 	return zones, err
 }

@@ -75,7 +75,7 @@ type ZoneInfoOverlayTermination struct {
 }
 
 // GetZoneInfo gets the info for the specified ZoneID
-func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
+func (client *APIClient) GetZoneInfo(zoneID int) (ZoneInfo, error) {
 	var (
 		err          error
 		body         []byte
@@ -86,7 +86,7 @@ func (client *APIClient) GetZoneInfo(zoneID int) (*ZoneInfo, error) {
 			err = json.Unmarshal(body, &tadoZoneInfo)
 		}
 	}
-	return &tadoZoneInfo, err
+	return tadoZoneInfo, err
 }
 
 // SetZoneOverlay sets an overlay (manual temperature setting) for the specified ZoneID
