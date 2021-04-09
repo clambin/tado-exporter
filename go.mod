@@ -1,6 +1,6 @@
 module github.com/clambin/tado-exporter
 
-go 1.15
+go 1.16
 
 require (
 	github.com/clambin/gotools v0.2.1
