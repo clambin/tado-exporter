@@ -75,7 +75,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: metadata
         id: docker_meta
-        uses: crazy-max/ghaction-docker-meta@v2.1.0
+        uses: crazy-max/ghaction-docker-meta@v2.3.0
         with:
           images: clambin/tado-monitor
           tags: |
