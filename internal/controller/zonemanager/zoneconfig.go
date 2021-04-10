@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// TODO: move this to models?
 func (mgr *Manager) makeZoneConfig(config []configuration.ZoneConfig) (zoneConfig map[int]model.ZoneConfig, err error) {
 	var allZones, allUsers map[int]string
 
