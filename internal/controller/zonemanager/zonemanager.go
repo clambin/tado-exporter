@@ -104,7 +104,7 @@ func nightTimeDelay(nightTime model.ZoneNightTimestamp) (delay time.Duration) {
 func (mgr *Manager) allUsersAway(zoneID int, update poller.Update) (away bool) {
 	away = true
 	for _, user := range mgr.ZoneConfig[zoneID].AutoAway.Users {
-		if update.UserStates[user] == model.UserHome {
+		if update.UserStates[user] != model.UserAway {
 			away = false
 			break
 		}
