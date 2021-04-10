@@ -11,7 +11,8 @@ import (
 type Scheduler struct {
 	API         tado.API
 	Cancel      chan struct{}
-	Register    chan *Task
+	Schedule    chan *Task
+	Scheduled   chan ScheduledRequest
 	fire        chan *Task
 	tasks       map[int]*scheduledTask
 	postChannel slackbot.PostChannel
@@ -24,11 +25,17 @@ type Task struct {
 	When   time.Duration
 }
 
-func New(API tado.API, postChannel slackbot.PostChannel) *Scheduler {
+type ScheduledRequest struct {
+	ZoneID   int
+	Response chan model.ZoneState
+}
+
+func New(API tado.API, postChannel slackbot.PostChannel) API {
 	return &Scheduler{
 		API:         API,
 		Cancel:      make(chan struct{}),
-		Register:    make(chan *Task),
+		Schedule:    make(chan *Task),
+		Scheduled:   make(chan ScheduledRequest),
 		fire:        make(chan *Task),
 		tasks:       make(map[int]*scheduledTask),
 		postChannel: postChannel,
@@ -42,10 +49,12 @@ loop:
 		select {
 		case <-scheduler.Cancel:
 			break loop
-		case task := <-scheduler.Register:
+		case task := <-scheduler.Schedule:
 			scheduler.schedule(task)
 		case task := <-scheduler.fire:
 			scheduler.runTask(task)
+		case req := <-scheduler.Scheduled:
+			req.Response <- scheduler.getScheduledState(req.ZoneID)
 		}
 	}
 	close(scheduler.Cancel)
@@ -100,4 +109,15 @@ func (scheduler *Scheduler) runTask(task *Task) {
 	delete(scheduler.tasks, task.ZoneID)
 
 	log.WithField("zone", task.ZoneID).Debug("executed task")
+}
+
+func (scheduler *Scheduler) getScheduledState(zoneID int) (state model.ZoneState) {
+	if scheduled, ok := scheduler.tasks[zoneID]; ok == true {
+		state = scheduled.task.State
+	} else {
+		state = model.ZoneState{
+			State: model.Unknown,
+		}
+	}
+	return
 }

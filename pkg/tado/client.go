@@ -49,7 +49,7 @@ type Value struct {
 }
 
 // API for the Tado APIClient.
-// Used to mock the API during unit testing
+// Used to mockscheduler the API during unit testing
 type API interface {
 	GetZones() ([]Zone, error)
 	GetZoneInfo(zoneID int) (ZoneInfo, error)

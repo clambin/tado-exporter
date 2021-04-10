@@ -14,16 +14,14 @@ type Manager struct {
 	ZoneConfig map[int]model.ZoneConfig
 	Cancel     chan struct{}
 	Update     chan poller.Update
-	queued     map[int]model.ZoneState
-	scheduler  chan *scheduler.Task
+	scheduler  scheduler.API
 }
 
-func New(API tado.API, zoneConfig []configuration.ZoneConfig, updater chan poller.Update, scheduler chan *scheduler.Task) (mgr *Manager, err error) {
+func New(API tado.API, zoneConfig []configuration.ZoneConfig, updater chan poller.Update, scheduler scheduler.API) (mgr *Manager, err error) {
 	mgr = &Manager{
 		API:       API,
 		Cancel:    make(chan struct{}),
 		Update:    updater,
-		queued:    make(map[int]model.ZoneState),
 		scheduler: scheduler,
 	}
 	mgr.ZoneConfig, err = mgr.makeZoneConfig(zoneConfig)
@@ -49,21 +47,11 @@ func (mgr *Manager) update(update poller.Update) {
 
 		if newState != state {
 			// check if we've already queued this update with the scheduler
-			if queuedState, ok := mgr.queued[zoneID]; !ok || queuedState != newState {
+			scheduledState := mgr.scheduler.ScheduledState(zoneID)
+			if scheduledState != newState {
 				// queue the update
-				mgr.scheduler <- &scheduler.Task{
-					ZoneID: zoneID,
-					State:  newState,
-					When:   when,
-				}
-				mgr.queued[zoneID] = newState
+				mgr.scheduler.ScheduleTask(zoneID, newState, when)
 			}
-		}
-
-		// if we're back in auto mode, delete the queued state so we can switch back to overlay
-		// would be cleaner to do this when the auto task has been processed by the scheduler
-		if state.State == model.Auto && newState.State == model.Auto {
-			delete(mgr.queued, zoneID)
 		}
 	}
 	return

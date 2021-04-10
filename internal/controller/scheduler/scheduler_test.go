@@ -6,15 +6,12 @@ import (
 	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
 
 func TestScheduler_Run(t *testing.T) {
-	log.SetLevel(log.DebugLevel)
-
 	postChannel := make(slackbot.PostChannel, 20)
 
 	server := &mockapi.MockAPI{}
@@ -22,14 +19,7 @@ func TestScheduler_Run(t *testing.T) {
 
 	go s.Run()
 
-	s.Register <- &scheduler.Task{
-		ZoneID: 2,
-		State: model.ZoneState{
-			State:       model.Manual,
-			Temperature: tado.Temperature{Celsius: 18.5},
-		},
-		When: 50 * time.Millisecond,
-	}
+	s.ScheduleTask(2, model.ZoneState{State: model.Manual, Temperature: tado.Temperature{Celsius: 18.5}}, 50*time.Millisecond)
 
 	assert.Eventually(t, func() bool {
 		if zoneInfo, err := server.GetZoneInfo(2); err == nil {
@@ -38,16 +28,8 @@ func TestScheduler_Run(t *testing.T) {
 		return false
 	}, 500*time.Millisecond, 50*time.Millisecond)
 
-	s.Register <- &scheduler.Task{
-		ZoneID: 2,
-		State:  model.ZoneState{State: model.Off},
-		When:   10 * time.Minute,
-	}
-
-	s.Register <- &scheduler.Task{
-		ZoneID: 2,
-		State:  model.ZoneState{State: model.Off},
-	}
+	s.ScheduleTask(2, model.ZoneState{State: model.Off}, 10*time.Minute)
+	s.ScheduleTask(2, model.ZoneState{State: model.Off}, 0*time.Second)
 
 	assert.Eventually(t, func() bool {
 		if zoneInfo, err := server.GetZoneInfo(2); err == nil {
@@ -56,10 +38,7 @@ func TestScheduler_Run(t *testing.T) {
 		return false
 	}, 500*time.Millisecond, 50*time.Millisecond)
 
-	s.Register <- &scheduler.Task{
-		ZoneID: 2,
-		State:  model.ZoneState{State: model.Auto},
-	}
+	s.ScheduleTask(2, model.ZoneState{State: model.Auto}, 0*time.Second)
 
 	assert.Eventually(t, func() bool {
 		if zoneInfo, err := server.GetZoneInfo(2); err == nil {
@@ -68,12 +47,28 @@ func TestScheduler_Run(t *testing.T) {
 		return false
 	}, 500*time.Millisecond, 50*time.Millisecond)
 
-	s.Cancel <- struct{}{}
-
-	assert.Eventually(t, func() bool {
-		_, ok := <-s.Cancel
-		return !ok
-	}, 500*time.Millisecond, 10*time.Millisecond)
+	s.Stop()
 
 	assert.Len(t, postChannel, 7)
+}
+
+func TestScheduler_Scheduled(t *testing.T) {
+	server := &mockapi.MockAPI{}
+	s := scheduler.New(server, nil)
+
+	go s.Run()
+
+	s.ScheduleTask(2, model.ZoneState{
+		State:       model.Manual,
+		Temperature: tado.Temperature{Celsius: 18.5},
+	},
+		100*time.Millisecond,
+	)
+
+	state := s.ScheduledState(2)
+	assert.Equal(t, model.Manual, state.State)
+
+	assert.Eventually(t, func() bool {
+		return s.ScheduledState(2).State == model.Unknown
+	}, 200*time.Millisecond, 50*time.Millisecond)
 }

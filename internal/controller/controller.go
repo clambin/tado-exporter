@@ -20,7 +20,7 @@ type Controller struct {
 	API       tado.API
 	poller    *poller.Poller
 	mgr       *zonemanager.Manager
-	scheduler *scheduler.Scheduler
+	scheduler scheduler.API
 	tadoBot   *slackbot.SlackBot
 	stop      chan struct{}
 }
@@ -58,7 +58,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 		schedulr := scheduler.New(API, postChannel)
 
 		var mgr *zonemanager.Manager
-		mgr, err = zonemanager.New(API, *cfg.ZoneConfig, pollr.Update, schedulr.Register)
+		mgr, err = zonemanager.New(API, *cfg.ZoneConfig, pollr.Update, schedulr)
 
 		if err == nil {
 			controller, err = NewWith(API, pollr, mgr, schedulr, tadoBot)
@@ -68,7 +68,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 }
 
 // NewWith creates a controller with pre-existing components.  Used for unit-testing
-func NewWith(API tado.API, pollr *poller.Poller, mgr *zonemanager.Manager, schedulr *scheduler.Scheduler, tadoBot *slackbot.SlackBot) (controller *Controller, err error) {
+func NewWith(API tado.API, pollr *poller.Poller, mgr *zonemanager.Manager, schedulr scheduler.API, tadoBot *slackbot.SlackBot) (controller *Controller, err error) {
 	controller = &Controller{
 		API:       API,
 		poller:    pollr,
@@ -92,7 +92,7 @@ loop:
 		case <-controller.stop:
 			controller.poller.Cancel <- struct{}{}
 			controller.mgr.Cancel <- struct{}{}
-			controller.scheduler.Cancel <- struct{}{}
+			controller.scheduler.Stop()
 			break loop
 		}
 	}

@@ -4,7 +4,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/model"
 	"github.com/clambin/tado-exporter/internal/controller/poller"
-	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/internal/controller/scheduler/mockscheduler"
 	"github.com/clambin/tado-exporter/internal/controller/zonemanager"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
@@ -77,35 +77,30 @@ func TestZoneManager_AutoAway(t *testing.T) {
 		},
 	}}
 
+	schedulr := mockscheduler.New()
 	updates := make(chan poller.Update)
-	result := make(chan *scheduler.Task)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, result)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, schedulr)
 
 	if assert.Nil(t, err) {
 		go mgr.Run()
 
 		// user is away
 		updates <- fakeUpdates[0]
-		updated, ok := <-result
 
-		assert.True(t, ok)
-		assert.Equal(t, 2, updated.ZoneID)
-		assert.Equal(t, model.Off, updated.State.State)
-		assert.Equal(t, 1*time.Hour, updated.When)
+		assert.Eventually(t, func() bool {
+			return schedulr.ScheduledState(2).State == model.Off
+		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		// user comes home
 		updates <- fakeUpdates[1]
-		updated, ok = <-result
 
-		assert.True(t, ok)
-		assert.Equal(t, 2, updated.ZoneID)
-		assert.Equal(t, model.Auto, updated.State.State)
-		assert.Equal(t, 0*time.Second, updated.When)
+		assert.Eventually(t, func() bool {
+			return schedulr.ScheduledState(2).State == model.Unknown
+		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		mgr.Cancel <- struct{}{}
 	}
 }
-
 func TestZoneManager_LimitOverlay(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
@@ -116,35 +111,32 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 	}}
 
 	updates := make(chan poller.Update)
-	result := make(chan *scheduler.Task)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, result)
+	schedulr := mockscheduler.New()
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, schedulr)
 
 	if assert.Nil(t, err) {
 		go mgr.Run()
 
 		// manual mode
 		updates <- fakeUpdates[2]
-		updated, ok := <-result
 
-		assert.True(t, ok)
-		assert.Equal(t, 2, updated.ZoneID)
-		assert.Equal(t, model.Auto, updated.State.State)
-		assert.Equal(t, 20*time.Minute, updated.When)
+		assert.Eventually(t, func() bool {
+			return schedulr.ScheduledState(2).State == model.Auto
+		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		// back to auto mode
 		updates <- fakeUpdates[3]
-		assert.Never(t, func() bool {
-			return len(result) > 0
-		}, 100*time.Millisecond, 10*time.Millisecond)
+
+		assert.Eventually(t, func() bool {
+			return schedulr.ScheduledState(2).State == model.Auto
+		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		// back to manual mode
 		updates <- fakeUpdates[2]
-		updated, ok = <-result
 
-		assert.True(t, ok)
-		assert.Equal(t, 2, updated.ZoneID)
-		assert.Equal(t, model.Auto, updated.State.State)
-		assert.Equal(t, 20*time.Minute, updated.When)
+		assert.Eventually(t, func() bool {
+			return schedulr.ScheduledState(2).State == model.Auto
+		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		mgr.Cancel <- struct{}{}
 	}
@@ -163,19 +155,17 @@ func TestZoneManager_NightTime(t *testing.T) {
 	}}
 
 	updates := make(chan poller.Update)
-	result := make(chan *scheduler.Task)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, result)
+	schedulr := mockscheduler.New()
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, schedulr)
 
 	if assert.Nil(t, err) {
 		go mgr.Run()
 
 		updates <- fakeUpdates[2]
-		updated, ok := <-result
 
-		assert.True(t, ok)
-		assert.Equal(t, 2, updated.ZoneID)
-		assert.Equal(t, model.Auto, updated.State.State)
-		assert.Greater(t, updated.When, 0*time.Second)
+		assert.Eventually(t, func() bool {
+			return schedulr.ScheduledState(2).State == model.Auto
+		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		mgr.Cancel <- struct{}{}
 	}
@@ -196,37 +186,32 @@ func TestZoneManager_Combined(t *testing.T) {
 	}}
 
 	updates := make(chan poller.Update)
-	result := make(chan *scheduler.Task)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, result)
+	schedulr := mockscheduler.New()
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, schedulr)
 
 	if assert.Nil(t, err) {
 		go mgr.Run()
 
 		// user comes home
 		updates <- fakeUpdates[0]
-		updated, ok := <-result
 
-		assert.True(t, ok)
-		assert.Equal(t, 2, updated.ZoneID)
-		assert.Equal(t, model.Off, updated.State.State)
-		assert.Equal(t, 1*time.Hour, updated.When)
+		assert.Eventually(t, func() bool {
+			return schedulr.ScheduledState(2).State == model.Off
+		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		// user comes home
 		updates <- fakeUpdates[1]
-		updated, ok = <-result
 
-		assert.True(t, ok)
-		assert.Equal(t, 2, updated.ZoneID)
-		assert.Equal(t, model.Auto, updated.State.State)
-		assert.Equal(t, 0*time.Second, updated.When)
+		assert.Eventually(t, func() bool {
+			return schedulr.ScheduledState(2).State == model.Unknown
+		}, 500*time.Millisecond, 10*time.Millisecond)
 
+		// user is home & room set to manual
 		updates <- fakeUpdates[2]
-		updated, ok = <-result
 
-		assert.True(t, ok)
-		assert.Equal(t, 2, updated.ZoneID)
-		assert.Equal(t, model.Auto, updated.State.State)
-		assert.Equal(t, 20*time.Minute, updated.When)
+		assert.Eventually(t, func() bool {
+			return schedulr.ScheduledState(2).State == model.Auto
+		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		mgr.Cancel <- struct{}{}
 	}
@@ -243,8 +228,8 @@ func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
 
 	server := &mockapi.MockAPI{}
 	updates := make(chan poller.Update)
-	result := make(chan *scheduler.Task)
-	mgr, err := zonemanager.New(server, zoneConfig, updates, result)
+	schedulr := mockscheduler.New()
+	mgr, err := zonemanager.New(server, zoneConfig, updates, schedulr)
 
 	if assert.Nil(b, err) {
 		go mgr.Run()
@@ -253,12 +238,11 @@ func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
 		for i := 0; i < 100; i++ {
 			updates <- fakeUpdates[2]
 			if i == 0 {
-				updates, ok := <-result
-
-				assert.True(b, ok)
-				assert.Equal(b, 2, updates.ZoneID)
-				assert.Equal(b, model.Auto, updates.State.State)
-				assert.Equal(b, 20*time.Minute, updates.When)
+				assert.Eventually(b, func() bool {
+					return schedulr.ScheduledState(2).State == model.Auto
+				}, 500*time.Millisecond, 10*time.Millisecond)
+			} else {
+				assert.Equal(b, model.Auto, schedulr.ScheduledState(2).State)
 			}
 		}
 
