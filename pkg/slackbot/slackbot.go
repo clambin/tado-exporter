@@ -24,6 +24,7 @@ import (
 	"github.com/slack-go/slack"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // SlackBot structure
@@ -37,6 +38,7 @@ type SlackBot struct {
 	userID      string
 	callbacks   map[string]CommandFunc
 	reconnect   bool
+	cbLock      sync.RWMutex
 }
 
 // CommandFunc signature for command callback functions
@@ -56,7 +58,7 @@ type PostChannel chan []slack.Attachment
 // Create a slackbot
 func Create(name string, slackToken string, callbacks map[string]CommandFunc) (bot *SlackBot, err error) {
 	bot = &SlackBot{
-		PostChannel: make(chan []slack.Attachment, 5),
+		PostChannel: make(chan []slack.Attachment, 10),
 		name:        name,
 		events:      make(chan slack.RTMEvent),
 		messages:    make(chan slackMessage),
@@ -146,7 +148,7 @@ func (bot *SlackBot) processMessage(text string) (attachments []slack.Attachment
 	log.WithField("text", text).Debug("processing slack chatter")
 	command, args := bot.parseCommand(text)
 	if command != "" {
-		if callback, ok := bot.callbacks[command]; ok {
+		if callback, ok := bot.getCallback(command); ok {
 			attachments = callback(args...)
 			log.WithFields(log.Fields{
 				"command": command,
@@ -159,6 +161,21 @@ func (bot *SlackBot) processMessage(text string) (attachments []slack.Attachment
 			})
 		}
 	}
+	return
+}
+
+func (bot *SlackBot) RegisterCallback(command string, callback CommandFunc) {
+	bot.cbLock.Lock()
+	defer bot.cbLock.Unlock()
+
+	bot.callbacks[command] = callback
+}
+
+func (bot *SlackBot) getCallback(command string) (callback CommandFunc, ok bool) {
+	bot.cbLock.RLock()
+	defer bot.cbLock.RUnlock()
+
+	callback, ok = bot.callbacks[command]
 	return
 }
 

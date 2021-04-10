@@ -27,9 +27,8 @@ func TestProcessMessage(t *testing.T) {
 }
 
 func TestProcessEvent(t *testing.T) {
-	bot, _ := Create("testBot", "", map[string]CommandFunc{
-		"hello": doHello,
-	})
+	bot, _ := Create("testBot", "", nil)
+	bot.RegisterCallback("hello", doHello)
 
 	msg := slack.RTMEvent{Type: "connected", Data: &slack.ConnectedEvent{
 		ConnectionCount: 1,

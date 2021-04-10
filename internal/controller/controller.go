@@ -31,14 +31,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 		var tadoBot *slackbot.SlackBot
 		var postChannel slackbot.PostChannel
 		if cfg.TadoBot.Enabled {
-			// TODO: catch-22: we need the controller to create the callbacks, but we need the slackbot to create the controller
-			callbacks := map[string]slackbot.CommandFunc{
-				// "rooms": controller.doRooms,
-				// "users": controller.doUsers,
-				//	"rules":        controller.doRules,
-				//	// "set":          controller.doSetTemperature,
-			}
-			if tadoBot, err = slackbot.Create("tado "+version.BuildVersion, cfg.TadoBot.Token.Value, callbacks); err == nil {
+			if tadoBot, err = slackbot.Create("tado "+version.BuildVersion, cfg.TadoBot.Token.Value, nil); err == nil {
 				go tadoBot.Run()
 				postChannel = tadoBot.PostChannel
 			} else {
@@ -56,6 +49,10 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 
 		pollr := poller.New(API, cfg.Interval)
 		schedulr := scheduler.New(API, postChannel)
+
+		if tadoBot != nil {
+			tadoBot.RegisterCallback("rules", schedulr.ReportTasks)
+		}
 
 		var mgr *zonemanager.Manager
 		mgr, err = zonemanager.New(API, *cfg.ZoneConfig, pollr.Update, schedulr)

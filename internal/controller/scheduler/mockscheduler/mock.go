@@ -2,6 +2,7 @@ package mockscheduler
 
 import (
 	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/slack-go/slack"
 	"sync"
 	"time"
 )
@@ -63,5 +64,6 @@ func (scheduler *MockScheduler) Run() {
 func (scheduler *MockScheduler) Stop() {
 }
 
-func (scheduler *MockScheduler) ReportTasks() {
+func (scheduler *MockScheduler) ReportTasks(_ ...string) []slack.Attachment {
+	return []slack.Attachment{}
 }
