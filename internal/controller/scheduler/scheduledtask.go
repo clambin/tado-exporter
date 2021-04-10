@@ -8,6 +8,7 @@ type scheduledTask struct {
 	Cancel      chan struct{}
 	task        *Task
 	timer       *time.Timer
+	activation  time.Time
 	fireChannel chan *Task
 }
 

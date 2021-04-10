@@ -62,3 +62,6 @@ func (scheduler *MockScheduler) Run() {
 
 func (scheduler *MockScheduler) Stop() {
 }
+
+func (scheduler *MockScheduler) ReportTasks() {
+}

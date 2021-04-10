@@ -13,6 +13,7 @@ type Scheduler struct {
 	Cancel      chan struct{}
 	Schedule    chan *Task
 	Scheduled   chan ScheduledRequest
+	Report      chan struct{}
 	fire        chan *Task
 	tasks       map[int]*scheduledTask
 	postChannel slackbot.PostChannel
@@ -36,6 +37,7 @@ func New(API tado.API, postChannel slackbot.PostChannel) API {
 		Cancel:      make(chan struct{}),
 		Schedule:    make(chan *Task),
 		Scheduled:   make(chan ScheduledRequest),
+		Report:      make(chan struct{}),
 		fire:        make(chan *Task),
 		tasks:       make(map[int]*scheduledTask),
 		postChannel: postChannel,
@@ -55,6 +57,10 @@ loop:
 			scheduler.runTask(task)
 		case req := <-scheduler.Scheduled:
 			req.Response <- scheduler.getScheduledState(req.ZoneID)
+		case <-scheduler.Report:
+			if scheduler.postChannel != nil {
+				scheduler.postChannel <- scheduler.reportTasks()
+			}
 		}
 	}
 	close(scheduler.Cancel)
@@ -71,6 +77,7 @@ func (scheduler *Scheduler) schedule(task *Task) {
 		Cancel:      make(chan struct{}),
 		task:        task,
 		timer:       time.NewTimer(task.When),
+		activation:  time.Now().Add(task.When),
 		fireChannel: scheduler.fire,
 	}
 	scheduler.tasks[task.ZoneID] = s

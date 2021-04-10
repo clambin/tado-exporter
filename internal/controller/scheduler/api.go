@@ -6,10 +6,11 @@ import (
 )
 
 type API interface {
+	Run()
+	Stop()
 	ScheduleTask(zoneID int, state model.ZoneState, when time.Duration)
 	ScheduledState(zoneID int) model.ZoneState
-	Stop()
-	Run()
+	ReportTasks()
 }
 
 func (scheduler *Scheduler) ScheduleTask(zoneID int, state model.ZoneState, when time.Duration) {
@@ -31,4 +32,8 @@ func (scheduler *Scheduler) ScheduledState(zoneID int) (state model.ZoneState) {
 
 func (scheduler *Scheduler) Stop() {
 	scheduler.Cancel <- struct{}{}
+}
+
+func (scheduler *Scheduler) ReportTasks() {
+	scheduler.Report <- struct{}{}
 }

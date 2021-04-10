@@ -72,3 +72,20 @@ func TestScheduler_Scheduled(t *testing.T) {
 		return s.ScheduledState(2).State == model.Unknown
 	}, 200*time.Millisecond, 50*time.Millisecond)
 }
+
+func TestScheduler_Report(t *testing.T) {
+	server := &mockapi.MockAPI{}
+	postChannel := make(slackbot.PostChannel)
+	s := scheduler.New(server, postChannel)
+	go s.Run()
+
+	s.ScheduleTask(2, model.ZoneState{State: model.Manual, Temperature: tado.Temperature{Celsius: 18.5}}, 1*time.Hour)
+	_ = <-postChannel
+
+	s.ReportTasks()
+
+	attachments := <-postChannel
+	if assert.Len(t, attachments, 1) {
+		assert.Equal(t, "setting bar to 18.5º in 1h0m0s", attachments[0].Text)
+	}
+}

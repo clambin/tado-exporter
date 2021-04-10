@@ -5,6 +5,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/model"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
+	"time"
 )
 
 func (scheduler *Scheduler) notifyPendingTask(task *Task) (attachments []slack.Attachment) {
@@ -20,7 +21,7 @@ func (scheduler *Scheduler) notifyPendingTask(task *Task) (attachments []slack.A
 		text = "switching off heating in " + task.When.String()
 	case model.Auto:
 		title = "manual temperature setting detected in " + zoneName
-		text = "will move back to auto mode in " + task.When.String()
+		text = "will move back to auto mode in " + task.When.Round(1*time.Minute).String()
 	case model.Manual:
 		title = "setting " + zoneName + " to manual temperature setting"
 		text = fmt.Sprintf("setting to %.1fº in %s",
