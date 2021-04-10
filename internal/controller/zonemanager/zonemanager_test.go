@@ -183,6 +183,14 @@ func TestZoneManager_Combined(t *testing.T) {
 			Enabled: true,
 			Delay:   20 * time.Minute,
 		},
+		NightTime: configuration.ZoneNightTime{
+			Enabled: true,
+			Time: configuration.ZoneNightTimeTimestamp{
+				Hour:    01,
+				Minutes: 30,
+				Seconds: 30,
+			},
+		},
 	}}
 
 	updates := make(chan poller.Update)

@@ -102,7 +102,7 @@ func (scheduler *Scheduler) runTask(task *Task) {
 			scheduler.postChannel <- scheduler.notifyExecutedTask(task)
 		}
 	} else {
-		log.WithField("err", err).Debug("unable to update zone")
+		log.WithField("err", err).Warning("unable to update zone")
 	}
 
 	// unregister the completed task

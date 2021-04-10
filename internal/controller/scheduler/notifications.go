@@ -13,6 +13,7 @@ func (scheduler *Scheduler) notifyPendingTask(task *Task) (attachments []slack.A
 	log.WithFields(log.Fields{"zone": zoneName, "state": task.State.String()}).Debug("queuing zone state change")
 
 	var title, text string
+	title = "unknown state detected for " + zoneName
 	switch task.State.State {
 	case model.Off:
 		title = zoneName + " users not home"
@@ -26,8 +27,6 @@ func (scheduler *Scheduler) notifyPendingTask(task *Task) (attachments []slack.A
 			task.State.Temperature.Celsius,
 			task.When.String(),
 		)
-	default:
-		title = "unknown state detected for " + zoneName
 	}
 
 	return []slack.Attachment{{
@@ -43,6 +42,7 @@ func (scheduler *Scheduler) notifyExecutedTask(task *Task) (attachments []slack.
 	log.WithFields(log.Fields{"zone": zoneName, "state": task.State.String()}).Info("setting zone state")
 
 	var title, text string
+	title = "unknown state detected for " + zoneName
 	switch task.State.State {
 	case model.Off:
 		title = "switching off heating in " + zoneName
@@ -53,8 +53,6 @@ func (scheduler *Scheduler) notifyExecutedTask(task *Task) (attachments []slack.
 	case model.Manual:
 		title = "setting " + zoneName + " to manual temperature"
 		text = fmt.Sprintf("setting to %.1fº", task.State.Temperature.Celsius)
-	default:
-		title = "unknown state detected for " + zoneName
 	}
 	return []slack.Attachment{{
 		Color: "good",
