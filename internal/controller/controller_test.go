@@ -3,10 +3,11 @@ package controller_test
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller"
-	"github.com/clambin/tado-exporter/internal/controller/model"
 	"github.com/clambin/tado-exporter/internal/controller/poller"
-	"github.com/clambin/tado-exporter/internal/controller/scheduler/mockscheduler"
+	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/zonemanager"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
+	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,6 @@ import (
 	"time"
 )
 
-/*
 func BenchmarkController_Run(b *testing.B) {
 	server := &mockapi.MockAPI{}
 	pollr := poller.New(server, 10*time.Millisecond)
@@ -27,7 +27,7 @@ func BenchmarkController_Run(b *testing.B) {
 			Delay:   20 * time.Millisecond,
 		},
 	}}
-	mgr, _ := zonemanager.New(server, zoneConfig, pollr.Update, schedulr.Schedule)
+	mgr, _ := zonemanager.New(server, zoneConfig, pollr.Update, schedulr)
 	c, _ := controller.NewWith(server, pollr, mgr, schedulr, nil)
 	go c.Run()
 
@@ -37,23 +37,22 @@ func BenchmarkController_Run(b *testing.B) {
 		_ = server.SetZoneOverlay(2, 15.5)
 		_ = <-postChannel
 		_ = <-postChannel
-		// wait for zone mgr to clear the queued state
-		time.Sleep(15 * time.Millisecond)
 	}
 }
-*/
+
 func TestController_Run(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
 		LimitOverlay: configuration.ZoneLimitOverlay{
 			Enabled: true,
-			Delay:   100 * time.Millisecond,
+			Delay:   50 * time.Millisecond,
 		},
 	}}
 
 	server := &mockapi.MockAPI{}
 	pollr := poller.New(server, 25*time.Millisecond)
-	schedulr := mockscheduler.New()
+	postChannel := make(slackbot.PostChannel, 200)
+	schedulr := scheduler.New(server, postChannel)
 	mgr, err := zonemanager.New(server, zoneConfig, pollr.Update, schedulr)
 
 	if assert.Nil(t, err) {
@@ -61,17 +60,21 @@ func TestController_Run(t *testing.T) {
 
 		log.SetLevel(log.DebugLevel)
 
-		go c.Run()
-
 		err = server.SetZoneOverlay(2, 15.5)
 		assert.Nil(t, err)
-		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == model.Auto
-		}, 50*time.Millisecond, 10*time.Millisecond)
+		var info tado.ZoneInfo
+		info, err = server.GetZoneInfo(2)
+		assert.Nil(t, err)
+		assert.Equal(t, "MANUAL", info.Overlay.Type)
+
+		go c.Run()
 
 		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == model.Unknown
-		}, 500*time.Millisecond, 10*time.Millisecond)
+			info, err = server.GetZoneInfo(2)
+			return err == nil && info.Overlay.Type == ""
+		}, 100*time.Millisecond, 10*time.Millisecond)
+
+		assert.Len(t, postChannel, 2)
 
 		c.Stop()
 	}
