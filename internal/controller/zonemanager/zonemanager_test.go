@@ -173,7 +173,7 @@ func TestZoneManager_NightTime(t *testing.T) {
 
 func TestZoneManager_Combined(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
-		ZoneName: "bar",
+		ZoneID: 2,
 		AutoAway: configuration.ZoneAutoAway{
 			Enabled: true,
 			Delay:   1 * time.Hour,
