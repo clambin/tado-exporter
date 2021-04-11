@@ -11,18 +11,20 @@ import (
 func (scheduler *Scheduler) reportTasks() []slack.Attachment {
 	text := make([]string, 0, len(scheduler.tasks))
 
-	for id, task := range scheduler.tasks {
+	for id, scheduled := range scheduler.tasks {
 		var action string
-		switch task.task.State.State {
+		switch scheduled.task.State.State {
 		case model.Off:
-			action = "switching off heating in " + scheduler.getZoneName(id)
+			action = "switch off heating"
 		case model.Auto:
-			action = "setting " + scheduler.getZoneName(id) + " to auto mode"
+			action = "set to auto mode"
 		case model.Manual:
-			action = fmt.Sprintf("setting %s to %.1fº",
-				scheduler.getZoneName(id), task.task.State.Temperature.Celsius)
+			action = fmt.Sprintf("set temperature to %.1fº", scheduled.task.State.Temperature.Celsius)
 		}
-		text = append(text, action+" in "+task.activation.Sub(time.Now()).Round(5*time.Second).String())
+		text = append(text,
+			scheduler.getZoneName(id)+": will "+action+" in "+
+				scheduled.activation.Sub(time.Now()).Round(5*time.Second).String(),
+		)
 	}
 
 	var slackText, slackTitle string

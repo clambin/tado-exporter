@@ -19,14 +19,18 @@ type ZoneState struct {
 	Temperature tado.Temperature
 }
 
-func (state ZoneState) String() string {
-	switch state.State {
+func (a ZoneState) String() string {
+	switch a.State {
 	case Off:
 		return "off"
 	case Auto:
 		return "auto"
 	case Manual:
-		return fmt.Sprintf("manual (%.1fºC)", state.Temperature.Celsius)
+		return fmt.Sprintf("manual (%.1fºC)", a.Temperature.Celsius)
 	}
 	return "unknown"
+}
+
+func (a ZoneState) Equals(b ZoneState) bool {
+	return a.State == b.State && a.Temperature.Celsius == b.Temperature.Celsius
 }

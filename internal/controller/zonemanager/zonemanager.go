@@ -43,15 +43,10 @@ loop:
 
 func (mgr *Manager) update(update poller.Update) {
 	for zoneID, state := range update.ZoneStates {
-		newState, when := mgr.newZoneState(zoneID, update)
+		targetState, when := mgr.newZoneState(zoneID, update)
 
-		if newState != state {
-			// check if we've already queued this update with the scheduler
-			scheduledState := mgr.scheduler.ScheduledState(zoneID)
-			if scheduledState != newState {
-				// queue the update
-				mgr.scheduler.ScheduleTask(zoneID, newState, when)
-			}
+		if targetState.Equals(state) == false {
+			mgr.scheduler.ScheduleTask(zoneID, targetState, when)
 		}
 	}
 	return

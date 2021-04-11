@@ -67,11 +67,20 @@ loop:
 }
 
 func (scheduler *Scheduler) schedule(task *Task) {
+	// check if we already have a task running for the zoneID
+	running, ok := scheduler.tasks[task.ZoneID]
+
+	// if we're already setting that state, ignore the new task, unless it sets that state earlier
+	if ok && running.task.Equals(task) && running.activation.Before(time.Now().Add(task.When)) {
+		return
+	}
+
 	// cancel a previously running task
-	if running, ok := scheduler.tasks[task.ZoneID]; ok == true {
+	if ok == true {
 		running.Cancel <- struct{}{}
 		log.WithField("zone", task.ZoneID).Debug("canceled running task")
 	}
+
 	// run a new task
 	s := &scheduledTask{
 		Cancel:      make(chan struct{}),
@@ -127,4 +136,8 @@ func (scheduler *Scheduler) getScheduledState(zoneID int) (state model.ZoneState
 		}
 	}
 	return
+}
+
+func (a *Task) Equals(b *Task) bool {
+	return a.ZoneID == b.ZoneID && a.State.Equals(b.State)
 }

@@ -79,13 +79,20 @@ func TestScheduler_Report(t *testing.T) {
 	s := scheduler.New(server, postChannel)
 	go s.Run()
 
+	s.ReportTasks()
+
+	attachments := <-postChannel
+	if assert.Len(t, attachments, 1) {
+		assert.Equal(t, "no rules have been triggered", attachments[0].Text)
+	}
+
 	s.ScheduleTask(2, model.ZoneState{State: model.Manual, Temperature: tado.Temperature{Celsius: 18.5}}, 1*time.Hour)
 	_ = <-postChannel
 
 	s.ReportTasks()
 
-	attachments := <-postChannel
+	attachments = <-postChannel
 	if assert.Len(t, attachments, 1) {
-		assert.Equal(t, "setting bar to 18.5º in 1h0m0s", attachments[0].Text)
+		assert.Equal(t, "bar: will set temperature to 18.5º in 1h0m0s", attachments[0].Text)
 	}
 }
