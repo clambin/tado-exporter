@@ -180,6 +180,9 @@ func (bot *SlackBot) getCallback(command string) (callback CommandFunc, ok bool)
 }
 
 func (bot *SlackBot) doHelp(_ ...string) []slack.Attachment {
+	bot.cbLock.RLock()
+	defer bot.cbLock.RUnlock()
+
 	var commands = make([]string, 0)
 	for command := range bot.callbacks {
 		commands = append(commands, command)

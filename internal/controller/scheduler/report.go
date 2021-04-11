@@ -10,6 +10,7 @@ import (
 
 func (scheduler *Scheduler) reportTasks() []slack.Attachment {
 	text := make([]string, 0, len(scheduler.tasks))
+
 	for id, task := range scheduler.tasks {
 		var action string
 		switch task.task.State.State {
@@ -23,9 +24,19 @@ func (scheduler *Scheduler) reportTasks() []slack.Attachment {
 		}
 		text = append(text, action+" in "+task.activation.Sub(time.Now()).Round(5*time.Second).String())
 	}
+
+	var slackText, slackTitle string
+	if len(text) > 0 {
+		slackTitle = "rules:"
+		slackText = strings.Join(text, "\n")
+	} else {
+		slackTitle = ""
+		slackText = "no rules have been triggered"
+	}
+
 	return []slack.Attachment{{
 		Color: "good",
-		Title: "rules:",
-		Text:  strings.Join(text, "\n"),
+		Title: slackTitle,
+		Text:  slackText,
 	}}
 }
