@@ -60,8 +60,8 @@ func Create(name string, slackToken string, callbacks map[string]CommandFunc) (b
 	bot = &SlackBot{
 		PostChannel: make(chan []slack.Attachment, 10),
 		name:        name,
-		events:      make(chan slack.RTMEvent),
-		messages:    make(chan slackMessage),
+		events:      make(chan slack.RTMEvent, 10),
+		messages:    make(chan slackMessage, 10),
 	}
 	if slackToken != "" {
 		bot.slackClient = newClient(slackToken, bot.events, bot.messages)
@@ -149,6 +149,7 @@ func (bot *SlackBot) processMessage(text string) (attachments []slack.Attachment
 	command, args := bot.parseCommand(text)
 	if command != "" {
 		if callback, ok := bot.getCallback(command); ok {
+			log.WithFields(log.Fields{"command": command}).Info("slackbot running command")
 			attachments = callback(args...)
 			log.WithFields(log.Fields{
 				"command": command,

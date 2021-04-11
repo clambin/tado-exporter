@@ -89,15 +89,15 @@ func (poller *Poller) getUserStates() (users map[int]models.UserState, err error
 	if devices, err = poller.API.GetMobileDevices(); err == nil {
 		users = make(map[int]models.UserState)
 		for _, device := range devices {
-			state := models.UserUnknown
-			if device.Settings.GeoTrackingEnabled == true {
+			if device.Settings.GeoTrackingEnabled {
+				var state models.UserState
 				if device.Location.AtHome == false {
 					state = models.UserAway
 				} else {
 					state = models.UserHome
 				}
+				users[device.ID] = state
 			}
-			users[device.ID] = state
 		}
 	}
 	return
