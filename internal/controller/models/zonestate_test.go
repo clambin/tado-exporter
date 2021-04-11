@@ -1,14 +1,14 @@
-package model_test
+package models_test
 
 import (
-	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"testing"
 )
 
 func TestZoneState_String(t *testing.T) {
 	type fields struct {
-		State       model.ZoneStateEnum
+		State       models.ZoneStateEnum
 		Temperature tado.Temperature
 	}
 	tests := []struct {
@@ -18,28 +18,28 @@ func TestZoneState_String(t *testing.T) {
 	}{
 		{
 			name:   "unknown",
-			fields: fields{State: model.Unknown},
+			fields: fields{State: models.ZoneUnknown},
 			want:   "unknown",
 		},
 		{
 			name:   "auto",
-			fields: fields{State: model.Auto},
+			fields: fields{State: models.ZoneAuto},
 			want:   "auto",
 		},
 		{
 			name:   "off",
-			fields: fields{State: model.Off},
+			fields: fields{State: models.ZoneOff},
 			want:   "off",
 		},
 		{
 			name:   "manual",
-			fields: fields{State: model.Manual, Temperature: tado.Temperature{Celsius: 18.0}},
+			fields: fields{State: models.ZoneManual, Temperature: tado.Temperature{Celsius: 18.0}},
 			want:   "manual (18.0ºC)",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			state := model.ZoneState{
+			state := models.ZoneState{
 				State:       tt.fields.State,
 				Temperature: tt.fields.Temperature,
 			}

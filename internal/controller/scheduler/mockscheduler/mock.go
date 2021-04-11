@@ -1,14 +1,14 @@
 package mockscheduler
 
 import (
-	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/slack-go/slack"
 	"sync"
 	"time"
 )
 
 type Task struct {
-	State  model.ZoneState
+	State  models.ZoneState
 	Expiry time.Time
 }
 
@@ -21,7 +21,7 @@ func New() *MockScheduler {
 	return &MockScheduler{tasks: make(map[int]Task)}
 }
 
-func (scheduler *MockScheduler) ScheduleTask(zoneID int, state model.ZoneState, when time.Duration) {
+func (scheduler *MockScheduler) ScheduleTask(zoneID int, state models.ZoneState, when time.Duration) {
 	scheduler.lock.Lock()
 	defer scheduler.lock.Unlock()
 
@@ -41,7 +41,7 @@ func (scheduler *MockScheduler) ScheduleTask(zoneID int, state model.ZoneState, 
 	}
 }
 
-func (scheduler *MockScheduler) ScheduledState(zoneID int) (state model.ZoneState) {
+func (scheduler *MockScheduler) ScheduledState(zoneID int) (state models.ZoneState) {
 	scheduler.lock.Lock()
 	defer scheduler.lock.Unlock()
 
@@ -49,11 +49,11 @@ func (scheduler *MockScheduler) ScheduledState(zoneID int) (state model.ZoneStat
 		if task.Expiry.After(time.Now()) {
 			state = task.State
 		} else {
-			state = model.ZoneState{State: model.Unknown}
+			state = models.ZoneState{State: models.ZoneUnknown}
 			delete(scheduler.tasks, zoneID)
 		}
 	} else {
-		state = model.ZoneState{State: model.Unknown}
+		state = models.ZoneState{State: models.ZoneUnknown}
 	}
 	return
 }

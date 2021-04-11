@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"fmt"
-	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"time"
@@ -16,13 +16,13 @@ func (scheduler *Scheduler) notifyPendingTask(task *Task) (attachments []slack.A
 	var title, text string
 	title = "unknown state detected for " + zoneName
 	switch task.State.State {
-	case model.Off:
+	case models.ZoneOff:
 		title = zoneName + " users not home"
 		text = "switching off heating in " + task.When.String()
-	case model.Auto:
+	case models.ZoneAuto:
 		title = "manual temperature setting detected in " + zoneName
 		text = "will move back to auto mode in " + task.When.Round(1*time.Minute).String()
-	case model.Manual:
+	case models.ZoneManual:
 		title = "setting " + zoneName + " to manual temperature setting"
 		text = fmt.Sprintf("setting to %.1fº in %s",
 			task.State.Temperature.Celsius,
@@ -45,13 +45,13 @@ func (scheduler *Scheduler) notifyExecutedTask(task *Task) (attachments []slack.
 	var title, text string
 	title = "unknown state detected for " + zoneName
 	switch task.State.State {
-	case model.Off:
+	case models.ZoneOff:
 		title = "switching off heating in " + zoneName
 		text = "users not home"
-	case model.Auto:
+	case models.ZoneAuto:
 		title = "Setting " + zoneName + " back to auto mode"
 		text = "overlay expired"
-	case model.Manual:
+	case models.ZoneManual:
 		title = "setting " + zoneName + " to manual temperature"
 		text = fmt.Sprintf("setting to %.1fº", task.State.Temperature.Celsius)
 	}

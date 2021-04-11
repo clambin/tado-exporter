@@ -1,7 +1,7 @@
 package scheduler_test
 
 import (
-	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/pkg/tado"
@@ -19,7 +19,7 @@ func TestScheduler_Run(t *testing.T) {
 
 	go s.Run()
 
-	s.ScheduleTask(2, model.ZoneState{State: model.Manual, Temperature: tado.Temperature{Celsius: 18.5}}, 50*time.Millisecond)
+	s.ScheduleTask(2, models.ZoneState{State: models.ZoneManual, Temperature: tado.Temperature{Celsius: 18.5}}, 50*time.Millisecond)
 
 	assert.Eventually(t, func() bool {
 		if zoneInfo, err := server.GetZoneInfo(2); err == nil {
@@ -28,8 +28,8 @@ func TestScheduler_Run(t *testing.T) {
 		return false
 	}, 500*time.Millisecond, 50*time.Millisecond)
 
-	s.ScheduleTask(2, model.ZoneState{State: model.Off}, 10*time.Minute)
-	s.ScheduleTask(2, model.ZoneState{State: model.Off}, 0*time.Second)
+	s.ScheduleTask(2, models.ZoneState{State: models.ZoneOff}, 10*time.Minute)
+	s.ScheduleTask(2, models.ZoneState{State: models.ZoneOff}, 0*time.Second)
 
 	assert.Eventually(t, func() bool {
 		if zoneInfo, err := server.GetZoneInfo(2); err == nil {
@@ -38,7 +38,7 @@ func TestScheduler_Run(t *testing.T) {
 		return false
 	}, 500*time.Millisecond, 50*time.Millisecond)
 
-	s.ScheduleTask(2, model.ZoneState{State: model.Auto}, 0*time.Second)
+	s.ScheduleTask(2, models.ZoneState{State: models.ZoneAuto}, 0*time.Second)
 
 	assert.Eventually(t, func() bool {
 		if zoneInfo, err := server.GetZoneInfo(2); err == nil {
@@ -49,7 +49,7 @@ func TestScheduler_Run(t *testing.T) {
 
 	s.Stop()
 
-	assert.Len(t, postChannel, 7)
+	assert.Len(t, postChannel, 5)
 }
 
 func TestScheduler_Scheduled(t *testing.T) {
@@ -58,18 +58,18 @@ func TestScheduler_Scheduled(t *testing.T) {
 
 	go s.Run()
 
-	s.ScheduleTask(2, model.ZoneState{
-		State:       model.Manual,
+	s.ScheduleTask(2, models.ZoneState{
+		State:       models.ZoneManual,
 		Temperature: tado.Temperature{Celsius: 18.5},
 	},
 		100*time.Millisecond,
 	)
 
 	state := s.ScheduledState(2)
-	assert.Equal(t, model.Manual, state.State)
+	assert.Equal(t, models.ZoneManual, state.State)
 
 	assert.Eventually(t, func() bool {
-		return s.ScheduledState(2).State == model.Unknown
+		return s.ScheduledState(2).State == models.ZoneUnknown
 	}, 200*time.Millisecond, 50*time.Millisecond)
 }
 
@@ -86,7 +86,7 @@ func TestScheduler_Report(t *testing.T) {
 		assert.Equal(t, "no rules have been triggered", attachments[0].Text)
 	}
 
-	s.ScheduleTask(2, model.ZoneState{State: model.Manual, Temperature: tado.Temperature{Celsius: 18.5}}, 1*time.Hour)
+	s.ScheduleTask(2, models.ZoneState{State: models.ZoneManual, Temperature: tado.Temperature{Celsius: 18.5}}, 1*time.Hour)
 	_ = <-postChannel
 
 	s.ReportTasks()

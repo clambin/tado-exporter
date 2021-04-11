@@ -1,7 +1,7 @@
 package poller_test
 
 import (
-	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/internal/controller/poller"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
@@ -22,19 +22,19 @@ func TestPoller_Run(t *testing.T) {
 	}, 100*time.Millisecond, 50*time.Millisecond)
 
 	if state, ok := update.ZoneStates[1]; assert.True(t, ok) {
-		assert.Equal(t, model.Auto, state.State)
+		assert.Equal(t, models.ZoneAuto, state.State)
 	}
 
 	if state, ok := update.ZoneStates[2]; assert.True(t, ok) {
-		assert.Equal(t, model.Auto, state.State)
+		assert.Equal(t, models.ZoneAuto, state.State)
 	}
 
 	if state, ok := update.UserStates[1]; assert.True(t, ok) {
-		assert.Equal(t, model.UserHome, state)
+		assert.Equal(t, models.UserHome, state)
 	}
 
 	if state, ok := update.UserStates[2]; assert.True(t, ok) {
-		assert.Equal(t, model.UserAway, state)
+		assert.Equal(t, models.UserAway, state)
 	}
 
 	err := p.API.SetZoneOverlay(2, 18.5)
@@ -50,7 +50,7 @@ func TestPoller_Run(t *testing.T) {
 	update = <-p.Update
 
 	if state, ok := update.ZoneStates[2]; assert.True(t, ok) {
-		assert.Equal(t, model.Manual, state.State)
+		assert.Equal(t, models.ZoneManual, state.State)
 		assert.Equal(t, 18.5, state.Temperature.Celsius)
 	}
 
@@ -67,7 +67,7 @@ func TestPoller_Run(t *testing.T) {
 	update = <-p.Update
 
 	if state, ok := update.ZoneStates[2]; assert.True(t, ok) {
-		assert.Equal(t, model.Off, state.State)
+		assert.Equal(t, models.ZoneOff, state.State)
 	}
 
 	p.Cancel <- struct{}{}

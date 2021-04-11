@@ -2,12 +2,12 @@ package zonemanager
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 )
 
-func (mgr *Manager) makeZoneConfig(config []configuration.ZoneConfig) (zoneConfig map[int]model.ZoneConfig, err error) {
+func (mgr *Manager) makeZoneConfig(config []configuration.ZoneConfig) (zoneConfig map[int]models.ZoneConfig, err error) {
 	var allZones, allUsers map[int]string
 
 	allZones, err = mgr.getAllZones()
@@ -17,7 +17,7 @@ func (mgr *Manager) makeZoneConfig(config []configuration.ZoneConfig) (zoneConfi
 	}
 
 	if err == nil {
-		zoneConfig = make(map[int]model.ZoneConfig)
+		zoneConfig = make(map[int]models.ZoneConfig)
 
 		for _, entry := range config {
 			var zoneID int
@@ -28,7 +28,7 @@ func (mgr *Manager) makeZoneConfig(config []configuration.ZoneConfig) (zoneConfi
 				continue
 			}
 
-			zoneConfigEntry := model.ZoneConfig{}
+			zoneConfigEntry := models.ZoneConfig{}
 
 			if entry.AutoAway.Enabled {
 				zoneConfigEntry.AutoAway.Enabled = true

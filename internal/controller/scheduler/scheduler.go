@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
@@ -22,13 +22,13 @@ type Scheduler struct {
 
 type Task struct {
 	ZoneID int
-	State  model.ZoneState
+	State  models.ZoneState
 	When   time.Duration
 }
 
 type ScheduledRequest struct {
 	ZoneID   int
-	Response chan model.ZoneState
+	Response chan models.ZoneState
 }
 
 func New(API tado.API, postChannel slackbot.PostChannel) API {
@@ -81,58 +81,68 @@ func (scheduler *Scheduler) schedule(task *Task) {
 		log.WithField("zone", task.ZoneID).Debug("canceled running task")
 	}
 
-	// run a new task
-	s := &scheduledTask{
-		Cancel:      make(chan struct{}),
-		task:        task,
-		timer:       time.NewTimer(task.When),
-		activation:  time.Now().Add(task.When),
-		fireChannel: scheduler.fire,
-	}
-	scheduler.tasks[task.ZoneID] = s
-	go s.Run()
+	if task.When == 0 {
+		// if the task is immediate, do it here
+		scheduler.runTask(task)
+	} else {
+		// schedule a new task
+		s := &scheduledTask{
+			Cancel:      make(chan struct{}),
+			task:        task,
+			timer:       time.NewTimer(task.When),
+			activation:  time.Now().Add(task.When),
+			fireChannel: scheduler.fire,
+		}
+		scheduler.tasks[task.ZoneID] = s
+		go s.Run()
 
-	log.WithFields(log.Fields{
-		"zone":  task.ZoneID,
-		"state": task.State.String(),
-		"when":  task.When.String(),
-	}).Debug("scheduled task")
+		log.WithFields(log.Fields{
+			"zone":  task.ZoneID,
+			"state": task.State.String(),
+			"when":  task.When.String(),
+		}).Debug("scheduled task")
 
-	if scheduler.postChannel != nil {
-		scheduler.postChannel <- scheduler.notifyPendingTask(task)
+		if scheduler.postChannel != nil {
+			scheduler.postChannel <- scheduler.notifyPendingTask(task)
+		}
 	}
 }
 
 func (scheduler *Scheduler) runTask(task *Task) {
+	var zoneInfo tado.ZoneInfo
 	var err error
-	switch task.State.State {
-	case model.Off:
-		err = scheduler.API.SetZoneOverlay(task.ZoneID, 5.0)
-	case model.Auto:
-		err = scheduler.API.DeleteZoneOverlay(task.ZoneID)
-	case model.Manual:
-		err = scheduler.API.SetZoneOverlay(task.ZoneID, task.State.Temperature.Celsius)
-	}
-	if err == nil {
-		if scheduler.postChannel != nil {
-			scheduler.postChannel <- scheduler.notifyExecutedTask(task)
+	if zoneInfo, err = scheduler.API.GetZoneInfo(task.ZoneID); err == nil {
+		if models.GetZoneState(zoneInfo).Equals(task.State) == false {
+			switch task.State.State {
+			case models.ZoneOff:
+				err = scheduler.API.SetZoneOverlay(task.ZoneID, 5.0)
+			case models.ZoneAuto:
+				err = scheduler.API.DeleteZoneOverlay(task.ZoneID)
+			case models.ZoneManual:
+				err = scheduler.API.SetZoneOverlay(task.ZoneID, task.State.Temperature.Celsius)
+			}
+			if err == nil {
+				if scheduler.postChannel != nil {
+					scheduler.postChannel <- scheduler.notifyExecutedTask(task)
+				}
+				log.WithField("zone", task.ZoneID).Debug("executed task")
+			}
 		}
-	} else {
+	}
+	if err != nil {
 		log.WithField("err", err).Warning("unable to update zone")
 	}
 
 	// unregister the completed task
 	delete(scheduler.tasks, task.ZoneID)
-
-	log.WithField("zone", task.ZoneID).Debug("executed task")
 }
 
-func (scheduler *Scheduler) getScheduledState(zoneID int) (state model.ZoneState) {
+func (scheduler *Scheduler) getScheduledState(zoneID int) (state models.ZoneState) {
 	if scheduled, ok := scheduler.tasks[zoneID]; ok == true {
 		state = scheduled.task.State
 	} else {
-		state = model.ZoneState{
-			State: model.Unknown,
+		state = models.ZoneState{
+			State: models.ZoneUnknown,
 		}
 	}
 	return

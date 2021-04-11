@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/slack-go/slack"
 	"time"
 )
@@ -9,12 +9,12 @@ import (
 type API interface {
 	Run()
 	Stop()
-	ScheduleTask(zoneID int, state model.ZoneState, when time.Duration)
-	ScheduledState(zoneID int) model.ZoneState
+	ScheduleTask(zoneID int, state models.ZoneState, when time.Duration)
+	ScheduledState(zoneID int) models.ZoneState
 	ReportTasks(_ ...string) []slack.Attachment
 }
 
-func (scheduler *Scheduler) ScheduleTask(zoneID int, state model.ZoneState, when time.Duration) {
+func (scheduler *Scheduler) ScheduleTask(zoneID int, state models.ZoneState, when time.Duration) {
 	scheduler.Schedule <- &Task{
 		ZoneID: zoneID,
 		State:  state,
@@ -22,8 +22,8 @@ func (scheduler *Scheduler) ScheduleTask(zoneID int, state model.ZoneState, when
 	}
 }
 
-func (scheduler *Scheduler) ScheduledState(zoneID int) (state model.ZoneState) {
-	response := make(chan model.ZoneState)
+func (scheduler *Scheduler) ScheduledState(zoneID int) (state models.ZoneState) {
+	response := make(chan models.ZoneState)
 	scheduler.Scheduled <- ScheduledRequest{
 		ZoneID:   zoneID,
 		Response: response,

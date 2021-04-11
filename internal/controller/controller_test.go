@@ -3,6 +3,7 @@ package controller_test
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/internal/controller/poller"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/zonemanager"
@@ -75,6 +76,45 @@ func TestController_Run(t *testing.T) {
 		}, 100*time.Millisecond, 10*time.Millisecond)
 
 		assert.Len(t, postChannel, 2)
+
+		c.Stop()
+	}
+}
+
+func TestController_RevertedOverlay(t *testing.T) {
+	zoneConfig := []configuration.ZoneConfig{{
+		ZoneName: "bar",
+		LimitOverlay: configuration.ZoneLimitOverlay{
+			Enabled: true,
+			Delay:   1 * time.Hour,
+		},
+	}}
+
+	server := &mockapi.MockAPI{}
+	pollr := poller.New(server, 25*time.Millisecond)
+	postChannel := make(slackbot.PostChannel, 200)
+	schedulr := scheduler.New(server, postChannel)
+	mgr, err := zonemanager.New(server, zoneConfig, pollr.Update, schedulr)
+
+	if assert.Nil(t, err) {
+		c, _ := controller.NewWith(server, pollr, mgr, schedulr, nil)
+		go c.Run()
+
+		log.SetLevel(log.DebugLevel)
+
+		err = server.SetZoneOverlay(2, 15.5)
+		assert.Nil(t, err)
+
+		assert.Eventually(t, func() bool {
+			return schedulr.ScheduledState(2).State == models.ZoneAuto
+		}, 500*time.Millisecond, 10*time.Millisecond)
+
+		err = server.DeleteZoneOverlay(2)
+		assert.Nil(t, err)
+
+		assert.Eventually(t, func() bool {
+			return schedulr.ScheduledState(2).State == models.ZoneUnknown
+		}, 500*time.Hour, 10*time.Millisecond)
 
 		c.Stop()
 	}

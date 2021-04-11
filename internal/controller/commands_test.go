@@ -3,7 +3,7 @@ package controller
 /*
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/internal/controller/tadoproxy"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
@@ -27,8 +27,8 @@ func TestController_doRooms(t *testing.T) {
 	ctrl := NewWithProxy(proxy, cfg)
 	go ctrl.Run()
 
-	ctrl.proxy.SetZones <- map[int]model.ZoneState{
-		2: {State: model.Manual, Temperature: tado.Temperature{Celsius: 25.0}},
+	ctrl.proxy.SetZones <- map[int]models.ZoneState{
+		2: {State: models.Manual, Temperature: tado.Temperature{Celsius: 25.0}},
 	}
 
 	output := ctrl.doRooms()

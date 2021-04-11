@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"fmt"
-	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/slack-go/slack"
 	"strings"
 	"time"
@@ -14,11 +14,11 @@ func (scheduler *Scheduler) reportTasks() []slack.Attachment {
 	for id, scheduled := range scheduler.tasks {
 		var action string
 		switch scheduled.task.State.State {
-		case model.Off:
+		case models.ZoneOff:
 			action = "switch off heating"
-		case model.Auto:
+		case models.ZoneAuto:
 			action = "set to auto mode"
-		case model.Manual:
+		case models.ZoneManual:
 			action = fmt.Sprintf("set temperature to %.1fº", scheduled.task.State.Temperature.Celsius)
 		}
 		text = append(text,

@@ -2,7 +2,7 @@ package zonemanager_test
 
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/model"
+	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/internal/controller/poller"
 	"github.com/clambin/tado-exporter/internal/controller/scheduler/mockscheduler"
 	"github.com/clambin/tado-exporter/internal/controller/zonemanager"
@@ -50,20 +50,20 @@ func TestZoneManager_Load(t *testing.T) {
 
 var fakeUpdates = []poller.Update{
 	{
-		ZoneStates: map[int]model.ZoneState{2: {State: model.Auto, Temperature: tado.Temperature{Celsius: 25.0}}},
-		UserStates: map[int]model.UserState{2: model.UserAway},
+		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneAuto, Temperature: tado.Temperature{Celsius: 25.0}}},
+		UserStates: map[int]models.UserState{2: models.UserAway},
 	},
 	{
-		ZoneStates: map[int]model.ZoneState{2: {State: model.Off, Temperature: tado.Temperature{Celsius: 15.0}}},
-		UserStates: map[int]model.UserState{2: model.UserHome},
+		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneOff, Temperature: tado.Temperature{Celsius: 15.0}}},
+		UserStates: map[int]models.UserState{2: models.UserHome},
 	},
 	{
-		ZoneStates: map[int]model.ZoneState{2: {State: model.Manual, Temperature: tado.Temperature{Celsius: 20.0}}},
-		UserStates: map[int]model.UserState{2: model.UserHome},
+		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneManual, Temperature: tado.Temperature{Celsius: 20.0}}},
+		UserStates: map[int]models.UserState{2: models.UserHome},
 	},
 	{
-		ZoneStates: map[int]model.ZoneState{2: {State: model.Auto, Temperature: tado.Temperature{Celsius: 25.0}}},
-		UserStates: map[int]model.UserState{2: model.UserHome},
+		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneAuto, Temperature: tado.Temperature{Celsius: 25.0}}},
+		UserStates: map[int]models.UserState{2: models.UserHome},
 	},
 }
 
@@ -88,14 +88,14 @@ func TestZoneManager_AutoAway(t *testing.T) {
 		updates <- fakeUpdates[0]
 
 		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == model.Off
+			return schedulr.ScheduledState(2).State == models.ZoneOff
 		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		// user comes home
 		updates <- fakeUpdates[1]
 
 		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == model.Unknown
+			return schedulr.ScheduledState(2).State == models.ZoneUnknown
 		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		mgr.Cancel <- struct{}{}
@@ -121,21 +121,22 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 		updates <- fakeUpdates[2]
 
 		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == model.Auto
+			return schedulr.ScheduledState(2).State == models.ZoneAuto
 		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		// back to auto mode
 		updates <- fakeUpdates[3]
 
 		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == model.Auto
+			state := schedulr.ScheduledState(2).State
+			return state == models.ZoneAuto || state == models.ZoneUnknown
 		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		// back to manual mode
 		updates <- fakeUpdates[2]
 
 		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == model.Auto
+			return schedulr.ScheduledState(2).State == models.ZoneAuto
 		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		mgr.Cancel <- struct{}{}
@@ -164,7 +165,7 @@ func TestZoneManager_NightTime(t *testing.T) {
 		updates <- fakeUpdates[2]
 
 		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == model.Auto
+			return schedulr.ScheduledState(2).State == models.ZoneAuto
 		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		mgr.Cancel <- struct{}{}
@@ -204,21 +205,21 @@ func TestZoneManager_Combined(t *testing.T) {
 		updates <- fakeUpdates[0]
 
 		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == model.Off
+			return schedulr.ScheduledState(2).State == models.ZoneOff
 		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		// user comes home
 		updates <- fakeUpdates[1]
 
 		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == model.Unknown
+			return schedulr.ScheduledState(2).State == models.ZoneUnknown
 		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		// user is home & room set to manual
 		updates <- fakeUpdates[2]
 
 		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == model.Auto
+			return schedulr.ScheduledState(2).State == models.ZoneAuto
 		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		mgr.Cancel <- struct{}{}
@@ -247,10 +248,10 @@ func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
 			updates <- fakeUpdates[2]
 			if i == 0 {
 				assert.Eventually(b, func() bool {
-					return schedulr.ScheduledState(2).State == model.Auto
+					return schedulr.ScheduledState(2).State == models.ZoneAuto
 				}, 500*time.Millisecond, 10*time.Millisecond)
 			} else {
-				assert.Equal(b, model.Auto, schedulr.ScheduledState(2).State)
+				assert.Equal(b, models.ZoneAuto, schedulr.ScheduledState(2).State)
 			}
 		}
 
