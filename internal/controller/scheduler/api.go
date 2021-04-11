@@ -10,6 +10,7 @@ type API interface {
 	Run()
 	Stop()
 	ScheduleTask(zoneID int, state models.ZoneState, when time.Duration)
+	UnscheduleTask(zoneID int)
 	ScheduledState(zoneID int) models.ZoneState
 	ReportTasks(_ ...string) []slack.Attachment
 }
@@ -20,6 +21,10 @@ func (scheduler *Scheduler) ScheduleTask(zoneID int, state models.ZoneState, whe
 		State:  state,
 		When:   when,
 	}
+}
+
+func (scheduler *Scheduler) UnscheduleTask(zoneID int) {
+	scheduler.Unschedule <- zoneID
 }
 
 func (scheduler *Scheduler) ScheduledState(zoneID int) (state models.ZoneState) {

@@ -12,6 +12,7 @@ type Scheduler struct {
 	API         tado.API
 	Cancel      chan struct{}
 	Schedule    chan *Task
+	Unschedule  chan int
 	Scheduled   chan ScheduledRequest
 	Report      chan struct{}
 	fire        chan *Task
@@ -36,6 +37,7 @@ func New(API tado.API, postChannel slackbot.PostChannel) API {
 		API:         API,
 		Cancel:      make(chan struct{}),
 		Schedule:    make(chan *Task),
+		Unschedule:  make(chan int),
 		Scheduled:   make(chan ScheduledRequest),
 		Report:      make(chan struct{}),
 		fire:        make(chan *Task),
@@ -53,6 +55,8 @@ loop:
 			break loop
 		case task := <-scheduler.Schedule:
 			scheduler.schedule(task)
+		case zoneID := <-scheduler.Unschedule:
+			scheduler.unschedule(zoneID)
 		case task := <-scheduler.fire:
 			scheduler.runTask(task)
 		case req := <-scheduler.Scheduled:
@@ -108,28 +112,29 @@ func (scheduler *Scheduler) schedule(task *Task) {
 	}
 }
 
-func (scheduler *Scheduler) runTask(task *Task) {
-	var zoneInfo tado.ZoneInfo
-	var err error
-	if zoneInfo, err = scheduler.API.GetZoneInfo(task.ZoneID); err == nil {
-		if models.GetZoneState(zoneInfo).Equals(task.State) == false {
-			switch task.State.State {
-			case models.ZoneOff:
-				err = scheduler.API.SetZoneOverlay(task.ZoneID, 5.0)
-			case models.ZoneAuto:
-				err = scheduler.API.DeleteZoneOverlay(task.ZoneID)
-			case models.ZoneManual:
-				err = scheduler.API.SetZoneOverlay(task.ZoneID, task.State.Temperature.Celsius)
-			}
-			if err == nil {
-				if scheduler.postChannel != nil {
-					scheduler.postChannel <- scheduler.notifyExecutedTask(task)
-				}
-				log.WithField("zone", task.ZoneID).Debug("executed task")
-			}
-		}
+func (scheduler *Scheduler) unschedule(zoneID int) {
+	if task, ok := scheduler.tasks[zoneID]; ok == true {
+		task.Cancel <- struct{}{}
+		delete(scheduler.tasks, zoneID)
 	}
-	if err != nil {
+}
+
+func (scheduler *Scheduler) runTask(task *Task) {
+	var err error
+	switch task.State.State {
+	case models.ZoneOff:
+		err = scheduler.API.SetZoneOverlay(task.ZoneID, 5.0)
+	case models.ZoneAuto:
+		err = scheduler.API.DeleteZoneOverlay(task.ZoneID)
+	case models.ZoneManual:
+		err = scheduler.API.SetZoneOverlay(task.ZoneID, task.State.Temperature.Celsius)
+	}
+	if err == nil {
+		if scheduler.postChannel != nil {
+			scheduler.postChannel <- scheduler.notifyExecutedTask(task)
+		}
+		log.WithField("zone", task.ZoneID).Debug("executed task")
+	} else {
 		log.WithField("err", err).Warning("unable to update zone")
 	}
 

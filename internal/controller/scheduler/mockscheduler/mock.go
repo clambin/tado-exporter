@@ -41,6 +41,13 @@ func (scheduler *MockScheduler) ScheduleTask(zoneID int, state models.ZoneState,
 	}
 }
 
+func (scheduler *MockScheduler) UnscheduleTask(zoneID int) {
+	scheduler.lock.Lock()
+	defer scheduler.lock.Unlock()
+
+	delete(scheduler.tasks, zoneID)
+}
+
 func (scheduler *MockScheduler) ScheduledState(zoneID int) (state models.ZoneState) {
 	scheduler.lock.Lock()
 	defer scheduler.lock.Unlock()

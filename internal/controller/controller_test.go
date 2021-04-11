@@ -25,7 +25,7 @@ func BenchmarkController_Run(b *testing.B) {
 		ZoneName: "bar",
 		LimitOverlay: configuration.ZoneLimitOverlay{
 			Enabled: true,
-			Delay:   20 * time.Millisecond,
+			Delay:   1 * time.Millisecond,
 		},
 	}}
 	mgr, _ := zonemanager.New(server, zoneConfig, pollr.Update, schedulr)

@@ -42,10 +42,16 @@ loop:
 }
 
 func (mgr *Manager) update(update poller.Update) {
-	for zoneID := range update.ZoneStates {
+	for zoneID, state := range update.ZoneStates {
 		if _, ok := mgr.ZoneConfig[zoneID]; ok == true {
 			targetState, when := mgr.newZoneState(zoneID, update)
-			mgr.scheduler.ScheduleTask(zoneID, targetState, when)
+			if targetState.Equals(state) == false {
+				// schedule the new state
+				mgr.scheduler.ScheduleTask(zoneID, targetState, when)
+			} else {
+				// already at target state. cancel any outstanding tasks
+				mgr.scheduler.UnscheduleTask(zoneID)
+			}
 		}
 	}
 	return
