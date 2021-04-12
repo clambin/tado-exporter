@@ -4,7 +4,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/internal/controller/poller"
-	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"time"
 )
@@ -12,17 +12,29 @@ import (
 type Manager struct {
 	API        tado.API
 	ZoneConfig map[int]models.ZoneConfig
-	Cancel     chan struct{}
-	Update     chan poller.Update
-	scheduler  scheduler.API
+
+	Cancel chan struct{}
+	Update chan poller.Update
+	Report chan struct{}
+
+	fire      chan *Task
+	tasks     map[int]*Task
+	nameCache map[int]string
+
+	postChannel slackbot.PostChannel
 }
 
-func New(API tado.API, zoneConfig []configuration.ZoneConfig, updater chan poller.Update, scheduler scheduler.API) (mgr *Manager, err error) {
+func New(API tado.API, zoneConfig []configuration.ZoneConfig, updater chan poller.Update, postChannel slackbot.PostChannel) (mgr *Manager, err error) {
 	mgr = &Manager{
-		API:       API,
-		Cancel:    make(chan struct{}),
-		Update:    updater,
-		scheduler: scheduler,
+		API:    API,
+		Cancel: make(chan struct{}),
+		Update: updater,
+		Report: make(chan struct{}),
+
+		fire:        make(chan *Task),
+		tasks:       make(map[int]*Task),
+		postChannel: postChannel,
+		nameCache:   make(map[int]string),
 	}
 	mgr.ZoneConfig, err = mgr.makeZoneConfig(zoneConfig)
 
@@ -37,6 +49,10 @@ loop:
 			break loop
 		case update := <-mgr.Update:
 			mgr.update(update)
+		case task := <-mgr.fire:
+			mgr.runTask(task)
+		case <-mgr.Report:
+			mgr.reportTasks()
 		}
 	}
 }
@@ -47,10 +63,10 @@ func (mgr *Manager) update(update poller.Update) {
 			targetState, when := mgr.newZoneState(zoneID, update)
 			if targetState.Equals(state) == false {
 				// schedule the new state
-				mgr.scheduler.ScheduleTask(zoneID, targetState, when)
+				mgr.scheduleTask(zoneID, targetState, when)
 			} else {
 				// already at target state. cancel any outstanding tasks
-				mgr.scheduler.UnscheduleTask(zoneID)
+				mgr.unscheduleTask(zoneID)
 			}
 		}
 	}

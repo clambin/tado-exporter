@@ -1,4 +1,4 @@
-package scheduler
+package zonemanager
 
 import (
 	"fmt"
@@ -8,25 +8,27 @@ import (
 	"time"
 )
 
-func (scheduler *Scheduler) notifyPendingTask(task *Task) (attachments []slack.Attachment) {
-	zoneName := scheduler.getZoneName(task.ZoneID)
+func (mgr *Manager) notifyPendingTask(task *Task) (attachments []slack.Attachment) {
+	zoneName := mgr.getZoneName(task.zoneID)
 
-	log.WithFields(log.Fields{"zone": zoneName, "state": task.State.String()}).Debug("queuing zone state change")
+	log.WithFields(log.Fields{"zone": zoneName, "state": task.state.String()}).Debug("queuing zone state change")
 
 	var title, text string
 	title = "unknown state detected for " + zoneName
-	switch task.State.State {
+	delta := task.activation.Sub(time.Now()).Round(1 * time.Second).String()
+
+	switch task.state.State {
 	case models.ZoneOff:
 		title = zoneName + " users not home"
-		text = "switching off heating in " + task.When.String()
+		text = "switching off heating in " + delta
 	case models.ZoneAuto:
 		title = "manual temperature setting detected in " + zoneName
-		text = "will move back to auto mode in " + task.When.Round(1*time.Minute).String()
+		text = "will move back to auto mode in " + delta
 	case models.ZoneManual:
 		title = "setting " + zoneName + " to manual temperature setting"
 		text = fmt.Sprintf("setting to %.1fº in %s",
-			task.State.Temperature.Celsius,
-			task.When.String(),
+			task.state.Temperature.Celsius,
+			delta,
 		)
 	}
 
@@ -37,14 +39,14 @@ func (scheduler *Scheduler) notifyPendingTask(task *Task) (attachments []slack.A
 	}}
 }
 
-func (scheduler *Scheduler) notifyExecutedTask(task *Task) (attachments []slack.Attachment) {
-	zoneName := scheduler.getZoneName(task.ZoneID)
+func (mgr *Manager) notifyExecutedTask(task *Task) (attachments []slack.Attachment) {
+	zoneName := mgr.getZoneName(task.zoneID)
 
-	log.WithFields(log.Fields{"zone": zoneName, "state": task.State.String()}).Info("setting zone state")
+	log.WithFields(log.Fields{"zone": zoneName, "state": task.state.String()}).Info("setting zone state")
 
 	var title, text string
 	title = "unknown state detected for " + zoneName
-	switch task.State.State {
+	switch task.state.State {
 	case models.ZoneOff:
 		title = "switching off heating in " + zoneName
 		text = "users not home"
@@ -53,7 +55,7 @@ func (scheduler *Scheduler) notifyExecutedTask(task *Task) (attachments []slack.
 		text = "overlay expired"
 	case models.ZoneManual:
 		title = "setting " + zoneName + " to manual temperature"
-		text = fmt.Sprintf("setting to %.1fº", task.State.Temperature.Celsius)
+		text = fmt.Sprintf("setting to %.1fº", task.state.Temperature.Celsius)
 	}
 	return []slack.Attachment{{
 		Color: "good",
@@ -62,15 +64,15 @@ func (scheduler *Scheduler) notifyExecutedTask(task *Task) (attachments []slack.
 	}}
 }
 
-func (scheduler *Scheduler) getZoneName(zoneID int) (name string) {
+func (mgr *Manager) getZoneName(zoneID int) (name string) {
 	var ok bool
-	if name, ok = scheduler.nameCache[zoneID]; ok == false {
+	if name, ok = mgr.nameCache[zoneID]; ok == false {
 		name = "unknown"
-		if zones, err := scheduler.API.GetZones(); err == nil {
+		if zones, err := mgr.API.GetZones(); err == nil {
 			for _, zone := range zones {
 				if zone.ID == zoneID {
 					name = zone.Name
-					scheduler.nameCache[zoneID] = name
+					mgr.nameCache[zoneID] = name
 					break
 				}
 			}

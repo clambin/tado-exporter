@@ -3,9 +3,7 @@ package controller_test
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller"
-	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/internal/controller/poller"
-	"github.com/clambin/tado-exporter/internal/controller/scheduler"
 	"github.com/clambin/tado-exporter/internal/controller/zonemanager"
 	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/pkg/tado"
@@ -20,7 +18,6 @@ func BenchmarkController_Run(b *testing.B) {
 	server := &mockapi.MockAPI{}
 	pollr := poller.New(server, 10*time.Millisecond)
 	postChannel := make(slackbot.PostChannel)
-	schedulr := scheduler.New(server, postChannel)
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
 		LimitOverlay: configuration.ZoneLimitOverlay{
@@ -28,8 +25,8 @@ func BenchmarkController_Run(b *testing.B) {
 			Delay:   1 * time.Millisecond,
 		},
 	}}
-	mgr, _ := zonemanager.New(server, zoneConfig, pollr.Update, schedulr)
-	c, _ := controller.NewWith(server, pollr, mgr, schedulr, nil)
+	mgr, _ := zonemanager.New(server, zoneConfig, pollr.Update, postChannel)
+	c, _ := controller.NewWith(server, pollr, mgr, nil)
 	go c.Run()
 
 	b.ResetTimer()
@@ -53,11 +50,10 @@ func TestController_Run(t *testing.T) {
 	server := &mockapi.MockAPI{}
 	pollr := poller.New(server, 25*time.Millisecond)
 	postChannel := make(slackbot.PostChannel, 200)
-	schedulr := scheduler.New(server, postChannel)
-	mgr, err := zonemanager.New(server, zoneConfig, pollr.Update, schedulr)
+	mgr, err := zonemanager.New(server, zoneConfig, pollr.Update, postChannel)
 
 	if assert.Nil(t, err) {
-		c, _ := controller.NewWith(server, pollr, mgr, schedulr, nil)
+		c, _ := controller.NewWith(server, pollr, mgr, nil)
 
 		log.SetLevel(log.DebugLevel)
 
@@ -71,8 +67,7 @@ func TestController_Run(t *testing.T) {
 		go c.Run()
 
 		assert.Eventually(t, func() bool {
-			info, err = server.GetZoneInfo(2)
-			return err == nil && info.Overlay.Type == ""
+			return zoneInOverlay(server, 2) == false
 		}, 100*time.Millisecond, 10*time.Millisecond)
 
 		assert.Len(t, postChannel, 2)
@@ -93,11 +88,10 @@ func TestController_RevertedOverlay(t *testing.T) {
 	server := &mockapi.MockAPI{}
 	pollr := poller.New(server, 25*time.Millisecond)
 	postChannel := make(slackbot.PostChannel, 200)
-	schedulr := scheduler.New(server, postChannel)
-	mgr, err := zonemanager.New(server, zoneConfig, pollr.Update, schedulr)
+	mgr, err := zonemanager.New(server, zoneConfig, pollr.Update, postChannel)
 
 	if assert.Nil(t, err) {
-		c, _ := controller.NewWith(server, pollr, mgr, schedulr, nil)
+		c, _ := controller.NewWith(server, pollr, mgr, nil)
 		go c.Run()
 
 		log.SetLevel(log.DebugLevel)
@@ -105,17 +99,24 @@ func TestController_RevertedOverlay(t *testing.T) {
 		err = server.SetZoneOverlay(2, 15.5)
 		assert.Nil(t, err)
 
-		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == models.ZoneAuto
+		assert.Never(t, func() bool {
+			return zoneInOverlay(server, 2) == false
 		}, 500*time.Millisecond, 10*time.Millisecond)
 
 		err = server.DeleteZoneOverlay(2)
 		assert.Nil(t, err)
 
+		// TODO: we really want to check that mgr no longer has a task for this
+		// use task report to validate this
 		assert.Eventually(t, func() bool {
-			return schedulr.ScheduledState(2).State == models.ZoneUnknown
+			return zoneInOverlay(server, 2) == false
 		}, 500*time.Hour, 10*time.Millisecond)
 
 		c.Stop()
 	}
+}
+
+func zoneInOverlay(server tado.API, zoneID int) bool {
+	info, err := server.GetZoneInfo(zoneID)
+	return err == nil && info.Overlay.Type != ""
 }

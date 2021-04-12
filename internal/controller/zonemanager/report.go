@@ -1,4 +1,4 @@
-package scheduler
+package zonemanager
 
 import (
 	"fmt"
@@ -8,22 +8,27 @@ import (
 	"time"
 )
 
-func (scheduler *Scheduler) reportTasks() []slack.Attachment {
-	text := make([]string, 0, len(scheduler.tasks))
+func (mgr *Manager) ReportTasks(_ ...string) (attachments []slack.Attachment) {
+	mgr.Report <- struct{}{}
+	return
+}
 
-	for id, scheduled := range scheduler.tasks {
+func (mgr *Manager) reportTasks(_ ...string) {
+	text := make([]string, 0, len(mgr.tasks))
+
+	for id, task := range mgr.tasks {
 		var action string
-		switch scheduled.task.State.State {
+		switch task.state.State {
 		case models.ZoneOff:
 			action = "switch off heating"
 		case models.ZoneAuto:
 			action = "set to auto mode"
 		case models.ZoneManual:
-			action = fmt.Sprintf("set temperature to %.1fº", scheduled.task.State.Temperature.Celsius)
+			action = fmt.Sprintf("set temperature to %.1fº", task.state.Temperature.Celsius)
 		}
 		text = append(text,
-			scheduler.getZoneName(id)+": will "+action+" in "+
-				scheduled.activation.Sub(time.Now()).Round(5*time.Second).String(),
+			mgr.getZoneName(id)+": will "+action+" in "+
+				task.activation.Sub(time.Now()).Round(1*time.Second).String(),
 		)
 	}
 
@@ -36,7 +41,7 @@ func (scheduler *Scheduler) reportTasks() []slack.Attachment {
 		slackText = "no rules have been triggered"
 	}
 
-	return []slack.Attachment{{
+	mgr.postChannel <- []slack.Attachment{{
 		Color: "good",
 		Title: slackTitle,
 		Text:  slackText,

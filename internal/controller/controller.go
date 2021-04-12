@@ -3,26 +3,22 @@ package controller
 import (
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/poller"
-	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/internal/controller/zonemanager"
 	"github.com/clambin/tado-exporter/internal/version"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-
-	// "github.com/slack-go/slack"
 	//"github.com/clambin/tado-exporter/internal/controller/commands"
-	"github.com/clambin/tado-exporter/internal/controller/zonemanager"
-	"github.com/clambin/tado-exporter/pkg/slackbot"
 )
 
 // Controller object for tado-controller.
 type Controller struct {
-	API       tado.API
-	poller    *poller.Poller
-	mgr       *zonemanager.Manager
-	scheduler scheduler.API
-	tadoBot   *slackbot.SlackBot
-	stop      chan struct{}
+	API     tado.API
+	poller  *poller.Poller
+	mgr     *zonemanager.Manager
+	tadoBot *slackbot.SlackBot
+	stop    chan struct{}
 }
 
 // New creates a new Controller object
@@ -48,38 +44,34 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 		}
 
 		pollr := poller.New(API, cfg.Interval)
-		schedulr := scheduler.New(API, postChannel)
-
-		if tadoBot != nil {
-			tadoBot.RegisterCallback("rules", schedulr.ReportTasks)
-		}
 
 		var mgr *zonemanager.Manager
-		mgr, err = zonemanager.New(API, *cfg.ZoneConfig, pollr.Update, schedulr)
+		mgr, err = zonemanager.New(API, *cfg.ZoneConfig, pollr.Update, postChannel)
 
 		if err == nil {
-			controller, err = NewWith(API, pollr, mgr, schedulr, tadoBot)
+			if tadoBot != nil {
+				tadoBot.RegisterCallback("rules", mgr.ReportTasks)
+			}
+			controller, err = NewWith(API, pollr, mgr, tadoBot)
 		}
 	}
 	return
 }
 
 // NewWith creates a controller with pre-existing components.  Used for unit-testing
-func NewWith(API tado.API, pollr *poller.Poller, mgr *zonemanager.Manager, schedulr scheduler.API, tadoBot *slackbot.SlackBot) (controller *Controller, err error) {
+func NewWith(API tado.API, pollr *poller.Poller, mgr *zonemanager.Manager, tadoBot *slackbot.SlackBot) (controller *Controller, err error) {
 	controller = &Controller{
-		API:       API,
-		poller:    pollr,
-		mgr:       mgr,
-		scheduler: schedulr,
-		stop:      make(chan struct{}),
-		tadoBot:   tadoBot,
+		API:     API,
+		poller:  pollr,
+		mgr:     mgr,
+		stop:    make(chan struct{}),
+		tadoBot: tadoBot,
 	}
 	return
 }
 
 // Run the controller
 func (controller *Controller) Run() {
-	go controller.scheduler.Run()
 	go controller.mgr.Run()
 	go controller.poller.Run()
 
@@ -89,7 +81,6 @@ loop:
 		case <-controller.stop:
 			controller.poller.Cancel <- struct{}{}
 			controller.mgr.Cancel <- struct{}{}
-			controller.scheduler.Stop()
 			break loop
 		}
 	}
