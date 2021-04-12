@@ -14,10 +14,11 @@ tado-monitor offers two types of functionality:
 * an exporter to expose metrics to Prometheus
 * a controller to control the temperature settings of rooms in your Tado-controlled home
 
-The controller is rule-based. It currently supports two types of rules:
+The controller is rule-based. It currently supports three types of rules:
 
-* **LimitOverlay** disables manual temperature settings in a room after a specified amount of time. Typical use case is to disable the bathroom heating if someone forgot to switch off a manual temperature setting.
-* **AutoAway** rules switch off the automatic temperature control for a room when a user has left home for a specified amount of time. Typical use case is one of the kids leaving for college for the week.
+* **autoAway** rules switch off the automatic temperature control for a room when a user has left home for a specified amount of time. Typical use case is one of the kids leaving for college for the week.
+* **limitOverlay** disables manual temperature settings in a room after a specified amount of time. Typical use case is to disable the bathroom heating if someone forgot to switch off a manual temperature setting.
+* **nightTime** disables manual temperature settings in a room at a specific time of day. Typical use case is switching the living room to automatic at the end of the day.
 
 
 ## Installation
@@ -106,27 +107,27 @@ controller:
       # if set, tado will use the specified environment variable's value as slackbot token.
       # Overrides the value above.
       envVar: ""
-  # autoAway rules switch a room to manual control when a user is not home
-  autoAwayRules:
-      # mobileDeviceName or mobileDeviceID identify the user through his registed mobile phone
-    - mobileDeviceName: "my Phone"
-      # zoneName or zoneID identify the room / zone to switch to manual control
-      zoneName: "Study"
-      # how long do we wait after the user leaves home to set the room to manual control?
-      waitTime: 2h
-      # temperature of the room while the user is away. 5 or less degrees switch the room to frost control (i.e. off)
-      targetTemperature: 15.0
+    # Zones defined rules for individual rooms (i.e. "zones")
+    zones:
+    - name: "zone name"
+      # autoAway switches off heating in a room when all associated users are not home
+      autoAway:
+        enabled: false
+        delay: 1h
+        # users specifies the list of users assocated with that room. 
+        # either name or id can be used
+        users:
+          - name: "my Phone"
+      # limitOverlay switches off a room's manual temperature setting after a configured amount of time
+      limitOverlay:
+        enabled: false
+        delay: 10m
+      # nighttime sets a room to automatic temperature control at a fixed time of day
+      nightTime:
+        enabled: false
+        time: "23:30:00"
 
-  # overlayLimit rules switch off a room's manual temperature setting after a configured amount of time
-  overlayLimitRules:
-    # zoneName or zoneID identify the room  
-  - zoneName: "Study"
-    # how long do we allow the room to be in manual control before switching it to automatic control
-    maxTime: 1m
 ```
-
-Note: clearly, those two sets of rules can interact. No logic is implemented to compensate this. Use wisely.
-
 
 ## Prometheus
 
@@ -197,13 +198,8 @@ Users can also interact with the bot:
 
 TadoBot supports the following commands:
 
-* **users**: show presence of all users (i.e. geo-tracked mobile devices)
-* **rooms**: show info of all rooms (zones)
-* **rules**: show status of all configured rules
-* **autoaway**: show status of all configured autoAway rules
-* **limitoverlay**: show status of all configured limitOverlay rules
-* **set <room name> <temperature>**: set the target temperature of a room. use temperature "auto" to set back to automatic schedule
-* **version**: show version of tado-controller
+* **rules**: show any activated rules
+* **version**: show version of tado-monitor
 * **help**: show all available commands
 
 To enable the bot, add a bot to the workspace's Custom Integrations and add the API Token in the configuration file above (*slackbotToken*).
