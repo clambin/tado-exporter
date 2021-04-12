@@ -43,34 +43,28 @@ func TestController_Run(t *testing.T) {
 		ZoneName: "bar",
 		LimitOverlay: configuration.ZoneLimitOverlay{
 			Enabled: true,
-			Delay:   50 * time.Millisecond,
+			Delay:   20 * time.Millisecond,
 		},
 	}}
 
 	server := &mockapi.MockAPI{}
 	pollr := poller.New(server, 25*time.Millisecond)
-	postChannel := make(slackbot.PostChannel, 200)
+	postChannel := make(slackbot.PostChannel)
 	mgr, err := zonemanager.New(server, zoneConfig, pollr.Update, postChannel)
 
 	if assert.Nil(t, err) {
 		c, _ := controller.NewWith(server, pollr, mgr, nil)
+		go c.Run()
 
 		log.SetLevel(log.DebugLevel)
 
 		err = server.SetZoneOverlay(2, 15.5)
-		assert.Nil(t, err)
-		var info tado.ZoneInfo
-		info, err = server.GetZoneInfo(2)
-		assert.Nil(t, err)
-		assert.Equal(t, "MANUAL", info.Overlay.Type)
+		assert.True(t, zoneInOverlay(server, 2))
 
-		go c.Run()
+		_ = <-postChannel
+		_ = <-postChannel
 
-		assert.Eventually(t, func() bool {
-			return zoneInOverlay(server, 2) == false
-		}, 100*time.Millisecond, 10*time.Millisecond)
-
-		assert.Len(t, postChannel, 2)
+		assert.False(t, zoneInOverlay(server, 2))
 
 		c.Stop()
 	}
@@ -87,7 +81,7 @@ func TestController_RevertedOverlay(t *testing.T) {
 
 	server := &mockapi.MockAPI{}
 	pollr := poller.New(server, 25*time.Millisecond)
-	postChannel := make(slackbot.PostChannel, 200)
+	postChannel := make(slackbot.PostChannel)
 	mgr, err := zonemanager.New(server, zoneConfig, pollr.Update, postChannel)
 
 	if assert.Nil(t, err) {
@@ -99,17 +93,17 @@ func TestController_RevertedOverlay(t *testing.T) {
 		err = server.SetZoneOverlay(2, 15.5)
 		assert.Nil(t, err)
 
-		assert.Never(t, func() bool {
-			return zoneInOverlay(server, 2) == false
-		}, 500*time.Millisecond, 10*time.Millisecond)
+		_ = <-postChannel
+
+		assert.True(t, zoneInOverlay(server, 2))
 
 		err = server.DeleteZoneOverlay(2)
 		assert.Nil(t, err)
 
-		// TODO: we really want to check that mgr no longer has a task for this
-		// use task report to validate this
 		assert.Eventually(t, func() bool {
-			return zoneInOverlay(server, 2) == false
+			mgr.ReportTasks()
+			msg := <-postChannel
+			return len(msg) == 1 && msg[0].Text == "no rules have been triggered"
 		}, 500*time.Hour, 10*time.Millisecond)
 
 		c.Stop()

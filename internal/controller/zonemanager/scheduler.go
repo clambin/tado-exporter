@@ -8,15 +8,12 @@ import (
 
 func (mgr *Manager) scheduleTask(zoneID int, state models.ZoneState, when time.Duration) {
 	// check if we already have a task running for the zoneID
-	running, ok := mgr.tasks[zoneID]
+	if running, ok := mgr.tasks[zoneID]; ok {
+		// if we're already setting that state, ignore the new task, unless it sets that state earlier
+		if running.state.Equals(state) && running.activation.Before(time.Now().Add(when)) {
+			return
+		}
 
-	// if we're already setting that state, ignore the new task, unless it sets that state earlier
-	if ok && running.state.Equals(state) && running.activation.Before(time.Now().Add(when)) {
-		return
-	}
-
-	// cancel a previously running task
-	if ok == true {
 		running.Cancel <- struct{}{}
 		log.WithField("zone", zoneID).Debug("canceled running task")
 	}

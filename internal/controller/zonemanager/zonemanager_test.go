@@ -79,7 +79,8 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 
 	updates := make(chan poller.Update)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, nil)
+	postChannel := make(slackbot.PostChannel)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, postChannel)
 
 	if assert.Nil(t, err) {
 		go mgr.Run()
@@ -88,9 +89,8 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 		_ = mgr.API.SetZoneOverlay(2, 15.0)
 		updates <- fakeUpdates[2]
 
-		assert.Never(t, func() bool {
-			return zoneInOverlay(mgr.API, 2) == false
-		}, 100*time.Millisecond, 10*time.Millisecond)
+		_ = <-postChannel
+		assert.True(t, zoneInOverlay(mgr.API, 2))
 
 		// back to auto mode
 		updates <- fakeUpdates[3]
@@ -98,9 +98,9 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 		// back to manual mode
 		updates <- fakeUpdates[2]
 
-		assert.Eventually(t, func() bool {
-			return zoneInOverlay(mgr.API, 2) == false
-		}, 500*time.Millisecond, 10*time.Millisecond)
+		_ = <-postChannel
+		_ = <-postChannel
+		assert.False(t, zoneInOverlay(mgr.API, 2))
 
 		mgr.Cancel <- struct{}{}
 	}
@@ -119,18 +119,23 @@ func TestZoneManager_NightTime(t *testing.T) {
 	}}
 
 	updates := make(chan poller.Update)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, nil)
+	postChannel := make(slackbot.PostChannel)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, postChannel)
 
 	if assert.Nil(t, err) {
 		go mgr.Run()
 
 		updates <- fakeUpdates[2]
 
-		assert.Eventually(t, func() bool {
-			var info tado.ZoneInfo
-			info, err = mgr.API.GetZoneInfo(2)
-			return err == nil && info.Overlay.Type == ""
-		}, 500*time.Millisecond, 10*time.Millisecond)
+		_ = <-postChannel
+
+		_ = mgr.ReportTasks()
+
+		assert.False(t, zoneInOverlay(mgr.API, 2))
+		msgs := <-postChannel
+		if assert.Len(t, msgs, 1) {
+			assert.Contains(t, msgs[0].Text, "bar: will set to auto mode in ")
+		}
 
 		mgr.Cancel <- struct{}{}
 	}
@@ -159,33 +164,33 @@ func TestZoneManager_Combined(t *testing.T) {
 	}}
 
 	updates := make(chan poller.Update)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, nil)
+	postChannel := make(slackbot.PostChannel)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, postChannel)
 
 	if assert.Nil(t, err) {
 		go mgr.Run()
 
 		// user is away
 		updates <- fakeUpdates[0]
-
-		assert.Eventually(t, func() bool {
-			var info tado.ZoneInfo
-			info, err = mgr.API.GetZoneInfo(2)
-			return err == nil && info.Overlay.Type != "" && info.Overlay.Setting.Temperature.Celsius == 5.0
-		}, 500*time.Millisecond, 10*time.Millisecond)
+		_ = <-postChannel
+		_ = <-postChannel
+		assert.True(t, zoneInOverlay(mgr.API, 2))
 
 		// user comes home
 		updates <- fakeUpdates[1]
-
-		assert.Eventually(t, func() bool {
-			return zoneInOverlay(mgr.API, 2) == false
-		}, 500*time.Millisecond, 10*time.Millisecond)
+		_ = <-postChannel
+		assert.False(t, zoneInOverlay(mgr.API, 2))
 
 		// user is home & room set to manual
 		updates <- fakeUpdates[2]
+		_ = <-postChannel
+		assert.False(t, zoneInOverlay(mgr.API, 2))
 
-		assert.Eventually(t, func() bool {
-			return zoneInOverlay(mgr.API, 2) == false
-		}, 500*time.Millisecond, 10*time.Millisecond)
+		mgr.ReportTasks()
+		msgs := <-postChannel
+		if assert.Len(t, msgs, 1) {
+			assert.Contains(t, msgs[0].Text, "bar: will set to auto mode in ")
+		}
 
 		mgr.Cancel <- struct{}{}
 	}
@@ -262,19 +267,20 @@ func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
 	}}
 
 	updates := make(chan poller.Update)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, nil)
+	postChannel := make(slackbot.PostChannel)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, postChannel)
 
 	if assert.Nil(b, err) {
 		go mgr.Run()
 		b.ResetTimer()
 
-		for i := 0; i < 100; i++ {
-			_ = mgr.API.SetZoneOverlay(2, 5.0)
-			updates <- fakeUpdates[2]
-			if i%25 == 0 {
-				assert.Eventually(b, func() bool { return zoneInOverlay(mgr.API, 2) == false }, 100*time.Millisecond, 10*time.Millisecond)
-			}
-		}
+		_ = mgr.API.SetZoneOverlay(2, 5.0)
+		updates <- fakeUpdates[2]
+
+		_ = <-postChannel
+		_ = <-postChannel
+
+		assert.False(b, zoneInOverlay(mgr.API, 2))
 
 		mgr.Cancel <- struct{}{}
 	}
