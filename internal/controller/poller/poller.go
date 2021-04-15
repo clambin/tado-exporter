@@ -4,14 +4,10 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
-	"time"
 )
 
 type Poller struct {
-	API    tado.API
-	Cancel chan struct{}
-	Update chan Update
-	ticker *time.Ticker
+	API tado.API
 }
 
 type Update struct {
@@ -19,38 +15,20 @@ type Update struct {
 	UserStates map[int]models.UserState
 }
 
-func New(API tado.API, interval time.Duration) *Poller {
+func New(API tado.API) *Poller {
 	return &Poller{
-		API:    API,
-		Update: make(chan Update),
-		Cancel: make(chan struct{}),
-		ticker: time.NewTicker(interval),
+		API: API,
 	}
 }
 
-func (poller *Poller) Run() {
-loop:
-	for {
-		select {
-		case <-poller.ticker.C:
-			poller.update()
-		case <-poller.Cancel:
-			break loop
-		}
-	}
-	poller.ticker.Stop()
-	close(poller.Cancel)
-}
-
-func (poller *Poller) update() {
+func (poller *Poller) Update() (update Update, err error) {
 	var (
-		err        error
 		zoneStates map[int]models.ZoneState
 		userStates map[int]models.UserState
 	)
 	if zoneStates, err = poller.getZoneStates(); err == nil {
 		if userStates, err = poller.getUserStates(); err == nil {
-			poller.Update <- Update{
+			update = Update{
 				ZoneStates: zoneStates,
 				UserStates: userStates,
 			}
@@ -60,6 +38,7 @@ func (poller *Poller) update() {
 	if err != nil {
 		log.WithField("err", err).Warning("failed to get tado status information")
 	}
+	return
 }
 
 func (poller *Poller) getZoneStates() (states map[int]models.ZoneState, err error) {

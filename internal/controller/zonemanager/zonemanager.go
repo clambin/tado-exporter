@@ -24,11 +24,11 @@ type Manager struct {
 	postChannel slackbot.PostChannel
 }
 
-func New(API tado.API, zoneConfig []configuration.ZoneConfig, updater chan poller.Update, postChannel slackbot.PostChannel) (mgr *Manager, err error) {
+func New(API tado.API, zoneConfig []configuration.ZoneConfig, postChannel slackbot.PostChannel) (mgr *Manager, err error) {
 	mgr = &Manager{
 		API:    API,
 		Cancel: make(chan struct{}),
-		Update: updater,
+		Update: make(chan poller.Update),
 		Report: make(chan struct{}),
 
 		fire:        make(chan *Task),

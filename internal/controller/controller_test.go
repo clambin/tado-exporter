@@ -16,7 +16,7 @@ import (
 
 func BenchmarkController_Run(b *testing.B) {
 	server := &mockapi.MockAPI{}
-	pollr := poller.New(server, 10*time.Millisecond)
+	pollr := poller.New(server)
 	postChannel := make(slackbot.PostChannel)
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
@@ -25,8 +25,8 @@ func BenchmarkController_Run(b *testing.B) {
 			Delay:   1 * time.Millisecond,
 		},
 	}}
-	mgr, _ := zonemanager.New(server, zoneConfig, pollr.Update, postChannel)
-	c, _ := controller.NewWith(server, pollr, mgr, nil)
+	mgr, _ := zonemanager.New(server, zoneConfig, postChannel)
+	c, _ := controller.NewWith(server, pollr, mgr, nil, 10*time.Millisecond)
 	go c.Run()
 
 	b.ResetTimer()
@@ -48,12 +48,12 @@ func TestController_Run(t *testing.T) {
 	}}
 
 	server := &mockapi.MockAPI{}
-	pollr := poller.New(server, 25*time.Millisecond)
+	pollr := poller.New(server)
 	postChannel := make(slackbot.PostChannel)
-	mgr, err := zonemanager.New(server, zoneConfig, pollr.Update, postChannel)
+	mgr, err := zonemanager.New(server, zoneConfig, postChannel)
 
 	if assert.Nil(t, err) {
-		c, _ := controller.NewWith(server, pollr, mgr, nil)
+		c, _ := controller.NewWith(server, pollr, mgr, nil, 25*time.Millisecond)
 		go c.Run()
 
 		log.SetLevel(log.DebugLevel)
@@ -80,12 +80,12 @@ func TestController_RevertedOverlay(t *testing.T) {
 	}}
 
 	server := &mockapi.MockAPI{}
-	pollr := poller.New(server, 25*time.Millisecond)
+	pollr := poller.New(server)
 	postChannel := make(slackbot.PostChannel)
-	mgr, err := zonemanager.New(server, zoneConfig, pollr.Update, postChannel)
+	mgr, err := zonemanager.New(server, zoneConfig, postChannel)
 
 	if assert.Nil(t, err) {
-		c, _ := controller.NewWith(server, pollr, mgr, nil)
+		c, _ := controller.NewWith(server, pollr, mgr, nil, 25*time.Millisecond)
 		go c.Run()
 
 		log.SetLevel(log.DebugLevel)

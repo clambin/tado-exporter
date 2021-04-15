@@ -9,6 +9,7 @@ import (
 	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"time"
 	//"github.com/clambin/tado-exporter/internal/controller/commands"
 )
 
@@ -19,6 +20,7 @@ type Controller struct {
 	mgr     *zonemanager.Manager
 	tadoBot *slackbot.SlackBot
 	stop    chan struct{}
+	ticker  *time.Ticker
 }
 
 // New creates a new Controller object
@@ -43,29 +45,31 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 			ClientSecret: tadoClientSecret,
 		}
 
-		pollr := poller.New(API, cfg.Interval)
+		pollr := poller.New(API)
+		//, cfg.Interval)
 
 		var mgr *zonemanager.Manager
-		mgr, err = zonemanager.New(API, *cfg.ZoneConfig, pollr.Update, postChannel)
+		mgr, err = zonemanager.New(API, *cfg.ZoneConfig, postChannel)
 
 		if err == nil {
 			if tadoBot != nil {
 				tadoBot.RegisterCallback("rules", mgr.ReportTasks)
 			}
-			controller, err = NewWith(API, pollr, mgr, tadoBot)
+			controller, err = NewWith(API, pollr, mgr, tadoBot, cfg.Interval)
 		}
 	}
 	return
 }
 
 // NewWith creates a controller with pre-existing components.  Used for unit-testing
-func NewWith(API tado.API, pollr *poller.Poller, mgr *zonemanager.Manager, tadoBot *slackbot.SlackBot) (controller *Controller, err error) {
+func NewWith(API tado.API, pollr *poller.Poller, mgr *zonemanager.Manager, tadoBot *slackbot.SlackBot, interval time.Duration) (controller *Controller, err error) {
 	controller = &Controller{
 		API:     API,
 		poller:  pollr,
 		mgr:     mgr,
 		stop:    make(chan struct{}),
 		tadoBot: tadoBot,
+		ticker:  time.NewTicker(interval),
 	}
 	return
 }
@@ -73,13 +77,15 @@ func NewWith(API tado.API, pollr *poller.Poller, mgr *zonemanager.Manager, tadoB
 // Run the controller
 func (controller *Controller) Run() {
 	go controller.mgr.Run()
-	go controller.poller.Run()
 
 loop:
 	for {
 		select {
+		case <-controller.ticker.C:
+			if updates, err := controller.poller.Update(); err == nil {
+				controller.mgr.Update <- updates
+			}
 		case <-controller.stop:
-			controller.poller.Cancel <- struct{}{}
 			controller.mgr.Cancel <- struct{}{}
 			break loop
 		}

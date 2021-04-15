@@ -36,7 +36,7 @@ func TestZoneManager_Load(t *testing.T) {
 		},
 	}
 
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, nil, nil)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, nil)
 
 	assert.Nil(t, err)
 
@@ -78,25 +78,24 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 	}}
 	log.SetLevel(log.DebugLevel)
 
-	updates := make(chan poller.Update)
 	postChannel := make(slackbot.PostChannel)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, postChannel)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 
 	if assert.Nil(t, err) {
 		go mgr.Run()
 
 		// manual mode
 		_ = mgr.API.SetZoneOverlay(2, 15.0)
-		updates <- fakeUpdates[2]
+		mgr.Update <- fakeUpdates[2]
 
 		_ = <-postChannel
 		assert.True(t, zoneInOverlay(mgr.API, 2))
 
 		// back to auto mode
-		updates <- fakeUpdates[3]
+		mgr.Update <- fakeUpdates[3]
 
 		// back to manual mode
-		updates <- fakeUpdates[2]
+		mgr.Update <- fakeUpdates[2]
 
 		_ = <-postChannel
 		_ = <-postChannel
@@ -118,14 +117,13 @@ func TestZoneManager_NightTime(t *testing.T) {
 		},
 	}}
 
-	updates := make(chan poller.Update)
 	postChannel := make(slackbot.PostChannel)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, postChannel)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 
 	if assert.Nil(t, err) {
 		go mgr.Run()
 
-		updates <- fakeUpdates[2]
+		mgr.Update <- fakeUpdates[2]
 
 		_ = <-postChannel
 
@@ -163,26 +161,25 @@ func TestZoneManager_Combined(t *testing.T) {
 		},
 	}}
 
-	updates := make(chan poller.Update)
 	postChannel := make(slackbot.PostChannel)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, postChannel)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 
 	if assert.Nil(t, err) {
 		go mgr.Run()
 
 		// user is away
-		updates <- fakeUpdates[0]
+		mgr.Update <- fakeUpdates[0]
 		_ = <-postChannel
 		_ = <-postChannel
 		assert.True(t, zoneInOverlay(mgr.API, 2))
 
 		// user comes home
-		updates <- fakeUpdates[1]
+		mgr.Update <- fakeUpdates[1]
 		_ = <-postChannel
 		assert.False(t, zoneInOverlay(mgr.API, 2))
 
 		// user is home & room set to manual
-		updates <- fakeUpdates[2]
+		mgr.Update <- fakeUpdates[2]
 		_ = <-postChannel
 		assert.False(t, zoneInOverlay(mgr.API, 2))
 
@@ -212,9 +209,8 @@ func TestManager_ReportTasks(t *testing.T) {
 		},
 	}}
 
-	updates := make(chan poller.Update)
 	postChannel := make(slackbot.PostChannel)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, postChannel)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 
 	if assert.Nil(t, err) {
 		go mgr.Run()
@@ -266,16 +262,15 @@ func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
 		},
 	}}
 
-	updates := make(chan poller.Update)
 	postChannel := make(slackbot.PostChannel)
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, updates, postChannel)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 
 	if assert.Nil(b, err) {
 		go mgr.Run()
 		b.ResetTimer()
 
 		_ = mgr.API.SetZoneOverlay(2, 5.0)
-		updates <- fakeUpdates[2]
+		mgr.Update <- fakeUpdates[2]
 
 		_ = <-postChannel
 		_ = <-postChannel

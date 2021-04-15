@@ -6,52 +6,46 @@ import (
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"time"
 )
 
 func TestPoller_Run(t *testing.T) {
-	p := poller.New(&mockapi.MockAPI{}, 50*time.Millisecond)
-
-	go p.Run()
+	p := poller.New(&mockapi.MockAPI{})
 
 	var update poller.Update
-	assert.Eventually(t, func() bool {
-		update = <-p.Update
+	var err error
 
-		return len(update.ZoneStates) == 2 && len(update.UserStates) == 2
-	}, 100*time.Millisecond, 50*time.Millisecond)
+	update, err = p.Update()
 
-	if state, ok := update.ZoneStates[1]; assert.True(t, ok) {
-		assert.Equal(t, models.ZoneAuto, state.State)
+	if assert.Nil(t, err) {
+		if state, ok := update.ZoneStates[1]; assert.True(t, ok) {
+			assert.Equal(t, models.ZoneAuto, state.State)
+		}
+
+		if state, ok := update.ZoneStates[2]; assert.True(t, ok) {
+			assert.Equal(t, models.ZoneAuto, state.State)
+		}
+
+		if state, ok := update.UserStates[1]; assert.True(t, ok) {
+			assert.Equal(t, models.UserHome, state)
+		}
+
+		if state, ok := update.UserStates[2]; assert.True(t, ok) {
+			assert.Equal(t, models.UserAway, state)
+		}
 	}
 
-	if state, ok := update.ZoneStates[2]; assert.True(t, ok) {
-		assert.Equal(t, models.ZoneAuto, state.State)
-	}
-
-	if state, ok := update.UserStates[1]; assert.True(t, ok) {
-		assert.Equal(t, models.UserHome, state)
-	}
-
-	if state, ok := update.UserStates[2]; assert.True(t, ok) {
-		assert.Equal(t, models.UserAway, state)
-	}
-
-	err := p.API.SetZoneOverlay(2, 18.5)
+	err = p.API.SetZoneOverlay(2, 18.5)
 	if assert.Nil(t, err) == false {
 		return
 	}
 
-	// drain any queued updates (not thread-safe, but we have no concurrent readers)
-	for len(p.Update) > 0 {
-		<-p.Update
-	}
+	update, err = p.Update()
 
-	update = <-p.Update
-
-	if state, ok := update.ZoneStates[2]; assert.True(t, ok) {
-		assert.Equal(t, models.ZoneManual, state.State)
-		assert.Equal(t, 18.5, state.Temperature.Celsius)
+	if assert.Nil(t, err) {
+		if state, ok := update.ZoneStates[2]; assert.True(t, ok) {
+			assert.Equal(t, models.ZoneManual, state.State)
+			assert.Equal(t, 18.5, state.Temperature.Celsius)
+		}
 	}
 
 	err = p.API.SetZoneOverlay(2, 5.0)
@@ -59,21 +53,11 @@ func TestPoller_Run(t *testing.T) {
 		return
 	}
 
-	// drain any queued updates (not thread-safe, but we have no concurrent readers)
-	for len(p.Update) > 0 {
-		<-p.Update
+	update, err = p.Update()
+
+	if assert.Nil(t, err) {
+		if state, ok := update.ZoneStates[2]; assert.True(t, ok) {
+			assert.Equal(t, models.ZoneOff, state.State)
+		}
 	}
-
-	update = <-p.Update
-
-	if state, ok := update.ZoneStates[2]; assert.True(t, ok) {
-		assert.Equal(t, models.ZoneOff, state.State)
-	}
-
-	p.Cancel <- struct{}{}
-
-	assert.Eventually(t, func() bool {
-		_, ok := <-p.Cancel
-		return !ok
-	}, 500*time.Millisecond, 10*time.Millisecond)
 }
