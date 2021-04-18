@@ -52,6 +52,17 @@ func TestRunProbe(t *testing.T) {
 	}
 }
 
+func BenchmarkExporter_Run(b *testing.B) {
+	export := exporter.Exporter{
+		API: &mockAPI{},
+	}
+	var err error
+	for i := 0; i < 100; i++ {
+		err = export.Run()
+	}
+	assert.Nil(b, err)
+}
+
 // TODO: replace this with test/server/mockapi
 
 type mockAPI struct {
