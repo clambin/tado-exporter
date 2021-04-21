@@ -122,3 +122,55 @@ func TestGetZoneState(t *testing.T) {
 		})
 	}
 }
+
+func TestZoneState_Equals(t *testing.T) {
+	type fields struct {
+		State       models.ZoneStateEnum
+		Temperature tado.Temperature
+	}
+	type args struct {
+		b models.ZoneState
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		{
+			name:   "auto - same",
+			fields: fields{State: models.ZoneAuto},
+			args:   args{b: models.ZoneState{State: models.ZoneAuto}},
+			want:   true,
+		},
+		{
+			name:   "manual - same",
+			fields: fields{State: models.ZoneManual, Temperature: tado.Temperature{Celsius: 15.0}},
+			args:   args{b: models.ZoneState{State: models.ZoneManual, Temperature: tado.Temperature{Celsius: 15.0}}},
+			want:   true,
+		},
+		{
+			name:   "off - same",
+			fields: fields{State: models.ZoneOff},
+			args:   args{b: models.ZoneState{State: models.ZoneOff}},
+			want:   true,
+		},
+		{
+			name:   "auto - different",
+			fields: fields{State: models.ZoneAuto},
+			args:   args{b: models.ZoneState{State: models.ZoneManual, Temperature: tado.Temperature{Celsius: 15.0}}},
+			want:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := models.ZoneState{
+				State:       tt.fields.State,
+				Temperature: tt.fields.Temperature,
+			}
+			if got := a.Equals(tt.args.b); got != tt.want {
+				t.Errorf("Equals() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
