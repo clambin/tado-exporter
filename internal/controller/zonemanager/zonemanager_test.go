@@ -9,6 +9,7 @@ import (
 	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	log "github.com/sirupsen/logrus"
+	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -93,6 +94,9 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 
 		// back to auto mode
 		mgr.Update <- fakeUpdates[3]
+		resp := <-postChannel
+		assert.Len(t, resp, 1)
+		assert.Equal(t, "resetting rule for bar", resp[0].Title)
 
 		// back to manual mode
 		mgr.Update <- fakeUpdates[2]
@@ -161,6 +165,7 @@ func TestZoneManager_Combined(t *testing.T) {
 		},
 	}}
 
+	var msg []slack.Attachment
 	postChannel := make(slackbot.PostChannel)
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 
@@ -169,24 +174,58 @@ func TestZoneManager_Combined(t *testing.T) {
 
 		// user is away
 		mgr.Update <- fakeUpdates[0]
-		_ = <-postChannel
-		_ = <-postChannel
+
+		// notification that zone will be switched off
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Equal(t, "all users of bar are away", msg[0].Title)
+			assert.Contains(t, msg[0].Text, "switching off heating in ")
+		}
+
+		// notification that zone gets switched off
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Equal(t, "all users of bar are away", msg[0].Title)
+			assert.Contains(t, msg[0].Text, "switching off heating")
+		}
+
+		// validate that the zone is switched off
 		assert.True(t, zoneInOverlay(mgr.API, 2))
 
 		// user comes home
 		mgr.Update <- fakeUpdates[1]
-		_ = <-postChannel
+
+		// notification that zone will be switched on again
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Equal(t, "one or more users of bar are home", msg[0].Title)
+			assert.Contains(t, msg[0].Text, "moving back to auto mode in ")
+		}
+
+		// ???
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Equal(t, "one or more users of bar are home", msg[0].Title)
+			assert.Equal(t, "moving back to auto mode", msg[0].Text)
+		}
+
 		assert.False(t, zoneInOverlay(mgr.API, 2))
 
 		// user is home & room set to manual
 		mgr.Update <- fakeUpdates[2]
-		_ = <-postChannel
-		assert.False(t, zoneInOverlay(mgr.API, 2))
 
+		// notification that zone will be switched back to auto
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Equal(t, "manual temperature setting detected in bar", msg[0].Title)
+			assert.Contains(t, msg[0].Text, "moving back to auto mode in ")
+		}
+
+		// report should say that a rule is triggered
 		mgr.ReportTasks()
-		msgs := <-postChannel
-		if assert.Len(t, msgs, 1) {
-			assert.Contains(t, msgs[0].Text, "bar: will set to auto mode in ")
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Contains(t, msg[0].Text, "bar: will set to auto mode in ")
 		}
 
 		mgr.Cancel <- struct{}{}
@@ -218,9 +257,9 @@ func TestManager_ReportTasks(t *testing.T) {
 		log.SetLevel(log.DebugLevel)
 
 		_ = mgr.ReportTasks()
-		msgs := <-postChannel
-		if assert.Len(t, msgs, 1) {
-			assert.Equal(t, "no rules have been triggered", msgs[0].Text)
+		msg := <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Equal(t, "no rules have been triggered", msg[0].Text)
 		}
 
 		// user is away
@@ -229,20 +268,23 @@ func TestManager_ReportTasks(t *testing.T) {
 
 		_ = mgr.ReportTasks()
 
-		msgs = <-postChannel
-		if assert.Len(t, msgs, 1) {
-			assert.Contains(t, msgs[0].Text, "bar: will switch off heating in ")
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Contains(t, msg[0].Text, "bar: will switch off heating in ")
 		}
 
 		// user is home & room set to manual
 		mgr.Update <- fakeUpdates[2]
-		_ = <-postChannel
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Contains(t, msg[0].Text, "moving back to auto mode in ")
+		}
 
 		_ = mgr.ReportTasks()
 
-		msgs = <-postChannel
-		if assert.Len(t, msgs, 1) {
-			assert.Contains(t, msgs[0].Text, "bar: will set to auto mode in ")
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Contains(t, msg[0].Text, "bar: will set to auto mode in ")
 		}
 	}
 }

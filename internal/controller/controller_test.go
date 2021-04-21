@@ -100,12 +100,17 @@ func TestController_RevertedOverlay(t *testing.T) {
 		err = server.DeleteZoneOverlay(2)
 		assert.Nil(t, err)
 
-		assert.Eventually(t, func() bool {
-			mgr.ReportTasks()
-			msg := <-postChannel
-			return len(msg) == 1 && msg[0].Text == "no rules have been triggered"
-		}, 500*time.Hour, 10*time.Millisecond)
+		msg := <-postChannel
 
+		if assert.Len(t, msg, 1) {
+			assert.Equal(t, "resetting rule for bar", msg[0].Title)
+		}
+
+		mgr.ReportTasks()
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Equal(t, "no rules have been triggered", msg[0].Text)
+		}
 		c.Stop()
 	}
 }

@@ -10,17 +10,14 @@ import (
 )
 
 type Manager struct {
-	API        tado.API
-	ZoneConfig map[int]models.ZoneConfig
-
-	Cancel chan struct{}
-	Update chan poller.Update
-	Report chan struct{}
-
-	fire      chan *Task
-	tasks     map[int]*Task
-	nameCache map[int]string
-
+	API         tado.API
+	ZoneConfig  map[int]models.ZoneConfig
+	Cancel      chan struct{}
+	Update      chan poller.Update
+	Report      chan struct{}
+	fire        chan *Task
+	tasks       map[int]*Task
+	nameCache   map[int]string
 	postChannel slackbot.PostChannel
 }
 
@@ -60,20 +57,20 @@ loop:
 func (mgr *Manager) update(update poller.Update) {
 	for zoneID, state := range update.ZoneStates {
 		if _, ok := mgr.ZoneConfig[zoneID]; ok == true {
-			targetState, when := mgr.newZoneState(zoneID, update)
+			targetState, when, reason := mgr.newZoneState(zoneID, update)
 			if targetState.Equals(state) == false {
 				// schedule the new state
-				mgr.scheduleTask(zoneID, targetState, when)
+				mgr.scheduleTask(zoneID, targetState, when, reason)
 			} else {
 				// already at target state. cancel any outstanding tasks
-				mgr.unscheduleTask(zoneID)
+				mgr.unscheduleTask(zoneID, reason)
 			}
 		}
 	}
 	return
 }
 
-func (mgr *Manager) newZoneState(zoneID int, update poller.Update) (newState models.ZoneState, when time.Duration) {
+func (mgr *Manager) newZoneState(zoneID int, update poller.Update) (newState models.ZoneState, when time.Duration, reason string) {
 	// if we don't trigger any rules, keep the same state
 	newState = update.ZoneStates[zoneID]
 
@@ -82,12 +79,16 @@ func (mgr *Manager) newZoneState(zoneID int, update poller.Update) (newState mod
 		if mgr.allUsersAway(zoneID, update) {
 			newState.State = models.ZoneOff
 			when = mgr.ZoneConfig[zoneID].AutoAway.Delay
-		} else {
+			reason = "all users of " + mgr.getZoneName(zoneID) + " are away"
+			return
+		} else if update.ZoneStates[zoneID].State == models.ZoneOff {
 			newState.State = models.ZoneAuto
+			when = mgr.ZoneConfig[zoneID].AutoAway.Delay
+			reason = "one or more users of " + mgr.getZoneName(zoneID) + " are home"
 		}
 	}
 
-	if update.ZoneStates[zoneID].State == models.ZoneManual && newState.State != models.ZoneOff {
+	if update.ZoneStates[zoneID].State == models.ZoneManual {
 		// determine if/when to set back to auto
 		if mgr.ZoneConfig[zoneID].NightTime.Enabled && mgr.ZoneConfig[zoneID].LimitOverlay.Enabled {
 			newState.State = models.ZoneAuto
@@ -95,12 +96,15 @@ func (mgr *Manager) newZoneState(zoneID int, update poller.Update) (newState mod
 			if mgr.ZoneConfig[zoneID].LimitOverlay.Delay < when {
 				when = mgr.ZoneConfig[zoneID].LimitOverlay.Delay
 			}
+			reason = "manual temperature setting detected in " + mgr.getZoneName(zoneID)
 		} else if mgr.ZoneConfig[zoneID].NightTime.Enabled {
 			newState.State = models.ZoneAuto
 			when = nightTimeDelay(mgr.ZoneConfig[zoneID].NightTime.Time)
+			reason = "manual temperature setting detected in " + mgr.getZoneName(zoneID)
 		} else if mgr.ZoneConfig[zoneID].LimitOverlay.Enabled {
 			newState.State = models.ZoneAuto
 			when = mgr.ZoneConfig[zoneID].LimitOverlay.Delay
+			reason = "manual temperature setting detected in " + mgr.getZoneName(zoneID)
 		}
 	}
 	return
@@ -123,6 +127,23 @@ func (mgr *Manager) allUsersAway(zoneID int, update poller.Update) (away bool) {
 		if update.UserStates[user] != models.UserAway {
 			away = false
 			break
+		}
+	}
+	return
+}
+
+func (mgr *Manager) getZoneName(zoneID int) (name string) {
+	var ok bool
+	if name, ok = mgr.nameCache[zoneID]; ok == false {
+		name = "unknown"
+		if zones, err := mgr.API.GetZones(); err == nil {
+			for _, zone := range zones {
+				if zone.ID == zoneID {
+					name = zone.Name
+					mgr.nameCache[zoneID] = name
+					break
+				}
+			}
 		}
 	}
 	return

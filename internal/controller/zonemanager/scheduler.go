@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func (mgr *Manager) scheduleTask(zoneID int, state models.ZoneState, when time.Duration) {
+func (mgr *Manager) scheduleTask(zoneID int, state models.ZoneState, when time.Duration, reason string) {
 	// check if we already have a task running for the zoneID
 	if running, ok := mgr.tasks[zoneID]; ok {
 		// if we're already setting that state, ignore the new task, unless it sets that state earlier
@@ -20,20 +20,20 @@ func (mgr *Manager) scheduleTask(zoneID int, state models.ZoneState, when time.D
 
 	// create the new task
 	task := &Task{
-		Cancel:      make(chan struct{}),
-		zoneID:      zoneID,
-		state:       state,
-		timer:       time.NewTimer(when),
-		activation:  time.Now().Add(when),
-		fireChannel: mgr.fire,
+		Cancel:     make(chan struct{}),
+		zoneID:     zoneID,
+		zoneName:   mgr.getZoneName(zoneID),
+		state:      state,
+		reason:     reason,
+		activation: time.Now().Add(when),
 	}
 	if when == 0 {
-		// if the task is immediate, do it here
+		// run the task directly
 		mgr.runTask(task)
 	} else {
-		// otherwise, schedule it
+		// schedule it
 		mgr.tasks[zoneID] = task
-		go task.Run()
+		go task.Run(when, mgr.fire)
 
 		log.WithFields(log.Fields{
 			"zone":  zoneID,
@@ -41,15 +41,21 @@ func (mgr *Manager) scheduleTask(zoneID int, state models.ZoneState, when time.D
 			"when":  when.String(),
 		}).Debug("scheduled task")
 
+		// post slack notification
 		if mgr.postChannel != nil {
-			mgr.postChannel <- mgr.notifyPendingTask(task)
+			mgr.postChannel <- task.notification()
 		}
 	}
 }
 
-func (mgr *Manager) unscheduleTask(zoneID int) {
+func (mgr *Manager) unscheduleTask(zoneID int, reason string) {
 	if task, ok := mgr.tasks[zoneID]; ok == true {
 		task.Cancel <- struct{}{}
+
+		if mgr.postChannel != nil {
+			mgr.postChannel <- task.cancelNotification(reason)
+		}
+
 		delete(mgr.tasks, zoneID)
 	}
 }
@@ -66,7 +72,8 @@ func (mgr *Manager) runTask(task *Task) {
 	}
 	if err == nil {
 		if mgr.postChannel != nil {
-			mgr.postChannel <- mgr.notifyExecutedTask(task)
+			task.activation = time.Time{}
+			mgr.postChannel <- task.notification()
 		}
 		log.WithFields(log.Fields{"zone": task.zoneID, "state": task.state.String()}).Debug("executed task")
 	} else {
