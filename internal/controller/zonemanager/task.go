@@ -38,7 +38,7 @@ func (task *Task) notification() (attachment []slack.Attachment) {
 	case models.ZoneOff:
 		text = "switching off heating"
 	case models.ZoneAuto:
-		text = "moving back to auto mode"
+		text = "moving to auto mode"
 	case models.ZoneManual:
 		text = fmt.Sprintf("setting to %.1fºC", task.state.Temperature.Celsius)
 	}

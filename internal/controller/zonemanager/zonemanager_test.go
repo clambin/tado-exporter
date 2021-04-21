@@ -140,7 +140,7 @@ func TestZoneManager_NightTime(t *testing.T) {
 		assert.False(t, zoneInOverlay(mgr.API, 2))
 		msgs := <-postChannel
 		if assert.Len(t, msgs, 1) {
-			assert.Contains(t, msgs[0].Text, "bar: will set to auto mode in ")
+			assert.Contains(t, msgs[0].Text, "bar: moving to auto mode in ")
 		}
 
 		mgr.Cancel <- struct{}{}
@@ -170,14 +170,14 @@ func TestZoneManager_AutoAway(t *testing.T) {
 		// notification that zone will be switched off
 		msg = <-postChannel
 		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "all users of bar are away", msg[0].Title)
+			assert.Equal(t, "bar: bar is away", msg[0].Title)
 			assert.Contains(t, msg[0].Text, "switching off heating in ")
 		}
 
 		// notification that zone gets switched off
 		msg = <-postChannel
 		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "all users of bar are away", msg[0].Title)
+			assert.Equal(t, "bar: bar is away", msg[0].Title)
 			assert.Contains(t, msg[0].Text, "switching off heating")
 		}
 
@@ -234,14 +234,14 @@ func TestZoneManager_Combined(t *testing.T) {
 		// notification that zone will be switched off
 		msg = <-postChannel
 		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "all users of bar are away", msg[0].Title)
+			assert.Equal(t, "bar: bar is away", msg[0].Title)
 			assert.Contains(t, msg[0].Text, "switching off heating in ")
 		}
 
 		// notification that zone gets switched off
 		msg = <-postChannel
 		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "all users of bar are away", msg[0].Title)
+			assert.Equal(t, "bar: bar is away", msg[0].Title)
 			assert.Contains(t, msg[0].Text, "switching off heating")
 		}
 
@@ -254,8 +254,8 @@ func TestZoneManager_Combined(t *testing.T) {
 		// notification that zone will be switched on again
 		msg = <-postChannel
 		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "one or more users of bar are home", msg[0].Title)
-			assert.Equal(t, "moving back to auto mode", msg[0].Text)
+			assert.Equal(t, "bar: bar is home", msg[0].Title)
+			assert.Equal(t, "moving to auto mode", msg[0].Text)
 		}
 
 		assert.False(t, zoneInOverlay(mgr.API, 2))
@@ -268,14 +268,14 @@ func TestZoneManager_Combined(t *testing.T) {
 		msg = <-postChannel
 		if assert.Len(t, msg, 1) {
 			assert.Equal(t, "manual temperature setting detected in bar", msg[0].Title)
-			assert.Contains(t, msg[0].Text, "moving back to auto mode in ")
+			assert.Contains(t, msg[0].Text, "moving to auto mode in ")
 		}
 
 		// report should say that a rule is triggered
 		mgr.ReportTasks()
 		msg = <-postChannel
 		if assert.Len(t, msg, 1) {
-			assert.Contains(t, msg[0].Text, "bar: will set to auto mode in ")
+			assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")
 		}
 
 		mgr.Cancel <- struct{}{}
@@ -320,21 +320,21 @@ func TestManager_ReportTasks(t *testing.T) {
 
 		msg = <-postChannel
 		if assert.Len(t, msg, 1) {
-			assert.Contains(t, msg[0].Text, "bar: will switch off heating in ")
+			assert.Contains(t, msg[0].Text, "bar: switching off heating in ")
 		}
 
 		// user is home & room set to manual
 		mgr.Update <- fakeUpdates[2]
 		msg = <-postChannel
 		if assert.Len(t, msg, 1) {
-			assert.Contains(t, msg[0].Text, "moving back to auto mode in ")
+			assert.Contains(t, msg[0].Text, "moving to auto mode in ")
 		}
 
 		_ = mgr.ReportTasks()
 
 		msg = <-postChannel
 		if assert.Len(t, msg, 1) {
-			assert.Contains(t, msg[0].Text, "bar: will set to auto mode in ")
+			assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")
 		}
 	}
 }

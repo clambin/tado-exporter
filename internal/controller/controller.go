@@ -46,7 +46,6 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 		}
 
 		pollr := poller.New(API)
-		//, cfg.Interval)
 
 		var mgr *zonemanager.Manager
 		mgr, err = zonemanager.New(API, *cfg.ZoneConfig, postChannel)

@@ -10,28 +10,29 @@ import (
 )
 
 type Manager struct {
-	API         tado.API
-	ZoneConfig  map[int]models.ZoneConfig
-	Cancel      chan struct{}
-	Update      chan poller.Update
-	Report      chan struct{}
-	fire        chan *Task
-	tasks       map[int]*Task
-	nameCache   map[int]string
-	postChannel slackbot.PostChannel
+	API           tado.API
+	ZoneConfig    map[int]models.ZoneConfig
+	Cancel        chan struct{}
+	Update        chan poller.Update
+	Report        chan struct{}
+	fire          chan *Task
+	tasks         map[int]*Task
+	zoneNameCache map[int]string
+	userNameCache map[int]string
+	postChannel   slackbot.PostChannel
 }
 
 func New(API tado.API, zoneConfig []configuration.ZoneConfig, postChannel slackbot.PostChannel) (mgr *Manager, err error) {
 	mgr = &Manager{
-		API:    API,
-		Cancel: make(chan struct{}),
-		Update: make(chan poller.Update),
-		Report: make(chan struct{}),
-
-		fire:        make(chan *Task),
-		tasks:       make(map[int]*Task),
-		postChannel: postChannel,
-		nameCache:   make(map[int]string),
+		API:           API,
+		Cancel:        make(chan struct{}),
+		Update:        make(chan poller.Update),
+		Report:        make(chan struct{}),
+		fire:          make(chan *Task),
+		tasks:         make(map[int]*Task),
+		postChannel:   postChannel,
+		zoneNameCache: make(map[int]string),
+		userNameCache: make(map[int]string),
 	}
 	mgr.ZoneConfig, err = mgr.makeZoneConfig(zoneConfig)
 
@@ -79,12 +80,12 @@ func (mgr *Manager) newZoneState(zoneID int, update poller.Update) (newState mod
 		if mgr.allUsersAway(zoneID, update) {
 			newState.State = models.ZoneOff
 			when = mgr.ZoneConfig[zoneID].AutoAway.Delay
-			reason = "all users of " + mgr.getZoneName(zoneID) + " are away"
+			reason = mgr.getAutoAwayReason(zoneID, false)
 			return
 		} else if update.ZoneStates[zoneID].State == models.ZoneOff {
 			newState.State = models.ZoneAuto
 			// when = mgr.ZoneConfig[zoneID].AutoAway.Delay
-			reason = "one or more users of " + mgr.getZoneName(zoneID) + " are home"
+			reason = mgr.getAutoAwayReason(zoneID, true)
 		}
 	}
 
@@ -134,16 +135,51 @@ func (mgr *Manager) allUsersAway(zoneID int, update poller.Update) (away bool) {
 
 func (mgr *Manager) getZoneName(zoneID int) (name string) {
 	var ok bool
-	if name, ok = mgr.nameCache[zoneID]; ok == false {
+	if name, ok = mgr.zoneNameCache[zoneID]; ok == false {
 		name = "unknown"
 		if zones, err := mgr.API.GetZones(); err == nil {
 			for _, zone := range zones {
-				mgr.nameCache[zone.ID] = zone.Name
+				mgr.zoneNameCache[zone.ID] = zone.Name
 				if zone.ID == zoneID {
 					name = zone.Name
 				}
 			}
 		}
 	}
+	return
+}
+
+func (mgr *Manager) getMobileDeviceName(mobileDeviceID int) (name string) {
+	var ok bool
+	if name, ok = mgr.userNameCache[mobileDeviceID]; ok == false {
+		name = "unknown"
+		if devices, err := mgr.API.GetMobileDevices(); err == nil {
+			for _, device := range devices {
+				mgr.userNameCache[device.ID] = device.Name
+				if device.ID == mobileDeviceID {
+					name = device.Name
+				}
+			}
+		}
+	}
+	return
+}
+
+func (mgr *Manager) getAutoAwayReason(zoneID int, home bool) (reason string) {
+	if len(mgr.ZoneConfig[zoneID].AutoAway.Users) == 1 {
+		reason = mgr.getMobileDeviceName(mgr.ZoneConfig[zoneID].AutoAway.Users[0]) + " is "
+		if home {
+			reason += "home"
+		} else {
+			reason += "away"
+		}
+	} else {
+		if home {
+			reason = "one or more users are home"
+		} else {
+			reason = "all users of are away"
+		}
+	}
+	reason = mgr.getZoneName(zoneID) + ": " + reason
 	return
 }

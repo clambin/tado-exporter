@@ -20,14 +20,14 @@ func (mgr *Manager) reportTasks(_ ...string) {
 		var action string
 		switch task.state.State {
 		case models.ZoneOff:
-			action = "switch off heating"
+			action = "switching off heating"
 		case models.ZoneAuto:
-			action = "set to auto mode"
+			action = "moving to auto mode"
 		case models.ZoneManual:
 			action = fmt.Sprintf("set temperature to %.1fº", task.state.Temperature.Celsius)
 		}
 		text = append(text,
-			mgr.getZoneName(id)+": will "+action+" in "+
+			mgr.getZoneName(id)+": "+action+" in "+
 				task.activation.Sub(time.Now()).Round(1*time.Second).String(),
 		)
 	}
