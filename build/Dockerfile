@@ -1,5 +1,8 @@
 FROM alpine
 
+RUN apk update && \
+    apk add --no-cache tzdata
+
 WORKDIR /app
 
 ARG TARGETOS
