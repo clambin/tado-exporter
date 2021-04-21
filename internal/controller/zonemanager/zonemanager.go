@@ -83,7 +83,7 @@ func (mgr *Manager) newZoneState(zoneID int, update poller.Update) (newState mod
 			return
 		} else if update.ZoneStates[zoneID].State == models.ZoneOff {
 			newState.State = models.ZoneAuto
-			when = mgr.ZoneConfig[zoneID].AutoAway.Delay
+			// when = mgr.ZoneConfig[zoneID].AutoAway.Delay
 			reason = "one or more users of " + mgr.getZoneName(zoneID) + " are home"
 		}
 	}
@@ -138,10 +138,9 @@ func (mgr *Manager) getZoneName(zoneID int) (name string) {
 		name = "unknown"
 		if zones, err := mgr.API.GetZones(); err == nil {
 			for _, zone := range zones {
+				mgr.nameCache[zone.ID] = zone.Name
 				if zone.ID == zoneID {
 					name = zone.Name
-					mgr.nameCache[zoneID] = name
-					break
 				}
 			}
 		}

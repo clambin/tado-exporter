@@ -67,6 +67,10 @@ var fakeUpdates = []poller.Update{
 		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneAuto, Temperature: tado.Temperature{Celsius: 25.0}}},
 		UserStates: map[int]models.UserState{2: models.UserHome},
 	},
+	{
+		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneOff, Temperature: tado.Temperature{Celsius: 15.0}}},
+		UserStates: map[int]models.UserState{2: models.UserAway},
+	},
 }
 
 func TestZoneManager_LimitOverlay(t *testing.T) {
@@ -143,6 +147,58 @@ func TestZoneManager_NightTime(t *testing.T) {
 	}
 }
 
+func TestZoneManager_AutoAway(t *testing.T) {
+	zoneConfig := []configuration.ZoneConfig{{
+		ZoneID: 2,
+		AutoAway: configuration.ZoneAutoAway{
+			Enabled: true,
+			Delay:   10 * time.Millisecond,
+			Users:   []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+		},
+	}}
+
+	var msg []slack.Attachment
+	postChannel := make(slackbot.PostChannel)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
+
+	if assert.Nil(t, err) {
+		go mgr.Run()
+
+		// user is away
+		mgr.Update <- fakeUpdates[0]
+
+		// notification that zone will be switched off
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Equal(t, "all users of bar are away", msg[0].Title)
+			assert.Contains(t, msg[0].Text, "switching off heating in ")
+		}
+
+		// notification that zone gets switched off
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Equal(t, "all users of bar are away", msg[0].Title)
+			assert.Contains(t, msg[0].Text, "switching off heating")
+		}
+
+		// validate that the zone is switched off
+		assert.True(t, zoneInOverlay(mgr.API, 2))
+
+		// user is still away
+		mgr.Update <- fakeUpdates[4]
+
+		// shouldn't trigger any actions and no rules should be outstanding
+		// (if it did trigger an action, the next message on postChannel wouldn't be "no rules have been triggered")
+		mgr.ReportTasks()
+		msg = <-postChannel
+		if assert.Len(t, msg, 1) {
+			assert.Equal(t, "no rules have been triggered", msg[0].Text)
+		}
+
+		mgr.Cancel <- struct{}{}
+	}
+}
+
 func TestZoneManager_Combined(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneID: 2,
@@ -199,18 +255,12 @@ func TestZoneManager_Combined(t *testing.T) {
 		msg = <-postChannel
 		if assert.Len(t, msg, 1) {
 			assert.Equal(t, "one or more users of bar are home", msg[0].Title)
-			assert.Contains(t, msg[0].Text, "moving back to auto mode in ")
-		}
-
-		// ???
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "one or more users of bar are home", msg[0].Title)
 			assert.Equal(t, "moving back to auto mode", msg[0].Text)
 		}
 
 		assert.False(t, zoneInOverlay(mgr.API, 2))
 
+		log.SetLevel(log.DebugLevel)
 		// user is home & room set to manual
 		mgr.Update <- fakeUpdates[2]
 
