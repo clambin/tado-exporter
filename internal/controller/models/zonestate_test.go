@@ -3,6 +3,7 @@ package models_test
 import (
 	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/pkg/tado"
+	"reflect"
 	"testing"
 )
 
@@ -45,6 +46,78 @@ func TestZoneState_String(t *testing.T) {
 			}
 			if got := state.String(); got != tt.want {
 				t.Errorf("String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetZoneState(t *testing.T) {
+	type args struct {
+		zoneInfo tado.ZoneInfo
+	}
+	tests := []struct {
+		name      string
+		args      args
+		wantState models.ZoneState
+	}{
+		{
+			name:      "auto",
+			args:      args{zoneInfo: tado.ZoneInfo{}},
+			wantState: models.ZoneState{State: models.ZoneAuto},
+		},
+		{
+			name: "manual",
+			args: args{zoneInfo: tado.ZoneInfo{
+				Overlay: tado.ZoneInfoOverlay{
+					Type: "MANUAL",
+					Setting: tado.ZoneInfoOverlaySetting{
+						Type:        "HEATING",
+						Temperature: tado.Temperature{Celsius: 15.0},
+					},
+					Termination: tado.ZoneInfoOverlayTermination{
+						Type: "MANUAL",
+					},
+				},
+			}},
+			wantState: models.ZoneState{State: models.ZoneManual, Temperature: tado.Temperature{Celsius: 15.0}},
+		},
+		{
+			name: "overlay with automatic termination",
+			args: args{zoneInfo: tado.ZoneInfo{
+				Overlay: tado.ZoneInfoOverlay{
+					Type: "MANUAL",
+					Setting: tado.ZoneInfoOverlaySetting{
+						Type:        "HEATING",
+						Temperature: tado.Temperature{Celsius: 15.0},
+					},
+					Termination: tado.ZoneInfoOverlayTermination{
+						Type: "TIMER",
+					},
+				},
+			}},
+			wantState: models.ZoneState{State: models.ZoneAuto},
+		},
+		{
+			name: "off",
+			args: args{zoneInfo: tado.ZoneInfo{
+				Overlay: tado.ZoneInfoOverlay{
+					Type: "MANUAL",
+					Setting: tado.ZoneInfoOverlaySetting{
+						Type:        "HEATING",
+						Temperature: tado.Temperature{Celsius: 5.0},
+					},
+					Termination: tado.ZoneInfoOverlayTermination{
+						Type: "MANUAL",
+					},
+				},
+			}},
+			wantState: models.ZoneState{State: models.ZoneOff},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotState := models.GetZoneState(tt.args.zoneInfo); !reflect.DeepEqual(gotState, tt.wantState) {
+				t.Errorf("GetZoneState() = %v, want %v", gotState, tt.wantState)
 			}
 		})
 	}
