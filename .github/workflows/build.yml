@@ -63,6 +63,10 @@ jobs:
           path: ./bld
       - uses: actions/download-artifact@v2
         with:
+          name: tado-monitor-linux-arm64
+          path: ./bld
+      - uses: actions/download-artifact@v2
+        with:
           name: tado-monitor-linux-amd64
           path: ./bld
       - name: Fix permissions
