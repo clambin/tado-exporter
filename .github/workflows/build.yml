@@ -28,7 +28,7 @@ jobs:
       matrix:
         target: [ tado-monitor ]
         platform: [ linux ]
-        arch: [ amd64, arm ]
+        arch: [ amd64, arm, arm64 ]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -86,7 +86,7 @@ jobs:
         with:
           context: .
           file: ./build/Dockerfile
-          platforms: linux/amd64,linux/arm
+          platforms: linux/amd64,linux/arm, linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
