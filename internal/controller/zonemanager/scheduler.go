@@ -13,7 +13,7 @@ func (mgr *Manager) scheduleTask(zoneID int, state models.ZoneState, when time.D
 	// check if we already have a task running for the zoneID
 	if running, ok := mgr.tasks[zoneID]; ok {
 		// if we're already setting that state, ignore the new task, unless it sets that state earlier
-		if running.state.Equals(state) && running.activation.After(activation) == false {
+		if running.state.Equals(state) && running.activation.Sub(activation).Round(time.Minute) <= 0 {
 			return
 		}
 
