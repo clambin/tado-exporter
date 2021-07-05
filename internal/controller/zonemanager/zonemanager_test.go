@@ -1,12 +1,13 @@
 package zonemanager_test
 
 import (
+	"context"
+	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/internal/controller/poller"
 	"github.com/clambin/tado-exporter/internal/controller/zonemanager"
 	"github.com/clambin/tado-exporter/pkg/slackbot"
-	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
@@ -14,41 +15,6 @@ import (
 	"testing"
 	"time"
 )
-
-// TODO: timing-based testing can be unreliable
-
-func TestZoneManager_Load(t *testing.T) {
-	zoneConfig := []configuration.ZoneConfig{
-		{
-			ZoneName: "bar",
-			AutoAway: configuration.ZoneAutoAway{
-				Enabled: true,
-				Users:   []configuration.ZoneUser{{MobileDeviceName: "bar"}},
-				Delay:   1 * time.Hour,
-			},
-		},
-		{
-			ZoneName: "invalid",
-			AutoAway: configuration.ZoneAutoAway{
-				Enabled: true,
-				Users:   []configuration.ZoneUser{{MobileDeviceName: "invalid"}},
-				Delay:   1 * time.Hour,
-			},
-		},
-	}
-
-	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, nil)
-
-	assert.Nil(t, err)
-
-	if assert.Len(t, mgr.ZoneConfig, 1) {
-		if zone, ok := mgr.ZoneConfig[2]; assert.True(t, ok) {
-			if assert.Len(t, zone.AutoAway.Users, 1) {
-				assert.Equal(t, 2, zone.AutoAway.Users[0])
-			}
-		}
-	}
-}
 
 var fakeUpdates = []poller.Update{
 	{
@@ -81,36 +47,37 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 			Delay:   200 * time.Millisecond,
 		},
 	}}
-	log.SetLevel(log.DebugLevel)
 
-	postChannel := make(slackbot.PostChannel)
+	postChannel := make(slackbot.PostChannel, 5)
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
+	assert.NoError(t, err)
 
-	if assert.Nil(t, err) {
-		go mgr.Run()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		// manual mode
-		_ = mgr.API.SetZoneOverlay(2, 15.0)
-		mgr.Update <- fakeUpdates[2]
+	go func(ctx context.Context) {
+		_ = mgr.Run(ctx)
+	}(ctx)
 
-		_ = <-postChannel
-		assert.True(t, zoneInOverlay(mgr.API, 2))
+	// manual mode
+	_ = mgr.API.SetZoneOverlay(ctx, 2, 15.0)
+	mgr.Update <- fakeUpdates[2]
 
-		// back to auto mode
-		mgr.Update <- fakeUpdates[3]
-		resp := <-postChannel
-		assert.Len(t, resp, 1)
-		assert.Equal(t, "resetting rule for bar", resp[0].Title)
+	_ = <-postChannel
+	assert.True(t, zoneInOverlay(ctx, mgr.API, 2))
 
-		// back to manual mode
-		mgr.Update <- fakeUpdates[2]
+	// back to auto mode
+	mgr.Update <- fakeUpdates[3]
+	resp := <-postChannel
+	assert.Len(t, resp, 1)
+	assert.Equal(t, "resetting rule for bar", resp[0].Title)
 
-		_ = <-postChannel
-		_ = <-postChannel
-		assert.False(t, zoneInOverlay(mgr.API, 2))
+	// back to manual mode
+	mgr.Update <- fakeUpdates[2]
 
-		mgr.Cancel <- struct{}{}
-	}
+	_ = <-postChannel
+	_ = <-postChannel
+	assert.False(t, zoneInOverlay(ctx, mgr.API, 2))
 }
 
 func TestZoneManager_NightTime(t *testing.T) {
@@ -125,77 +92,121 @@ func TestZoneManager_NightTime(t *testing.T) {
 		},
 	}}
 
-	postChannel := make(slackbot.PostChannel)
+	postChannel := make(slackbot.PostChannel, 5)
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
+	assert.NoError(t, err)
 
-	if assert.Nil(t, err) {
-		go mgr.Run()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		mgr.Update <- fakeUpdates[2]
+	go func(ctx context.Context) {
+		_ = mgr.Run(ctx)
+	}(ctx)
 
-		_ = <-postChannel
+	mgr.Update <- fakeUpdates[2]
 
-		_ = mgr.ReportTasks()
+	msgs := <-postChannel
+	if assert.Len(t, msgs, 1) {
+		assert.Equal(t, "manual temperature setting detected in bar", msgs[0].Title)
+		assert.Contains(t, msgs[0].Text, "moving to auto mode in ")
+	}
 
-		assert.False(t, zoneInOverlay(mgr.API, 2))
-		msgs := <-postChannel
-		if assert.Len(t, msgs, 1) {
-			assert.Contains(t, msgs[0].Text, "bar: moving to auto mode in ")
-		}
+	_ = mgr.ReportTasks()
 
-		mgr.Cancel <- struct{}{}
+	assert.False(t, zoneInOverlay(ctx, mgr.API, 2))
+	msgs = <-postChannel
+	if assert.Len(t, msgs, 1) {
+		assert.Contains(t, msgs[0].Text, "bar: moving to auto mode in ")
 	}
 }
 
-func TestZoneManager_AutoAway(t *testing.T) {
+func TestZoneManager_AutoAway_NoSlack(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneID: 2,
 		AutoAway: configuration.ZoneAutoAway{
 			Enabled: true,
-			Delay:   10 * time.Millisecond,
+			Delay:   20 * time.Millisecond,
 			Users:   []configuration.ZoneUser{{MobileDeviceName: "bar"}},
 		},
 	}}
 
-	var msg []slack.Attachment
-	postChannel := make(slackbot.PostChannel)
+	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, nil)
+	assert.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		_ = mgr.Run(ctx)
+	}()
+
+	// user is away
+	mgr.Update <- fakeUpdates[0]
+
+	// validate that the zone is switched off
+	assert.Eventually(t, func() bool { return zoneInOverlay(ctx, mgr.API, 2) }, 500*time.Millisecond, 10*time.Millisecond)
+
+	// user is away
+	mgr.Update <- fakeUpdates[4]
+
+	// user comes home
+	mgr.Update <- fakeUpdates[1]
+
+	// validate that the zone is switched back to auto
+	assert.Eventually(t, func() bool { return !zoneInOverlay(ctx, mgr.API, 2) }, 500*time.Millisecond, 10*time.Millisecond)
+
+}
+
+func TestZoneManager_AutoAway_WithSlack(t *testing.T) {
+	zoneConfig := []configuration.ZoneConfig{{
+		ZoneID: 2,
+		AutoAway: configuration.ZoneAutoAway{
+			Enabled: true,
+			Delay:   20 * time.Millisecond,
+			Users:   []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+		},
+	}}
+
+	postChannel := make(slackbot.PostChannel, 5)
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
+	assert.NoError(t, err)
 
-	if assert.Nil(t, err) {
-		go mgr.Run()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		_ = mgr.Run(ctx)
+	}()
 
-		// user is away
-		mgr.Update <- fakeUpdates[0]
+	// user is away
+	mgr.Update <- fakeUpdates[0]
 
-		// notification that zone will be switched off
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "bar: bar is away", msg[0].Title)
-			assert.Contains(t, msg[0].Text, "switching off heating in ")
-		}
+	msgs := <-postChannel
+	if assert.Len(t, msgs, 1) {
+		assert.Equal(t, "bar: bar is away", msgs[0].Title)
+		assert.Contains(t, msgs[0].Text, "switching off heating in ")
+	}
 
-		// notification that zone gets switched off
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "bar: bar is away", msg[0].Title)
-			assert.Contains(t, msg[0].Text, "switching off heating")
-		}
+	// validate that the zone is switched off
+	assert.Eventually(t, func() bool { return zoneInOverlay(ctx, mgr.API, 2) }, 500*time.Millisecond, 10*time.Millisecond)
 
-		// validate that the zone is switched off
-		assert.True(t, zoneInOverlay(mgr.API, 2))
+	msgs = <-postChannel
+	if assert.Len(t, msgs, 1) {
+		assert.Equal(t, "bar: bar is away", msgs[0].Title)
+		assert.Equal(t, "switching off heating", msgs[0].Text)
+	}
 
-		// user is still away
-		mgr.Update <- fakeUpdates[4]
+	// user is away & room in overlay
+	mgr.Update <- fakeUpdates[4]
 
-		// shouldn't trigger any actions and no rules should be outstanding
-		// (if it did trigger an action, the next message on postChannel wouldn't be "no rules have been triggered")
-		mgr.ReportTasks()
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "no rules have been triggered", msg[0].Text)
-		}
+	// user comes home
+	mgr.Update <- fakeUpdates[1]
 
-		mgr.Cancel <- struct{}{}
+	// validate that the zone is switched back to auto
+	assert.Eventually(t, func() bool { return !zoneInOverlay(ctx, mgr.API, 2) }, 500*time.Millisecond, 10*time.Millisecond)
+
+	msgs = <-postChannel
+	if assert.Len(t, msgs, 1) {
+		assert.Equal(t, "bar: bar is home", msgs[0].Title)
+		assert.Contains(t, msgs[0].Text, "moving to auto mode")
 	}
 }
 
@@ -222,63 +233,65 @@ func TestZoneManager_Combined(t *testing.T) {
 	}}
 
 	var msg []slack.Attachment
-	postChannel := make(slackbot.PostChannel)
+	postChannel := make(slackbot.PostChannel, 5)
+
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
+	assert.NoError(t, err)
 
-	if assert.Nil(t, err) {
-		go mgr.Run()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		_ = mgr.Run(ctx)
+	}()
 
-		// user is away
-		mgr.Update <- fakeUpdates[0]
+	// user is away
+	mgr.Update <- fakeUpdates[0]
 
-		// notification that zone will be switched off
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "bar: bar is away", msg[0].Title)
-			assert.Contains(t, msg[0].Text, "switching off heating in ")
-		}
+	// notification that zone will be switched off
+	msg = <-postChannel
+	if assert.Len(t, msg, 1) {
+		assert.Equal(t, "bar: bar is away", msg[0].Title)
+		assert.Contains(t, msg[0].Text, "switching off heating in ")
+	}
 
-		// notification that zone gets switched off
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "bar: bar is away", msg[0].Title)
-			assert.Contains(t, msg[0].Text, "switching off heating")
-		}
+	// notification that zone gets switched off
+	msg = <-postChannel
+	if assert.Len(t, msg, 1) {
+		assert.Equal(t, "bar: bar is away", msg[0].Title)
+		assert.Contains(t, msg[0].Text, "switching off heating")
+	}
 
-		// validate that the zone is switched off
-		assert.True(t, zoneInOverlay(mgr.API, 2))
+	// validate that the zone is switched off
+	assert.True(t, zoneInOverlay(ctx, mgr.API, 2))
 
-		// user comes home
-		mgr.Update <- fakeUpdates[1]
+	// user comes home
+	mgr.Update <- fakeUpdates[1]
 
-		// notification that zone will be switched on again
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "bar: bar is home", msg[0].Title)
-			assert.Equal(t, "moving to auto mode", msg[0].Text)
-		}
+	// notification that zone will be switched on again
+	msg = <-postChannel
+	if assert.Len(t, msg, 1) {
+		assert.Equal(t, "bar: bar is home", msg[0].Title)
+		assert.Equal(t, "moving to auto mode", msg[0].Text)
+	}
 
-		assert.False(t, zoneInOverlay(mgr.API, 2))
+	assert.False(t, zoneInOverlay(ctx, mgr.API, 2))
 
-		log.SetLevel(log.DebugLevel)
-		// user is home & room set to manual
-		mgr.Update <- fakeUpdates[2]
+	log.SetLevel(log.DebugLevel)
+	// user is home & room set to manual
+	mgr.Update <- fakeUpdates[2]
 
-		// notification that zone will be switched back to auto
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "manual temperature setting detected in bar", msg[0].Title)
-			assert.Contains(t, msg[0].Text, "moving to auto mode in ")
-		}
+	// notification that zone will be switched back to auto
+	msg = <-postChannel
+	if assert.Len(t, msg, 1) {
+		assert.Equal(t, "manual temperature setting detected in bar", msg[0].Title)
+		assert.Contains(t, msg[0].Text, "moving to auto mode in ")
+	}
 
-		// report should say that a rule is triggered
-		mgr.ReportTasks()
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")
-		}
-
-		mgr.Cancel <- struct{}{}
+	// report should say that a rule is triggered
+	mgr.ReportTasks()
+	msg = <-postChannel
+	if assert.Len(t, msg, 1) {
+		assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")
 	}
 }
 
@@ -298,53 +311,50 @@ func TestManager_ReportTasks(t *testing.T) {
 		},
 	}}
 
-	postChannel := make(slackbot.PostChannel)
+	postChannel := make(slackbot.PostChannel, 5)
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
+	assert.Nil(t, err)
 
-	if assert.Nil(t, err) {
-		go mgr.Run()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		_ = mgr.Run(ctx)
+	}()
 
-		log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.DebugLevel)
 
-		_ = mgr.ReportTasks()
-		msg := <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Equal(t, "no rules have been triggered", msg[0].Text)
-		}
+	_ = mgr.ReportTasks()
+	msg := <-postChannel
+	if assert.Len(t, msg, 1) {
+		assert.Equal(t, "no rules have been triggered", msg[0].Text)
+	}
 
-		// user is away
-		mgr.Update <- fakeUpdates[0]
-		_ = <-postChannel
+	// user is away
+	mgr.Update <- fakeUpdates[0]
+	_ = <-postChannel
 
-		_ = mgr.ReportTasks()
+	_ = mgr.ReportTasks()
+	msg = <-postChannel
+	if assert.Len(t, msg, 1) {
+		assert.Contains(t, msg[0].Text, "bar: switching off heating in ")
+	}
 
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Contains(t, msg[0].Text, "bar: switching off heating in ")
-		}
+	// user is home & room set to manual
+	mgr.Update <- fakeUpdates[2]
+	msg = <-postChannel
+	if assert.Len(t, msg, 1) {
+		assert.Contains(t, msg[0].Text, "moving to auto mode in ")
+	}
 
-		// user is home & room set to manual
-		mgr.Update <- fakeUpdates[2]
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Contains(t, msg[0].Text, "moving to auto mode in ")
-		}
+	_ = mgr.ReportTasks()
 
-		_ = mgr.ReportTasks()
-
-		msg = <-postChannel
-		if assert.Len(t, msg, 1) {
-			assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")
-		}
+	msg = <-postChannel
+	if assert.Len(t, msg, 1) {
+		assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")
 	}
 }
 
-func zoneInOverlay(server tado.API, zoneID int) bool {
-	info, err := server.GetZoneInfo(zoneID)
-	return err == nil && info.Overlay.Type != ""
-
-}
-
+/*
 func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
@@ -371,4 +381,11 @@ func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
 
 		mgr.Cancel <- struct{}{}
 	}
+}
+
+*/
+func zoneInOverlay(ctx context.Context, server tado.API, zoneID int) bool {
+	info, err := server.GetZoneInfo(ctx, zoneID)
+	return err == nil && info.Overlay.Type != ""
+
 }

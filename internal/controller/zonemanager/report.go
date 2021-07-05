@@ -14,21 +14,21 @@ func (mgr *Manager) ReportTasks(_ ...string) (attachments []slack.Attachment) {
 }
 
 func (mgr *Manager) reportTasks(_ ...string) {
-	text := make([]string, 0, len(mgr.tasks))
-
-	for id, task := range mgr.tasks {
+	text := make([]string, 0)
+	for _, task := range mgr.scheduler.GetAllScheduled() {
+		state := task.Args[1].(models.ZoneState)
 		var action string
-		switch task.state.State {
+		switch state.State {
 		case models.ZoneOff:
 			action = "switching off heating"
 		case models.ZoneAuto:
 			action = "moving to auto mode"
 		case models.ZoneManual:
-			action = fmt.Sprintf("set temperature to %.1fº", task.state.Temperature.Celsius)
+			action = fmt.Sprintf("set temperature to %.1fº", state.Temperature.Celsius)
 		}
-		text = append(text,
-			mgr.getZoneName(id)+": "+action+" in "+
-				task.activation.Sub(time.Now()).Round(1*time.Second).String(),
+		_, zoneName, _ := mgr.stateManager.LookupZone(int(task.ID), "")
+		text = append(text, zoneName+": "+action+" in "+
+			task.Activation.Sub(time.Now()).Round(1*time.Second).String(),
 		)
 	}
 

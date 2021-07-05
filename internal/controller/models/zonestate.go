@@ -2,16 +2,16 @@ package models
 
 import (
 	"fmt"
-	"github.com/clambin/tado-exporter/pkg/tado"
+	"github.com/clambin/tado"
 )
 
 type ZoneStateEnum int
 
 const (
-	ZoneUnknown ZoneStateEnum = 0
-	ZoneOff     ZoneStateEnum = 1
-	ZoneAuto    ZoneStateEnum = 2
-	ZoneManual  ZoneStateEnum = 3
+	ZoneUnknown ZoneStateEnum = iota
+	ZoneOff     ZoneStateEnum = iota
+	ZoneAuto    ZoneStateEnum = iota
+	ZoneManual  ZoneStateEnum = iota
 )
 
 type ZoneState struct {

@@ -2,7 +2,7 @@ package exporter
 
 import (
 	"github.com/clambin/gotools/metrics"
-	"github.com/clambin/tado-exporter/pkg/tado"
+	"github.com/clambin/tado"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

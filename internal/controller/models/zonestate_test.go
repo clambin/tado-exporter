@@ -1,8 +1,8 @@
 package models_test
 
 import (
+	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/controller/models"
-	"github.com/clambin/tado-exporter/pkg/tado"
 	"reflect"
 	"testing"
 )

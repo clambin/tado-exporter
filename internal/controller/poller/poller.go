@@ -1,8 +1,9 @@
 package poller
 
 import (
+	"context"
+	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/controller/models"
-	"github.com/clambin/tado-exporter/pkg/tado"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,13 +22,13 @@ func New(API tado.API) *Poller {
 	}
 }
 
-func (poller *Poller) Update() (update Update, err error) {
+func (poller *Poller) Update(ctx context.Context) (update Update, err error) {
 	var (
 		zoneStates map[int]models.ZoneState
 		userStates map[int]models.UserState
 	)
-	if zoneStates, err = poller.getZoneStates(); err == nil {
-		if userStates, err = poller.getUserStates(); err == nil {
+	if zoneStates, err = poller.getZoneStates(ctx); err == nil {
+		if userStates, err = poller.getUserStates(ctx); err == nil {
 			update = Update{
 				ZoneStates: zoneStates,
 				UserStates: userStates,
@@ -41,13 +42,13 @@ func (poller *Poller) Update() (update Update, err error) {
 	return
 }
 
-func (poller *Poller) getZoneStates() (states map[int]models.ZoneState, err error) {
+func (poller *Poller) getZoneStates(ctx context.Context) (states map[int]models.ZoneState, err error) {
 	var zones []tado.Zone
-	if zones, err = poller.API.GetZones(); err == nil {
+	if zones, err = poller.API.GetZones(ctx); err == nil {
 		states = make(map[int]models.ZoneState)
 		for _, zone := range zones {
 			var state models.ZoneState
-			if state, err = poller.getZoneState(zone.ID); err == nil {
+			if state, err = poller.getZoneState(ctx, zone.ID); err == nil {
 				states[zone.ID] = state
 			}
 		}
@@ -55,17 +56,17 @@ func (poller *Poller) getZoneStates() (states map[int]models.ZoneState, err erro
 	return
 }
 
-func (poller *Poller) getZoneState(zoneID int) (state models.ZoneState, err error) {
+func (poller *Poller) getZoneState(ctx context.Context, zoneID int) (state models.ZoneState, err error) {
 	var zoneInfo tado.ZoneInfo
-	if zoneInfo, err = poller.API.GetZoneInfo(zoneID); err == nil {
+	if zoneInfo, err = poller.API.GetZoneInfo(ctx, zoneID); err == nil {
 		state = models.GetZoneState(zoneInfo)
 	}
 	return
 }
 
-func (poller *Poller) getUserStates() (users map[int]models.UserState, err error) {
+func (poller *Poller) getUserStates(ctx context.Context) (users map[int]models.UserState, err error) {
 	var devices []tado.MobileDevice
-	if devices, err = poller.API.GetMobileDevices(); err == nil {
+	if devices, err = poller.API.GetMobileDevices(ctx); err == nil {
 		users = make(map[int]models.UserState)
 		for _, device := range devices {
 			if device.Settings.GeoTrackingEnabled {

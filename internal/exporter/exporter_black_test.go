@@ -1,9 +1,10 @@
 package exporter_test
 
 import (
+	"context"
 	"github.com/clambin/gotools/metrics"
+	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/exporter"
-	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -40,9 +41,8 @@ func TestRunProbe(t *testing.T) {
 	export := exporter.Exporter{
 		API: &mockAPI{},
 	}
-	// log.SetLevel(log.DebugLevel)
 
-	err = export.Run()
+	err = export.Run(context.Background())
 	assert.Nil(t, err)
 
 	for _, testCase := range testCases {
@@ -56,10 +56,7 @@ func BenchmarkExporter_Run(b *testing.B) {
 	export := exporter.Exporter{
 		API: &mockAPI{},
 	}
-	var err error
-	for i := 0; i < 100; i++ {
-		err = export.Run()
-	}
+	err := export.Run(context.Background())
 	assert.Nil(b, err)
 }
 
@@ -68,7 +65,7 @@ func BenchmarkExporter_Run(b *testing.B) {
 type mockAPI struct {
 }
 
-func (client *mockAPI) GetZones() ([]tado.Zone, error) {
+func (client *mockAPI) GetZones(_ context.Context) ([]tado.Zone, error) {
 	return []tado.Zone{
 		{
 			ID:   1,
@@ -101,7 +98,7 @@ func (client *mockAPI) GetZones() ([]tado.Zone, error) {
 	}, nil
 }
 
-func (client *mockAPI) GetZoneInfo(zoneID int) (tado.ZoneInfo, error) {
+func (client *mockAPI) GetZoneInfo(_ context.Context, zoneID int) (tado.ZoneInfo, error) {
 	info := tado.ZoneInfo{
 		Setting: tado.ZoneInfoSetting{
 			Power:       "ON",
@@ -135,7 +132,7 @@ func (client *mockAPI) GetZoneInfo(zoneID int) (tado.ZoneInfo, error) {
 	return info, nil
 }
 
-func (client *mockAPI) GetWeatherInfo() (tado.WeatherInfo, error) {
+func (client *mockAPI) GetWeatherInfo(_ context.Context) (tado.WeatherInfo, error) {
 	return tado.WeatherInfo{
 		OutsideTemperature: tado.Temperature{Celsius: 3.4},
 		SolarIntensity:     tado.Percentage{Percentage: 13.3},
@@ -143,7 +140,7 @@ func (client *mockAPI) GetWeatherInfo() (tado.WeatherInfo, error) {
 	}, nil
 }
 
-func (client *mockAPI) GetMobileDevices() ([]tado.MobileDevice, error) {
+func (client *mockAPI) GetMobileDevices(_ context.Context) ([]tado.MobileDevice, error) {
 	return []tado.MobileDevice{
 		{
 			ID:       1,
@@ -172,10 +169,10 @@ func (client *mockAPI) GetMobileDevices() ([]tado.MobileDevice, error) {
 	}, nil
 }
 
-func (client *mockAPI) SetZoneOverlay(_ int, _ float64) error {
+func (client *mockAPI) SetZoneOverlay(_ context.Context, _ int, _ float64) error {
 	return nil
 }
 
-func (client *mockAPI) DeleteZoneOverlay(_ int) error {
+func (client *mockAPI) DeleteZoneOverlay(_ context.Context, _ int) error {
 	return nil
 }

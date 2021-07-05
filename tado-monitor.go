@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/configuration"
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/internal/exporter"
 	"github.com/clambin/tado-exporter/internal/version"
-	"github.com/clambin/tado-exporter/pkg/tado"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -79,12 +80,15 @@ func main() {
 	controlTicker := time.NewTicker(cfg.Controller.Interval)
 	defer controlTicker.Stop()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	var control *controller.Controller
 	if cfg.Controller.Enabled {
 		if control, err = controller.New(username, password, clientSecret, &cfg.Controller); err == nil {
 			log.WithField("interval", cfg.Controller.Interval).Info("controller created")
 
-			go control.Run()
+			go control.Run(ctx)
 		} else {
 			log.WithField("err", err).Fatal("failed to create controller")
 		}
@@ -97,7 +101,7 @@ func main() {
 	}()
 
 	if export != nil {
-		if err = export.Run(); err != nil {
+		if err = export.Run(ctx); err != nil {
 			log.WithField("err", err).Warning("exporter failed. Will keep retrying")
 		}
 	}
@@ -110,7 +114,7 @@ loop:
 		select {
 		case <-exportTicker.C:
 			if export != nil {
-				if err = export.Run(); err != nil {
+				if err = export.Run(ctx); err != nil {
 					log.WithField("err", err).Warning("exporter failed")
 				}
 			}
@@ -118,8 +122,6 @@ loop:
 			break loop
 		}
 	}
-
-	control.Stop()
 
 	log.Info("tado-monitor exiting")
 }

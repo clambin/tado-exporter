@@ -1,6 +1,7 @@
 package poller_test
 
 import (
+	"context"
 	"github.com/clambin/tado-exporter/internal/controller/models"
 	"github.com/clambin/tado-exporter/internal/controller/poller"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
@@ -10,11 +11,8 @@ import (
 
 func TestPoller_Run(t *testing.T) {
 	p := poller.New(&mockapi.MockAPI{})
-
-	var update poller.Update
-	var err error
-
-	update, err = p.Update()
+	ctx := context.Background()
+	update, err := p.Update(ctx)
 
 	if assert.Nil(t, err) {
 		if state, ok := update.ZoneStates[1]; assert.True(t, ok) {
@@ -34,12 +32,12 @@ func TestPoller_Run(t *testing.T) {
 		}
 	}
 
-	err = p.API.SetZoneOverlay(2, 18.5)
+	err = p.API.SetZoneOverlay(ctx, 2, 18.5)
 	if assert.Nil(t, err) == false {
 		return
 	}
 
-	update, err = p.Update()
+	update, err = p.Update(ctx)
 
 	if assert.Nil(t, err) {
 		if state, ok := update.ZoneStates[2]; assert.True(t, ok) {
@@ -48,12 +46,12 @@ func TestPoller_Run(t *testing.T) {
 		}
 	}
 
-	err = p.API.SetZoneOverlay(2, 5.0)
+	err = p.API.SetZoneOverlay(ctx, 2, 5.0)
 	if assert.Nil(t, err) == false {
 		return
 	}
 
-	update, err = p.Update()
+	update, err = p.Update(ctx)
 
 	if assert.Nil(t, err) {
 		if state, ok := update.ZoneStates[2]; assert.True(t, ok) {

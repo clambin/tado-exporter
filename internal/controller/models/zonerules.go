@@ -2,24 +2,24 @@ package models
 
 import "time"
 
-type ZoneConfig struct {
-	AutoAway     ZoneAutoAwayConfig
-	LimitOverlay ZoneLimitOverlayConfig
-	NightTime    ZoneNightTimeConfig
+type ZoneRules struct {
+	AutoAway     ZoneAutoAwayRule
+	LimitOverlay ZoneLimitOverlayRule
+	NightTime    ZoneNightTimeRule
 }
 
-type ZoneAutoAwayConfig struct {
+type ZoneAutoAwayRule struct {
 	Enabled bool
 	Users   []int
 	Delay   time.Duration
 }
 
-type ZoneLimitOverlayConfig struct {
+type ZoneLimitOverlayRule struct {
 	Enabled bool
 	Delay   time.Duration
 }
 
-type ZoneNightTimeConfig struct {
+type ZoneNightTimeRule struct {
 	Enabled bool
 	Time    ZoneNightTimestamp
 }

@@ -1,7 +1,8 @@
 package exporter
 
 import (
-	"github.com/clambin/tado-exporter/pkg/tado"
+	"context"
+	"github.com/clambin/tado"
 	log "github.com/sirupsen/logrus"
 	"strconv"
 )
@@ -13,25 +14,25 @@ type Exporter struct {
 }
 
 // Run a tado-exporter probe once
-func (export *Exporter) Run() error {
-	err := export.runWeather()
+func (export *Exporter) Run(ctx context.Context) (err error) {
+	err = export.runWeather(ctx)
 
 	if err == nil {
-		err = export.runMobileDevices()
+		err = export.runMobileDevices(ctx)
 	}
 
 	if err == nil {
-		err = export.runZones()
+		err = export.runZones(ctx)
 	}
 
 	return err
 }
 
-func (export *Exporter) runWeather() error {
+func (export *Exporter) runWeather(ctx context.Context) error {
 	var err error
 	var weatherInfo tado.WeatherInfo
 
-	if weatherInfo, err = export.GetWeatherInfo(); err == nil {
+	if weatherInfo, err = export.GetWeatherInfo(ctx); err == nil {
 		export.reportWeather(weatherInfo)
 		log.WithField("info", weatherInfo).Debug("retrieved weather info")
 	}
@@ -55,11 +56,11 @@ func (export *Exporter) reportWeather(weatherInfo tado.WeatherInfo) {
 	}
 }
 
-func (export *Exporter) runMobileDevices() error {
+func (export *Exporter) runMobileDevices(ctx context.Context) error {
 	var err error
 	var mobileDevices []tado.MobileDevice
 
-	if mobileDevices, err = export.GetMobileDevices(); err == nil {
+	if mobileDevices, err = export.GetMobileDevices(ctx); err == nil {
 		for _, mobileDevice := range mobileDevices {
 			export.reportMobileDevice(mobileDevice)
 			log.WithField("device", mobileDevice.String()).Debug("retrieved mobile device")
@@ -79,17 +80,17 @@ func (export *Exporter) reportMobileDevice(mobileDevice tado.MobileDevice) {
 	}
 }
 
-func (export *Exporter) runZones() error {
+func (export *Exporter) runZones(ctx context.Context) error {
 	var (
 		err   error
 		zones []tado.Zone
 		info  tado.ZoneInfo
 	)
 
-	if zones, err = export.GetZones(); err == nil {
+	if zones, err = export.GetZones(ctx); err == nil {
 		for _, zone := range zones {
 			logger := log.WithFields(log.Fields{"err": err, "zone.ID": zone.ID, "zone.Name": zone.Name})
-			if info, err = export.GetZoneInfo(zone.ID); err == nil {
+			if info, err = export.GetZoneInfo(ctx, zone.ID); err == nil {
 				export.reportZone(zone, info)
 				logger.WithField("zoneInfo", info).Debug("retrieved zone info")
 			}
