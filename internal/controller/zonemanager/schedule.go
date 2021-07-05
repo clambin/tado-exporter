@@ -20,11 +20,7 @@ func (mgr *Manager) scheduleZoneStateChange(ctx context.Context, zoneID int, sta
 	if ok {
 		// if that change is already pending for that room, and it will start earlier, don't schedule the new change
 		if state.State == running.Args[1].(models.ZoneState).State && activation.After(running.Activation) { // running.Sub(activation).Round(time.Minute) <= 0 {
-			log.WithFields(log.Fields{
-				"zone":    zoneID,
-				"running": running,
-				"new":     activation,
-			}).Debug("earlier task already found. won't schedule this task")
+			log.WithFields(log.Fields{"zone": zoneID, "running": running, "new": activation}).Debug("earlier task already found. won't schedule this task")
 			return
 		}
 

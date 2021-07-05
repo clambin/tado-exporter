@@ -26,21 +26,27 @@ type Controller struct {
 
 // New creates a new Controller object
 func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration.ControllerConfiguration) (controller *Controller, err error) {
-	if cfg == nil || !cfg.Enabled {
+	if !cfg.Enabled {
 		return nil, fmt.Errorf("controller not enabled")
 	}
-	var tadoBot *slackbot.SlackBot
-	var postChannel slackbot.PostChannel
+
+	var (
+		tadoBot     *slackbot.SlackBot
+		postChannel slackbot.PostChannel
+		mgr         *zonemanager.Manager
+	)
+
 	if cfg.TadoBot.Enabled {
-		if tadoBot, err = slackbot.Create("tado "+version.BuildVersion, cfg.TadoBot.Token.Value, nil); err == nil {
-			go func() {
-				_ = tadoBot.Run()
-			}()
-			postChannel = tadoBot.PostChannel
-		} else {
-			log.WithField("err", "failed to start TadoBot")
-			tadoBot = nil
+		tadoBot, err = slackbot.Create("tado "+version.BuildVersion, cfg.TadoBot.Token.Value, nil)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to start TadoBot: %s", err.Error())
 		}
+
+		go func() {
+			_ = tadoBot.Run()
+		}()
+		postChannel = tadoBot.PostChannel
 	}
 
 	API := &tado.APIClient{
@@ -51,17 +57,16 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 	}
 
 	pollr := poller.New(API)
-
-	var mgr *zonemanager.Manager
 	mgr, err = zonemanager.New(API, *cfg.ZoneConfig, postChannel)
 
-	if err == nil {
-		if tadoBot != nil {
-			tadoBot.RegisterCallback("rules", mgr.ReportTasks)
-		}
-		controller, err = NewWith(API, pollr, mgr, tadoBot, cfg.Interval)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create zone manager: %s", err.Error())
 	}
-	return
+	if tadoBot != nil {
+		tadoBot.RegisterCallback("rules", mgr.ReportTasks)
+	}
+
+	return NewWith(API, pollr, mgr, tadoBot, cfg.Interval)
 }
 
 // NewWith creates a controller with pre-existing components.  Used for unit-testing
@@ -91,6 +96,8 @@ loop:
 		case <-controller.ticker.C:
 			if updates, err := controller.poller.Update(ctx); err == nil {
 				controller.mgr.Update <- updates
+			} else {
+				log.WithError(err).Warning("failed to get Tado statistics")
 			}
 		}
 	}

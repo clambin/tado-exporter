@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/controller/models"
-	log "github.com/sirupsen/logrus"
 )
 
 type Poller struct {
@@ -34,10 +33,6 @@ func (poller *Poller) Update(ctx context.Context) (update Update, err error) {
 				UserStates: userStates,
 			}
 		}
-	}
-
-	if err != nil {
-		log.WithField("err", err).Warning("failed to get tado status information")
 	}
 	return
 }

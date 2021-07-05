@@ -90,25 +90,22 @@ func (mgr *Manager) load(config []configuration.ZoneConfig) (err error) {
 }
 
 func (mgr *Manager) buildNameCache(ctx context.Context) (err error) {
-	if err = mgr.buildZoneNameCache(ctx); err != nil {
-		return
+	if err = mgr.buildZoneNameCache(ctx); err == nil {
+		err = mgr.buildUserNameCache(ctx)
 	}
-	return mgr.buildUserNameCache(ctx)
+	return
 }
 
 func (mgr *Manager) buildZoneNameCache(ctx context.Context) (err error) {
 	var zones []tado.Zone
 	zones, err = mgr.API.GetZones(ctx)
 
-	if err != nil {
-		return
+	if err == nil {
+		mgr.zoneNameCache = make(map[int]string)
+		for _, zone := range zones {
+			mgr.zoneNameCache[zone.ID] = zone.Name
+		}
 	}
-
-	mgr.zoneNameCache = make(map[int]string)
-	for _, zone := range zones {
-		mgr.zoneNameCache[zone.ID] = zone.Name
-	}
-
 	return
 }
 
@@ -116,15 +113,12 @@ func (mgr *Manager) buildUserNameCache(ctx context.Context) (err error) {
 	var mobileDevices []tado.MobileDevice
 	mobileDevices, err = mgr.API.GetMobileDevices(ctx)
 
-	if err != nil {
-		return
+	if err == nil {
+		mgr.userNameCache = make(map[int]string)
+		for _, mobileDevice := range mobileDevices {
+			mgr.userNameCache[mobileDevice.ID] = mobileDevice.Name
+		}
 	}
-
-	mgr.userNameCache = make(map[int]string)
-	for _, mobileDevice := range mobileDevices {
-		mgr.userNameCache[mobileDevice.ID] = mobileDevice.Name
-	}
-
 	return
 }
 
@@ -132,7 +126,7 @@ func (mgr *Manager) LookupZone(id int, name string) (zoneID int, zoneName string
 	for zoneID, zoneName = range mgr.zoneNameCache {
 		if id == zoneID || name == zoneName {
 			found = true
-			return
+			break
 		}
 	}
 	return
@@ -142,7 +136,7 @@ func (mgr *Manager) LookupUser(id int, name string) (userID int, userName string
 	for userID, userName = range mgr.zoneNameCache {
 		if id == userID || name == userName {
 			found = true
-			return
+			break
 		}
 	}
 	return

@@ -46,6 +46,9 @@ func TestManager_GetNextState_LimitOverlay(t *testing.T) {
 	mgr, err := statemanager.New(&mockapi.MockAPI{}, zoneConfig)
 	assert.NoError(t, err)
 
+	assert.True(t, mgr.IsValidZoneID(2))
+	assert.False(t, mgr.IsValidZoneID(3))
+
 	expectedResults := []struct {
 		state  models.ZoneStateEnum
 		delay  bool
