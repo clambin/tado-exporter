@@ -2,7 +2,7 @@ package scheduler_test
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/controller/scheduler"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"sync"

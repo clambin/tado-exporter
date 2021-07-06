@@ -3,7 +3,7 @@ package poller
 import (
 	"context"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/controller/models"
+	"github.com/clambin/tado-exporter/controller/models"
 )
 
 type Poller struct {

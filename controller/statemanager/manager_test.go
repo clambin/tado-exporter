@@ -2,10 +2,10 @@ package statemanager_test
 
 import (
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/models"
-	"github.com/clambin/tado-exporter/internal/controller/poller"
-	"github.com/clambin/tado-exporter/internal/controller/statemanager"
+	"github.com/clambin/tado-exporter/configuration"
+	"github.com/clambin/tado-exporter/controller/models"
+	"github.com/clambin/tado-exporter/controller/poller"
+	"github.com/clambin/tado-exporter/controller/statemanager"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
 	"testing"

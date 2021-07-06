@@ -2,7 +2,7 @@ package zonemanager
 
 import (
 	"fmt"
-	"github.com/clambin/tado-exporter/internal/controller/models"
+	"github.com/clambin/tado-exporter/controller/models"
 	"github.com/slack-go/slack"
 	"strings"
 	"time"

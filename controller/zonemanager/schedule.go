@@ -3,8 +3,8 @@ package zonemanager
 import (
 	"context"
 	"fmt"
-	"github.com/clambin/tado-exporter/internal/controller/models"
-	"github.com/clambin/tado-exporter/internal/controller/scheduler"
+	"github.com/clambin/tado-exporter/controller/models"
+	"github.com/clambin/tado-exporter/controller/scheduler"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"time"

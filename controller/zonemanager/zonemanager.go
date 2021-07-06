@@ -3,11 +3,11 @@ package zonemanager
 import (
 	"context"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/poller"
-	"github.com/clambin/tado-exporter/internal/controller/scheduler"
-	"github.com/clambin/tado-exporter/internal/controller/statemanager"
-	"github.com/clambin/tado-exporter/pkg/slackbot"
+	"github.com/clambin/tado-exporter/configuration"
+	"github.com/clambin/tado-exporter/controller/poller"
+	"github.com/clambin/tado-exporter/controller/scheduler"
+	"github.com/clambin/tado-exporter/controller/statemanager"
+	"github.com/clambin/tado-exporter/slackbot"
 	log "github.com/sirupsen/logrus"
 )
 

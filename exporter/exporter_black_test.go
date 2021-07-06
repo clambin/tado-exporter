@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/clambin/gotools/metrics"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/exporter"
+	"github.com/clambin/tado-exporter/exporter"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

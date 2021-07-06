@@ -2,8 +2,8 @@ package poller_test
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/internal/controller/models"
-	"github.com/clambin/tado-exporter/internal/controller/poller"
+	"github.com/clambin/tado-exporter/controller/models"
+	"github.com/clambin/tado-exporter/controller/poller"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	"github.com/stretchr/testify/assert"
 	"testing"

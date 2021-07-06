@@ -3,8 +3,8 @@ package statemanager
 import (
 	"context"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/models"
+	"github.com/clambin/tado-exporter/configuration"
+	"github.com/clambin/tado-exporter/controller/models"
 	log "github.com/sirupsen/logrus"
 )
 

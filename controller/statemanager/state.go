@@ -1,8 +1,8 @@
 package statemanager
 
 import (
-	"github.com/clambin/tado-exporter/internal/controller/models"
-	"github.com/clambin/tado-exporter/internal/controller/poller"
+	"github.com/clambin/tado-exporter/controller/models"
+	"github.com/clambin/tado-exporter/controller/poller"
 	"time"
 )
 

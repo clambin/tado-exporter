@@ -1,7 +1,7 @@
 package configuration_test
 
 import (
-	"github.com/clambin/tado-exporter/internal/configuration"
+	"github.com/clambin/tado-exporter/configuration"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
@@ -46,7 +46,9 @@ controller:
 		panic(err)
 	}
 
-	defer os.Remove(f.Name())
+	defer func(name string) {
+		_ = os.Remove(name)
+	}(f.Name())
 	_, _ = f.Write(testRules)
 	_ = f.Close()
 
