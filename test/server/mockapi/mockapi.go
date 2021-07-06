@@ -1,7 +1,8 @@
 package mockapi
 
 import (
-	"github.com/clambin/tado-exporter/pkg/tado"
+	"context"
+	"github.com/clambin/tado"
 	"sync"
 )
 
@@ -11,14 +12,14 @@ type MockAPI struct {
 	lock     sync.RWMutex
 }
 
-func (client *MockAPI) GetZones() ([]tado.Zone, error) {
+func (client *MockAPI) GetZones(_ context.Context) ([]tado.Zone, error) {
 	return []tado.Zone{
 		{ID: 1, Name: "foo"},
 		{ID: 2, Name: "bar"},
 	}, nil
 }
 
-func (client *MockAPI) GetZoneInfo(zoneID int) (info tado.ZoneInfo, err error) {
+func (client *MockAPI) GetZoneInfo(_ context.Context, zoneID int) (info tado.ZoneInfo, err error) {
 	info = tado.ZoneInfo{
 		Setting: tado.ZoneInfoSetting{
 			Power:       "ON",
@@ -57,7 +58,7 @@ func (client *MockAPI) GetZoneInfo(zoneID int) (info tado.ZoneInfo, err error) {
 	return
 }
 
-func (client *MockAPI) GetWeatherInfo() (tado.WeatherInfo, error) {
+func (client *MockAPI) GetWeatherInfo(_ context.Context) (tado.WeatherInfo, error) {
 	return tado.WeatherInfo{
 		OutsideTemperature: tado.Temperature{Celsius: 3.4},
 		SolarIntensity:     tado.Percentage{Percentage: 13.3},
@@ -65,7 +66,7 @@ func (client *MockAPI) GetWeatherInfo() (tado.WeatherInfo, error) {
 	}, nil
 }
 
-func (client *MockAPI) GetMobileDevices() ([]tado.MobileDevice, error) {
+func (client *MockAPI) GetMobileDevices(_ context.Context) ([]tado.MobileDevice, error) {
 	return []tado.MobileDevice{
 		{
 			ID:       1,
@@ -82,7 +83,7 @@ func (client *MockAPI) GetMobileDevices() ([]tado.MobileDevice, error) {
 	}, nil
 }
 
-func (client *MockAPI) SetZoneOverlay(zoneID int, temperature float64) error {
+func (client *MockAPI) SetZoneOverlay(_ context.Context, zoneID int, temperature float64) error {
 	client.lock.Lock()
 	defer client.lock.Unlock()
 
@@ -94,7 +95,7 @@ func (client *MockAPI) SetZoneOverlay(zoneID int, temperature float64) error {
 	return nil
 }
 
-func (client *MockAPI) DeleteZoneOverlay(zoneID int) error {
+func (client *MockAPI) DeleteZoneOverlay(_ context.Context, zoneID int) error {
 	client.lock.Lock()
 	defer client.lock.Unlock()
 
