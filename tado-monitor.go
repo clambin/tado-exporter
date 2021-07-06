@@ -81,7 +81,6 @@ func main() {
 	defer controlTicker.Stop()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	var control *controller.Controller
 	if cfg.Controller.Enabled {
@@ -123,5 +122,7 @@ loop:
 		}
 	}
 
+	cancel()
 	log.Info("tado-monitor exiting")
+	time.Sleep(500 * time.Millisecond)
 }
