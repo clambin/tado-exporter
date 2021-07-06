@@ -78,6 +78,7 @@ func Create(name string, slackToken string, callbacks map[string]CommandFunc) (b
 
 // Run the slackbot
 func (bot *SlackBot) Run() (err error) {
+	log.Info("slackBot started")
 	if bot.slackClient != nil {
 		go bot.slackClient.run()
 	}
@@ -108,6 +109,7 @@ loop:
 	close(bot.messages)
 	close(bot.PostChannel)
 
+	log.Info("slackBot stopped")
 	return
 }
 

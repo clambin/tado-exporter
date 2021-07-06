@@ -20,7 +20,6 @@ type Controller struct {
 	poller  *poller.Poller
 	mgr     *zonemanager.Manager
 	tadoBot *slackbot.SlackBot
-	stop    chan struct{}
 	ticker  *time.Ticker
 }
 
@@ -44,6 +43,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 		}
 
 		go func() {
+			// TODO: start this in controller.Run() with context?
 			_ = tadoBot.Run()
 		}()
 		postChannel = tadoBot.PostChannel
@@ -75,7 +75,6 @@ func NewWith(API tado.API, pollr *poller.Poller, mgr *zonemanager.Manager, tadoB
 		API:     API,
 		poller:  pollr,
 		mgr:     mgr,
-		stop:    make(chan struct{}),
 		tadoBot: tadoBot,
 		ticker:  time.NewTicker(interval),
 	}
@@ -84,6 +83,7 @@ func NewWith(API tado.API, pollr *poller.Poller, mgr *zonemanager.Manager, tadoB
 
 // Run the controller
 func (controller *Controller) Run(ctx context.Context) {
+	log.Info("controller started")
 	go func() {
 		_ = controller.mgr.Run(ctx)
 	}()
@@ -101,5 +101,5 @@ loop:
 			}
 		}
 	}
-	close(controller.stop)
+	log.Info("controller started")
 }

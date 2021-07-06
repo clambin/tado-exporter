@@ -40,6 +40,7 @@ func New(API tado.API, zoneConfig []configuration.ZoneConfig, postChannel slackb
 }
 
 func (mgr *Manager) Run(ctx context.Context) (err error) {
+	log.Info("zone manager started")
 	go mgr.scheduler.Run(ctx)
 
 loop:
@@ -53,6 +54,7 @@ loop:
 			mgr.reportTasks()
 		}
 	}
+	log.Info("zone manager stopped")
 
 	return
 }

@@ -20,6 +20,7 @@ func New() *Scheduler {
 }
 
 func (scheduler *Scheduler) Run(ctx context.Context) {
+	log.Info("scheduler started")
 loop:
 	for {
 		select {
@@ -30,6 +31,7 @@ loop:
 		}
 	}
 	scheduler.CancelAll()
+	log.Info("scheduler stopped")
 }
 
 func (scheduler *Scheduler) Schedule(ctx context.Context, task Task) {
@@ -92,6 +94,7 @@ func (scheduler *Scheduler) run(ctx context.Context, taskID TaskID) {
 	defer scheduler.lock.Unlock()
 
 	if task, found := scheduler.tasks[taskID]; found {
+		log.WithField("taskID", taskID).Debug("task running")
 		task.Run(ctx, task.Args)
 		delete(scheduler.tasks, taskID)
 	} else {
