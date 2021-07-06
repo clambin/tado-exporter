@@ -27,7 +27,7 @@ type ControllerConfiguration struct {
 	Enabled    bool
 	Interval   time.Duration
 	TadoBot    TadoBotConfiguration `yaml:"tadoBot"`
-	ZoneConfig *[]ZoneConfig        `yaml:"zones"`
+	ZoneConfig []ZoneConfig         `yaml:"zones"`
 }
 
 // TadoBotConfiguration structure for TadoBot

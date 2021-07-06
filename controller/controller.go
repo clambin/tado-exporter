@@ -57,7 +57,7 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 	}
 
 	pollr := poller.New(API)
-	mgr, err = zonemanager.New(API, *cfg.ZoneConfig, postChannel)
+	mgr, err = zonemanager.New(API, cfg.ZoneConfig, postChannel)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create zone manager: %s", err.Error())

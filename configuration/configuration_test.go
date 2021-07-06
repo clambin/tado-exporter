@@ -66,26 +66,26 @@ controller:
 		assert.True(t, cfg.Controller.TadoBot.Enabled)
 		assert.Equal(t, "1234", cfg.Controller.TadoBot.Token.Value)
 
-		if assert.NotNil(t, cfg.Controller.ZoneConfig) && assert.Len(t, *cfg.Controller.ZoneConfig, 1) {
-			assert.Equal(t, 1, (*cfg.Controller.ZoneConfig)[0].ZoneID)
-			assert.Equal(t, "", (*cfg.Controller.ZoneConfig)[0].ZoneName)
+		if assert.NotNil(t, cfg.Controller.ZoneConfig) && assert.Len(t, cfg.Controller.ZoneConfig, 1) {
+			assert.Equal(t, 1, cfg.Controller.ZoneConfig[0].ZoneID)
+			assert.Equal(t, "", cfg.Controller.ZoneConfig[0].ZoneName)
 
-			assert.True(t, (*cfg.Controller.ZoneConfig)[0].AutoAway.Enabled)
-			if assert.Len(t, (*cfg.Controller.ZoneConfig)[0].AutoAway.Users, 2) {
-				assert.Equal(t, 1, (*cfg.Controller.ZoneConfig)[0].AutoAway.Users[0].MobileDeviceID)
-				assert.Equal(t, "", (*cfg.Controller.ZoneConfig)[0].AutoAway.Users[0].MobileDeviceName)
+			assert.True(t, cfg.Controller.ZoneConfig[0].AutoAway.Enabled)
+			if assert.Len(t, cfg.Controller.ZoneConfig[0].AutoAway.Users, 2) {
+				assert.Equal(t, 1, cfg.Controller.ZoneConfig[0].AutoAway.Users[0].MobileDeviceID)
+				assert.Equal(t, "", cfg.Controller.ZoneConfig[0].AutoAway.Users[0].MobileDeviceName)
 
-				assert.Equal(t, 0, (*cfg.Controller.ZoneConfig)[0].AutoAway.Users[1].MobileDeviceID)
-				assert.Equal(t, "bar", (*cfg.Controller.ZoneConfig)[0].AutoAway.Users[1].MobileDeviceName)
+				assert.Equal(t, 0, cfg.Controller.ZoneConfig[0].AutoAway.Users[1].MobileDeviceID)
+				assert.Equal(t, "bar", cfg.Controller.ZoneConfig[0].AutoAway.Users[1].MobileDeviceName)
 			}
 
-			assert.True(t, (*cfg.Controller.ZoneConfig)[0].LimitOverlay.Enabled)
-			assert.Equal(t, 1*time.Hour, (*cfg.Controller.ZoneConfig)[0].LimitOverlay.Delay)
+			assert.True(t, cfg.Controller.ZoneConfig[0].LimitOverlay.Enabled)
+			assert.Equal(t, 1*time.Hour, cfg.Controller.ZoneConfig[0].LimitOverlay.Delay)
 
-			assert.True(t, (*cfg.Controller.ZoneConfig)[0].NightTime.Enabled)
-			assert.Equal(t, 23, (*cfg.Controller.ZoneConfig)[0].NightTime.Time.Hour)
-			assert.Equal(t, 30, (*cfg.Controller.ZoneConfig)[0].NightTime.Time.Minutes)
-			assert.Equal(t, 0, (*cfg.Controller.ZoneConfig)[0].NightTime.Time.Seconds)
+			assert.True(t, cfg.Controller.ZoneConfig[0].NightTime.Enabled)
+			assert.Equal(t, 23, cfg.Controller.ZoneConfig[0].NightTime.Time.Hour)
+			assert.Equal(t, 30, cfg.Controller.ZoneConfig[0].NightTime.Time.Minutes)
+			assert.Equal(t, 0, cfg.Controller.ZoneConfig[0].NightTime.Time.Seconds)
 		}
 	}
 }
