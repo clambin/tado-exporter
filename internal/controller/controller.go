@@ -101,5 +101,5 @@ loop:
 			}
 		}
 	}
-	log.Info("controller started")
+	log.Info("controller stopped")
 }

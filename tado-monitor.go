@@ -123,6 +123,6 @@ loop:
 	}
 
 	cancel()
+	time.Sleep(100 * time.Millisecond)
 	log.Info("tado-monitor exiting")
-	time.Sleep(500 * time.Millisecond)
 }
