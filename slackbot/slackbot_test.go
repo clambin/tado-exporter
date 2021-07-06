@@ -127,7 +127,9 @@ func TestSlackBot_Run(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 	bot, err := Create("testBot", "", nil)
 	if assert.Nil(t, err) {
-		go bot.Run()
+		go func() {
+			_ = bot.Run()
+		}()
 
 		// we're connected to slack
 		bot.events <- slack.RTMEvent{Type: "connected", Data: &slack.ConnectedEvent{
@@ -185,7 +187,7 @@ func TestEndToEnd(t *testing.T) {
 		bot, err := Create("testBot", token, nil)
 
 		if assert.Nil(t, err) {
-			bot.Run()
+			_ = bot.Run()
 		}
 	}
 }
