@@ -76,7 +76,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: docker/metadata-action@v3.3.0
+      - uses: docker/metadata-action@v3.4.0
         id: docker_meta
         with:
           images: clambin/tado-monitor
