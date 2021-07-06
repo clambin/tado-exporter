@@ -48,7 +48,7 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 		},
 	}}
 
-	postChannel := make(slackbot.PostChannel, 5)
+	postChannel := make(slackbot.PostChannel)
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 	assert.NoError(t, err)
 
@@ -92,7 +92,7 @@ func TestZoneManager_NightTime(t *testing.T) {
 		},
 	}}
 
-	postChannel := make(slackbot.PostChannel, 5)
+	postChannel := make(slackbot.PostChannel)
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 	assert.NoError(t, err)
 
@@ -166,7 +166,7 @@ func TestZoneManager_AutoAway_WithSlack(t *testing.T) {
 		},
 	}}
 
-	postChannel := make(slackbot.PostChannel, 5)
+	postChannel := make(slackbot.PostChannel)
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 	assert.NoError(t, err)
 
@@ -233,7 +233,7 @@ func TestZoneManager_Combined(t *testing.T) {
 	}}
 
 	var msg []slack.Attachment
-	postChannel := make(slackbot.PostChannel, 5)
+	postChannel := make(slackbot.PostChannel)
 
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 	assert.NoError(t, err)
@@ -311,7 +311,7 @@ func TestManager_ReportTasks(t *testing.T) {
 		},
 	}}
 
-	postChannel := make(slackbot.PostChannel, 5)
+	postChannel := make(slackbot.PostChannel)
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 	assert.Nil(t, err)
 
@@ -354,7 +354,6 @@ func TestManager_ReportTasks(t *testing.T) {
 	}
 }
 
-/*
 func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
@@ -368,22 +367,25 @@ func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
 	mgr, err := zonemanager.New(&mockapi.MockAPI{}, zoneConfig, postChannel)
 
 	if assert.Nil(b, err) {
-		go mgr.Run()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go func() {
+			_ = mgr.Run(ctx)
+		}()
+
 		b.ResetTimer()
 
-		_ = mgr.API.SetZoneOverlay(2, 5.0)
+		_ = mgr.API.SetZoneOverlay(ctx, 2, 5.0)
 		mgr.Update <- fakeUpdates[2]
 
 		_ = <-postChannel
 		_ = <-postChannel
 
-		assert.False(b, zoneInOverlay(mgr.API, 2))
-
-		mgr.Cancel <- struct{}{}
+		assert.False(b, zoneInOverlay(ctx, mgr.API, 2))
 	}
 }
 
-*/
 func zoneInOverlay(ctx context.Context, server tado.API, zoneID int) bool {
 	info, err := server.GetZoneInfo(ctx, zoneID)
 	return err == nil && info.Overlay.Type != ""
