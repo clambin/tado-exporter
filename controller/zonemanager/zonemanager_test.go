@@ -389,5 +389,4 @@ func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
 func zoneInOverlay(ctx context.Context, server tado.API, zoneID int) bool {
 	info, err := server.GetZoneInfo(ctx, zoneID)
 	return err == nil && info.Overlay.Type != ""
-
 }
