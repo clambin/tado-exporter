@@ -159,7 +159,7 @@ func (m mockSlack) ConnectedEvent() slack.RTMEvent {
 }
 
 func (m mockSlack) InvalidAuthEvent() slack.RTMEvent {
-	return slack.RTMEvent{Type: "invalid auth", Data: &slack.InvalidAuthEvent{}}
+	return slack.RTMEvent{Type: "invalid_auth", Data: &slack.InvalidAuthEvent{}}
 }
 
 func (m mockSlack) MessageEvent(channel string, message string) slack.RTMEvent {
