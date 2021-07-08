@@ -20,6 +20,7 @@
 package slackbot
 
 import (
+	"context"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"sort"
@@ -30,15 +31,15 @@ import (
 // SlackBot structure
 type SlackBot struct {
 	PostChannel PostChannel
+	SlackClient ClientAPI
+	Events      chan slack.RTMEvent
 
-	name        string
-	slackClient *slackClient
-	events      chan slack.RTMEvent
-	messages    chan slackMessage
-	userID      string
-	callbacks   map[string]CommandFunc
-	reconnect   bool
-	cbLock      sync.RWMutex
+	name      string
+	channels  []string
+	userID    string
+	callbacks map[string]CommandFunc
+	reconnect bool
+	cbLock    sync.RWMutex
 }
 
 // CommandFunc signature for command callback functions
@@ -57,31 +58,35 @@ type PostChannel chan []slack.Attachment
 
 // Create a slackbot
 func Create(name string, slackToken string, callbacks map[string]CommandFunc) (bot *SlackBot, err error) {
+	eventsChannel := make(chan slack.RTMEvent, 10)
+
 	bot = &SlackBot{
 		PostChannel: make(chan []slack.Attachment, 10),
 		name:        name,
-		events:      make(chan slack.RTMEvent, 10),
-		messages:    make(chan slackMessage, 10),
+		Events:      eventsChannel,
+		SlackClient: newClient(slackToken, eventsChannel),
 	}
-	if slackToken != "" {
-		bot.slackClient = newClient(slackToken, bot.events, bot.messages)
-	}
+
 	bot.callbacks = map[string]CommandFunc{
 		"help":    bot.doHelp,
 		"version": bot.doVersion,
 	}
 	for cmd, callbackFunction := range callbacks {
-		bot.callbacks[cmd] = callbackFunction
+		bot.RegisterCallback(cmd, callbackFunction)
 	}
+
 	return
 }
 
 // Run the slackbot
-func (bot *SlackBot) Run() (err error) {
+func (bot *SlackBot) Run(ctx context.Context) (err error) {
 	log.Info("slackBot started")
-	if bot.slackClient != nil {
-		go bot.slackClient.run()
+
+	if bot.channels, err = bot.SlackClient.GetChannels(); err != nil {
+		return err
 	}
+
+	go bot.SlackClient.Run(ctx)
 
 loop:
 	for {
@@ -92,31 +97,54 @@ loop:
 		)
 
 		select {
-		case event := <-bot.events:
+		case <-ctx.Done():
+			break loop
+		case event := <-bot.Events:
 			channel, attachments, stop = bot.processEvent(event)
 			if stop {
 				break loop
 			}
+			if len(attachments) > 0 {
+				err = bot.Send(SlackMessage{Channel: channel, Attachments: attachments})
+			}
 		case attachments = <-bot.PostChannel:
+			err = bot.Send(SlackMessage{Attachments: attachments})
 		}
 
-		if len(attachments) > 0 {
-			bot.messages <- slackMessage{Channel: channel, Attachments: attachments}
+		if err != nil {
+			log.WithError(err).Warning("failed to post message on Slack")
 		}
 	}
 
-	close(bot.events)
-	close(bot.messages)
+	close(bot.Events)
 	close(bot.PostChannel)
 
 	log.Info("slackBot stopped")
 	return
 }
 
+func (bot *SlackBot) Send(message SlackMessage) (err error) {
+	var channels []string
+	if message.Channel != "" {
+		channels = []string{message.Channel}
+	} else {
+		channels = bot.channels
+	}
+
+	for _, channel := range channels {
+		message.Channel = channel
+		log.WithFields(log.Fields{"channel": message.Channel}).Debug("sending message")
+		if err = bot.SlackClient.Send(message); err != nil {
+			break
+		}
+	}
+	return
+}
+
 func (bot *SlackBot) processEvent(msg slack.RTMEvent) (channel string, attachments []slack.Attachment, stop bool) {
 	switch ev := msg.Data.(type) {
 	// case *slack.HelloEvent:
-	//	log.WithField("ev", ev).Debug("hello")
+	//	log.Debug("hello")
 	case *slack.ConnectedEvent:
 		bot.userID = ev.Info.User.ID
 		if bot.reconnect == false {
@@ -148,22 +176,24 @@ func (bot *SlackBot) processEvent(msg slack.RTMEvent) (channel string, attachmen
 func (bot *SlackBot) processMessage(text string) (attachments []slack.Attachment) {
 	// check if we're mentioned
 	log.WithField("text", text).Debug("processing slack chatter")
+
 	command, args := bot.parseCommand(text)
-	if command != "" {
-		if callback, ok := bot.getCallback(command); ok {
-			log.WithFields(log.Fields{"command": command}).Info("slackbot running command")
-			attachments = callback(args...)
-			log.WithFields(log.Fields{
-				"command": command,
-				"outputs": len(attachments),
-			}).Debug("command run")
-		} else {
-			attachments = append(attachments, slack.Attachment{
-				Color: "bad",
-				Text:  "invalid command",
-			})
-		}
+	if command == "" {
+		return
 	}
+
+	callback, ok := bot.getCallback(command)
+	if ok == false {
+		return []slack.Attachment{{
+			Color: "bad",
+			Text:  "invalid command",
+		}}
+	}
+
+	log.WithFields(log.Fields{"command": command}).Info("slackbot running command")
+	attachments = callback(args...)
+	log.WithFields(log.Fields{"command": command, "outputs": len(attachments)}).Debug("command run")
+
 	return
 }
 
