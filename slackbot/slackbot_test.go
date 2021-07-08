@@ -76,24 +76,28 @@ func TestSlackBot_Commands(t *testing.T) {
 
 	events <- server.MessageEvent("1", "<@1234> version")
 	response := <-output
+	assert.Equal(t, "1", response.Channel)
 	if assert.Len(t, response.Attachments, 1) {
 		assert.Equal(t, "test-client-"+version.BuildVersion, response.Attachments[0].Text)
 	}
 
 	events <- server.MessageEvent("2", "<@1234> help")
 	response = <-output
+	assert.Equal(t, "2", response.Channel)
 	if assert.Len(t, response.Attachments, 1) {
 		assert.Equal(t, "help, test, version", response.Attachments[0].Text)
 	}
 
 	events <- server.MessageEvent("3", "<@1234> test")
 	response = <-output
+	assert.Equal(t, "3", response.Channel)
 	if assert.Len(t, response.Attachments, 1) {
 		assert.Equal(t, "hello world!", response.Attachments[0].Text)
 	}
 
 	events <- server.MessageEvent("3", "<@1234> notacommand")
 	response = <-output
+	assert.Equal(t, "3", response.Channel)
 	if assert.Len(t, response.Attachments, 1) {
 		assert.Equal(t, "", response.Attachments[0].Title)
 		assert.Equal(t, "invalid command", response.Attachments[0].Text)
@@ -135,6 +139,7 @@ func TestSlackBot_Post(t *testing.T) {
 	for i := 0; i < len(server.channels); i++ {
 		msg := <-output
 
+		assert.Contains(t, server.channels, msg.Channel)
 		if assert.Len(t, msg.Attachments, 1) {
 			assert.Equal(t, "Hello world!", msg.Attachments[0].Text)
 		}
