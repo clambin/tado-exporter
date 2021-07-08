@@ -126,6 +126,8 @@ func TestSlackBot_Post(t *testing.T) {
 	}()
 
 	events <- server.ConnectedEvent()
+	events <- server.RTMErrorEvent()
+	events <- server.ConnectedEvent()
 	client.PostChannel <- []slack.Attachment{{
 		Text: "Hello world!",
 	}}
@@ -188,4 +190,11 @@ func (m mockSlack) MessageEvent(channel string, message string) slack.RTMEvent {
 		Channel: channel,
 		Text:    message,
 	}}}
+}
+
+func (m mockSlack) RTMErrorEvent() slack.RTMEvent {
+	return slack.RTMEvent{Type: "error", Data: &slack.RTMError{
+		Code: 1,
+		Msg:  "test. this will be ignored",
+	}}
 }

@@ -143,8 +143,8 @@ func (bot *SlackBot) Send(message SlackMessage) (err error) {
 
 func (bot *SlackBot) processEvent(msg slack.RTMEvent) (channel string, attachments []slack.Attachment, stop bool) {
 	switch ev := msg.Data.(type) {
-	case *slack.HelloEvent:
-		log.Debug("hello")
+	// case *slack.HelloEvent:
+	//	log.Debug("hello")
 	case *slack.ConnectedEvent:
 		bot.userID = ev.Info.User.ID
 		if bot.reconnect == false {
