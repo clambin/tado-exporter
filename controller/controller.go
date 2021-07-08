@@ -41,11 +41,6 @@ func New(tadoUsername, tadoPassword, tadoClientSecret string, cfg *configuration
 		if err != nil {
 			return nil, fmt.Errorf("failed to start TadoBot: %s", err.Error())
 		}
-
-		go func() {
-			// TODO: start this in controller.Run() with context?
-			_ = tadoBot.Run()
-		}()
 		postChannel = tadoBot.PostChannel
 	}
 
@@ -84,6 +79,12 @@ func NewWith(API tado.API, pollr *poller.Poller, mgr *zonemanager.Manager, tadoB
 // Run the controller
 func (controller *Controller) Run(ctx context.Context) {
 	log.Info("controller started")
+	if controller.tadoBot != nil {
+		go func() {
+			_ = controller.tadoBot.Run(ctx)
+		}()
+	}
+
 	go func() {
 		_ = controller.mgr.Run(ctx)
 	}()
