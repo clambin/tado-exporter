@@ -111,7 +111,7 @@ jobs:
           overwrite: true
           file_glob: true
       - uses: peter-evans/dockerhub-description@v2.4.3
-      - with:
+        with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: clambin/tado-monitor
