@@ -88,22 +88,18 @@ func (bot *SlackBot) Run(ctx context.Context) (err error) {
 
 	go bot.SlackClient.Run(ctx)
 
+	var (
+		channel     string
+		attachments []slack.Attachment
+	)
+
 loop:
 	for {
-		var (
-			channel     string
-			attachments []slack.Attachment
-			stop        bool
-		)
-
 		select {
 		case <-ctx.Done():
 			break loop
 		case event := <-bot.Events:
-			channel, attachments, stop = bot.processEvent(event)
-			if stop {
-				break loop
-			}
+			channel, attachments = bot.processEvent(event)
 			if len(attachments) > 0 {
 				err = bot.Send(SlackMessage{Channel: channel, Attachments: attachments})
 			}
@@ -124,51 +120,42 @@ loop:
 }
 
 func (bot *SlackBot) Send(message SlackMessage) (err error) {
-	var channels []string
+	var channels = bot.channels
 	if message.Channel != "" {
 		channels = []string{message.Channel}
-	} else {
-		channels = bot.channels
 	}
 
 	for _, channel := range channels {
 		message.Channel = channel
 		log.WithFields(log.Fields{"channel": message.Channel}).Debug("sending message")
-		if err = bot.SlackClient.Send(message); err != nil {
+		err = bot.SlackClient.Send(message)
+		if err != nil {
 			break
 		}
 	}
 	return
 }
 
-func (bot *SlackBot) processEvent(msg slack.RTMEvent) (channel string, attachments []slack.Attachment, stop bool) {
+func (bot *SlackBot) processEvent(msg slack.RTMEvent) (channel string, attachments []slack.Attachment) {
 	switch ev := msg.Data.(type) {
 	// case *slack.HelloEvent:
 	//	log.Debug("hello")
 	case *slack.ConnectedEvent:
 		bot.userID = ev.Info.User.ID
 		if bot.reconnect == false {
-			log.WithField("userID", bot.userID).Info("tadoBot connected to slack")
+			log.WithField("userID", bot.userID).Info("connected to slack")
 			bot.reconnect = true
 		} else {
-			log.Debug("tadoBot reconnected to slack")
+			log.WithField("userID", bot.userID).Debug("reconnected to slack")
 		}
 	case *slack.MessageEvent:
-		log.WithFields(log.Fields{
-			"name":     ev.Name,
-			"user":     ev.User,
-			"channel":  ev.Channel,
-			"type":     ev.Type,
-			"userName": ev.Username,
-			"botID":    ev.BotID,
-		}).Debug("message received: " + ev.Text)
+		log.WithFields(log.Fields{"name": ev.Name, "user": ev.User, "channel": ev.Channel, "type": ev.Type, "userName": ev.Username, "botID": ev.BotID}).Debug("slack message received: " + ev.Text)
 		channel = ev.Channel
 		attachments = bot.processMessage(ev.Text)
 	case *slack.RTMError:
-		log.WithField("error", ev.Error()).Error("error reading slack RTM connection")
+		log.WithField("error", ev.Error()).Error("error reading on slack RTM connection")
 	case *slack.InvalidAuthEvent:
-		log.Error("invalid credentials")
-		stop = true
+		log.Error("error received from slack: invalid credentials")
 	}
 	return
 }

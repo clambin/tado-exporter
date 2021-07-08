@@ -7,36 +7,7 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"time"
 )
-
-func TestSlackBot_InvalidAuth(t *testing.T) {
-	client, err := slackbot.Create("test", "12345678", nil)
-	assert.NoError(t, err)
-
-	events := make(chan slack.RTMEvent)
-	output := make(chan slackbot.SlackMessage)
-	server := &mockSlack{
-		userID:    "1234",
-		eventsIn:  events,
-		eventsOut: client.Events,
-		output:    output,
-	}
-	client.SlackClient = server
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go func() {
-		err = client.Run(ctx)
-		assert.NoError(t, err)
-	}()
-
-	events <- server.InvalidAuthEvent()
-
-	time.Sleep(time.Second)
-	assert.Panics(t, func() { close(client.PostChannel) })
-}
 
 func TestSlackBot_Commands(t *testing.T) {
 	callbacks := map[string]slackbot.CommandFunc{
@@ -130,6 +101,7 @@ func TestSlackBot_Post(t *testing.T) {
 	}()
 
 	events <- server.ConnectedEvent()
+	events <- server.InvalidAuthEvent()
 	events <- server.RTMErrorEvent()
 	events <- server.ConnectedEvent()
 	client.PostChannel <- []slack.Attachment{{
