@@ -32,8 +32,9 @@ github.com/cenkalti/backoff v2.2.1+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QH
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/cespare/xxhash/v2 v2.1.1 h1:6MnRN8NT7+YBpUIWxHtefFZOKTAPgGjpQSxqLNn0+qY=
 github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
-github.com/clambin/gotools v0.2.1 h1:pbxa4oAaWe8VhzQtT+SxzXhd9GluQoQXgess7HFt2TE=
 github.com/clambin/gotools v0.2.1/go.mod h1:ou43UqOdwLHFnTkfGDZtkt6lpULsyJ0tgd48hHrakc0=
+github.com/clambin/gotools v0.3.0 h1:Ub6nxfHmQkIJQLgQCL6Gfb8gXiWi+Va/635tRVAH9ms=
+github.com/clambin/gotools v0.3.0/go.mod h1:12mW+UZTyh4Mag+p6mhI2rrw9Sax/wTZjouU7WrLyuQ=
 github.com/clambin/tado v0.2.3 h1:glY1g/QgcUXbaZKnO1NajFRq57UmhkW6kJ1Eh0Cl9dQ=
 github.com/clambin/tado v0.2.3/go.mod h1:wgnlMcYD5put7/8zm1KmvtK3NzIe1fExRe8hV5Hme/M=
 github.com/clbanning/x2j v0.0.0-20191024224557-825249438eec/go.mod h1:jMjuTZXRI4dUb/I5gc9Hdhagfvm9+RyrPryS/auMzxE=
