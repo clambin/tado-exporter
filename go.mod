@@ -7,7 +7,7 @@ require (
 	github.com/clambin/tado v0.2.3
 	github.com/prometheus/client_golang v1.11.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/slack-go/slack v0.9.2
+	github.com/slack-go/slack v0.9.3
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
