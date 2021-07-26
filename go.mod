@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/clambin/gotools v0.3.0
-	github.com/clambin/tado v0.2.4
+	github.com/clambin/tado v0.2.91
 	github.com/prometheus/client_golang v1.11.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/slack-go/slack v0.9.3

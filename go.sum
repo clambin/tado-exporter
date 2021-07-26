@@ -14,8 +14,8 @@ github.com/cespare/xxhash/v2 v2.1.1 h1:6MnRN8NT7+YBpUIWxHtefFZOKTAPgGjpQSxqLNn0+
 github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/clambin/gotools v0.3.0 h1:Ub6nxfHmQkIJQLgQCL6Gfb8gXiWi+Va/635tRVAH9ms=
 github.com/clambin/gotools v0.3.0/go.mod h1:12mW+UZTyh4Mag+p6mhI2rrw9Sax/wTZjouU7WrLyuQ=
-github.com/clambin/tado v0.2.4 h1:8sb8NZVUS7YVkknch58yZcYe13Omq9ITMpo0ymKsetM=
-github.com/clambin/tado v0.2.4/go.mod h1:8ISRzYF9WrFscKpEM5XRRqZ2kpD6/7QuZjMCku9wYBM=
+github.com/clambin/tado v0.2.91 h1:uqDCqYOVxZP9ngzx5KEfnv37RvQ8ZtE0+V/3OA362kQ=
+github.com/clambin/tado v0.2.91/go.mod h1:8ISRzYF9WrFscKpEM5XRRqZ2kpD6/7QuZjMCku9wYBM=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
