@@ -4,6 +4,7 @@ import (
 	"context"
 	log "github.com/sirupsen/logrus"
 	"sync"
+	"time"
 )
 
 type Scheduler struct {
@@ -46,6 +47,7 @@ func (scheduler *Scheduler) Schedule(ctx context.Context, task Task) {
 
 	task.cancel = cancel
 	task.fire = scheduler.fire
+	task.Activation = time.Now().Add(task.When)
 
 	scheduler.tasks[task.ID] = task
 	go task.wait(newCtx)

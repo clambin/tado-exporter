@@ -1,8 +1,7 @@
 package zonemanager
 
 import (
-	"fmt"
-	"github.com/clambin/tado-exporter/controller/models"
+	"github.com/clambin/tado"
 	"github.com/slack-go/slack"
 	"strings"
 	"time"
@@ -16,18 +15,22 @@ func (mgr *Manager) ReportTasks(_ ...string) (attachments []slack.Attachment) {
 func (mgr *Manager) reportTasks(_ ...string) {
 	text := make([]string, 0)
 	for _, task := range mgr.scheduler.GetAllScheduled() {
-		state := task.Args[1].(models.ZoneState)
+		state := task.Args[1].(tado.ZoneState)
 		var action string
-		switch state.State {
-		case models.ZoneOff:
+		switch state {
+		case tado.ZoneStateOff:
 			action = "switching off heating"
-		case models.ZoneAuto:
+		case tado.ZoneStateAuto:
 			action = "moving to auto mode"
-		case models.ZoneManual:
-			action = fmt.Sprintf("set temperature to %.1fº", state.Temperature.Celsius)
+		case tado.ZoneStateManual:
+			action = "setting to manual temperature control"
 		}
-		_, zoneName, _ := mgr.stateManager.LookupZone(int(task.ID), "")
-		text = append(text, zoneName+": "+action+" in "+
+
+		name, ok := mgr.cache.GetZoneName(int(task.ID))
+		if ok == false {
+			name = "unknown"
+		}
+		text = append(text, name+": "+action+" in "+
 			task.Activation.Sub(time.Now()).Round(1*time.Second).String(),
 		)
 	}
@@ -41,7 +44,7 @@ func (mgr *Manager) reportTasks(_ ...string) {
 		slackText = "no rules have been triggered"
 	}
 
-	mgr.postChannel <- []slack.Attachment{{
+	mgr.PostChannel <- []slack.Attachment{{
 		Color: "good",
 		Title: slackTitle,
 		Text:  slackText,

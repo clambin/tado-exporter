@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller"
-	"github.com/clambin/tado-exporter/exporter"
+	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/version"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -58,69 +60,61 @@ func main() {
 		os.Exit(1)
 	}
 
-	exportTicker := time.NewTicker(cfg.Exporter.Interval)
-	defer exportTicker.Stop()
-
-	var export *exporter.Exporter
-	if cfg.Exporter.Enabled {
-		export = &exporter.Exporter{
-			API: &tado.APIClient{
-				HTTPClient:   &http.Client{},
-				Username:     username,
-				Password:     password,
-				ClientSecret: clientSecret,
-			},
-		}
-		log.WithFields(log.Fields{
-			"interval": cfg.Exporter.Interval,
-			"port":     cfg.Exporter.Port,
-		}).Info("exporter created")
-	}
-
-	controlTicker := time.NewTicker(cfg.Controller.Interval)
-	defer controlTicker.Stop()
-
 	ctx, cancel := context.WithCancel(context.Background())
 
-	var control *controller.Controller
-	if cfg.Controller.Enabled {
-		if control, err = controller.New(username, password, clientSecret, &cfg.Controller); err == nil {
-			log.WithField("interval", cfg.Controller.Interval).Info("controller created")
+	API := &tado.APIClient{
+		HTTPClient:   &http.Client{},
+		Username:     username,
+		Password:     password,
+		ClientSecret: clientSecret,
+	}
 
-			go control.Run(ctx)
-		} else {
-			log.WithField("err", err).Fatal("failed to create controller")
+	p := poller.New(API)
+	go p.Run(ctx, cfg.Interval)
+	log.WithField("interval", cfg.Interval).Info("poller created")
+
+	if cfg.Exporter.Enabled {
+		c := collector.New()
+		go c.Run(ctx)
+
+		p.Register <- c.Update
+		prometheus.MustRegister(c)
+		log.Info("exporter created")
+	}
+
+	if cfg.Controller.Enabled {
+		// TODO: can we reuse API?
+		API2 := &tado.APIClient{
+			HTTPClient:   &http.Client{},
+			Username:     username,
+			Password:     password,
+			ClientSecret: clientSecret,
 		}
+		var c *controller.Controller
+		c, err = controller.New(API2, &cfg.Controller)
+
+		if err != nil {
+			log.WithError(err).Fatal("unable to create controller")
+		}
+
+		go c.Run(ctx)
+		p.Register <- c.ZoneManager.Update
+		log.Info("controller created")
 	}
 
 	go func() {
 		listenAddress := fmt.Sprintf(":%d", cfg.Exporter.Port)
 		http.Handle("/metrics", promhttp.Handler())
-		_ = http.ListenAndServe(listenAddress, nil)
-	}()
-
-	if export != nil {
-		if err = export.Run(ctx); err != nil {
-			log.WithField("err", err).Warning("exporter failed. Will keep retrying")
+		err = http.ListenAndServe(listenAddress, nil)
+		if err != nil {
+			log.WithError(err).Fatal("unable to start metrics server")
 		}
-	}
+	}()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-loop:
-	for {
-		select {
-		case <-exportTicker.C:
-			if export != nil {
-				if err = export.Run(ctx); err != nil {
-					log.WithField("err", err).Warning("exporter failed")
-				}
-			}
-		case <-interrupt:
-			break loop
-		}
-	}
+	<-interrupt
 
 	cancel()
 	time.Sleep(100 * time.Millisecond)

@@ -12,15 +12,14 @@ import (
 func TestFullConfigurationFile(t *testing.T) {
 	var testRules = []byte(`
 debug: true
+interval: 5m
 
 exporter:
   enabled: true
   port: 8080
-  interval: 30s
 
 controller:
   enabled: true
-  interval: 5m
   tadoBot:
     enabled: true
     token:
@@ -58,11 +57,10 @@ controller:
 		assert.True(t, cfg.Debug)
 
 		assert.True(t, cfg.Exporter.Enabled)
+		assert.Equal(t, 5*time.Minute, cfg.Interval)
 		assert.Equal(t, 8080, cfg.Exporter.Port)
-		assert.Equal(t, 30*time.Second, cfg.Exporter.Interval)
 
 		assert.True(t, cfg.Controller.Enabled)
-		assert.Equal(t, 5*time.Minute, cfg.Controller.Interval)
 		assert.True(t, cfg.Controller.TadoBot.Enabled)
 		assert.Equal(t, "1234", cfg.Controller.TadoBot.Token.Value)
 
@@ -96,11 +94,10 @@ func TestConfigLoader_Defaults(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.False(t, cfg.Debug)
+	assert.Equal(t, 1*time.Minute, cfg.Interval)
 	assert.True(t, cfg.Exporter.Enabled)
 	assert.Equal(t, 8080, cfg.Exporter.Port)
-	assert.Equal(t, 1*time.Minute, cfg.Exporter.Interval)
 	assert.False(t, cfg.Controller.Enabled)
-	assert.Equal(t, 5*time.Minute, cfg.Controller.Interval)
 	assert.False(t, cfg.Controller.TadoBot.Enabled)
 	assert.Nil(t, cfg.Controller.ZoneConfig)
 }
@@ -110,7 +107,6 @@ func TestConfigLoader_Tadobot(t *testing.T) {
 debug: true
 controller:
   enabled: true
-  interval: 5m
   tadoBot:
     enabled: true
     token:

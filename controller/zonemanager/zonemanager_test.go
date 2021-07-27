@@ -4,9 +4,8 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
-	"github.com/clambin/tado-exporter/controller/models"
-	"github.com/clambin/tado-exporter/controller/poller"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
+	poller2 "github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/slackbot"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	log "github.com/sirupsen/logrus"
@@ -16,26 +15,43 @@ import (
 	"time"
 )
 
-var fakeUpdates = []poller.Update{
+var fakeUpdates = []poller2.Update{
 	{
-		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneAuto, Temperature: tado.Temperature{Celsius: 25.0}}},
-		UserStates: map[int]models.UserState{2: models.UserAway},
+		Zones:    map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
+		ZoneInfo: map[int]tado.ZoneInfo{2: {}},
+		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 	},
 	{
-		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneOff, Temperature: tado.Temperature{Celsius: 15.0}}},
-		UserStates: map[int]models.UserState{2: models.UserHome},
+		Zones: map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
+		ZoneInfo: map[int]tado.ZoneInfo{2: {Overlay: tado.ZoneInfoOverlay{
+			Type:        "MANUAL",
+			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 5.0}},
+			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+		}}},
+		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 	},
 	{
-		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneManual, Temperature: tado.Temperature{Celsius: 20.0}}},
-		UserStates: map[int]models.UserState{2: models.UserHome},
+		Zones: map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
+		ZoneInfo: map[int]tado.ZoneInfo{2: {Overlay: tado.ZoneInfoOverlay{
+			Type:        "MANUAL",
+			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 15.0}},
+			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+		}}},
+		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 	},
 	{
-		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneAuto, Temperature: tado.Temperature{Celsius: 25.0}}},
-		UserStates: map[int]models.UserState{2: models.UserHome},
+		Zones:    map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
+		ZoneInfo: map[int]tado.ZoneInfo{2: {}},
+		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 	},
 	{
-		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneOff, Temperature: tado.Temperature{Celsius: 15.0}}},
-		UserStates: map[int]models.UserState{2: models.UserAway},
+		Zones: map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
+		ZoneInfo: map[int]tado.ZoneInfo{2: {Overlay: tado.ZoneInfoOverlay{
+			Type:        "MANUAL",
+			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 5.0}},
+			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+		}}},
+		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 	},
 }
 
@@ -61,19 +77,19 @@ func TestZoneManager_LimitOverlay(t *testing.T) {
 
 	// manual mode
 	_ = mgr.API.SetZoneOverlay(ctx, 2, 15.0)
-	mgr.Update <- fakeUpdates[2]
+	mgr.Update <- &fakeUpdates[2]
 
 	_ = <-postChannel
 	assert.True(t, zoneInOverlay(ctx, mgr.API, 2))
 
 	// back to auto mode
-	mgr.Update <- fakeUpdates[3]
+	mgr.Update <- &fakeUpdates[3]
 	resp := <-postChannel
 	assert.Len(t, resp, 1)
 	assert.Equal(t, "resetting rule for bar", resp[0].Title)
 
 	// back to manual mode
-	mgr.Update <- fakeUpdates[2]
+	mgr.Update <- &fakeUpdates[2]
 
 	_ = <-postChannel
 	_ = <-postChannel
@@ -103,7 +119,7 @@ func TestZoneManager_NightTime(t *testing.T) {
 		_ = mgr.Run(ctx)
 	}(ctx)
 
-	mgr.Update <- fakeUpdates[2]
+	mgr.Update <- &fakeUpdates[2]
 
 	msgs := <-postChannel
 	if assert.Len(t, msgs, 1) {
@@ -140,16 +156,16 @@ func TestZoneManager_AutoAway_NoSlack(t *testing.T) {
 	}()
 
 	// user is away
-	mgr.Update <- fakeUpdates[0]
+	mgr.Update <- &fakeUpdates[0]
 
 	// validate that the zone is switched off
 	assert.Eventually(t, func() bool { return zoneInOverlay(ctx, mgr.API, 2) }, 500*time.Millisecond, 10*time.Millisecond)
 
 	// user is away
-	mgr.Update <- fakeUpdates[4]
+	mgr.Update <- &fakeUpdates[4]
 
 	// user comes home
-	mgr.Update <- fakeUpdates[1]
+	mgr.Update <- &fakeUpdates[1]
 
 	// validate that the zone is switched back to auto
 	assert.Eventually(t, func() bool { return !zoneInOverlay(ctx, mgr.API, 2) }, 500*time.Millisecond, 10*time.Millisecond)
@@ -177,7 +193,7 @@ func TestZoneManager_AutoAway_WithSlack(t *testing.T) {
 	}()
 
 	// user is away
-	mgr.Update <- fakeUpdates[0]
+	mgr.Update <- &fakeUpdates[0]
 
 	msgs := <-postChannel
 	if assert.Len(t, msgs, 1) {
@@ -195,10 +211,10 @@ func TestZoneManager_AutoAway_WithSlack(t *testing.T) {
 	}
 
 	// user is away & room in overlay
-	mgr.Update <- fakeUpdates[4]
+	mgr.Update <- &fakeUpdates[4]
 
 	// user comes home
-	mgr.Update <- fakeUpdates[1]
+	mgr.Update <- &fakeUpdates[1]
 
 	// validate that the zone is switched back to auto
 	assert.Eventually(t, func() bool { return !zoneInOverlay(ctx, mgr.API, 2) }, 500*time.Millisecond, 10*time.Millisecond)
@@ -245,7 +261,7 @@ func TestZoneManager_Combined(t *testing.T) {
 	}()
 
 	// user is away
-	mgr.Update <- fakeUpdates[0]
+	mgr.Update <- &fakeUpdates[0]
 
 	// notification that zone will be switched off
 	msg = <-postChannel
@@ -265,7 +281,7 @@ func TestZoneManager_Combined(t *testing.T) {
 	assert.True(t, zoneInOverlay(ctx, mgr.API, 2))
 
 	// user comes home
-	mgr.Update <- fakeUpdates[1]
+	mgr.Update <- &fakeUpdates[1]
 
 	// notification that zone will be switched on again
 	msg = <-postChannel
@@ -278,7 +294,7 @@ func TestZoneManager_Combined(t *testing.T) {
 
 	log.SetLevel(log.DebugLevel)
 	// user is home & room set to manual
-	mgr.Update <- fakeUpdates[2]
+	mgr.Update <- &fakeUpdates[2]
 
 	// notification that zone will be switched back to auto
 	msg = <-postChannel
@@ -330,7 +346,7 @@ func TestManager_ReportTasks(t *testing.T) {
 	}
 
 	// user is away
-	mgr.Update <- fakeUpdates[0]
+	mgr.Update <- &fakeUpdates[0]
 	_ = <-postChannel
 
 	_ = mgr.ReportTasks()
@@ -340,7 +356,7 @@ func TestManager_ReportTasks(t *testing.T) {
 	}
 
 	// user is home & room set to manual
-	mgr.Update <- fakeUpdates[2]
+	mgr.Update <- &fakeUpdates[2]
 	msg = <-postChannel
 	if assert.Len(t, msg, 1) {
 		assert.Contains(t, msg[0].Text, "moving to auto mode in ")
@@ -377,7 +393,7 @@ func BenchmarkZoneManager_LimitOverlay(b *testing.B) {
 		b.ResetTimer()
 
 		_ = mgr.API.SetZoneOverlay(ctx, 2, 5.0)
-		mgr.Update <- fakeUpdates[2]
+		mgr.Update <- &fakeUpdates[2]
 
 		_ = <-postChannel
 		_ = <-postChannel

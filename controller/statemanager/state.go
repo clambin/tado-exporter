@@ -1,46 +1,58 @@
 package statemanager
 
 import (
+	"fmt"
+	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/models"
-	"github.com/clambin/tado-exporter/controller/poller"
+	"github.com/clambin/tado-exporter/poller"
 	"time"
 )
 
-func (mgr *Manager) GetNextState(zoneID int, update poller.Update) (nextState models.ZoneState, when time.Duration, reason string) {
+func (mgr *Manager) GetNextState(zoneID int, update *poller.Update) (nextState tado.ZoneState, when time.Duration, reason string, err error) {
+	mgr.initialize()
+
+	zoneInfo, ok := update.ZoneInfo[zoneID]
+
+	if ok == false {
+		err = fmt.Errorf("zone ID %d not found in Tado metrics", zoneID)
+		return
+	}
+
 	// if we don't trigger any rules, keep the same state
-	nextState = update.ZoneStates[zoneID]
+	currentState := zoneInfo.GetState()
+	nextState = currentState
 
 	// if all users are away -> set 'off'
 	if mgr.zoneRules[zoneID].AutoAway.Enabled {
 		if mgr.allUsersAway(zoneID, update) {
-			nextState.State = models.ZoneOff
+			nextState = tado.ZoneStateOff
 			when = mgr.zoneRules[zoneID].AutoAway.Delay
-			reason = mgr.getAutoAwayReason(zoneID, false)
+			reason = mgr.getAutoAwayReason(zoneID, false, update)
 			return
-		} else if update.ZoneStates[zoneID].State == models.ZoneOff {
-			nextState.State = models.ZoneAuto
+		} else if currentState == tado.ZoneStateOff {
+			nextState = tado.ZoneStateAuto
 			// when = mgr.zoneRules[zoneID].AutoAway.Delay
-			reason = mgr.getAutoAwayReason(zoneID, true)
+			reason = mgr.getAutoAwayReason(zoneID, true, update)
 		}
 	}
 
-	if update.ZoneStates[zoneID].State == models.ZoneManual {
+	if currentState == tado.ZoneStateManual {
 		// determine if/when to set back to auto
 		if mgr.zoneRules[zoneID].NightTime.Enabled && mgr.zoneRules[zoneID].LimitOverlay.Enabled {
-			nextState.State = models.ZoneAuto
+			nextState = tado.ZoneStateAuto
 			when = nightTimeDelay(mgr.zoneRules[zoneID].NightTime.Time)
 			if mgr.zoneRules[zoneID].LimitOverlay.Delay < when {
 				when = mgr.zoneRules[zoneID].LimitOverlay.Delay
 			}
-			reason = "manual temperature setting detected in " + mgr.zoneNameCache[zoneID]
+			reason = "manual temperature setting detected in " + update.Zones[zoneID].Name
 		} else if mgr.zoneRules[zoneID].NightTime.Enabled {
-			nextState.State = models.ZoneAuto
+			nextState = tado.ZoneStateAuto
 			when = nightTimeDelay(mgr.zoneRules[zoneID].NightTime.Time)
-			reason = "manual temperature setting detected in " + mgr.zoneNameCache[zoneID]
+			reason = "manual temperature setting detected in " + update.Zones[zoneID].Name
 		} else if mgr.zoneRules[zoneID].LimitOverlay.Enabled {
-			nextState.State = models.ZoneAuto
+			nextState = tado.ZoneStateAuto
 			when = mgr.zoneRules[zoneID].LimitOverlay.Delay
-			reason = "manual temperature setting detected in " + mgr.zoneNameCache[zoneID]
+			reason = "manual temperature setting detected in " + update.Zones[zoneID].Name
 		}
 	}
 	return
@@ -57,10 +69,11 @@ func nightTimeDelay(nightTime models.ZoneNightTimestamp) (delay time.Duration) {
 	return next.Sub(now)
 }
 
-func (mgr *Manager) allUsersAway(zoneID int, update poller.Update) (away bool) {
+func (mgr *Manager) allUsersAway(zoneID int, update *poller.Update) (away bool) {
 	away = true
 	for _, user := range mgr.zoneRules[zoneID].AutoAway.Users {
-		if update.UserStates[user] != models.UserAway {
+		device := update.UserInfo[user]
+		if (&device).IsHome() != tado.DeviceAway {
 			away = false
 			break
 		}
@@ -68,9 +81,9 @@ func (mgr *Manager) allUsersAway(zoneID int, update poller.Update) (away bool) {
 	return
 }
 
-func (mgr *Manager) getAutoAwayReason(zoneID int, home bool) (reason string) {
+func (mgr *Manager) getAutoAwayReason(zoneID int, home bool, update *poller.Update) (reason string) {
 	if len(mgr.zoneRules[zoneID].AutoAway.Users) == 1 {
-		reason = mgr.userNameCache[mgr.zoneRules[zoneID].AutoAway.Users[0]] + " is "
+		reason = update.UserInfo[mgr.zoneRules[zoneID].AutoAway.Users[0]].Name + " is "
 		if home {
 			reason += "home"
 		} else {
@@ -83,6 +96,6 @@ func (mgr *Manager) getAutoAwayReason(zoneID int, home bool) (reason string) {
 			reason = "all users of are away"
 		}
 	}
-	reason = mgr.zoneNameCache[zoneID] + ": " + reason
+	reason = update.Zones[zoneID].Name + ": " + reason
 	return
 }

@@ -3,10 +3,9 @@ package statemanager_test
 import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
-	"github.com/clambin/tado-exporter/controller/models"
-	"github.com/clambin/tado-exporter/controller/poller"
+	"github.com/clambin/tado-exporter/controller/namecache"
 	"github.com/clambin/tado-exporter/controller/statemanager"
-	"github.com/clambin/tado-exporter/test/server/mockapi"
+	"github.com/clambin/tado-exporter/poller"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -14,24 +13,41 @@ import (
 
 var fakeUpdates = []poller.Update{
 	{
-		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneAuto, Temperature: tado.Temperature{Celsius: 25.0}}},
-		UserStates: map[int]models.UserState{2: models.UserAway},
+		Zones:    map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
+		ZoneInfo: map[int]tado.ZoneInfo{2: {}},
+		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 	},
 	{
-		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneOff, Temperature: tado.Temperature{Celsius: 15.0}}},
-		UserStates: map[int]models.UserState{2: models.UserHome},
+		Zones: map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
+		ZoneInfo: map[int]tado.ZoneInfo{2: {Overlay: tado.ZoneInfoOverlay{
+			Type:        "MANUAL",
+			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 5.0}},
+			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+		}}},
+		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 	},
 	{
-		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneManual, Temperature: tado.Temperature{Celsius: 20.0}}},
-		UserStates: map[int]models.UserState{2: models.UserHome},
+		Zones: map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
+		ZoneInfo: map[int]tado.ZoneInfo{2: {Overlay: tado.ZoneInfoOverlay{
+			Type:        "MANUAL",
+			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 15.0}},
+			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+		}}},
+		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 	},
 	{
-		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneAuto, Temperature: tado.Temperature{Celsius: 25.0}}},
-		UserStates: map[int]models.UserState{2: models.UserHome},
+		Zones:    map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
+		ZoneInfo: map[int]tado.ZoneInfo{2: {}},
+		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 	},
 	{
-		ZoneStates: map[int]models.ZoneState{2: {State: models.ZoneOff, Temperature: tado.Temperature{Celsius: 15.0}}},
-		UserStates: map[int]models.UserState{2: models.UserAway},
+		Zones: map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
+		ZoneInfo: map[int]tado.ZoneInfo{2: {Overlay: tado.ZoneInfoOverlay{
+			Type:        "MANUAL",
+			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 5.0}},
+			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+		}}},
+		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 	},
 }
 
@@ -43,25 +59,30 @@ func TestManager_GetNextState_LimitOverlay(t *testing.T) {
 			Delay:   time.Hour,
 		},
 	}}
-	mgr, err := statemanager.New(&mockapi.MockAPI{}, zoneConfig)
+	cache := namecache.New()
+	mgr, err := statemanager.New(zoneConfig, cache)
 	assert.NoError(t, err)
 
-	assert.True(t, mgr.IsValidZoneID(2))
-	assert.False(t, mgr.IsValidZoneID(3))
-
 	expectedResults := []struct {
-		state  models.ZoneStateEnum
+		state  tado.ZoneState
 		delay  bool
 		reason string
 	}{
-		{state: models.ZoneAuto, delay: false, reason: ""},
-		{state: models.ZoneOff, delay: false, reason: ""},
-		{state: models.ZoneAuto, delay: true, reason: "manual temperature setting detected in bar"},
+		{state: tado.ZoneStateAuto, delay: false, reason: ""},
+		{state: tado.ZoneStateOff, delay: false, reason: ""},
+		{state: tado.ZoneStateAuto, delay: true, reason: "manual temperature setting detected in bar"},
 	}
 
 	for index, expectedResult := range expectedResults {
-		nextState, when, reason := mgr.GetNextState(2, fakeUpdates[index])
-		assert.Equal(t, expectedResult.state, nextState.State, index)
+		var (
+			nextState tado.ZoneState
+			when      time.Duration
+			reason    string
+		)
+		cache.Update(&fakeUpdates[index])
+		nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[index])
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResult.state, nextState, index)
 		assert.Equal(t, expectedResult.reason, reason, index)
 		if expectedResult.delay {
 			assert.NotZero(t, when)
@@ -82,16 +103,25 @@ func TestZoneManager_NightTime(t *testing.T) {
 			},
 		},
 	}}
-	mgr, err := statemanager.New(&mockapi.MockAPI{}, zoneConfig)
+	cache := namecache.New()
+	mgr, err := statemanager.New(zoneConfig, cache)
 	assert.NoError(t, err)
 
-	nextState, when, reason := mgr.GetNextState(2, fakeUpdates[2])
-	assert.Equal(t, models.ZoneAuto, nextState.State)
+	var (
+		nextState tado.ZoneState
+		when      time.Duration
+		reason    string
+	)
+	cache.Update(&fakeUpdates[2])
+	nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[2])
+	assert.NoError(t, err)
+	assert.Equal(t, tado.ZoneState(tado.ZoneStateAuto), nextState)
 	assert.NotZero(t, when)
 	assert.Equal(t, "manual temperature setting detected in bar", reason)
 
-	nextState, _, _ = mgr.GetNextState(2, fakeUpdates[1])
-	assert.Equal(t, models.ZoneOff, nextState.State)
+	cache.Update(&fakeUpdates[1])
+	nextState, _, _, _ = mgr.GetNextState(2, &fakeUpdates[1])
+	assert.Equal(t, tado.ZoneState(tado.ZoneStateOff), nextState)
 }
 
 func TestZoneManager_AutoAway(t *testing.T) {
@@ -104,24 +134,32 @@ func TestZoneManager_AutoAway(t *testing.T) {
 		},
 	}}
 
-	mgr, err := statemanager.New(&mockapi.MockAPI{}, zoneConfig)
+	cache := namecache.New()
+	mgr, err := statemanager.New(zoneConfig, cache)
 	assert.NoError(t, err)
 
 	expectedResults := []struct {
-		state  models.ZoneStateEnum
+		state  tado.ZoneState
 		delay  bool
 		reason string
 	}{
-		{state: models.ZoneOff, delay: true, reason: "bar: bar is away"},
-		{state: models.ZoneAuto, delay: false, reason: "bar: bar is home"},
-		{state: models.ZoneManual, delay: false, reason: ""},
-		{state: models.ZoneAuto, delay: false, reason: ""},
-		{state: models.ZoneOff, delay: true, reason: "bar: bar is away"},
+		{state: tado.ZoneStateOff, delay: true, reason: "bar: bar is away"},
+		{state: tado.ZoneStateAuto, delay: false, reason: "bar: bar is home"},
+		{state: tado.ZoneStateManual, delay: false, reason: ""},
+		{state: tado.ZoneStateAuto, delay: false, reason: ""},
+		{state: tado.ZoneStateOff, delay: true, reason: "bar: bar is away"},
 	}
 
 	for index, expectedResult := range expectedResults {
-		nextState, when, reason := mgr.GetNextState(2, fakeUpdates[index])
-		assert.Equal(t, expectedResult.state, nextState.State, index)
+		var (
+			nextState tado.ZoneState
+			when      time.Duration
+			reason    string
+		)
+		cache.Update(&fakeUpdates[index])
+		nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[index])
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResult.state, nextState, index)
 		assert.Equal(t, expectedResult.reason, reason, index)
 		if expectedResult.delay {
 			assert.NotZero(t, when)
@@ -153,24 +191,32 @@ func TestZoneManager_Combined(t *testing.T) {
 		},
 	}}
 
-	mgr, err := statemanager.New(&mockapi.MockAPI{}, zoneConfig)
+	cache := namecache.New()
+	mgr, err := statemanager.New(zoneConfig, cache)
 	assert.NoError(t, err)
 
 	expectedResults := []struct {
-		state  models.ZoneStateEnum
+		state  tado.ZoneState
 		delay  bool
 		reason string
 	}{
-		{state: models.ZoneOff, delay: true, reason: "bar: bar is away"},
-		{state: models.ZoneAuto, delay: false, reason: "bar: bar is home"},
-		{state: models.ZoneAuto, delay: true, reason: "manual temperature setting detected in bar"},
-		{state: models.ZoneAuto, delay: false, reason: ""},
-		{state: models.ZoneOff, delay: true, reason: "bar: bar is away"},
+		{state: tado.ZoneStateOff, delay: true, reason: "bar: bar is away"},
+		{state: tado.ZoneStateAuto, delay: false, reason: "bar: bar is home"},
+		{state: tado.ZoneStateAuto, delay: true, reason: "manual temperature setting detected in bar"},
+		{state: tado.ZoneStateAuto, delay: false, reason: ""},
+		{state: tado.ZoneStateOff, delay: true, reason: "bar: bar is away"},
 	}
 
 	for index, expectedResult := range expectedResults {
-		nextState, when, reason := mgr.GetNextState(2, fakeUpdates[index])
-		assert.Equal(t, expectedResult.state, nextState.State, index)
+		var (
+			nextState tado.ZoneState
+			when      time.Duration
+			reason    string
+		)
+		cache.Update(&fakeUpdates[index])
+		nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[index])
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResult.state, nextState, index)
 		assert.Equal(t, expectedResult.reason, reason, index)
 		if expectedResult.delay {
 			assert.NotZero(t, when)

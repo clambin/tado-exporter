@@ -80,6 +80,12 @@ func (client *MockAPI) GetMobileDevices(_ context.Context) ([]tado.MobileDevice,
 			Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
 			Location: tado.MobileDeviceLocation{Stale: false, AtHome: false},
 		},
+		{
+			ID:       3,
+			Name:     "snafu",
+			Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: false},
+			Location: tado.MobileDeviceLocation{Stale: false, AtHome: false},
+		},
 	}, nil
 }
 

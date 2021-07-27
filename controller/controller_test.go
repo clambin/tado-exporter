@@ -5,8 +5,7 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller"
-	"github.com/clambin/tado-exporter/controller/poller"
-	"github.com/clambin/tado-exporter/controller/zonemanager"
+	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/slackbot"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	log "github.com/sirupsen/logrus"
@@ -16,8 +15,13 @@ import (
 )
 
 func BenchmarkController_Run(b *testing.B) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	server := &mockapi.MockAPI{}
 	pollr := poller.New(server)
+	go pollr.Run(ctx, 1*time.Millisecond)
+
 	postChannel := make(slackbot.PostChannel)
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
@@ -26,16 +30,19 @@ func BenchmarkController_Run(b *testing.B) {
 			Delay:   1 * time.Millisecond,
 		},
 	}}
-	mgr, _ := zonemanager.New(server, zoneConfig, postChannel)
-	c, _ := controller.NewWith(server, pollr, mgr, nil, 10*time.Millisecond)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	c, _ := controller.New(server, &configuration.ControllerConfiguration{
+		Enabled:    true,
+		ZoneConfig: zoneConfig,
+	})
+	c.ZoneManager.PostChannel = postChannel
 	go c.Run(ctx)
+
+	pollr.Register <- c.ZoneManager.Update
 
 	b.ResetTimer()
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10; i++ {
 		_ = server.SetZoneOverlay(ctx, 2, 15.5)
 		_ = <-postChannel
 		_ = <-postChannel
@@ -51,21 +58,27 @@ func TestController_Run(t *testing.T) {
 		},
 	}}
 
-	server := &mockapi.MockAPI{}
-	pollr := poller.New(server)
-	postChannel := make(slackbot.PostChannel)
-	mgr, err := zonemanager.New(server, zoneConfig, postChannel)
-	assert.Nil(t, err)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	c, _ := controller.NewWith(server, pollr, mgr, nil, 25*time.Millisecond)
+	server := &mockapi.MockAPI{}
+	pollr := poller.New(server)
+	go pollr.Run(ctx, 20*time.Millisecond)
+
+	postChannel := make(slackbot.PostChannel)
+
+	c, _ := controller.New(server, &configuration.ControllerConfiguration{
+		Enabled:    true,
+		ZoneConfig: zoneConfig,
+	})
+	c.ZoneManager.PostChannel = postChannel
 	go c.Run(ctx)
+
+	pollr.Register <- c.ZoneManager.Update
 
 	log.SetLevel(log.DebugLevel)
 
-	err = server.SetZoneOverlay(ctx, 2, 15.5)
+	_ = server.SetZoneOverlay(ctx, 2, 15.5)
 	assert.True(t, zoneInOverlay(ctx, server, 2))
 
 	_ = <-postChannel
@@ -84,21 +97,26 @@ func TestController_RevertedOverlay(t *testing.T) {
 		},
 	}}
 
-	server := &mockapi.MockAPI{}
-	pollr := poller.New(server)
-	postChannel := make(slackbot.PostChannel)
-	mgr, err := zonemanager.New(server, zoneConfig, postChannel)
-	assert.Nil(t, err)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	c, _ := controller.NewWith(server, pollr, mgr, nil, 25*time.Millisecond)
+	server := &mockapi.MockAPI{}
+	pollr := poller.New(server)
+	go pollr.Run(ctx, 20*time.Millisecond)
+
+	postChannel := make(slackbot.PostChannel)
+
+	c, _ := controller.New(server, &configuration.ControllerConfiguration{
+		Enabled:    true,
+		ZoneConfig: zoneConfig,
+	})
+	c.ZoneManager.PostChannel = postChannel
 	go c.Run(ctx)
+	pollr.Register <- c.ZoneManager.Update
 
 	log.SetLevel(log.DebugLevel)
 
-	err = server.SetZoneOverlay(ctx, 2, 15.5)
+	err := server.SetZoneOverlay(ctx, 2, 15.5)
 	assert.Nil(t, err)
 
 	_ = <-postChannel
@@ -114,7 +132,7 @@ func TestController_RevertedOverlay(t *testing.T) {
 		assert.Equal(t, "resetting rule for bar", msg[0].Title)
 	}
 
-	mgr.ReportTasks()
+	c.ZoneManager.ReportTasks()
 	msg = <-postChannel
 	if assert.Len(t, msg, 1) {
 		assert.Equal(t, "no rules have been triggered", msg[0].Text)

@@ -11,21 +11,20 @@ import (
 // Configuration structure for tado-monitor
 type Configuration struct {
 	Debug      bool
+	Interval   time.Duration
 	Exporter   ExporterConfiguration
 	Controller ControllerConfiguration
 }
 
 // ExporterConfiguration structure for exporter
 type ExporterConfiguration struct {
-	Enabled  bool
-	Interval time.Duration
-	Port     int
+	Enabled bool
+	Port    int
 }
 
 // ControllerConfiguration structure for controller
 type ControllerConfiguration struct {
 	Enabled    bool
-	Interval   time.Duration
 	TadoBot    TadoBotConfiguration `yaml:"tadoBot"`
 	ZoneConfig []ZoneConfig         `yaml:"zones"`
 }
@@ -117,13 +116,10 @@ func LoadConfigurationFile(fileName string) (*Configuration, error) {
 // LoadConfiguration loads the tado-monitor configuration file from memory
 func LoadConfiguration(content []byte) (*Configuration, error) {
 	configuration := Configuration{
+		Interval: 1 * time.Minute,
 		Exporter: ExporterConfiguration{
-			Enabled:  true,
-			Interval: 1 * time.Minute,
-			Port:     8080,
-		},
-		Controller: ControllerConfiguration{
-			Interval: 5 * time.Minute,
+			Enabled: true,
+			Port:    8080,
 		},
 	}
 	err := yaml.Unmarshal(content, &configuration)
