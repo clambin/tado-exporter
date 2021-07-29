@@ -70,8 +70,6 @@ func main() {
 	}
 
 	p := poller.New(API)
-	go p.Run(ctx, cfg.Interval)
-	log.WithField("interval", cfg.Interval).Info("poller created")
 
 	if cfg.Exporter.Enabled {
 		c := collector.New()
@@ -79,7 +77,7 @@ func main() {
 
 		p.Register <- c.Update
 		prometheus.MustRegister(c)
-		log.Info("exporter created")
+		log.Info("exporter started")
 	}
 
 	if cfg.Controller.Enabled {
@@ -99,8 +97,11 @@ func main() {
 
 		go c.Run(ctx)
 		p.Register <- c.ZoneManager.Update
-		log.Info("controller created")
+		log.Info("controller started")
 	}
+
+	go p.Run(ctx, cfg.Interval)
+	log.WithField("interval", cfg.Interval).Info("poller started")
 
 	go func() {
 		listenAddress := fmt.Sprintf(":%d", cfg.Exporter.Port)
