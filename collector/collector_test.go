@@ -23,7 +23,7 @@ func TestCollector_Describe(t *testing.T) {
 		"tado_mobile_device_status",
 		"tado_solar_intensity_percentage",
 		"tado_outside_temp_celsius",
-		"tado_tado_weather",
+		"tado_weather",
 		"tado_zone_device_battery_status",
 		"tado_zone_device_connection_status",
 		"tado_zone_heating_percentage",
@@ -244,7 +244,7 @@ var CollectResult = map[string]MetricResult{
 	},
 	"tado_solar_intensity_percentage": {value: 55.0},
 	"tado_outside_temp_celsius":       {value: 18.5},
-	"tado_tado_weather":               {value: 1.0, labels: []LabelPair{{name: "tado_weather", value: "SUNNY"}}},
+	"tado_weather":                    {value: 1.0, labels: []LabelPair{{name: "tado_weather", value: "SUNNY"}}},
 	"tado_zone_device_connection_status": {
 		multiKey: "zone_name",
 		multiValues: map[string]MetricResult{

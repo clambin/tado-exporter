@@ -103,7 +103,7 @@ func New() *Collector {
 		),
 		tadoOutsideWeather: prometheus.NewDesc(
 			// TODO: make consistent. tado_outside_weather
-			prometheus.BuildFQName("tado", "", "tado_weather"),
+			prometheus.BuildFQName("tado", "", "weather"),
 			"Current weather. Always one. See label 'tado_weather'",
 			[]string{"tado_weather"},
 			nil,
