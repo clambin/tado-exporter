@@ -73,9 +73,9 @@ func (mgr *Manager) update(ctx context.Context, update *poller.Update) {
 			continue
 		}
 
-		log.WithFields(log.Fields{"old": state, "new": targetState, "id": zoneID}).Debug("new zone state determined")
-
 		if targetState != state {
+			log.WithFields(log.Fields{"old": state, "new": targetState, "id": zoneID}).Debug("new zone state determined")
+
 			// schedule the new state
 			mgr.scheduleZoneStateChange(ctx, zoneID, targetState, when, reason)
 		} else {
