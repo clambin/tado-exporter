@@ -29,11 +29,9 @@ func New(API tado.API) *Poller {
 }
 
 func (poller *Poller) Run(ctx context.Context, interval time.Duration) {
-	timer := time.NewTicker(interval)
-	err := poller.poll(ctx)
-	if err != nil {
-		log.WithError(err).Warning("failed to get Tado metrics")
-	}
+	var err error
+	timer := time.NewTicker(10 * time.Millisecond)
+	first := true
 
 loop:
 	for {
@@ -43,9 +41,19 @@ loop:
 		case ch := <-poller.Register:
 			poller.registry = append(poller.registry, ch)
 		case <-timer.C:
-			err = poller.poll(ctx)
-			if err != nil {
-				log.WithError(err).Warning("failed to get Tado metrics")
+			// is anybody listening?
+			if len(poller.registry) > 0 {
+				// poll for new data
+				err = poller.poll(ctx)
+				if err != nil {
+					log.WithError(err).Warning("failed to get Tado metrics")
+				}
+				// once we have registered listeners, poll at the desired interval
+				if first {
+					timer.Stop()
+					timer = time.NewTicker(interval)
+					first = false
+				}
 			}
 		}
 	}

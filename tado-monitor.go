@@ -70,6 +70,8 @@ func main() {
 	}
 
 	p := poller.New(API)
+	go p.Run(ctx, cfg.Interval)
+	log.WithField("interval", cfg.Interval).Info("poller started")
 
 	if cfg.Exporter.Enabled {
 		c := collector.New()
@@ -99,9 +101,6 @@ func main() {
 		p.Register <- c.ZoneManager.Update
 		log.Info("controller started")
 	}
-
-	go p.Run(ctx, cfg.Interval)
-	log.WithField("interval", cfg.Interval).Info("poller started")
 
 	go func() {
 		listenAddress := fmt.Sprintf(":%d", cfg.Exporter.Port)
