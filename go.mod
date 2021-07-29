@@ -3,7 +3,6 @@ module github.com/clambin/tado-exporter
 go 1.16
 
 require (
-	github.com/clambin/gotools v0.3.0
 	github.com/clambin/tado v0.2.91
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/prometheus/client_golang v1.11.0
@@ -11,7 +10,7 @@ require (
 	github.com/prometheus/common v0.29.0 // indirect
 	github.com/prometheus/procfs v0.7.1 // indirect
 	github.com/sirupsen/logrus v1.8.1
-	github.com/slack-go/slack v0.9.2
+	github.com/slack-go/slack v0.9.3
 	github.com/stretchr/testify v1.7.0
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
