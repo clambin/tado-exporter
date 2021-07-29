@@ -23,7 +23,7 @@ The controller is rule-based. It currently supports three types of rules:
 
 ## Installation
 
-Binaries are available on the [release](https://github.com/clambin/tado-exporter/releases) page. Docker images are available on [docker hub](https://hub.docker.com/r/clambin/tado-monitor).
+Binaries are available on the [release](https://github.com/clambin/tado-exporter/releases) page. Docker images are available on [ghcr.io](https://github.com/clambin/tado-exporter/pkgs/container/tado-monitor).
 
 Alternatively, you can clone the repository and build from source:
 
@@ -206,7 +206,7 @@ To enable the bot, add a bot to the workspace's Custom Integrations and add the 
 
 ## Tado Client API
 
-The Tado Client API implementation can be found in [pkg/tado](pkg/tado). The API should be fairly stable at this point, 
+The Tado Client API implementation can be found in [github](https://github.com/clambin/tado). The API should be fairly stable at this point, 
 so feel free to reuse for your own projects.
 
 ## Authors
