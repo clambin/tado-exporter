@@ -3,6 +3,7 @@ package slackbot_test
 import (
 	"context"
 	"github.com/clambin/tado-exporter/slackbot"
+	"github.com/clambin/tado-exporter/slackbot/mock"
 	"github.com/clambin/tado-exporter/version"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
@@ -19,27 +20,26 @@ func TestSlackBot_Commands(t *testing.T) {
 			}
 		},
 	}
-	client, err := slackbot.Create("test-client-"+version.BuildVersion, "12345678", callbacks)
-	assert.NoError(t, err)
+	client := slackbot.Create("test-client-"+version.BuildVersion, "12345678", callbacks)
 
 	events := make(chan slack.RTMEvent)
 	output := make(chan slackbot.SlackMessage)
-	server := &mockSlack{
-		userID:    "1234",
-		channels:  []string{"1", "2", "3"},
-		eventsIn:  events,
-		eventsOut: client.Events,
-		output:    output,
+	server := &mock.Client{
+		UserID:    "1234",
+		Channels:  []string{"1", "2", "3"},
+		EventsIn:  events,
+		EventsOut: client.Events,
+		Output:    output,
 	}
 	client.SlackClient = server
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go func() {
-		err = client.Run(ctx)
+	go func(ctx context.Context) {
+		err := client.Run(ctx)
 		assert.NoError(t, err)
-	}()
+	}(ctx)
 
 	events <- server.ConnectedEvent()
 
@@ -78,27 +78,26 @@ func TestSlackBot_Commands(t *testing.T) {
 }
 
 func TestSlackBot_Post(t *testing.T) {
-	client, err := slackbot.Create("test-client"+version.BuildVersion, "12345678", nil)
-	assert.NoError(t, err)
+	client := slackbot.Create("test-client"+version.BuildVersion, "12345678", nil)
 
 	events := make(chan slack.RTMEvent)
 	output := make(chan slackbot.SlackMessage)
-	server := &mockSlack{
-		userID:    "1234",
-		channels:  []string{"1", "2", "3"},
-		eventsIn:  events,
-		eventsOut: client.Events,
-		output:    output,
+	server := &mock.Client{
+		UserID:    "1234",
+		Channels:  []string{"1", "2", "3"},
+		EventsIn:  events,
+		EventsOut: client.Events,
+		Output:    output,
 	}
 	client.SlackClient = server
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go func() {
-		err = client.Run(ctx)
+	go func(ctx context.Context) {
+		err := client.Run(ctx)
 		assert.NoError(t, err)
-	}()
+	}(ctx)
 
 	events <- server.ConnectedEvent()
 	events <- server.InvalidAuthEvent()
@@ -108,70 +107,12 @@ func TestSlackBot_Post(t *testing.T) {
 		Text: "Hello world!",
 	}}
 
-	for i := 0; i < len(server.channels); i++ {
+	for i := 0; i < len(server.Channels); i++ {
 		msg := <-output
 
-		assert.Contains(t, server.channels, msg.Channel)
+		assert.Contains(t, server.Channels, msg.Channel)
 		if assert.Len(t, msg.Attachments, 1) {
 			assert.Equal(t, "Hello world!", msg.Attachments[0].Text)
 		}
 	}
-}
-
-type mockSlack struct {
-	userID    string
-	channels  []string
-	eventsIn  chan slack.RTMEvent
-	eventsOut chan slack.RTMEvent
-	output    chan slackbot.SlackMessage
-}
-
-func (m mockSlack) Run(ctx context.Context) {
-loop:
-	for {
-		select {
-		case <-ctx.Done():
-			break loop
-		case msg := <-m.eventsIn:
-			m.eventsOut <- msg
-		}
-	}
-}
-
-func (m mockSlack) Send(message slackbot.SlackMessage) (err error) {
-	m.output <- message
-	return nil
-}
-
-func (m mockSlack) GetChannels() (channelIDs []string, err error) {
-	return m.channels, nil
-}
-
-func (m mockSlack) ConnectedEvent() slack.RTMEvent {
-	return slack.RTMEvent{Type: "connected", Data: &slack.ConnectedEvent{
-		ConnectionCount: 1,
-		Info: &slack.Info{
-			User: &slack.UserDetails{
-				ID: m.userID,
-			},
-		},
-	}}
-}
-
-func (m mockSlack) InvalidAuthEvent() slack.RTMEvent {
-	return slack.RTMEvent{Type: "invalid_auth", Data: &slack.InvalidAuthEvent{}}
-}
-
-func (m mockSlack) MessageEvent(channel string, message string) slack.RTMEvent {
-	return slack.RTMEvent{Type: "message", Data: &slack.MessageEvent{Msg: slack.Msg{
-		Channel: channel,
-		Text:    message,
-	}}}
-}
-
-func (m mockSlack) RTMErrorEvent() slack.RTMEvent {
-	return slack.RTMEvent{Type: "error", Data: &slack.RTMError{
-		Code: 1,
-		Msg:  "test. this will be ignored",
-	}}
 }

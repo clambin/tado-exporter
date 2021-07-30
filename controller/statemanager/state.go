@@ -93,7 +93,7 @@ func (mgr *Manager) getAutoAwayReason(zoneID int, home bool, update *poller.Upda
 		if home {
 			reason = "one or more users are home"
 		} else {
-			reason = "all users of are away"
+			reason = "all users are away"
 		}
 	}
 	reason = update.Zones[zoneID].Name + ": " + reason

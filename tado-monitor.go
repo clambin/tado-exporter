@@ -8,6 +8,7 @@ import (
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller"
 	"github.com/clambin/tado-exporter/poller"
+	"github.com/clambin/tado-exporter/slackbot"
 	"github.com/clambin/tado-exporter/version"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -83,6 +84,18 @@ func main() {
 	}
 
 	if cfg.Controller.Enabled {
+		var tadoBot *slackbot.SlackBot
+		if cfg.Controller.TadoBot.Enabled {
+			tadoBot = slackbot.Create("tado "+version.BuildVersion, cfg.Controller.TadoBot.Token.Value, nil)
+
+			go func(ctx context.Context) {
+				err2 := tadoBot.Run(ctx)
+				if err2 != nil {
+					log.WithError(err).Fatal("tadoBot failed to start")
+				}
+			}(ctx)
+		}
+
 		// TODO: can we reuse API?
 		API2 := &tado.APIClient{
 			HTTPClient:   &http.Client{},
@@ -91,7 +104,7 @@ func main() {
 			ClientSecret: clientSecret,
 		}
 		var c *controller.Controller
-		c, err = controller.New(API2, &cfg.Controller)
+		c, err = controller.New(API2, &cfg.Controller, tadoBot)
 
 		if err != nil {
 			log.WithError(err).Fatal("unable to create controller")

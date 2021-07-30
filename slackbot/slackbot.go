@@ -57,7 +57,7 @@ type CommandFunc func(args ...string) []slack.Attachment
 type PostChannel chan []slack.Attachment
 
 // Create a slackbot
-func Create(name string, slackToken string, callbacks map[string]CommandFunc) (bot *SlackBot, err error) {
+func Create(name string, slackToken string, callbacks map[string]CommandFunc) (bot *SlackBot) {
 	eventsChannel := make(chan slack.RTMEvent, 10)
 
 	bot = &SlackBot{
