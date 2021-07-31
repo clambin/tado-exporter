@@ -4,8 +4,7 @@ on:
   push:
     branches:
     - master
-    - collector
-    - ghcr
+    - refactor
 jobs:
   test:
     runs-on: ubuntu-latest

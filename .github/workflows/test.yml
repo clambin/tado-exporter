@@ -4,8 +4,7 @@ on:
   push:
     branches-ignore:
       - master
-      - collector
-      - ghcr
+      - refactor
   pull_request_target:
 
 jobs:

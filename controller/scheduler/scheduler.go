@@ -8,14 +8,14 @@ import (
 )
 
 type Scheduler struct {
-	tasks map[TaskID]Task
+	tasks map[TaskID]*Task
 	fire  chan TaskID
 	lock  sync.RWMutex
 }
 
 func New() *Scheduler {
 	return &Scheduler{
-		tasks: make(map[TaskID]Task),
+		tasks: make(map[TaskID]*Task),
 		fire:  make(chan TaskID),
 	}
 }
@@ -35,7 +35,7 @@ loop:
 	log.Info("scheduler stopped")
 }
 
-func (scheduler *Scheduler) Schedule(ctx context.Context, task Task) {
+func (scheduler *Scheduler) Schedule(ctx context.Context, task *Task) {
 	scheduler.lock.RLock()
 	defer scheduler.lock.RUnlock()
 
@@ -53,14 +53,16 @@ func (scheduler *Scheduler) Schedule(ctx context.Context, task Task) {
 	go task.wait(newCtx)
 }
 
-func (scheduler *Scheduler) Cancel(taskID TaskID) {
+func (scheduler *Scheduler) Cancel(taskID TaskID) (found bool) {
 	scheduler.lock.Lock()
 	defer scheduler.lock.Unlock()
 
-	if task, found := scheduler.tasks[taskID]; found {
+	var task *Task
+	if task, found = scheduler.tasks[taskID]; found {
 		task.cancel()
 		delete(scheduler.tasks, taskID)
 	}
+	return
 }
 
 func (scheduler *Scheduler) CancelAll() {
@@ -70,10 +72,10 @@ func (scheduler *Scheduler) CancelAll() {
 	for _, task := range scheduler.tasks {
 		task.cancel()
 	}
-	scheduler.tasks = make(map[TaskID]Task)
+	scheduler.tasks = make(map[TaskID]*Task)
 }
 
-func (scheduler *Scheduler) GetScheduled(id TaskID) (task Task, found bool) {
+func (scheduler *Scheduler) GetScheduled(id TaskID) (task *Task, found bool) {
 	scheduler.lock.RLock()
 	defer scheduler.lock.RUnlock()
 
@@ -81,7 +83,7 @@ func (scheduler *Scheduler) GetScheduled(id TaskID) (task Task, found bool) {
 	return
 }
 
-func (scheduler *Scheduler) GetAllScheduled() (tasks []Task) {
+func (scheduler *Scheduler) GetAllScheduled() (tasks []*Task) {
 	scheduler.lock.RLock()
 	defer scheduler.lock.RUnlock()
 

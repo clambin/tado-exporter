@@ -111,7 +111,7 @@ func main() {
 		}
 
 		go c.Run(ctx)
-		p.Register <- c.ZoneManager.Update
+		p.Register <- c.Update
 		log.Info("controller started")
 	}
 

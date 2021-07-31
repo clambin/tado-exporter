@@ -1,4 +1,4 @@
-package zonemanager
+package controller
 
 import (
 	"github.com/clambin/tado"
@@ -7,14 +7,14 @@ import (
 	"time"
 )
 
-func (mgr *Manager) ReportTasks(_ ...string) (attachments []slack.Attachment) {
-	mgr.Report <- struct{}{}
+func (controller *Controller) ReportTasks(_ ...string) (attachments []slack.Attachment) {
+	controller.Report <- struct{}{}
 	return
 }
 
-func (mgr *Manager) reportTasks(_ ...string) {
+func (controller *Controller) reportTasks(_ ...string) {
 	text := make([]string, 0)
-	for _, task := range mgr.scheduler.GetAllScheduled() {
+	for _, task := range controller.scheduler.GetAllScheduled() {
 		state := task.Args[1].(tado.ZoneState)
 		var action string
 		switch state {
@@ -26,7 +26,7 @@ func (mgr *Manager) reportTasks(_ ...string) {
 			action = "setting to manual temperature control"
 		}
 
-		name, ok := mgr.cache.GetZoneName(int(task.ID))
+		name, ok := controller.cache.GetZoneName(int(task.ID))
 		if ok == false {
 			name = "unknown"
 		}
@@ -44,7 +44,7 @@ func (mgr *Manager) reportTasks(_ ...string) {
 		slackText = "no rules have been triggered"
 	}
 
-	mgr.PostChannel <- []slack.Attachment{{
+	controller.PostChannel <- []slack.Attachment{{
 		Color: "good",
 		Title: slackTitle,
 		Text:  slackText,

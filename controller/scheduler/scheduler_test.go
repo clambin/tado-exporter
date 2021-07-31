@@ -18,14 +18,14 @@ func TestScheduler(t *testing.T) {
 
 	db := &DB{}
 
-	taskA := scheduler.Task{
+	taskA := &scheduler.Task{
 		ID:   1,
 		Run:  RunTask,
 		Args: []interface{}{&db.A},
 		When: 50 * time.Millisecond,
 	}
 
-	taskB := scheduler.Task{
+	taskB := &scheduler.Task{
 		ID:   2,
 		Run:  RunTask,
 		Args: []interface{}{&db.B},
@@ -57,6 +57,29 @@ func TestScheduler(t *testing.T) {
 
 	cancel()
 	assert.Eventually(t, func() bool { return len(s.GetAllScheduled()) == 0 }, 500*time.Millisecond, 50*time.Millisecond)
+}
+
+func BenchmarkScheduler(b *testing.B) {
+	s := scheduler.New()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	taskA := &scheduler.Task{
+		ID: 1,
+		Run: func(_ context.Context, _ []interface{}) {
+		},
+		Args: nil,
+		When: 50 * time.Second,
+	}
+
+	for i := 0; i < 100000; i++ {
+		s.Schedule(ctx, taskA)
+		s.Schedule(ctx, taskA)
+		s.Cancel(1)
+	}
+
 }
 
 type DB struct {
