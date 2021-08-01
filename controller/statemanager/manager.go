@@ -2,18 +2,18 @@ package statemanager
 
 import (
 	"github.com/clambin/tado-exporter/configuration"
+	"github.com/clambin/tado-exporter/controller/cache"
 	"github.com/clambin/tado-exporter/controller/models"
-	"github.com/clambin/tado-exporter/controller/namecache"
 	log "github.com/sirupsen/logrus"
 )
 
 type Manager struct {
 	zoneRules  map[int]models.ZoneRules
 	zoneConfig []configuration.ZoneConfig
-	cache      *namecache.Cache
+	cache      *cache.Cache
 }
 
-func New(config []configuration.ZoneConfig, cache *namecache.Cache) (mgr *Manager, err error) {
+func New(config []configuration.ZoneConfig, cache *cache.Cache) (mgr *Manager, err error) {
 	return &Manager{
 		zoneConfig: config,
 		cache:      cache,

@@ -33,6 +33,8 @@ func (poller *Poller) Run(ctx context.Context, interval time.Duration) {
 	timer := time.NewTicker(10 * time.Millisecond)
 	first := true
 
+	log.Info("poller started")
+
 loop:
 	for {
 		select {
@@ -58,6 +60,8 @@ loop:
 		}
 	}
 	timer.Stop()
+
+	log.Info("poller stopped")
 }
 
 func (poller *Poller) poll(ctx context.Context) (err error) {

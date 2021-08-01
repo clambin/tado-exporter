@@ -3,7 +3,7 @@ package statemanager_test
 import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
-	"github.com/clambin/tado-exporter/controller/namecache"
+	"github.com/clambin/tado-exporter/controller/cache"
 	"github.com/clambin/tado-exporter/controller/statemanager"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/stretchr/testify/assert"
@@ -59,8 +59,8 @@ func TestManager_GetNextState_LimitOverlay(t *testing.T) {
 			Delay:   time.Hour,
 		},
 	}}
-	cache := namecache.New()
-	mgr, err := statemanager.New(zoneConfig, cache)
+	testcache := cache.New()
+	mgr, err := statemanager.New(zoneConfig, testcache)
 	assert.NoError(t, err)
 
 	expectedResults := []struct {
@@ -79,7 +79,7 @@ func TestManager_GetNextState_LimitOverlay(t *testing.T) {
 			when      time.Duration
 			reason    string
 		)
-		cache.Update(&fakeUpdates[index])
+		testcache.Update(&fakeUpdates[index])
 		nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[index])
 		assert.NoError(t, err)
 		assert.Equal(t, expectedResult.state, nextState, index)
@@ -103,8 +103,8 @@ func TestZoneManager_NightTime(t *testing.T) {
 			},
 		},
 	}}
-	cache := namecache.New()
-	mgr, err := statemanager.New(zoneConfig, cache)
+	testCache := cache.New()
+	mgr, err := statemanager.New(zoneConfig, testCache)
 	assert.NoError(t, err)
 
 	var (
@@ -112,14 +112,14 @@ func TestZoneManager_NightTime(t *testing.T) {
 		when      time.Duration
 		reason    string
 	)
-	cache.Update(&fakeUpdates[2])
+	testCache.Update(&fakeUpdates[2])
 	nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[2])
 	assert.NoError(t, err)
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateAuto), nextState)
 	assert.NotZero(t, when)
 	assert.Equal(t, "manual temperature setting detected in bar", reason)
 
-	cache.Update(&fakeUpdates[1])
+	testCache.Update(&fakeUpdates[1])
 	nextState, _, _, _ = mgr.GetNextState(2, &fakeUpdates[1])
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateOff), nextState)
 }
@@ -134,8 +134,8 @@ func TestZoneManager_AutoAway(t *testing.T) {
 		},
 	}}
 
-	cache := namecache.New()
-	mgr, err := statemanager.New(zoneConfig, cache)
+	testCache := cache.New()
+	mgr, err := statemanager.New(zoneConfig, testCache)
 	assert.NoError(t, err)
 
 	expectedResults := []struct {
@@ -156,7 +156,7 @@ func TestZoneManager_AutoAway(t *testing.T) {
 			when      time.Duration
 			reason    string
 		)
-		cache.Update(&fakeUpdates[index])
+		testCache.Update(&fakeUpdates[index])
 		nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[index])
 		assert.NoError(t, err)
 		assert.Equal(t, expectedResult.state, nextState, index)
@@ -191,8 +191,8 @@ func TestZoneManager_Combined(t *testing.T) {
 		},
 	}}
 
-	cache := namecache.New()
-	mgr, err := statemanager.New(zoneConfig, cache)
+	testCache := cache.New()
+	mgr, err := statemanager.New(zoneConfig, testCache)
 	assert.NoError(t, err)
 
 	expectedResults := []struct {
@@ -213,7 +213,7 @@ func TestZoneManager_Combined(t *testing.T) {
 			when      time.Duration
 			reason    string
 		)
-		cache.Update(&fakeUpdates[index])
+		testCache.Update(&fakeUpdates[index])
 		nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[index])
 		assert.NoError(t, err)
 		assert.Equal(t, expectedResult.state, nextState, index)

@@ -143,7 +143,7 @@ func TestController_RevertedOverlay(t *testing.T) {
 		assert.Equal(t, "resetting rule for bar", msg[0].Title)
 	}
 
-	c.ReportTasks()
+	c.ReportRules()
 	msg = <-postChannel
 	if assert.Len(t, msg, 1) {
 		assert.Equal(t, "no rules have been triggered", msg[0].Text)
@@ -188,7 +188,6 @@ func TestController_TadoBot(t *testing.T) {
 		&configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig},
 		tadoBot,
 	)
-	// c.ZoneManager.PostChannel = tadoBot.PostChannel
 	go c.Run(ctx)
 	pollr.Register <- c.Update
 
@@ -201,7 +200,7 @@ func TestController_TadoBot(t *testing.T) {
 
 	if assert.Len(t, msg.Attachments, 1) {
 		assert.Equal(t, "supported commands", msg.Attachments[0].Title)
-		assert.Equal(t, "help, rules, version", msg.Attachments[0].Text)
+		assert.Equal(t, "help, rooms, rules, version", msg.Attachments[0].Text)
 	}
 
 	events <- slackClient.MessageEvent("2", "<@1234> rules")
@@ -211,7 +210,6 @@ func TestController_TadoBot(t *testing.T) {
 		assert.Equal(t, "", msg.Attachments[0].Title)
 		assert.Equal(t, "no rules have been triggered", msg.Attachments[0].Text)
 	}
-
 }
 
 //
@@ -347,7 +345,7 @@ func TestZoneManager_NightTime(t *testing.T) {
 		assert.Contains(t, msgs[0].Text, "moving to auto mode in ")
 	}
 
-	_ = c.ReportTasks()
+	_ = c.ReportRules()
 
 	assert.False(t, zoneInOverlay(ctx, c.API, 2))
 	msgs = <-postChannel
@@ -508,77 +506,7 @@ func TestZoneManager_Combined(t *testing.T) {
 	}
 
 	// report should say that a rule is triggered
-	c.ReportTasks()
-	msg = <-postChannel
-	if assert.Len(t, msg, 1) {
-		assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")
-	}
-}
-
-func TestManager_ReportTasks(t *testing.T) {
-	zoneConfig := []configuration.ZoneConfig{{
-		ZoneName: "bar",
-		AutoAway: configuration.ZoneAutoAway{
-			Enabled: true,
-			Delay:   1 * time.Hour,
-			Users: []configuration.ZoneUser{{
-				MobileDeviceID: 2,
-			}},
-		},
-		LimitOverlay: configuration.ZoneLimitOverlay{
-			Enabled: true,
-			Delay:   1 * time.Hour,
-		},
-	}}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	server := &mockapi.MockAPI{}
-	pollr := poller.New(server)
-	go pollr.Run(ctx, 20*time.Millisecond)
-
-	postChannel := make(slackbot.PostChannel)
-
-	c, err := controller.New(
-		server,
-		&configuration.ControllerConfiguration{
-			Enabled:    true,
-			ZoneConfig: zoneConfig,
-		},
-		nil)
-	assert.NoError(t, err)
-	c.PostChannel = postChannel
-
-	go c.Run(ctx)
-
-	log.SetLevel(log.DebugLevel)
-
-	_ = c.ReportTasks()
-	msg := <-postChannel
-	if assert.Len(t, msg, 1) {
-		assert.Equal(t, "no rules have been triggered", msg[0].Text)
-	}
-
-	// user is away
-	c.Update <- &fakeUpdates[0]
-	_ = <-postChannel
-
-	_ = c.ReportTasks()
-	msg = <-postChannel
-	if assert.Len(t, msg, 1) {
-		assert.Contains(t, msg[0].Text, "bar: switching off heating in ")
-	}
-
-	// user is home & room set to manual
-	c.Update <- &fakeUpdates[2]
-	msg = <-postChannel
-	if assert.Len(t, msg, 1) {
-		assert.Contains(t, msg[0].Text, "moving to auto mode in ")
-	}
-
-	_ = c.ReportTasks()
-
+	c.ReportRules()
 	msg = <-postChannel
 	if assert.Len(t, msg, 1) {
 		assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")

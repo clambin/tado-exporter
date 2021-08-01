@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
-	"github.com/clambin/tado-exporter/controller/namecache"
+	"github.com/clambin/tado-exporter/controller/cache"
 	"github.com/clambin/tado-exporter/controller/scheduler"
 	"github.com/clambin/tado-exporter/controller/statemanager"
 	"github.com/clambin/tado-exporter/poller"
@@ -15,13 +15,12 @@ import (
 // Controller object for tado-controller.
 type Controller struct {
 	tado.API
-	// TadoBot      *slackbot.SlackBot
 	Update       chan *poller.Update
-	Report       chan struct{}
+	Report       chan int
 	PostChannel  slackbot.PostChannel
 	scheduler    *scheduler.Scheduler
 	stateManager *statemanager.Manager
-	cache        *namecache.Cache
+	cache        *cache.Cache
 }
 
 // New creates a new Controller object
@@ -31,24 +30,24 @@ func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot *slac
 		postChannel = tadoBot.PostChannel
 	}
 
-	cache := namecache.New()
+	tadoCache := cache.New()
 	var stateManager *statemanager.Manager
-	stateManager, err = statemanager.New(cfg.ZoneConfig, cache)
+	stateManager, err = statemanager.New(cfg.ZoneConfig, tadoCache)
 
 	if err == nil {
 		controller = &Controller{
-			API: API,
-			// TadoBot:     tadoBot,
+			API:          API,
 			Update:       make(chan *poller.Update),
-			Report:       make(chan struct{}),
+			Report:       make(chan int),
 			scheduler:    scheduler.New(),
 			stateManager: stateManager,
 			PostChannel:  postChannel,
-			cache:        cache,
+			cache:        tadoCache,
 		}
 
 		if tadoBot != nil {
-			tadoBot.RegisterCallback("rules", controller.ReportTasks)
+			tadoBot.RegisterCallback("rules", controller.ReportRules)
+			tadoBot.RegisterCallback("rooms", controller.ReportRooms)
 		}
 	}
 
@@ -69,8 +68,13 @@ loop:
 		case update := <-controller.Update:
 			controller.cache.Update(update)
 			controller.update(ctx, update)
-		case <-controller.Report:
-			controller.reportTasks()
+		case report := <-controller.Report:
+			switch report {
+			case reportRules:
+				controller.reportRules()
+			case reportRooms:
+				controller.reportRooms()
+			}
 		}
 	}
 

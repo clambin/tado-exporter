@@ -5,6 +5,7 @@ on:
     branches:
     - master
     - refactor
+    - rooms
 jobs:
   test:
     runs-on: ubuntu-latest

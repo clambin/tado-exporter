@@ -88,22 +88,17 @@ func (bot *SlackBot) Run(ctx context.Context) (err error) {
 
 	go bot.SlackClient.Run(ctx)
 
-	var (
-		channel     string
-		attachments []slack.Attachment
-	)
-
 loop:
 	for {
 		select {
 		case <-ctx.Done():
 			break loop
 		case event := <-bot.Events:
-			channel, attachments = bot.processEvent(event)
+			channel, attachments := bot.processEvent(event)
 			if len(attachments) > 0 {
 				err = bot.Send(SlackMessage{Channel: channel, Attachments: attachments})
 			}
-		case attachments = <-bot.PostChannel:
+		case attachments := <-bot.PostChannel:
 			err = bot.Send(SlackMessage{Attachments: attachments})
 		}
 

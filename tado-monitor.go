@@ -15,6 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"net/http"
+	// _ "net/http/pprof"
 	"os"
 	"os/signal"
 	"path/filepath"
