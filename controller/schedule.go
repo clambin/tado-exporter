@@ -110,10 +110,8 @@ func (controller *Controller) getNotification(state tado.ZoneState, reason strin
 }
 
 func (controller *Controller) getCancelNotification(zoneID int, reason string) []slack.Attachment {
-	name, ok := controller.cache.GetZoneName(zoneID)
-	if ok == false {
-		name = "unknown"
-	}
+	name, _ := controller.cache.GetZoneName(zoneID)
+
 	return []slack.Attachment{{
 		Color: "good",
 		Title: "resetting rule for " + name,

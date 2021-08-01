@@ -16,7 +16,6 @@ import (
 type Controller struct {
 	tado.API
 	Update       chan *poller.Update
-	Report       chan int
 	PostChannel  slackbot.PostChannel
 	scheduler    *scheduler.Scheduler
 	stateManager *statemanager.Manager
@@ -38,7 +37,6 @@ func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot *slac
 		controller = &Controller{
 			API:          API,
 			Update:       make(chan *poller.Update),
-			Report:       make(chan int),
 			scheduler:    scheduler.New(),
 			stateManager: stateManager,
 			PostChannel:  postChannel,
@@ -68,13 +66,6 @@ loop:
 		case update := <-controller.Update:
 			controller.cache.Update(update)
 			controller.update(ctx, update)
-		case report := <-controller.Report:
-			switch report {
-			case reportRules:
-				controller.reportRules()
-			case reportRooms:
-				controller.reportRooms()
-			}
 		}
 	}
 

@@ -47,8 +47,10 @@ func BenchmarkController_Run(b *testing.B) {
 
 	b.ResetTimer()
 
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 100; i++ {
 		_ = server.SetZoneOverlay(ctx, 2, 15.5)
+		_ = <-postChannel
+		c.ReportRules()
 		_ = <-postChannel
 		_ = <-postChannel
 	}
