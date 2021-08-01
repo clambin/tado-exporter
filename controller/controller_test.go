@@ -51,6 +51,8 @@ func BenchmarkController_Run(b *testing.B) {
 		_ = server.SetZoneOverlay(ctx, 2, 15.5)
 		_ = c.ReportRules()
 		_ = <-postChannel
+		c.ReportRules()
+		_ = <-postChannel
 		_ = <-postChannel
 	}
 }
