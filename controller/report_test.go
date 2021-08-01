@@ -54,8 +54,7 @@ func TestManager_ReportRules(t *testing.T) {
 
 	log.SetLevel(log.DebugLevel)
 
-	_ = c.ReportRules()
-	msg := <-postChannel
+	msg := c.ReportRules()
 	if assert.Len(t, msg, 1) {
 		assert.Equal(t, "no rules have been triggered", msg[0].Text)
 	}
@@ -64,8 +63,7 @@ func TestManager_ReportRules(t *testing.T) {
 	c.Update <- &fakeUpdates[0]
 	_ = <-postChannel
 
-	_ = c.ReportRules()
-	msg = <-postChannel
+	msg = c.ReportRules()
 	if assert.Len(t, msg, 1) {
 		assert.Contains(t, msg[0].Text, "bar: switching off heating in ")
 	}
@@ -77,9 +75,7 @@ func TestManager_ReportRules(t *testing.T) {
 		assert.Contains(t, msg[0].Text, "moving to auto mode in ")
 	}
 
-	_ = c.ReportRules()
-
-	msg = <-postChannel
+	msg = c.ReportRules()
 	if assert.Len(t, msg, 1) {
 		assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")
 	}
@@ -165,8 +161,7 @@ func TestManager_ReportRooms(t *testing.T) {
 		c.Update <- testCase.update
 
 		assert.Eventually(t, func() bool {
-			_ = c.ReportRooms()
-			msg := <-postChannel
+			msg := c.ReportRooms()
 
 			if len(msg) != 1 {
 				return false

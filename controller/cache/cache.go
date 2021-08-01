@@ -34,6 +34,8 @@ func (cache *Cache) GetZoneName(id int) (name string, ok bool) {
 	zone, ok = cache.zones[id]
 	if ok {
 		name = zone.Name
+	} else {
+		name = "unknown"
 	}
 	return
 }
@@ -47,6 +49,8 @@ func (cache *Cache) GetUserName(id int) (name string, ok bool) {
 
 	if ok {
 		name = device.Name
+	} else {
+		name = "unknown"
 	}
 	return
 }

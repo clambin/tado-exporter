@@ -5,7 +5,7 @@ on:
     branches-ignore:
       - master
       - refactor
-      - rooms
+      - report
   pull_request_target:
 
 jobs:

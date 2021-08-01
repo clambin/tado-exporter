@@ -8,24 +8,7 @@ import (
 	"time"
 )
 
-const (
-	reportRules = iota
-	reportRooms
-)
-
 func (controller *Controller) ReportRules(_ ...string) (attachments []slack.Attachment) {
-	// TODO: can we run this here (i.e. outside of the controller's main thread)?
-	controller.Report <- reportRules
-	return
-}
-
-func (controller *Controller) ReportRooms(_ ...string) (attachments []slack.Attachment) {
-	// TODO: can we run this here (i.e. outside of the controller's main thread)?
-	controller.Report <- reportRooms
-	return
-}
-
-func (controller *Controller) reportRules(_ ...string) {
 	text := make([]string, 0)
 	for _, task := range controller.scheduler.GetAllScheduled() {
 		state := task.Args[1].(tado.ZoneState)
@@ -35,14 +18,12 @@ func (controller *Controller) reportRules(_ ...string) {
 			action = "switching off heating"
 		case tado.ZoneStateAuto:
 			action = "moving to auto mode"
-		case tado.ZoneStateManual:
-			action = "setting to manual temperature control"
+			//case tado.ZoneStateManual:
+			//	action = "setting to manual temperature control"
 		}
 
-		name, ok := controller.cache.GetZoneName(int(task.ID))
-		if ok == false {
-			name = "unknown"
-		}
+		name, _ := controller.cache.GetZoneName(int(task.ID))
+
 		text = append(text,
 			name+": "+action+" in "+task.Activation.Sub(time.Now()).Round(1*time.Second).String())
 	}
@@ -56,14 +37,14 @@ func (controller *Controller) reportRules(_ ...string) {
 		slackText = "no rules have been triggered"
 	}
 
-	controller.PostChannel <- []slack.Attachment{{
+	return []slack.Attachment{{
 		Color: "good",
 		Title: slackTitle,
 		Text:  slackText,
 	}}
 }
 
-func (controller *Controller) reportRooms(_ ...string) {
+func (controller *Controller) ReportRooms(_ ...string) (attachments []slack.Attachment) {
 	text := make([]string, 0)
 
 	for _, zoneID := range controller.cache.GetZones() {
@@ -102,7 +83,7 @@ func (controller *Controller) reportRooms(_ ...string) {
 		slackText = strings.Join(text, "\n")
 	}
 
-	controller.PostChannel <- []slack.Attachment{{
+	return []slack.Attachment{{
 		Color: slackColor,
 		Title: slackTitle,
 		Text:  slackText,

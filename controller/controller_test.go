@@ -47,8 +47,9 @@ func BenchmarkController_Run(b *testing.B) {
 
 	b.ResetTimer()
 
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 100; i++ {
 		_ = server.SetZoneOverlay(ctx, 2, 15.5)
+		_ = c.ReportRules()
 		_ = <-postChannel
 		_ = <-postChannel
 	}
@@ -143,8 +144,7 @@ func TestController_RevertedOverlay(t *testing.T) {
 		assert.Equal(t, "resetting rule for bar", msg[0].Title)
 	}
 
-	c.ReportRules()
-	msg = <-postChannel
+	msg = c.ReportRules()
 	if assert.Len(t, msg, 1) {
 		assert.Equal(t, "no rules have been triggered", msg[0].Text)
 	}
@@ -345,10 +345,9 @@ func TestZoneManager_NightTime(t *testing.T) {
 		assert.Contains(t, msgs[0].Text, "moving to auto mode in ")
 	}
 
-	_ = c.ReportRules()
-
 	assert.False(t, zoneInOverlay(ctx, c.API, 2))
-	msgs = <-postChannel
+
+	msgs = c.ReportRules()
 	if assert.Len(t, msgs, 1) {
 		assert.Contains(t, msgs[0].Text, "bar: moving to auto mode in ")
 	}
@@ -506,8 +505,7 @@ func TestZoneManager_Combined(t *testing.T) {
 	}
 
 	// report should say that a rule is triggered
-	c.ReportRules()
-	msg = <-postChannel
+	msg = c.ReportRules()
 	if assert.Len(t, msg, 1) {
 		assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")
 	}
