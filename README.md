@@ -199,6 +199,7 @@ Users can also interact with the bot:
 TadoBot supports the following commands:
 
 * **rules**: show any activated rules
+* **rooms**: show temperature & settings on each room
 * **version**: show version of tado-monitor
 * **help**: show all available commands
 
