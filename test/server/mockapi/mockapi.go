@@ -4,12 +4,18 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"sync"
+	"time"
 )
 
 // MockAPI mocks the tado Client API
 type MockAPI struct {
-	Overlays map[int]float64
+	Overlays map[int]overlaySettings
 	lock     sync.RWMutex
+}
+
+type overlaySettings struct {
+	temperature float64
+	expiry      time.Time
 }
 
 func (client *MockAPI) GetZones(_ context.Context) ([]tado.Zone, error) {
@@ -41,17 +47,26 @@ func (client *MockAPI) GetZoneInfo(_ context.Context, zoneID int) (info tado.Zon
 	client.lock.RLock()
 	defer client.lock.RUnlock()
 
-	if temperature, ok := client.Overlays[zoneID]; ok == true {
-		info.Overlay = tado.ZoneInfoOverlay{
-			Type: "MANUAL",
-			Setting: tado.ZoneInfoOverlaySetting{
-				Type:        "HEATING",
-				Power:       "ON",
-				Temperature: tado.Temperature{Celsius: temperature},
-			},
-			Termination: tado.ZoneInfoOverlayTermination{
+	if overlay, ok := client.Overlays[zoneID]; ok == true {
+		if overlay.expiry.IsZero() || time.Now().Before(overlay.expiry) {
+			info.Overlay = tado.ZoneInfoOverlay{
 				Type: "MANUAL",
-			},
+				Setting: tado.ZoneInfoOverlaySetting{
+					Type:        "HEATING",
+					Power:       "ON",
+					Temperature: tado.Temperature{Celsius: overlay.temperature},
+				},
+				Termination: tado.ZoneInfoOverlayTermination{
+					Type: "MANUAL",
+				},
+			}
+
+			if !overlay.expiry.IsZero() {
+				info.Overlay.Termination = tado.ZoneInfoOverlayTermination{
+					Type:          "TIMER",
+					RemainingTime: int(time.Now().Sub(overlay.expiry)),
+				}
+			}
 		}
 	}
 
@@ -94,10 +109,26 @@ func (client *MockAPI) SetZoneOverlay(_ context.Context, zoneID int, temperature
 	defer client.lock.Unlock()
 
 	if client.Overlays == nil {
-		client.Overlays = make(map[int]float64)
+		client.Overlays = make(map[int]overlaySettings)
 	}
 
-	client.Overlays[zoneID] = temperature
+	client.Overlays[zoneID] = overlaySettings{temperature: temperature}
+	return nil
+}
+
+func (client *MockAPI) SetZoneOverlayWithDuration(ctx context.Context, zoneID int, temperature float64, duration time.Duration) error {
+	if duration == 0 {
+		return client.SetZoneOverlay(ctx, zoneID, temperature)
+	}
+
+	client.lock.Lock()
+	defer client.lock.Unlock()
+
+	if client.Overlays == nil {
+		client.Overlays = make(map[int]overlaySettings)
+	}
+
+	client.Overlays[zoneID] = overlaySettings{temperature: temperature, expiry: time.Now().Add(duration)}
 	return nil
 }
 
@@ -105,9 +136,8 @@ func (client *MockAPI) DeleteZoneOverlay(_ context.Context, zoneID int) error {
 	client.lock.Lock()
 	defer client.lock.Unlock()
 
-	if client.Overlays == nil {
-		client.Overlays = make(map[int]float64)
+	if client.Overlays != nil {
+		delete(client.Overlays, zoneID)
 	}
-	delete(client.Overlays, zoneID)
 	return nil
 }

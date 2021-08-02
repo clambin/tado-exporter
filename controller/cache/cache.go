@@ -4,6 +4,7 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
 	"sync"
+	"time"
 )
 
 type Cache struct {
@@ -91,7 +92,7 @@ func (cache *Cache) GetZones() (zoneIDs []int) {
 	return
 }
 
-func (cache *Cache) GetZoneInfo(id int) (temperature, targetTemperature float64, zoneState tado.ZoneState, found bool) {
+func (cache *Cache) GetZoneInfo(id int) (temperature, targetTemperature float64, zoneState tado.ZoneState, duration time.Duration, found bool) {
 	cache.lock.RLock()
 	defer cache.lock.RUnlock()
 
@@ -101,8 +102,16 @@ func (cache *Cache) GetZoneInfo(id int) (temperature, targetTemperature float64,
 		zoneState = zoneInfo.GetState()
 		if zoneState == tado.ZoneStateAuto {
 			targetTemperature = zoneInfo.Setting.Temperature.Celsius
+
+			// expired overlay may still be in the cache
+			if targetTemperature == 0 {
+				targetTemperature = zoneInfo.Overlay.Setting.Temperature.Celsius
+			}
 		} else {
 			targetTemperature = zoneInfo.Overlay.Setting.Temperature.Celsius
+			if zoneState == tado.ZoneStateTemporaryManual {
+				duration = time.Duration(zoneInfo.Overlay.Termination.DurationInSeconds) * time.Second
+			}
 		}
 		return
 	}

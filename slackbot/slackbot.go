@@ -51,7 +51,7 @@ type SlackBot struct {
 // args will be []string{"1", "2", "3"}
 //
 // returns a slice of Attachments, which will be sent to slack as one message
-type CommandFunc func(args ...string) []slack.Attachment
+type CommandFunc func(ctx context.Context, args ...string) []slack.Attachment
 
 // PostChannel to send output to slack
 type PostChannel chan []slack.Attachment
@@ -94,7 +94,7 @@ loop:
 		case <-ctx.Done():
 			break loop
 		case event := <-bot.Events:
-			channel, attachments := bot.processEvent(event)
+			channel, attachments := bot.processEvent(ctx, event)
 			if len(attachments) > 0 {
 				err = bot.Send(SlackMessage{Channel: channel, Attachments: attachments})
 			}
@@ -131,7 +131,7 @@ func (bot *SlackBot) Send(message SlackMessage) (err error) {
 	return
 }
 
-func (bot *SlackBot) processEvent(msg slack.RTMEvent) (channel string, attachments []slack.Attachment) {
+func (bot *SlackBot) processEvent(ctx context.Context, msg slack.RTMEvent) (channel string, attachments []slack.Attachment) {
 	switch ev := msg.Data.(type) {
 	// case *slack.HelloEvent:
 	//	log.Debug("hello")
@@ -146,7 +146,7 @@ func (bot *SlackBot) processEvent(msg slack.RTMEvent) (channel string, attachmen
 	case *slack.MessageEvent:
 		log.WithFields(log.Fields{"name": ev.Name, "user": ev.User, "channel": ev.Channel, "type": ev.Type, "userName": ev.Username, "botID": ev.BotID}).Debug("slack message received: " + ev.Text)
 		channel = ev.Channel
-		attachments = bot.processMessage(ev.Text)
+		attachments = bot.processMessage(ctx, ev.Text)
 	case *slack.RTMError:
 		log.WithField("error", ev.Error()).Error("error reading on slack RTM connection")
 	case *slack.InvalidAuthEvent:
@@ -155,7 +155,7 @@ func (bot *SlackBot) processEvent(msg slack.RTMEvent) (channel string, attachmen
 	return
 }
 
-func (bot *SlackBot) processMessage(text string) (attachments []slack.Attachment) {
+func (bot *SlackBot) processMessage(ctx context.Context, text string) (attachments []slack.Attachment) {
 	// check if we're mentioned
 	log.WithField("text", text).Debug("processing slack chatter")
 
@@ -173,7 +173,7 @@ func (bot *SlackBot) processMessage(text string) (attachments []slack.Attachment
 	}
 
 	log.WithFields(log.Fields{"command": command}).Info("slackbot running command")
-	attachments = callback(args...)
+	attachments = callback(ctx, args...)
 	log.WithFields(log.Fields{"command": command, "outputs": len(attachments)}).Debug("command run")
 
 	return
@@ -194,7 +194,7 @@ func (bot *SlackBot) getCallback(command string) (callback CommandFunc, ok bool)
 	return
 }
 
-func (bot *SlackBot) doHelp(_ ...string) []slack.Attachment {
+func (bot *SlackBot) doHelp(_ context.Context, _ ...string) []slack.Attachment {
 	bot.cbLock.RLock()
 	defer bot.cbLock.RUnlock()
 
@@ -213,7 +213,7 @@ func (bot *SlackBot) doHelp(_ ...string) []slack.Attachment {
 	}
 }
 
-func (bot *SlackBot) doVersion(_ ...string) []slack.Attachment {
+func (bot *SlackBot) doVersion(_ context.Context, _ ...string) []slack.Attachment {
 	return []slack.Attachment{
 		{
 			Color: "good",

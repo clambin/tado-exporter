@@ -71,15 +71,15 @@ func main() {
 		ClientSecret: clientSecret,
 	}
 
-	p := poller.New(API)
-	go p.Run(ctx, cfg.Interval)
+	tadoPoller := poller.New(API)
+	go tadoPoller.Run(ctx, cfg.Interval)
 	log.WithField("interval", cfg.Interval).Info("poller started")
 
 	if cfg.Exporter.Enabled {
 		c := collector.New()
 		go c.Run(ctx)
 
-		p.Register <- c.Update
+		tadoPoller.Register <- c.Update
 		prometheus.MustRegister(c)
 		log.Info("exporter started")
 	}
@@ -105,14 +105,14 @@ func main() {
 			ClientSecret: clientSecret,
 		}
 		var c *controller.Controller
-		c, err = controller.New(API2, &cfg.Controller, tadoBot)
+		c, err = controller.New(API2, &cfg.Controller, tadoBot, tadoPoller)
 
 		if err != nil {
 			log.WithError(err).Fatal("unable to create controller")
 		}
 
 		go c.Run(ctx)
-		p.Register <- c.Update
+		tadoPoller.Register <- c.Update
 		log.Info("controller started")
 	}
 

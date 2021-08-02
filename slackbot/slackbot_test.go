@@ -12,7 +12,7 @@ import (
 
 func TestSlackBot_Commands(t *testing.T) {
 	callbacks := map[string]slackbot.CommandFunc{
-		"test": func(_ ...string) []slack.Attachment {
+		"test": func(_ context.Context, _ ...string) []slack.Attachment {
 			return []slack.Attachment{
 				{
 					Text: "hello world!",

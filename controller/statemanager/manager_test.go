@@ -5,51 +5,11 @@ import (
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller/cache"
 	"github.com/clambin/tado-exporter/controller/statemanager"
-	"github.com/clambin/tado-exporter/poller"
+	"github.com/clambin/tado-exporter/poller/mock"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
-
-var fakeUpdates = []poller.Update{
-	{
-		Zones:    map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
-		ZoneInfo: map[int]tado.ZoneInfo{2: {}},
-		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
-	},
-	{
-		Zones: map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
-		ZoneInfo: map[int]tado.ZoneInfo{2: {Overlay: tado.ZoneInfoOverlay{
-			Type:        "MANUAL",
-			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 5.0}},
-			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-		}}},
-		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
-	},
-	{
-		Zones: map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
-		ZoneInfo: map[int]tado.ZoneInfo{2: {Overlay: tado.ZoneInfoOverlay{
-			Type:        "MANUAL",
-			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 15.0}},
-			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-		}}},
-		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
-	},
-	{
-		Zones:    map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
-		ZoneInfo: map[int]tado.ZoneInfo{2: {}},
-		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
-	},
-	{
-		Zones: map[int]tado.Zone{2: {ID: 2, Name: "bar"}},
-		ZoneInfo: map[int]tado.ZoneInfo{2: {Overlay: tado.ZoneInfoOverlay{
-			Type:        "MANUAL",
-			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 5.0}},
-			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-		}}},
-		UserInfo: map[int]tado.MobileDevice{2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
-	},
-}
 
 func TestManager_GetNextState_LimitOverlay(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
@@ -79,8 +39,8 @@ func TestManager_GetNextState_LimitOverlay(t *testing.T) {
 			when      time.Duration
 			reason    string
 		)
-		testcache.Update(&fakeUpdates[index])
-		nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[index])
+		testcache.Update(&mock.FakeUpdates[index])
+		nextState, when, reason, err = mgr.GetNextState(2, &mock.FakeUpdates[index])
 		assert.NoError(t, err)
 		assert.Equal(t, expectedResult.state, nextState, index)
 		assert.Equal(t, expectedResult.reason, reason, index)
@@ -112,15 +72,15 @@ func TestZoneManager_NightTime(t *testing.T) {
 		when      time.Duration
 		reason    string
 	)
-	testCache.Update(&fakeUpdates[2])
-	nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[2])
+	testCache.Update(&mock.FakeUpdates[2])
+	nextState, when, reason, err = mgr.GetNextState(2, &mock.FakeUpdates[2])
 	assert.NoError(t, err)
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateAuto), nextState)
 	assert.NotZero(t, when)
 	assert.Equal(t, "manual temperature setting detected in bar", reason)
 
-	testCache.Update(&fakeUpdates[1])
-	nextState, _, _, _ = mgr.GetNextState(2, &fakeUpdates[1])
+	testCache.Update(&mock.FakeUpdates[1])
+	nextState, _, _, _ = mgr.GetNextState(2, &mock.FakeUpdates[1])
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateOff), nextState)
 }
 
@@ -156,8 +116,8 @@ func TestZoneManager_AutoAway(t *testing.T) {
 			when      time.Duration
 			reason    string
 		)
-		testCache.Update(&fakeUpdates[index])
-		nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[index])
+		testCache.Update(&mock.FakeUpdates[index])
+		nextState, when, reason, err = mgr.GetNextState(2, &mock.FakeUpdates[index])
 		assert.NoError(t, err)
 		assert.Equal(t, expectedResult.state, nextState, index)
 		assert.Equal(t, expectedResult.reason, reason, index)
@@ -213,8 +173,8 @@ func TestZoneManager_Combined(t *testing.T) {
 			when      time.Duration
 			reason    string
 		)
-		testCache.Update(&fakeUpdates[index])
-		nextState, when, reason, err = mgr.GetNextState(2, &fakeUpdates[index])
+		testCache.Update(&mock.FakeUpdates[index])
+		nextState, when, reason, err = mgr.GetNextState(2, &mock.FakeUpdates[index])
 		assert.NoError(t, err)
 		assert.Equal(t, expectedResult.state, nextState, index)
 		assert.Equal(t, expectedResult.reason, reason, index)

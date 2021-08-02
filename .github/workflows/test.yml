@@ -5,7 +5,7 @@ on:
     branches-ignore:
       - master
       - refactor
-      - report
+      - setroom
   pull_request_target:
 
 jobs:

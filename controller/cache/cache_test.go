@@ -6,6 +6,7 @@ import (
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func TestCache_GetName(t *testing.T) {
@@ -76,6 +77,7 @@ func TestCache_GetZoneInfo(t *testing.T) {
 					Temperature: tado.Temperature{Celsius: 18.5},
 				},
 				Setting: tado.ZoneInfoSetting{
+					Power:       "ON",
 					Temperature: tado.Temperature{Celsius: 22.0},
 				},
 			},
@@ -84,30 +86,32 @@ func TestCache_GetZoneInfo(t *testing.T) {
 					Temperature: tado.Temperature{Celsius: 22.5},
 				},
 				Setting: tado.ZoneInfoSetting{
+					Power:       "ON",
 					Temperature: tado.Temperature{Celsius: 22.0},
 				},
 				Overlay: tado.ZoneInfoOverlay{
 					Type:        "MANUAL",
-					Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 23.0}},
-					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+					Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 23.0}},
+					Termination: tado.ZoneInfoOverlayTermination{Type: "TIMER", DurationInSeconds: 500},
 				},
 			},
 		},
 	})
 
-	temperature, targetTemperature, zoneState, found := testCache.GetZoneInfo(1)
+	temperature, targetTemperature, zoneState, duration, found := testCache.GetZoneInfo(1)
 	assert.True(t, found)
 	assert.Equal(t, 18.5, temperature)
 	assert.Equal(t, 22.0, targetTemperature)
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateAuto), zoneState)
 
-	temperature, targetTemperature, zoneState, found = testCache.GetZoneInfo(2)
+	temperature, targetTemperature, zoneState, duration, found = testCache.GetZoneInfo(2)
 	assert.True(t, found)
 	assert.Equal(t, 22.5, temperature)
 	assert.Equal(t, 23.0, targetTemperature)
-	assert.Equal(t, tado.ZoneState(tado.ZoneStateManual), zoneState)
+	assert.Equal(t, tado.ZoneState(tado.ZoneStateTemporaryManual), zoneState)
+	assert.Equal(t, 500*time.Second, duration)
 
-	_, _, _, found = testCache.GetZoneInfo(3)
+	_, _, _, _, found = testCache.GetZoneInfo(3)
 	assert.False(t, found)
 
 }

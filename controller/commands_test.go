@@ -6,9 +6,11 @@ import (
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller"
 	"github.com/clambin/tado-exporter/poller"
+	pollMock "github.com/clambin/tado-exporter/poller/mock"
 	"github.com/clambin/tado-exporter/slackbot"
 	"github.com/clambin/tado-exporter/test/server/mockapi"
 	log "github.com/sirupsen/logrus"
+	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
@@ -40,13 +42,7 @@ func TestManager_ReportRules(t *testing.T) {
 
 	postChannel := make(slackbot.PostChannel)
 
-	c, err := controller.New(
-		server,
-		&configuration.ControllerConfiguration{
-			Enabled:    true,
-			ZoneConfig: zoneConfig,
-		},
-		nil)
+	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, nil, pollr)
 	assert.NoError(t, err)
 	c.PostChannel = postChannel
 
@@ -54,28 +50,28 @@ func TestManager_ReportRules(t *testing.T) {
 
 	log.SetLevel(log.DebugLevel)
 
-	msg := c.ReportRules()
+	msg := c.ReportRules(ctx)
 	if assert.Len(t, msg, 1) {
 		assert.Equal(t, "no rules have been triggered", msg[0].Text)
 	}
 
 	// user is away
-	c.Update <- &fakeUpdates[0]
+	c.Update <- &pollMock.FakeUpdates[0]
 	_ = <-postChannel
 
-	msg = c.ReportRules()
+	msg = c.ReportRules(ctx)
 	if assert.Len(t, msg, 1) {
 		assert.Contains(t, msg[0].Text, "bar: switching off heating in ")
 	}
 
 	// user is home & room set to manual
-	c.Update <- &fakeUpdates[2]
+	c.Update <- &pollMock.FakeUpdates[2]
 	msg = <-postChannel
 	if assert.Len(t, msg, 1) {
 		assert.Contains(t, msg[0].Text, "moving to auto mode in ")
 	}
 
-	msg = c.ReportRules()
+	msg = c.ReportRules(ctx)
 	if assert.Len(t, msg, 1) {
 		assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")
 	}
@@ -89,13 +85,7 @@ func TestManager_ReportRooms(t *testing.T) {
 	_ = server.SetZoneOverlay(context.Background(), 2, 22.0)
 
 	postChannel := make(slackbot.PostChannel)
-	c, err := controller.New(
-		server,
-		&configuration.ControllerConfiguration{
-			Enabled:    true,
-			ZoneConfig: nil,
-		},
-		nil)
+	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: nil}, nil, nil)
 
 	assert.NoError(t, err)
 	c.PostChannel = postChannel
@@ -121,7 +111,7 @@ func TestManager_ReportRooms(t *testing.T) {
 						SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 21.0}},
 						Overlay: tado.ZoneInfoOverlay{
 							Type:        "MANUAL",
-							Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 22.0}},
+							Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 22.0}},
 							Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 						},
 					},
@@ -138,7 +128,7 @@ func TestManager_ReportRooms(t *testing.T) {
 						SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 17.0}},
 						Overlay: tado.ZoneInfoOverlay{
 							Type:        "MANUAL",
-							Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 5.0}},
+							Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "OFF", Temperature: tado.Temperature{Celsius: 5.0}},
 							Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 						},
 					},
@@ -147,21 +137,21 @@ func TestManager_ReportRooms(t *testing.T) {
 						SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 21.0}},
 						Overlay: tado.ZoneInfoOverlay{
 							Type:        "MANUAL",
-							Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Temperature: tado.Temperature{Celsius: 22.0}},
-							Termination: tado.ZoneInfoOverlayTermination{Type: "AUTO"},
+							Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 22.0}},
+							Termination: tado.ZoneInfoOverlayTermination{Type: "TIMER", DurationInSeconds: 300},
 						},
 					},
 				},
 			},
-			output: []string{"foo: 17.0ºC (off)", "bar: 21.0ºC (target: 22.0, MANUAL)"},
+			output: []string{"foo: 17.0ºC (off)", "bar: 21.0ºC (target: 22.0, MANUAL for 5m0s)"},
 		},
 	}
 
-	for _, testCase := range testCases {
+	for index, testCase := range testCases {
 		c.Update <- testCase.update
 
 		assert.Eventually(t, func() bool {
-			msg := c.ReportRooms()
+			msg := c.ReportRooms(ctx)
 
 			if len(msg) != 1 {
 				return false
@@ -180,6 +170,89 @@ func TestManager_ReportRooms(t *testing.T) {
 			}
 
 			return true
-		}, 1*time.Second, 10*time.Millisecond)
+		}, 1*time.Second, 10*time.Millisecond, index)
 	}
+}
+
+func TestController_SetRoom(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := &mockapi.MockAPI{}
+	p := poller.New(server)
+	go p.Run(ctx, 10*time.Millisecond)
+	postChannel := make(slackbot.PostChannel)
+	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: nil}, nil, p)
+
+	assert.NoError(t, err)
+	c.PostChannel = postChannel
+	p.Register <- c.Update
+	go c.Run(ctx)
+
+	var attachments []slack.Attachment
+
+	// wait for poller to send an update to controller, so it knows about the rooms
+	assert.Eventually(t, func() bool {
+		attachments = c.ReportRooms(ctx)
+		return len(attachments) == 1 && attachments[0].Text != "no rooms found"
+
+	}, 500*time.Millisecond, 10*time.Millisecond)
+
+	type TestCaseStruct struct {
+		Args  []string
+		Color string
+		Text  string
+	}
+
+	var testCases = []TestCaseStruct{
+		{
+			Args:  []string{},
+			Color: "bad",
+			Text:  "invalid command: missing room name",
+		},
+		{
+			Args:  []string{"notaroom"},
+			Color: "bad",
+			Text:  "invalid command: invalid room name",
+		},
+		{
+			Args:  []string{"bar"},
+			Color: "bad",
+			Text:  "invalid command: missing target temperature",
+		},
+		{
+			Args:  []string{"bar", "25,0"},
+			Color: "bad",
+			Text:  "invalid command: invalid target temperature: \"25,0\"",
+		},
+		{
+			Args:  []string{"bar", "25.0", "invalid"},
+			Color: "bad",
+			Text:  "invalid command: invalid duration: \"invalid\"",
+		},
+		{
+			Args:  []string{"bar", "25.0"},
+			Color: "good",
+			Text:  "Setting target temperature for bar to 25.0ºC",
+		},
+		{
+			Args:  []string{"bar", "25.0", "5m"},
+			Color: "good",
+			Text:  "Setting target temperature for bar to 25.0ºC for 5m0s",
+		},
+	}
+
+	for _, testCase := range testCases {
+		attachments = c.SetRoom(ctx, testCase.Args...)
+
+		assert.Len(t, attachments, 1)
+		assert.Equal(t, testCase.Color, attachments[0].Color)
+		assert.Empty(t, attachments[0].Title)
+		assert.Equal(t, testCase.Text, attachments[0].Text)
+	}
+
+	assert.Eventually(t, func() bool {
+		zoneInfo, _ := c.API.GetZoneInfo(ctx, 2)
+		return zoneInfo.GetState() == tado.ZoneStateTemporaryManual
+	}, 500*time.Millisecond, 10*time.Millisecond)
 }

@@ -17,13 +17,14 @@ type Controller struct {
 	tado.API
 	Update       chan *poller.Update
 	PostChannel  slackbot.PostChannel
+	poller       *poller.Poller
 	scheduler    *scheduler.Scheduler
 	stateManager *statemanager.Manager
 	cache        *cache.Cache
 }
 
 // New creates a new Controller object
-func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot *slackbot.SlackBot) (controller *Controller, err error) {
+func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot *slackbot.SlackBot, pollr *poller.Poller) (controller *Controller, err error) {
 	var postChannel slackbot.PostChannel
 	if tadoBot != nil {
 		postChannel = tadoBot.PostChannel
@@ -37,6 +38,7 @@ func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot *slac
 		controller = &Controller{
 			API:          API,
 			Update:       make(chan *poller.Update),
+			poller:       pollr,
 			scheduler:    scheduler.New(),
 			stateManager: stateManager,
 			PostChannel:  postChannel,
@@ -46,6 +48,8 @@ func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot *slac
 		if tadoBot != nil {
 			tadoBot.RegisterCallback("rules", controller.ReportRules)
 			tadoBot.RegisterCallback("rooms", controller.ReportRooms)
+			tadoBot.RegisterCallback("set", controller.SetRoom)
+			tadoBot.RegisterCallback("refresh", controller.Refresh)
 		}
 	}
 

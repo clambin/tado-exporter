@@ -10,6 +10,7 @@ import (
 type Poller struct {
 	tado.API
 	Register chan chan *Update
+	Refresh  chan struct{}
 	registry []chan *Update
 }
 
@@ -24,6 +25,7 @@ func New(API tado.API) *Poller {
 	return &Poller{
 		API:      API,
 		Register: make(chan chan *Update),
+		Refresh:  make(chan struct{}),
 		registry: make([]chan *Update, 0),
 	}
 }
@@ -35,27 +37,31 @@ func (poller *Poller) Run(ctx context.Context, interval time.Duration) {
 
 	log.Info("poller started")
 
-loop:
-	for {
+	for running := true; running; {
+		poll := false
 		select {
 		case <-ctx.Done():
-			break loop
+			running = false
 		case ch := <-poller.Register:
 			poller.registry = append(poller.registry, ch)
 		case <-timer.C:
-			// is anybody listening?
-			if len(poller.registry) > 0 {
-				// poll for new data
-				err = poller.poll(ctx)
-				if err != nil {
-					log.WithError(err).Warning("failed to get Tado metrics")
-				}
-				// once we have registered listeners, poll at the desired interval
-				if first {
-					timer.Stop()
-					timer = time.NewTicker(interval)
-					first = false
-				}
+			poll = true
+		case <-poller.Refresh:
+			poll = true
+		}
+
+		// is anybody listening?
+		if running && poll && len(poller.registry) > 0 {
+			// poll for new data
+			err = poller.poll(ctx)
+			if err != nil {
+				log.WithError(err).Warning("failed to get Tado metrics")
+			}
+			// once we have registered listeners, poll at the desired interval
+			if first {
+				timer.Stop()
+				timer = time.NewTicker(interval)
+				first = false
 			}
 		}
 	}
