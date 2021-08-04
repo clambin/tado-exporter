@@ -10,7 +10,9 @@ import (
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/slackbot"
 	"github.com/clambin/tado-exporter/version"
+	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -118,8 +120,11 @@ func main() {
 
 	go func() {
 		listenAddress := fmt.Sprintf(":%d", cfg.Exporter.Port)
-		http.Handle("/metrics", promhttp.Handler())
-		err = http.ListenAndServe(listenAddress, nil)
+
+		r := mux.NewRouter()
+		r.Use(prometheusMiddleware)
+		r.Path("/metrics/").Handler(promhttp.Handler())
+		err = http.ListenAndServe(listenAddress, r)
 		if err != nil {
 			log.WithError(err).Fatal("unable to start metrics server")
 		}
@@ -133,4 +138,22 @@ func main() {
 	cancel()
 	time.Sleep(100 * time.Millisecond)
 	log.Info("tado-monitor exiting")
+}
+
+// Prometheus metrics
+var (
+	httpDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
+		Name: "http_duration_seconds",
+		Help: "Duration of HTTP requests",
+	}, []string{"path"})
+)
+
+func prometheusMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		route := mux.CurrentRoute(r)
+		path, _ := route.GetPathTemplate()
+		timer := prometheus.NewTimer(httpDuration.WithLabelValues(path))
+		next.ServeHTTP(w, r)
+		timer.ObserveDuration()
+	})
 }

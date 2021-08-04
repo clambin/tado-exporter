@@ -141,6 +141,7 @@ func (collector *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (collector *Collector) Collect(ch chan<- prometheus.Metric) {
+	log.Debug("prometheus collect called")
 	collector.lock.RLock()
 	defer collector.lock.RUnlock()
 
