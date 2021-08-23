@@ -175,6 +175,7 @@ func TestController_SetRoom(t *testing.T) {
 		Color    string
 		Text     string
 		Action   bool
+		Delete   bool
 		Duration time.Duration
 	}
 
@@ -182,17 +183,17 @@ func TestController_SetRoom(t *testing.T) {
 		{
 			Args:  []string{},
 			Color: "bad",
-			Text:  "invalid command: missing room name",
-		},
-		{
-			Args:  []string{"notaroom"},
-			Color: "bad",
-			Text:  "invalid command: invalid room name",
+			Text:  "invalid command: missing parameters\nUsage: set <room> [auto|<temperature> [<duration>]",
 		},
 		{
 			Args:  []string{"bar"},
 			Color: "bad",
-			Text:  "invalid command: missing target temperature",
+			Text:  "invalid command: missing parameters\nUsage: set <room> [auto|<temperature> [<duration>]",
+		},
+		{
+			Args:  []string{"notaroom", "auto"},
+			Color: "bad",
+			Text:  "invalid command: invalid room name",
 		},
 		{
 			Args:  []string{"bar", "25,0"},
@@ -217,11 +218,22 @@ func TestController_SetRoom(t *testing.T) {
 			Action:   true,
 			Duration: 5 * time.Minute,
 		},
+		{
+			Args:   []string{"bar", "auto"},
+			Color:  "good",
+			Text:   "Setting bar to automatic mode",
+			Action: true,
+			Delete: true,
+		},
 	}
 
 	for _, testCase := range testCases {
 		if testCase.Action {
-			server.On("SetZoneOverlayWithDuration", mock.Anything, 2, 25.0, testCase.Duration).Return(nil).Once()
+			if testCase.Delete {
+				server.On("DeleteZoneOverlay", mock.Anything, 2).Return(nil).Once()
+			} else {
+				server.On("SetZoneOverlayWithDuration", mock.Anything, 2, 25.0, testCase.Duration).Return(nil).Once()
+			}
 			pollr.On("Refresh").Return(nil).Once()
 		}
 

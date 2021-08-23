@@ -94,20 +94,24 @@ func (controller *Controller) ReportRooms(_ context.Context, _ ...string) (attac
 }
 
 func (controller *Controller) SetRoom(ctx context.Context, args ...string) (attachments []slack.Attachment) {
-	zoneID, zoneName, temperature, duration, err := controller.parseSetCommand(args...)
+	zoneID, zoneName, auto, temperature, duration, err := controller.parseSetCommand(args...)
 
 	if err != nil {
 		err = fmt.Errorf("invalid command: %v", err)
 	}
 
 	if err == nil {
-		err = controller.API.SetZoneOverlayWithDuration(ctx, zoneID, temperature, duration)
-
-		if err != nil {
-			err = fmt.Errorf("unable to set temperature for %s: %v", zoneName, err)
+		if auto == true {
+			err = controller.API.DeleteZoneOverlay(ctx, zoneID)
+			if err != nil {
+				err = fmt.Errorf("unable to move room to auto mode: %s", err.Error())
+			}
+		} else {
+			err = controller.API.SetZoneOverlayWithDuration(ctx, zoneID, temperature, duration)
+			if err != nil {
+				err = fmt.Errorf("unable to set temperature for %s: %s", zoneName, err.Error())
+			}
 		}
-
-		controller.refresh()
 	}
 
 	if err != nil {
@@ -117,9 +121,16 @@ func (controller *Controller) SetRoom(ctx context.Context, args ...string) (atta
 			Text:  err.Error(),
 		}}
 	} else {
-		text := fmt.Sprintf("Setting target temperature for %s to %.1fºC", zoneName, temperature)
-		if duration > 0 {
-			text += " for " + duration.String()
+		controller.refresh()
+
+		var text string
+		if auto {
+			text = "Setting " + zoneName + " to automatic mode"
+		} else {
+			text = fmt.Sprintf("Setting target temperature for %s to %.1fºC", zoneName, temperature)
+			if duration > 0 {
+				text += " for " + duration.String()
+			}
 		}
 		attachments = []slack.Attachment{{
 			Color: "good",
@@ -131,9 +142,9 @@ func (controller *Controller) SetRoom(ctx context.Context, args ...string) (atta
 	return
 }
 
-func (controller *Controller) parseSetCommand(args ...string) (zoneID int, zoneName string, temperature float64, duration time.Duration, err error) {
-	if len(args) < 1 {
-		err = fmt.Errorf("missing room name")
+func (controller *Controller) parseSetCommand(args ...string) (zoneID int, zoneName string, auto bool, temperature float64, duration time.Duration, err error) {
+	if len(args) < 2 {
+		err = fmt.Errorf("missing parameters\nUsage: set <room> [auto|<temperature> [<duration>]")
 		return
 	}
 
@@ -147,8 +158,8 @@ func (controller *Controller) parseSetCommand(args ...string) (zoneID int, zoneN
 		return
 	}
 
-	if len(args) < 2 {
-		err = fmt.Errorf("missing target temperature")
+	if args[1] == "auto" {
+		auto = true
 		return
 	}
 

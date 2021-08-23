@@ -203,6 +203,7 @@ TadoBot supports the following commands:
 * **set**: sets the room's target temperature, optionally for a limited duration:
   * **set Bathroom 23.5**: sets the bathroom's target temperature to 23.5ºC
   * **set Bathroom 23.5 1h**: same, but switches back to automatic mode after 1 hour
+  * **set Study auto**: sets the study to automatic temperature control
 * **version**: show version of tado-monitor
 * **help**: show all available commands
 
