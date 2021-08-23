@@ -232,15 +232,17 @@ func (collector *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 }
 
 func (collector *Collector) Run(ctx context.Context) {
-loop:
-	for {
+	log.Info("exporter started")
+
+	for running := true; running; {
 		select {
 		case <-ctx.Done():
-			break loop
+			running = false
 		case update := <-collector.Update:
 			collector.lock.Lock()
 			collector.lastUpdate = update
 			collector.lock.Unlock()
 		}
 	}
+	log.Info("exporter stopped")
 }

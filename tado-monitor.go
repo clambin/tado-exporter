@@ -17,11 +17,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"net/http"
+	"sync"
+
 	// _ "net/http/pprof"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"time"
 )
 
 func main() {
@@ -64,6 +65,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	wg := sync.WaitGroup{}
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	API := &tado.APIClient{
@@ -74,16 +77,22 @@ func main() {
 	}
 
 	tadoPoller := poller.New(API)
-	go tadoPoller.Run(ctx, cfg.Interval)
-	log.WithField("interval", cfg.Interval).Info("poller started")
+	wg.Add(1)
+	go func() {
+		tadoPoller.Run(ctx, cfg.Interval)
+		wg.Done()
+	}()
 
 	if cfg.Exporter.Enabled {
 		c := collector.New()
-		go c.Run(ctx)
+		wg.Add(1)
+		go func() {
+			c.Run(ctx)
+			wg.Done()
+		}()
 
 		tadoPoller.Register <- c.Update
 		prometheus.MustRegister(c)
-		log.Info("exporter started")
 	}
 
 	if cfg.Controller.Enabled {
@@ -91,11 +100,13 @@ func main() {
 		if cfg.Controller.TadoBot.Enabled {
 			tadoBot = slackbot.Create("tado "+version.BuildVersion, cfg.Controller.TadoBot.Token.Value, nil)
 
+			wg.Add(1)
 			go func(ctx context.Context) {
 				err2 := tadoBot.Run(ctx)
 				if err2 != nil {
 					log.WithError(err).Fatal("tadoBot failed to start")
 				}
+				wg.Done()
 			}(ctx)
 		}
 
@@ -113,9 +124,12 @@ func main() {
 			log.WithError(err).Fatal("unable to create controller")
 		}
 
-		go c.Run(ctx)
+		wg.Add(1)
+		go func() {
+			c.Run(ctx)
+			wg.Done()
+		}()
 		tadoPoller.Register <- c.Updates
-		log.Info("controller started")
 	}
 
 	go func() {
@@ -136,7 +150,7 @@ func main() {
 	<-interrupt
 
 	cancel()
-	time.Sleep(100 * time.Millisecond)
+	wg.Wait()
 	log.Info("tado-monitor exiting")
 }
 
