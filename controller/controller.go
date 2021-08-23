@@ -12,45 +12,36 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Controller object for tado-controller.
+// Controller object for tado-controller
 type Controller struct {
 	tado.API
-	Update       chan *poller.Update
-	PostChannel  slackbot.PostChannel
-	poller       *poller.Poller
-	scheduler    *scheduler.Scheduler
-	stateManager *statemanager.Manager
-	cache        *cache.Cache
+	Updates chan *poller.Update
+
+	scheduler    scheduler.Scheduler
+	stateManager statemanager.Manager
+	cache        cache.Cache
+	bot          slackbot.SlackBot
+	poller       poller.Poller
 }
 
 // New creates a new Controller object
-func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot *slackbot.SlackBot, pollr *poller.Poller) (controller *Controller, err error) {
-	var postChannel slackbot.PostChannel
-	if tadoBot != nil {
-		postChannel = tadoBot.PostChannel
+func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot slackbot.SlackBot, p poller.Poller) (controller *Controller, err error) {
+	controller = &Controller{
+		API:     API,
+		Updates: make(chan *poller.Update),
+		bot:     tadoBot,
+		poller:  p,
+	}
+	controller.stateManager = statemanager.Manager{
+		ZoneConfig: cfg.ZoneConfig,
+		Cache:      &controller.cache,
 	}
 
-	tadoCache := cache.New()
-	var stateManager *statemanager.Manager
-	stateManager, err = statemanager.New(cfg.ZoneConfig, tadoCache)
-
-	if err == nil {
-		controller = &Controller{
-			API:          API,
-			Update:       make(chan *poller.Update),
-			poller:       pollr,
-			scheduler:    scheduler.New(),
-			stateManager: stateManager,
-			PostChannel:  postChannel,
-			cache:        tadoCache,
-		}
-
-		if tadoBot != nil {
-			tadoBot.RegisterCallback("rules", controller.ReportRules)
-			tadoBot.RegisterCallback("rooms", controller.ReportRooms)
-			tadoBot.RegisterCallback("set", controller.SetRoom)
-			tadoBot.RegisterCallback("refresh", controller.Refresh)
-		}
+	if tadoBot != nil {
+		tadoBot.RegisterCallback("rules", controller.ReportRules)
+		tadoBot.RegisterCallback("rooms", controller.ReportRooms)
+		tadoBot.RegisterCallback("set", controller.SetRoom)
+		tadoBot.RegisterCallback("refresh", controller.DoRefresh)
 	}
 
 	return controller, err
@@ -62,21 +53,20 @@ func (controller *Controller) Run(ctx context.Context) {
 
 	go controller.scheduler.Run(ctx)
 
-loop:
-	for {
+	for running := true; running; {
 		select {
 		case <-ctx.Done():
-			break loop
-		case update := <-controller.Update:
-			controller.cache.Update(update)
-			controller.update(ctx, update)
+			running = false
+		case update := <-controller.Updates:
+			controller.Update(ctx, update)
 		}
 	}
 
 	log.Info("controller stopped")
 }
 
-func (controller *Controller) update(ctx context.Context, update *poller.Update) {
+func (controller *Controller) Update(ctx context.Context, update *poller.Update) {
+	controller.cache.Update(update)
 	for zoneID, zoneInfo := range update.ZoneInfo {
 
 		state := zoneInfo.GetState()
@@ -98,4 +88,10 @@ func (controller *Controller) update(ctx context.Context, update *poller.Update)
 		}
 	}
 	return
+}
+
+func (controller *Controller) refresh() {
+	if controller.poller != nil {
+		controller.poller.Refresh()
+	}
 }

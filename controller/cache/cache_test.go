@@ -10,7 +10,7 @@ import (
 )
 
 func TestCache_GetName(t *testing.T) {
-	testCache := cache.New()
+	testCache := &cache.Cache{}
 	testCache.Update(&poller.Update{
 		UserInfo: map[int]tado.MobileDevice{
 			1: {Name: "foo"},
@@ -65,7 +65,7 @@ func TestCache_GetName(t *testing.T) {
 }
 
 func TestCache_GetZoneInfo(t *testing.T) {
-	testCache := cache.New()
+	testCache := &cache.Cache{}
 	testCache.Update(&poller.Update{
 		Zones: map[int]tado.Zone{
 			1: {Name: "foo"},
@@ -117,7 +117,7 @@ func TestCache_GetZoneInfo(t *testing.T) {
 }
 
 func BenchmarkCache_Update(b *testing.B) {
-	testCache := cache.New()
+	testCache := &cache.Cache{}
 	update := &poller.Update{
 		UserInfo: map[int]tado.MobileDevice{
 			1: {Name: "foo"},

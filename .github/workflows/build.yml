@@ -5,7 +5,7 @@ on:
     branches:
     - master
     - refactor
-    - setroom
+    - mock
 jobs:
   test:
     runs-on: ubuntu-latest

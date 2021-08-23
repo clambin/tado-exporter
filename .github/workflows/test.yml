@@ -5,7 +5,7 @@ on:
     branches-ignore:
       - master
       - refactor
-      - setroom
+      - mock
   pull_request_target:
 
 jobs:

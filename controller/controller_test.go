@@ -6,21 +6,80 @@ import (
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller"
 	"github.com/clambin/tado-exporter/poller"
-	pollMock "github.com/clambin/tado-exporter/poller/mock"
-	"github.com/clambin/tado-exporter/slackbot"
-	"github.com/clambin/tado-exporter/slackbot/mock"
-	"github.com/clambin/tado-exporter/test/server/mockapi"
+	mocks2 "github.com/clambin/tado-exporter/slackbot/mocks"
+	"github.com/clambin/tado/mocks"
 	log "github.com/sirupsen/logrus"
-	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
+var (
+	updateZones = map[int]tado.Zone{
+		1: {ID: 1, Name: "foo"},
+		2: {ID: 2, Name: "bar"},
+	}
+	updateUserHome = map[int]tado.MobileDevice{
+		1: {ID: 1, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}},
+		2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}},
+	}
+	updateUserAway = map[int]tado.MobileDevice{
+		1: {ID: 1, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}},
+		2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}},
+	}
+	updateZoneAuto = map[int]tado.ZoneInfo{
+		1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}}},
+		2: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}}},
+	}
+	updateZoneManual = map[int]tado.ZoneInfo{
+		1: {
+			Setting:          tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}},
+			SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 22.0}, Humidity: tado.Percentage{Percentage: 75.0}}},
+		2: {
+			Setting:          tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}},
+			SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 22.0}, Humidity: tado.Percentage{Percentage: 75.0}},
+			Overlay: tado.ZoneInfoOverlay{
+				Type: "MANUAL",
+				Setting: tado.ZoneInfoOverlaySetting{
+					Type:        "HEATING",
+					Power:       "ON",
+					Temperature: tado.Temperature{Celsius: 22.0},
+				},
+				Termination: tado.ZoneInfoOverlayTermination{
+					Type: "MANUAL",
+				},
+			},
+		},
+	}
+	updateZoneOff = map[int]tado.ZoneInfo{
+		1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}}},
+		2: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}}, Overlay: tado.ZoneInfoOverlay{
+			Type: "MANUAL",
+			Setting: tado.ZoneInfoOverlaySetting{
+				Type:        "HEATING",
+				Power:       "ON",
+				Temperature: tado.Temperature{Celsius: 5.0},
+			},
+			Termination: tado.ZoneInfoOverlayTermination{
+				Type: "MANUAL",
+			},
+		}},
+	}
+
+	updateZoneInOverlay = &poller.Update{
+		Zones:    updateZones,
+		ZoneInfo: updateZoneManual,
+	}
+)
+
+/*
 func BenchmarkController_Run(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	server := &mockapi.MockAPI{}
 	server := &mockapi.MockAPI{}
 	pollr := poller.New(server)
 	go pollr.Run(ctx, 1*time.Millisecond)
@@ -34,11 +93,11 @@ func BenchmarkController_Run(b *testing.B) {
 		},
 	}}
 
-	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, nil, pollr)
+	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, nil)
 	c.PostChannel = postChannel
 	go c.Run(ctx)
 
-	pollr.Register <- c.Update
+	pollr.Register <- c.Updates
 
 	b.ResetTimer()
 
@@ -51,8 +110,9 @@ func BenchmarkController_Run(b *testing.B) {
 		_ = <-postChannel
 	}
 }
+*/
 
-func TestController_Run(t *testing.T) {
+func TestController_LimitOverlay(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
 		LimitOverlay: configuration.ZoneLimitOverlay{
@@ -64,178 +124,84 @@ func TestController_Run(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &mockapi.MockAPI{}
-	pollr := poller.New(server)
-	go pollr.Run(ctx, 20*time.Millisecond)
+	server := &mocks.API{}
+	server.On("DeleteZoneOverlay", mock.Anything, 2).Return(nil)
 
-	postChannel := make(slackbot.PostChannel)
+	bot := mocks2.SlackBot{}
+	bot.On("RegisterCallback", mock.Anything, mock.Anything).
+		Return(nil)
+	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode in 0s").
+		Return(nil).
+		Once()
+	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode").
+		Return(nil).
+		Once()
 
-	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, nil, pollr)
-	c.PostChannel = postChannel
-	go c.Run(ctx)
-
-	pollr.Register <- c.Update
-
-	log.SetLevel(log.DebugLevel)
-
-	_ = server.SetZoneOverlay(ctx, 2, 15.5)
-	assert.True(t, zoneInOverlay(ctx, server, 2))
-
-	_ = <-postChannel
-	_ = <-postChannel
-
-	assert.False(t, zoneInOverlay(ctx, server, 2))
-
-}
-
-func TestController_RevertedOverlay(t *testing.T) {
-	zoneConfig := []configuration.ZoneConfig{{
-		ZoneName: "bar",
-		LimitOverlay: configuration.ZoneLimitOverlay{
-			Enabled: true,
-			Delay:   1 * time.Hour,
-		},
-	}}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	server := &mockapi.MockAPI{}
-	pollr := poller.New(server)
-	go pollr.Run(ctx, 20*time.Millisecond)
-
-	postChannel := make(slackbot.PostChannel)
-
-	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, nil, pollr)
-	c.PostChannel = postChannel
-	go c.Run(ctx)
-	pollr.Register <- c.Update
+	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, &bot, nil)
 
 	log.SetLevel(log.DebugLevel)
 
-	err := server.SetZoneOverlay(ctx, 2, 15.5)
-	assert.Nil(t, err)
+	c.Update(ctx, &poller.Update{
+		Zones:    updateZones,
+		ZoneInfo: updateZoneManual,
+	})
+	go c.Run(ctx)
 
-	_ = <-postChannel
-
-	assert.True(t, zoneInOverlay(ctx, server, 2))
-
-	err = server.DeleteZoneOverlay(ctx, 2)
-	assert.Nil(t, err)
-
-	msg := <-postChannel
-
-	if assert.Len(t, msg, 1) {
-		assert.Equal(t, "resetting rule for bar", msg[0].Title)
-	}
-
-	msg = c.ReportRules(ctx)
-	if assert.Len(t, msg, 1) {
-		assert.Equal(t, "no rules have been triggered", msg[0].Text)
-	}
+	time.Sleep(50 * time.Millisecond)
+	server.AssertExpectations(t)
 }
 
-func TestController_TadoBot(t *testing.T) {
+func TestController_RevertLimitOverlay(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
 		LimitOverlay: configuration.ZoneLimitOverlay{
 			Enabled: true,
-			Delay:   1 * time.Hour,
+			Delay:   20 * time.Minute,
 		},
 	}}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &mockapi.MockAPI{}
-	pollr := poller.New(server)
-	go pollr.Run(ctx, 20*time.Millisecond)
+	server := &mocks.API{}
 
-	tadoBot := slackbot.Create("", "", nil)
+	bot := mocks2.SlackBot{}
+	bot.On("RegisterCallback", mock.Anything, mock.Anything).
+		Return(nil)
 
-	events := make(chan slack.RTMEvent)
-	output := make(chan slackbot.SlackMessage)
-	slackClient := &mock.Client{
-		UserID:    "1234",
-		Channels:  []string{"1", "2", "3"},
-		EventsIn:  events,
-		EventsOut: tadoBot.Events,
-		Output:    output,
-	}
-	tadoBot.SlackClient = slackClient
-	go func(ctx context.Context) {
-		err := tadoBot.Run(ctx)
-		assert.NoError(t, err)
-	}(ctx)
+	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, &bot, nil)
 
-	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, tadoBot, pollr)
-	go c.Run(ctx)
-	pollr.Register <- c.Update
-
-	// log.SetLevel(log.DebugLevel)
-
-	events <- slackClient.ConnectedEvent()
-
-	events <- slackClient.MessageEvent("2", "<@1234> help")
-	msg := <-output
-
-	if assert.Len(t, msg.Attachments, 1) {
-		assert.Equal(t, "supported commands", msg.Attachments[0].Title)
-		assert.Equal(t, "help, refresh, rooms, rules, set, version", msg.Attachments[0].Text)
-	}
-
-	events <- slackClient.MessageEvent("2", "<@1234> rules")
-	msg = <-output
-
-	if assert.Len(t, msg.Attachments, 1) {
-		assert.Equal(t, "", msg.Attachments[0].Title)
-		assert.Equal(t, "no rules have been triggered", msg.Attachments[0].Text)
-	}
-}
-
-func TestZoneManager_LimitOverlay(t *testing.T) {
-	zoneConfig := []configuration.ZoneConfig{{
-		ZoneName: "bar",
-		LimitOverlay: configuration.ZoneLimitOverlay{
-			Enabled: true,
-			Delay:   200 * time.Millisecond,
-		},
-	}}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	server := &mockapi.MockAPI{}
-	pollr := poller.New(server)
-	go pollr.Run(ctx, 20*time.Millisecond)
-
-	postChannel := make(slackbot.PostChannel)
-
-	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, nil, pollr)
-	assert.NoError(t, err)
-	c.PostChannel = postChannel
+	log.SetLevel(log.DebugLevel)
 
 	go c.Run(ctx)
 
-	// manual mode
-	_ = c.API.SetZoneOverlay(ctx, 2, 15.0)
-	c.Update <- &pollMock.FakeUpdates[2]
+	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode in 20m0s").
+		Return(nil).
+		Once()
+	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode").
+		Return(nil).
+		Once()
 
-	_ = <-postChannel
-	assert.True(t, zoneInOverlay(ctx, c.API, 2))
+	c.Updates <- &poller.Update{
+		Zones:    updateZones,
+		ZoneInfo: updateZoneManual,
+	}
 
-	// back to auto mode
-	c.Update <- &pollMock.FakeUpdates[3]
-	resp := <-postChannel
-	assert.Len(t, resp, 1)
-	assert.Equal(t, "resetting rule for bar", resp[0].Title)
+	time.Sleep(100 * time.Millisecond)
 
-	// back to manual mode
-	c.Update <- &pollMock.FakeUpdates[2]
+	bot.
+		On("Send", "", "good", "resetting rule for bar", "").
+		Return(nil).
+		Once()
 
-	_ = <-postChannel
-	_ = <-postChannel
-	assert.False(t, zoneInOverlay(ctx, c.API, 2))
+	c.Updates <- &poller.Update{
+		Zones:    updateZones,
+		ZoneInfo: updateZoneAuto,
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	server.AssertExpectations(t)
 }
 
 func TestZoneManager_NightTime(t *testing.T) {
@@ -253,32 +219,19 @@ func TestZoneManager_NightTime(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &mockapi.MockAPI{}
-	pollr := poller.New(server)
-	go pollr.Run(ctx, 20*time.Millisecond)
+	server := &mocks.API{}
+	bot := &mocks2.SlackBot{}
+	bot.On("RegisterCallback", mock.Anything, mock.Anything).
+		Return(nil)
+	bot.On("Send", "", "good", "manual temperature setting detected in bar", mock.AnythingOfType("string")).
+		Return(nil).
+		Once()
 
-	postChannel := make(slackbot.PostChannel)
+	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 
-	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, nil, pollr)
-	assert.NoError(t, err)
-	c.PostChannel = postChannel
+	c.Update(ctx, updateZoneInOverlay)
 
-	go c.Run(ctx)
-
-	c.Update <- &pollMock.FakeUpdates[2]
-
-	msgs := <-postChannel
-	if assert.Len(t, msgs, 1) {
-		assert.Equal(t, "manual temperature setting detected in bar", msgs[0].Title)
-		assert.Contains(t, msgs[0].Text, "moving to auto mode in ")
-	}
-
-	assert.False(t, zoneInOverlay(ctx, c.API, 2))
-
-	msgs = c.ReportRules(ctx)
-	if assert.Len(t, msgs, 1) {
-		assert.Contains(t, msgs[0].Text, "bar: moving to auto mode in ")
-	}
+	server.AssertExpectations(t)
 }
 
 func TestZoneManager_AutoAway(t *testing.T) {
@@ -294,50 +247,59 @@ func TestZoneManager_AutoAway(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &mockapi.MockAPI{}
-	pollr := poller.New(server)
-	go pollr.Run(ctx, 20*time.Millisecond)
+	server := &mocks.API{}
 
-	postChannel := make(slackbot.PostChannel)
+	bot := &mocks2.SlackBot{}
+	bot.On("RegisterCallback", mock.Anything, mock.Anything).Return(nil)
 
-	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, nil, pollr)
+	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 	assert.NoError(t, err)
-	c.PostChannel = postChannel
 
+	log.SetLevel(log.DebugLevel)
 	go c.Run(ctx)
 
-	// user is away
-	c.Update <- &pollMock.FakeUpdates[0]
+	server.On("SetZoneOverlay", mock.Anything, 2, 5.0).Return(nil).Once()
+	bot.On("Send", "", "good", "bar: bar is away", "switching off heating in 0s").
+		Return(nil).
+		Once()
+	bot.On("Send", "", "good", "bar: bar is away", "switching off heating").
+		Return(nil).
+		Once()
 
-	msgs := <-postChannel
-	if assert.Len(t, msgs, 1) {
-		assert.Equal(t, "bar: bar is away", msgs[0].Title)
-		assert.Contains(t, msgs[0].Text, "switching off heating in ")
+	// user is away & room in auto mode
+	c.Updates <- &poller.Update{
+		UserInfo: updateUserAway,
+		Zones:    updateZones,
+		ZoneInfo: updateZoneAuto,
 	}
 
-	// validate that the zone is switched off
-	assert.Eventually(t, func() bool { return zoneInOverlay(ctx, c.API, 2) }, 500*time.Millisecond, 10*time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
-	msgs = <-postChannel
-	if assert.Len(t, msgs, 1) {
-		assert.Equal(t, "bar: bar is away", msgs[0].Title)
-		assert.Equal(t, "switching off heating", msgs[0].Text)
+	// user is away & room heating is off
+	c.Updates <- &poller.Update{
+		UserInfo: updateUserAway,
+		Zones:    updateZones,
+		ZoneInfo: updateZoneOff,
 	}
 
-	// user is away & room in overlay
-	c.Update <- &pollMock.FakeUpdates[4]
+	server.
+		On("DeleteZoneOverlay", mock.Anything, 2).
+		Return(nil).
+		Once()
+	bot.On("Send", "", "good", "bar: bar is home", "moving to auto mode").
+		Return(nil).
+		Once()
 
 	// user comes home
-	c.Update <- &pollMock.FakeUpdates[1]
-
-	// validate that the zone is switched back to auto
-	assert.Eventually(t, func() bool { return !zoneInOverlay(ctx, c.API, 2) }, 500*time.Millisecond, 10*time.Millisecond)
-
-	msgs = <-postChannel
-	if assert.Len(t, msgs, 1) {
-		assert.Equal(t, "bar: bar is home", msgs[0].Title)
-		assert.Contains(t, msgs[0].Text, "moving to auto mode")
+	c.Updates <- &poller.Update{
+		UserInfo: updateUserHome,
+		Zones:    updateZones,
+		ZoneInfo: updateZoneOff,
 	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	mock.AssertExpectationsForObjects(t, server, bot)
 }
 
 func TestZoneManager_Combined(t *testing.T) {
@@ -365,69 +327,130 @@ func TestZoneManager_Combined(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &mockapi.MockAPI{}
-	pollr := poller.New(server)
-	go pollr.Run(ctx, 20*time.Millisecond)
+	server := &mocks.API{}
+	// server.On("DeleteZoneOverlay", mock.Anything, 2).Return(nil).Once()
 
-	postChannel := make(slackbot.PostChannel)
+	bot := &mocks2.SlackBot{}
+	bot.On("RegisterCallback", mock.Anything, mock.Anything).Return(nil)
 
-	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, nil, pollr)
+	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 	assert.NoError(t, err)
-	c.PostChannel = postChannel
 
 	go c.Run(ctx)
 
+	server.On("SetZoneOverlay", mock.Anything, 2, 5.0).Return(nil).Once()
+	bot.On("Send", "", "good", "bar: bar is away", "switching off heating in 0s").
+		Return(nil).
+		Once()
+	bot.On("Send", "", "good", "bar: bar is away", "switching off heating").
+		Return(nil).
+		Once()
+
 	// user is away
-	c.Update <- &pollMock.FakeUpdates[0]
-
-	// notification that zone will be switched off
-	msg := <-postChannel
-	if assert.Len(t, msg, 1) {
-		assert.Equal(t, "bar: bar is away", msg[0].Title)
-		assert.Contains(t, msg[0].Text, "switching off heating in ")
+	c.Updates <- &poller.Update{
+		UserInfo: updateUserAway,
+		Zones:    updateZones,
+		ZoneInfo: updateZoneAuto,
 	}
 
-	// notification that zone gets switched off
-	msg = <-postChannel
-	if assert.Len(t, msg, 1) {
-		assert.Equal(t, "bar: bar is away", msg[0].Title)
-		assert.Contains(t, msg[0].Text, "switching off heating")
-	}
+	time.Sleep(100 * time.Millisecond)
 
-	// validate that the zone is switched off
-	assert.True(t, zoneInOverlay(ctx, c.API, 2))
+	server.
+		On("DeleteZoneOverlay", mock.Anything, 2).
+		Return(nil).
+		Once()
+	bot.On("Send", "", "good", "bar: bar is home", "moving to auto mode").
+		Return(nil).
+		Once()
 
 	// user comes home
-	c.Update <- &pollMock.FakeUpdates[1]
-
-	// notification that zone will be switched on again
-	msg = <-postChannel
-	if assert.Len(t, msg, 1) {
-		assert.Equal(t, "bar: bar is home", msg[0].Title)
-		assert.Equal(t, "moving to auto mode", msg[0].Text)
+	c.Updates <- &poller.Update{
+		UserInfo: updateUserHome,
+		Zones:    updateZones,
+		ZoneInfo: updateZoneOff,
 	}
 
-	assert.False(t, zoneInOverlay(ctx, c.API, 2))
+	time.Sleep(100 * time.Millisecond)
 
-	log.SetLevel(log.DebugLevel)
+	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode in 20m0s").
+		Return(nil).
+		Once()
+
 	// user is home & room set to manual
-	c.Update <- &pollMock.FakeUpdates[2]
-
-	// notification that zone will be switched back to auto
-	msg = <-postChannel
-	if assert.Len(t, msg, 1) {
-		assert.Equal(t, "manual temperature setting detected in bar", msg[0].Title)
-		assert.Contains(t, msg[0].Text, "moving to auto mode in ")
+	c.Updates <- &poller.Update{
+		UserInfo: updateUserHome,
+		Zones:    updateZones,
+		ZoneInfo: updateZoneManual,
 	}
+
+	time.Sleep(100 * time.Millisecond)
 
 	// report should say that a rule is triggered
-	msg = c.ReportRules(ctx)
-	if assert.Len(t, msg, 1) {
-		assert.Contains(t, msg[0].Text, "bar: moving to auto mode in ")
-	}
+	msg := c.ReportRules(ctx)
+	require.Len(t, msg, 1)
+	assert.Equal(t, "bar: moving to auto mode in 20m0s", msg[0].Text)
+
+	mock.AssertExpectationsForObjects(t, server, bot)
 }
 
-func zoneInOverlay(ctx context.Context, server tado.API, zoneID int) bool {
-	info, err := server.GetZoneInfo(ctx, zoneID)
-	return err == nil && info.Overlay.Type != ""
+func TestZoneManager_ReplacedTask(t *testing.T) {
+	zoneConfig := []configuration.ZoneConfig{{
+		ZoneID: 2,
+		AutoAway: configuration.ZoneAutoAway{
+			Enabled: true,
+			Delay:   20 * time.Minute,
+			Users:   []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+		},
+		NightTime: configuration.ZoneNightTime{
+			Enabled: true,
+			Time: configuration.ZoneNightTimeTimestamp{
+				Hour:    01,
+				Minutes: 30,
+				Seconds: 30,
+			},
+		},
+	}}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := &mocks.API{}
+	bot := &mocks2.SlackBot{}
+	bot.On("RegisterCallback", mock.Anything, mock.Anything).Return(nil)
+
+	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
+	assert.NoError(t, err)
+
+	go c.Run(ctx)
+
+	// user is home. room in manual, with night time configured
+	bot.On("Send", "", "good", "manual temperature setting detected in bar", mock.AnythingOfType("string")).
+		Return(nil).
+		Once()
+	c.Updates <- &poller.Update{
+		UserInfo: updateUserHome,
+		Zones:    updateZones,
+		ZoneInfo: updateZoneManual,
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// user leaves
+	bot.On("Send", "", "good", "bar: bar is away", "switching off heating in 20m0s").
+		Return(nil).
+		Once()
+	c.Updates <- &poller.Update{
+		UserInfo: updateUserAway,
+		Zones:    updateZones,
+		ZoneInfo: updateZoneManual,
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// report should say that a rule is triggered
+	msg := c.ReportRules(ctx)
+	require.Len(t, msg, 1)
+	assert.Equal(t, "bar: switching off heating in 20m0s", msg[0].Text)
+
+	mock.AssertExpectationsForObjects(t, server, bot)
 }

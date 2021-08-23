@@ -7,10 +7,15 @@ import (
 	"time"
 )
 
-type Poller struct {
+//go:generate mockery --name Poller
+type Poller interface {
+	Refresh()
+}
+
+type Server struct {
 	tado.API
 	Register chan chan *Update
-	Refresh  chan struct{}
+	refresh  chan struct{}
 	registry []chan *Update
 }
 
@@ -21,16 +26,16 @@ type Update struct {
 	ZoneInfo    map[int]tado.ZoneInfo
 }
 
-func New(API tado.API) *Poller {
-	return &Poller{
+func New(API tado.API) *Server {
+	return &Server{
 		API:      API,
 		Register: make(chan chan *Update),
-		Refresh:  make(chan struct{}),
+		refresh:  make(chan struct{}),
 		registry: make([]chan *Update, 0),
 	}
 }
 
-func (poller *Poller) Run(ctx context.Context, interval time.Duration) {
+func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 	var err error
 	timer := time.NewTicker(10 * time.Millisecond)
 	first := true
@@ -46,14 +51,14 @@ func (poller *Poller) Run(ctx context.Context, interval time.Duration) {
 			poller.registry = append(poller.registry, ch)
 		case <-timer.C:
 			poll = true
-		case <-poller.Refresh:
+		case <-poller.refresh:
 			poll = true
 		}
 
 		// is anybody listening?
 		if running && poll && len(poller.registry) > 0 {
 			// poll for new data
-			err = poller.poll(ctx)
+			err = poller.Poll(ctx)
 			if err != nil {
 				log.WithError(err).Warning("failed to get Tado metrics")
 			}
@@ -70,7 +75,11 @@ func (poller *Poller) Run(ctx context.Context, interval time.Duration) {
 	log.Info("poller stopped")
 }
 
-func (poller *Poller) poll(ctx context.Context) (err error) {
+func (poller *Server) Refresh() {
+	poller.refresh <- struct{}{}
+}
+
+func (poller *Server) Poll(ctx context.Context) (err error) {
 	var update Update
 	update, err = poller.update(ctx)
 
@@ -82,7 +91,7 @@ func (poller *Poller) poll(ctx context.Context) (err error) {
 	return
 }
 
-func (poller *Poller) update(ctx context.Context) (update Update, err error) {
+func (poller *Server) update(ctx context.Context) (update Update, err error) {
 	update.UserInfo, err = poller.getMobileDevices(ctx)
 
 	if err == nil {
@@ -100,7 +109,7 @@ func (poller *Poller) update(ctx context.Context) (update Update, err error) {
 	return
 }
 
-func (poller *Poller) getMobileDevices(ctx context.Context) (deviceMap map[int]tado.MobileDevice, err error) {
+func (poller *Server) getMobileDevices(ctx context.Context) (deviceMap map[int]tado.MobileDevice, err error) {
 	deviceMap = make(map[int]tado.MobileDevice)
 
 	var devices []tado.MobileDevice
@@ -117,7 +126,7 @@ func (poller *Poller) getMobileDevices(ctx context.Context) (deviceMap map[int]t
 	return
 }
 
-func (poller *Poller) getZones(ctx context.Context) (zoneMap map[int]tado.Zone, err error) {
+func (poller *Server) getZones(ctx context.Context) (zoneMap map[int]tado.Zone, err error) {
 	zoneMap = make(map[int]tado.Zone)
 
 	var zones []tado.Zone
@@ -131,7 +140,7 @@ func (poller *Poller) getZones(ctx context.Context) (zoneMap map[int]tado.Zone, 
 	return
 }
 
-func (poller *Poller) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) (zoneInfoMap map[int]tado.ZoneInfo, err error) {
+func (poller *Server) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) (zoneInfoMap map[int]tado.ZoneInfo, err error) {
 	zoneInfoMap = make(map[int]tado.ZoneInfo)
 
 	for zoneID := range zones {

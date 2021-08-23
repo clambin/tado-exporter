@@ -107,9 +107,7 @@ func (controller *Controller) SetRoom(ctx context.Context, args ...string) (atta
 			err = fmt.Errorf("unable to set temperature for %s: %v", zoneName, err)
 		}
 
-		if controller.poller != nil {
-			controller.poller.Refresh <- struct{}{}
-		}
+		controller.refresh()
 	}
 
 	if err != nil {
@@ -172,9 +170,7 @@ func (controller *Controller) parseSetCommand(args ...string) (zoneID int, zoneN
 	return
 }
 
-func (controller *Controller) Refresh(_ context.Context, _ ...string) (attachments []slack.Attachment) {
-	if controller.poller != nil {
-		controller.poller.Refresh <- struct{}{}
-	}
+func (controller *Controller) DoRefresh(_ context.Context, _ ...string) (attachments []slack.Attachment) {
+	controller.refresh()
 	return
 }

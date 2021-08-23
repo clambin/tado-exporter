@@ -44,7 +44,7 @@ func TestParseCommand(t *testing.T) {
 		args    []string
 	)
 
-	bot := SlackBot{
+	bot := Agent{
 		userID: "123",
 	}
 

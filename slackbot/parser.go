@@ -20,7 +20,7 @@ func parseText(input string) (output []string) {
 	return
 }
 
-func (bot *SlackBot) parseCommand(input string) (command string, args []string) {
+func (bot *Agent) parseCommand(input string) (command string, args []string) {
 	words := parseText(input)
 	if len(words) > 1 && words[0] == "<@"+bot.userID+">" {
 		command = words[1]

@@ -87,7 +87,7 @@ func main() {
 	}
 
 	if cfg.Controller.Enabled {
-		var tadoBot *slackbot.SlackBot
+		var tadoBot *slackbot.Agent
 		if cfg.Controller.TadoBot.Enabled {
 			tadoBot = slackbot.Create("tado "+version.BuildVersion, cfg.Controller.TadoBot.Token.Value, nil)
 
@@ -114,7 +114,7 @@ func main() {
 		}
 
 		go c.Run(ctx)
-		tadoPoller.Register <- c.Update
+		tadoPoller.Register <- c.Updates
 		log.Info("controller started")
 	}
 

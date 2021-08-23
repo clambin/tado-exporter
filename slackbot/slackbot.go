@@ -16,7 +16,7 @@
 //
 // Additionally, output can be sent to the slack channel(s) using PostChannel, e.g.:
 //
-//     bot.PostChannel <- []slack.Attachment{{Text: "Hello world"}}
+//     bot.GetPostChannel() <- []slack.Attachment{{Text: "Hello world"}}
 package slackbot
 
 import (
@@ -28,9 +28,18 @@ import (
 	"sync"
 )
 
-// SlackBot structure
-type SlackBot struct {
-	PostChannel PostChannel
+// SlackBot interface
+//go:generate mockery --name SlackBot
+type SlackBot interface {
+	RegisterCallback(command string, commandFunc CommandFunc)
+	Run(ctx context.Context) (err error)
+	Send(channel, color, title, text string) (err error)
+	GetPostChannel() (ch PostChannel)
+}
+
+// Agent structure
+type Agent struct {
+	postChannel PostChannel
 	SlackClient ClientAPI
 	Events      chan slack.RTMEvent
 
@@ -57,11 +66,11 @@ type CommandFunc func(ctx context.Context, args ...string) []slack.Attachment
 type PostChannel chan []slack.Attachment
 
 // Create a slackbot
-func Create(name string, slackToken string, callbacks map[string]CommandFunc) (bot *SlackBot) {
+func Create(name string, slackToken string, callbacks map[string]CommandFunc) (bot *Agent) {
 	eventsChannel := make(chan slack.RTMEvent, 10)
 
-	bot = &SlackBot{
-		PostChannel: make(chan []slack.Attachment, 10),
+	bot = &Agent{
+		postChannel: make(chan []slack.Attachment, 10),
 		name:        name,
 		Events:      eventsChannel,
 		SlackClient: newClient(slackToken, eventsChannel),
@@ -79,7 +88,7 @@ func Create(name string, slackToken string, callbacks map[string]CommandFunc) (b
 }
 
 // Run the slackbot
-func (bot *SlackBot) Run(ctx context.Context) (err error) {
+func (bot *Agent) Run(ctx context.Context) (err error) {
 	log.Info("slackBot started")
 
 	if bot.channels, err = bot.SlackClient.GetChannels(); err != nil {
@@ -96,10 +105,10 @@ loop:
 		case event := <-bot.Events:
 			channel, attachments := bot.processEvent(ctx, event)
 			if len(attachments) > 0 {
-				err = bot.Send(SlackMessage{Channel: channel, Attachments: attachments})
+				err = bot.sendAttachments(channel, attachments)
 			}
-		case attachments := <-bot.PostChannel:
-			err = bot.Send(SlackMessage{Attachments: attachments})
+		case attachments := <-bot.postChannel:
+			err = bot.sendAttachments("", attachments)
 		}
 
 		if err != nil {
@@ -107,21 +116,28 @@ loop:
 		}
 	}
 
-	close(bot.Events)
-	close(bot.PostChannel)
+	// close(bot.Events)
+	close(bot.postChannel)
 
 	log.Info("slackBot stopped")
 	return
 }
 
-func (bot *SlackBot) Send(message SlackMessage) (err error) {
+func (bot *Agent) Send(channel, color, title, text string) (err error) {
 	var channels = bot.channels
-	if message.Channel != "" {
-		channels = []string{message.Channel}
+	if channel != "" {
+		channels = []string{channel}
 	}
 
-	for _, channel := range channels {
-		message.Channel = channel
+	for _, c := range channels {
+		message := SlackMessage{
+			Channel: c,
+			Attachments: []slack.Attachment{{
+				Color: color,
+				Title: title,
+				Text:  text,
+			}},
+		}
 		log.WithFields(log.Fields{"channel": message.Channel}).Debug("sending message")
 		err = bot.SlackClient.Send(message)
 		if err != nil {
@@ -131,7 +147,23 @@ func (bot *SlackBot) Send(message SlackMessage) (err error) {
 	return
 }
 
-func (bot *SlackBot) processEvent(ctx context.Context, msg slack.RTMEvent) (channel string, attachments []slack.Attachment) {
+func (bot *Agent) sendAttachments(channel string, attachments []slack.Attachment) (err error) {
+	var channels = bot.channels
+	if channel != "" {
+		channels = []string{channel}
+	}
+
+	for _, c := range channels {
+		log.WithFields(log.Fields{"channel": c}).Debug("sending message")
+		err = bot.SlackClient.Send(SlackMessage{Channel: c, Attachments: attachments})
+		if err != nil {
+			break
+		}
+	}
+	return
+}
+
+func (bot *Agent) processEvent(ctx context.Context, msg slack.RTMEvent) (channel string, attachments []slack.Attachment) {
 	switch ev := msg.Data.(type) {
 	// case *slack.HelloEvent:
 	//	log.Debug("hello")
@@ -155,7 +187,7 @@ func (bot *SlackBot) processEvent(ctx context.Context, msg slack.RTMEvent) (chan
 	return
 }
 
-func (bot *SlackBot) processMessage(ctx context.Context, text string) (attachments []slack.Attachment) {
+func (bot *Agent) processMessage(ctx context.Context, text string) (attachments []slack.Attachment) {
 	// check if we're mentioned
 	log.WithField("text", text).Debug("processing slack chatter")
 
@@ -179,14 +211,18 @@ func (bot *SlackBot) processMessage(ctx context.Context, text string) (attachmen
 	return
 }
 
-func (bot *SlackBot) RegisterCallback(command string, callback CommandFunc) {
+func (bot *Agent) GetPostChannel() (ch PostChannel) {
+	return bot.postChannel
+}
+
+func (bot *Agent) RegisterCallback(command string, callback CommandFunc) {
 	bot.cbLock.Lock()
 	defer bot.cbLock.Unlock()
 
 	bot.callbacks[command] = callback
 }
 
-func (bot *SlackBot) getCallback(command string) (callback CommandFunc, ok bool) {
+func (bot *Agent) getCallback(command string) (callback CommandFunc, ok bool) {
 	bot.cbLock.RLock()
 	defer bot.cbLock.RUnlock()
 
@@ -194,7 +230,7 @@ func (bot *SlackBot) getCallback(command string) (callback CommandFunc, ok bool)
 	return
 }
 
-func (bot *SlackBot) doHelp(_ context.Context, _ ...string) []slack.Attachment {
+func (bot *Agent) doHelp(_ context.Context, _ ...string) []slack.Attachment {
 	bot.cbLock.RLock()
 	defer bot.cbLock.RUnlock()
 
@@ -213,7 +249,7 @@ func (bot *SlackBot) doHelp(_ context.Context, _ ...string) []slack.Attachment {
 	}
 }
 
-func (bot *SlackBot) doVersion(_ context.Context, _ ...string) []slack.Attachment {
+func (bot *Agent) doVersion(_ context.Context, _ ...string) []slack.Attachment {
 	return []slack.Attachment{
 		{
 			Color: "good",

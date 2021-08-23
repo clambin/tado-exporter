@@ -38,18 +38,28 @@ func (controller *Controller) scheduleZoneStateChange(ctx context.Context, zoneI
 		},
 		When: when,
 	})
+	log.WithFields(log.Fields{"zone": zoneID, "state": state}).Debug("scheduled task")
 
 	// log.WithFields(log.Fields{"zone": zoneID, "state": state, "when": when.String()}).Debug("scheduled task")
 
 	// post Slack notification, if it will be executed later
-	if when > 0 && controller.PostChannel != nil {
-		controller.PostChannel <- controller.getNotification(state, reason, activation)
+	if when > 0 && controller.bot != nil {
+		for _, attachment := range controller.getNotification(state, reason, activation) {
+			if err := controller.bot.Send("", attachment.Color, attachment.Title, attachment.Text); err != nil {
+				log.WithError(err).Warning("failed to send slack message")
+			}
+
+		}
 	}
 }
 
 func (controller *Controller) cancelZoneStateChange(zoneID int, reason string) {
-	if controller.scheduler.Cancel(scheduler.TaskID(zoneID)) == true && controller.PostChannel != nil {
-		controller.PostChannel <- controller.getCancelNotification(zoneID, reason)
+	if controller.scheduler.Cancel(scheduler.TaskID(zoneID)) == true && controller.bot != nil {
+		for _, attachment := range controller.getCancelNotification(zoneID, reason) {
+			if err := controller.bot.Send("", attachment.Color, attachment.Title, attachment.Text); err != nil {
+				log.WithError(err).Warning("failed to send slack message")
+			}
+		}
 	}
 }
 
@@ -76,8 +86,17 @@ func (controller *Controller) runTask(ctx context.Context, args []interface{}) {
 		return
 	}
 
-	if controller.PostChannel != nil {
-		controller.PostChannel <- controller.getNotification(state, reason, time.Time{})
+	if controller.bot != nil {
+		for _, attachment := range controller.getNotification(state, reason, time.Time{}) {
+			err = controller.bot.Send("", attachment.Color, attachment.Title, attachment.Text)
+			if err != nil {
+				break
+			}
+		}
+
+		if err != nil {
+			log.WithError(err).Warning("unable to send slack message")
+		}
 	}
 
 	log.WithFields(log.Fields{"zone": zoneID, "state": state}).Debug("executed task")

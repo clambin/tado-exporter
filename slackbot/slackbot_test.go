@@ -3,7 +3,7 @@ package slackbot_test
 import (
 	"context"
 	"github.com/clambin/tado-exporter/slackbot"
-	"github.com/clambin/tado-exporter/slackbot/mock"
+	"github.com/clambin/tado-exporter/slackbot/fake"
 	"github.com/clambin/tado-exporter/version"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +24,7 @@ func TestSlackBot_Commands(t *testing.T) {
 
 	events := make(chan slack.RTMEvent)
 	output := make(chan slackbot.SlackMessage)
-	server := &mock.Client{
+	server := &fake.Client{
 		UserID:    "1234",
 		Channels:  []string{"1", "2", "3"},
 		EventsIn:  events,
@@ -81,8 +81,8 @@ func TestSlackBot_Post(t *testing.T) {
 	client := slackbot.Create("test-client"+version.BuildVersion, "12345678", nil)
 
 	events := make(chan slack.RTMEvent)
-	output := make(chan slackbot.SlackMessage)
-	server := &mock.Client{
+	output := make(chan slackbot.SlackMessage, 5)
+	server := &fake.Client{
 		UserID:    "1234",
 		Channels:  []string{"1", "2", "3"},
 		EventsIn:  events,
@@ -103,9 +103,7 @@ func TestSlackBot_Post(t *testing.T) {
 	events <- server.InvalidAuthEvent()
 	events <- server.RTMErrorEvent()
 	events <- server.ConnectedEvent()
-	client.PostChannel <- []slack.Attachment{{
-		Text: "Hello world!",
-	}}
+	_ = client.Send("", "", "", "Hello world!")
 
 	for i := 0; i < len(server.Channels); i++ {
 		msg := <-output

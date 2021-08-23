@@ -11,7 +11,7 @@ import (
 )
 
 func TestScheduler(t *testing.T) {
-	s := scheduler.New()
+	s := scheduler.Scheduler{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go s.Run(ctx)
@@ -60,7 +60,7 @@ func TestScheduler(t *testing.T) {
 }
 
 func BenchmarkScheduler(b *testing.B) {
-	s := scheduler.New()
+	s := scheduler.Scheduler{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -8,16 +8,9 @@ import (
 )
 
 type Manager struct {
+	ZoneConfig []configuration.ZoneConfig
+	Cache      *cache.Cache
 	zoneRules  map[int]models.ZoneRules
-	zoneConfig []configuration.ZoneConfig
-	cache      *cache.Cache
-}
-
-func New(config []configuration.ZoneConfig, cache *cache.Cache) (mgr *Manager, err error) {
-	return &Manager{
-		zoneConfig: config,
-		cache:      cache,
-	}, nil
 }
 
 func (mgr *Manager) initialize() {
@@ -29,11 +22,11 @@ func (mgr *Manager) initialize() {
 func (mgr *Manager) load() {
 	mgr.zoneRules = make(map[int]models.ZoneRules)
 
-	for _, entry := range mgr.zoneConfig {
+	for _, entry := range mgr.ZoneConfig {
 		var zoneID int
 		var ok bool
 
-		zoneID, _, ok = mgr.cache.LookupZone(entry.ZoneID, entry.ZoneName)
+		zoneID, _, ok = mgr.Cache.LookupZone(entry.ZoneID, entry.ZoneName)
 
 		if ok == false {
 			log.WithFields(log.Fields{"id": entry.ZoneID, "name": entry.ZoneName}).Warning("ignoring invalid zone in configuration")
@@ -48,7 +41,7 @@ func (mgr *Manager) load() {
 
 			for _, user := range entry.AutoAway.Users {
 				var userID int
-				userID, _, ok = mgr.cache.LookupUser(user.MobileDeviceID, user.MobileDeviceName)
+				userID, _, ok = mgr.Cache.LookupUser(user.MobileDeviceID, user.MobileDeviceName)
 
 				if ok == false {
 					log.WithFields(log.Fields{"id": user.MobileDeviceID, "name": user.MobileDeviceName}).Warning("ignoring invalid user in configuration")

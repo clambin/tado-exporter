@@ -14,10 +14,6 @@ type Cache struct {
 	lock      sync.RWMutex
 }
 
-func New() *Cache {
-	return &Cache{}
-}
-
 func (cache *Cache) Update(update *poller.Update) {
 	cache.lock.Lock()
 	defer cache.lock.Unlock()

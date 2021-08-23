@@ -13,20 +13,14 @@ type Scheduler struct {
 	lock  sync.RWMutex
 }
 
-func New() *Scheduler {
-	return &Scheduler{
-		tasks: make(map[TaskID]*Task),
-		fire:  make(chan TaskID),
-	}
-}
-
 func (scheduler *Scheduler) Run(ctx context.Context) {
 	log.Info("scheduler started")
-loop:
-	for {
+	scheduler.init()
+
+	for running := true; running; {
 		select {
 		case <-ctx.Done():
-			break loop
+			running = false
 		case id := <-scheduler.fire:
 			scheduler.run(ctx, id)
 		}
@@ -35,9 +29,22 @@ loop:
 	log.Info("scheduler stopped")
 }
 
+func (scheduler *Scheduler) init() {
+	scheduler.lock.Lock()
+	defer scheduler.lock.Unlock()
+
+	if scheduler.tasks == nil {
+		scheduler.tasks = make(map[TaskID]*Task)
+	}
+	if scheduler.fire == nil {
+		scheduler.fire = make(chan TaskID)
+	}
+}
+
 func (scheduler *Scheduler) Schedule(ctx context.Context, task *Task) {
-	scheduler.lock.RLock()
-	defer scheduler.lock.RUnlock()
+	scheduler.init()
+	scheduler.lock.Lock()
+	defer scheduler.lock.Unlock()
 
 	if oldTask, found := scheduler.tasks[task.ID]; found {
 		oldTask.cancel()
@@ -54,6 +61,7 @@ func (scheduler *Scheduler) Schedule(ctx context.Context, task *Task) {
 }
 
 func (scheduler *Scheduler) Cancel(taskID TaskID) (found bool) {
+	scheduler.init()
 	scheduler.lock.Lock()
 	defer scheduler.lock.Unlock()
 
@@ -66,6 +74,7 @@ func (scheduler *Scheduler) Cancel(taskID TaskID) (found bool) {
 }
 
 func (scheduler *Scheduler) CancelAll() {
+	scheduler.init()
 	scheduler.lock.Lock()
 	defer scheduler.lock.Unlock()
 
@@ -76,6 +85,7 @@ func (scheduler *Scheduler) CancelAll() {
 }
 
 func (scheduler *Scheduler) GetScheduled(id TaskID) (task *Task, found bool) {
+	scheduler.init()
 	scheduler.lock.RLock()
 	defer scheduler.lock.RUnlock()
 
@@ -84,6 +94,7 @@ func (scheduler *Scheduler) GetScheduled(id TaskID) (task *Task, found bool) {
 }
 
 func (scheduler *Scheduler) GetAllScheduled() (tasks []*Task) {
+	scheduler.init()
 	scheduler.lock.RLock()
 	defer scheduler.lock.RUnlock()
 
@@ -97,11 +108,14 @@ func (scheduler *Scheduler) run(ctx context.Context, taskID TaskID) {
 	scheduler.lock.Lock()
 	defer scheduler.lock.Unlock()
 
-	if task, found := scheduler.tasks[taskID]; found {
-		log.WithField("taskID", taskID).Debug("task running")
-		task.Run(ctx, task.Args)
-		delete(scheduler.tasks, taskID)
-	} else {
+	task, found := scheduler.tasks[taskID]
+
+	if !found {
 		log.WithField("taskID", taskID).Warning("Task no longer running. ignoring")
+		return
 	}
+
+	log.WithField("taskID", taskID).Debug("task running")
+	task.Run(ctx, task.Args)
+	delete(scheduler.tasks, taskID)
 }
