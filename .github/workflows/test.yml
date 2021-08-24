@@ -5,7 +5,7 @@ on:
     branches-ignore:
       - master
       - refactor
-      - mock
+      - oneclient
   pull_request_target:
 
 jobs:

@@ -5,7 +5,7 @@ on:
     branches:
     - master
     - refactor
-    - mock
+    - oneclient
 jobs:
   test:
     runs-on: ubuntu-latest

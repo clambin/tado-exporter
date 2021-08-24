@@ -56,18 +56,41 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	wg := sync.WaitGroup{}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	startStack(ctx, cfg, &wg)
+
+	go func() {
+		listenAddress := fmt.Sprintf(":%d", cfg.Exporter.Port)
+
+		r := mux.NewRouter()
+		r.Use(prometheusMiddleware)
+		r.Path("/metrics").Handler(promhttp.Handler())
+		err = http.ListenAndServe(listenAddress, r)
+		if err != nil {
+			log.WithError(err).Fatal("unable to start metrics server")
+		}
+	}()
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+
+	<-interrupt
+
+	cancel()
+	wg.Wait()
+	log.Info("tado-monitor exiting")
+}
+
+func startStack(ctx context.Context, cfg *configuration.Configuration, wg *sync.WaitGroup) {
 	username := os.Getenv("TADO_USERNAME")
 	password := os.Getenv("TADO_PASSWORD")
 	clientSecret := os.Getenv("TADO_CLIENT_SECRET")
 
 	if username == "" || password == "" {
-		log.Error("TADO_USERNAME/TADO_PASSWORD environment variables not set. Aborting ...")
-		os.Exit(1)
+		log.Fatal("TADO_USERNAME/TADO_PASSWORD environment variables not set. Aborting ...")
 	}
-
-	wg := sync.WaitGroup{}
-
-	ctx, cancel := context.WithCancel(context.Background())
 
 	API := &tado.APIClient{
 		HTTPClient:   &http.Client{},
@@ -102,23 +125,15 @@ func main() {
 
 			wg.Add(1)
 			go func(ctx context.Context) {
-				err2 := tadoBot.Run(ctx)
-				if err2 != nil {
+				err := tadoBot.Run(ctx)
+				if err != nil {
 					log.WithError(err).Fatal("tadoBot failed to start")
 				}
 				wg.Done()
 			}(ctx)
 		}
 
-		// TODO: can we reuse API?
-		API2 := &tado.APIClient{
-			HTTPClient:   &http.Client{},
-			Username:     username,
-			Password:     password,
-			ClientSecret: clientSecret,
-		}
-		var c *controller.Controller
-		c, err = controller.New(API2, &cfg.Controller, tadoBot, tadoPoller)
+		c, err := controller.New(API, &cfg.Controller, tadoBot, tadoPoller)
 
 		if err != nil {
 			log.WithError(err).Fatal("unable to create controller")
@@ -131,27 +146,6 @@ func main() {
 		}()
 		tadoPoller.Register <- c.Updates
 	}
-
-	go func() {
-		listenAddress := fmt.Sprintf(":%d", cfg.Exporter.Port)
-
-		r := mux.NewRouter()
-		r.Use(prometheusMiddleware)
-		r.Path("/metrics").Handler(promhttp.Handler())
-		err = http.ListenAndServe(listenAddress, r)
-		if err != nil {
-			log.WithError(err).Fatal("unable to start metrics server")
-		}
-	}()
-
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
-
-	<-interrupt
-
-	cancel()
-	wg.Wait()
-	log.Info("tado-monitor exiting")
 }
 
 // Prometheus metrics
