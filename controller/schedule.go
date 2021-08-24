@@ -18,8 +18,8 @@ func (controller *Controller) scheduleZoneStateChange(ctx context.Context, zoneI
 
 	if ok {
 		// if that change is already pending for that room, and the scheduled change will start earlier, don't schedule the new change
-		if state == running.Args[1].(tado.ZoneState) && activation.After(running.Activation) {
-			// log.WithFields(log.Fields{"zone": zoneID, "running": running, "new": activation}).Warning("earlier task already found. won't schedule this task")
+		if state == running.Args[1].(tado.ZoneState) && running.Activation.Sub(activation).Round(time.Second) < 0 { // activation.After(running.Activation) {
+			log.WithFields(log.Fields{"zone": zoneID, "running": running, "new": activation}).Warning("earlier task already found. won't schedule this task")
 			return
 		}
 

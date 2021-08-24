@@ -83,7 +83,6 @@ func BenchmarkController_Run(b *testing.B) {
 		},
 	}}
 
-	log.SetLevel(log.WarnLevel)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
