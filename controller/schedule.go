@@ -18,8 +18,8 @@ func (controller *Controller) scheduleZoneStateChange(ctx context.Context, zoneI
 
 	if ok {
 		// if that change is already pending for that room, and the scheduled change will start earlier, don't schedule the new change
-		if state == running.Args[1].(tado.ZoneState) && activation.After(running.Activation) { // running.Sub(activation).Round(time.Minute) <= 0 {
-			// log.WithFields(log.Fields{"zone": zoneID, "running": running, "new": activation}).Debug("earlier task already found. won't schedule this task")
+		if state == running.Args[1].(tado.ZoneState) && running.Activation.Sub(activation).Round(time.Second) < 0 { // activation.After(running.Activation) {
+			log.WithFields(log.Fields{"zone": zoneID, "running": running, "new": activation}).Warning("earlier task already found. won't schedule this task")
 			return
 		}
 
@@ -39,8 +39,6 @@ func (controller *Controller) scheduleZoneStateChange(ctx context.Context, zoneI
 		When: when,
 	})
 	log.WithFields(log.Fields{"zone": zoneID, "state": state}).Debug("scheduled task")
-
-	// log.WithFields(log.Fields{"zone": zoneID, "state": state, "when": when.String()}).Debug("scheduled task")
 
 	// post Slack notification, if it will be executed later
 	if when > 0 && controller.bot != nil {

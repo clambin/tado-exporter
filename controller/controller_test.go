@@ -74,43 +74,42 @@ var (
 	}
 )
 
-/*
 func BenchmarkController_Run(b *testing.B) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	server := &mockapi.MockAPI{}
-	server := &mockapi.MockAPI{}
-	pollr := poller.New(server)
-	go pollr.Run(ctx, 1*time.Millisecond)
-
-	postChannel := make(slackbot.PostChannel)
 	zoneConfig := []configuration.ZoneConfig{{
 		ZoneName: "bar",
 		LimitOverlay: configuration.ZoneLimitOverlay{
 			Enabled: true,
-			Delay:   1 * time.Millisecond,
+			Delay:   20 * time.Millisecond,
 		},
 	}}
 
-	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, nil)
-	c.PostChannel = postChannel
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := &mocks.API{}
+	server.On("DeleteZoneOverlay", mock.Anything, 2).Return(nil)
+
+	bot := &mocks2.SlackBot{}
+	bot.On("RegisterCallback", mock.Anything, mock.Anything).
+		Return(nil)
+	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode in 0s").
+		Return(nil)
+	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode").
+		Return(nil)
+
+	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 	go c.Run(ctx)
 
-	pollr.Register <- c.Updates
-
-	b.ResetTimer()
-
-	for i := 0; i < 100; i++ {
-		_ = server.SetZoneOverlay(ctx, 2, 15.5)
-		_ = c.ReportRules(ctx)
-		_ = <-postChannel
-		c.ReportRules(ctx)
-		_ = <-postChannel
-		_ = <-postChannel
+	for i := 0; i < 1000; i++ {
+		c.Update(ctx, &poller.Update{
+			Zones:    updateZones,
+			ZoneInfo: updateZoneManual,
+		})
 	}
+
+	time.Sleep(25 * time.Millisecond)
+	mock.AssertExpectationsForObjects(b, server, bot)
 }
-*/
 
 func TestController_LimitOverlay(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
