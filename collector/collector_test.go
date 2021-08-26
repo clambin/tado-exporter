@@ -2,13 +2,12 @@ package collector_test
 
 import (
 	"context"
+	"github.com/clambin/gotools/metrics"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/prometheus/client_golang/prometheus"
-	pcg "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
-	"regexp"
 	"testing"
 	"time"
 )
@@ -16,8 +15,8 @@ import (
 func TestCollector_Describe(t *testing.T) {
 	c := collector.New()
 
-	metrics := make(chan *prometheus.Desc)
-	go c.Describe(metrics)
+	ch := make(chan *prometheus.Desc)
+	go c.Describe(ch)
 
 	for _, metricName := range []string{
 		"tado_mobile_device_status",
@@ -35,7 +34,7 @@ func TestCollector_Describe(t *testing.T) {
 		"tado_zone_target_temp_celsius",
 		"tado_zone_temperature_celsius",
 	} {
-		metric := <-metrics
+		metric := <-ch
 		assert.Contains(t, metric.String(), "\""+metricName+"\"")
 	}
 }
@@ -50,14 +49,14 @@ func TestCollector_Collect(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	metrics := make(chan prometheus.Metric)
-	go c.Collect(metrics)
+	ch := make(chan prometheus.Metric)
+	go c.Collect(ch)
 
 	count := countMetricResults(CollectResult)
 
 	for count > 0 {
-		m := <-metrics
-		name := metricName(m)
+		m := <-ch
+		name := metrics.MetricName(m)
 
 		expected, ok := CollectResult[name]
 
@@ -66,7 +65,7 @@ func TestCollector_Collect(t *testing.T) {
 		}
 
 		if expected.multiKey != "" {
-			key := metricLabel(m, expected.multiKey)
+			key := metrics.MetricLabel(m, expected.multiKey)
 
 			if assert.NotEmpty(t, key) == false {
 				continue
@@ -78,10 +77,10 @@ func TestCollector_Collect(t *testing.T) {
 			}
 		}
 
-		assert.Equal(t, expected.value, metricValue(m).GetGauge().GetValue(), name)
+		assert.Equal(t, expected.value, metrics.MetricValue(m).GetGauge().GetValue(), name)
 
 		for _, labelPair := range expected.labels {
-			assert.Equal(t, labelPair.value, metricLabel(m, labelPair.name), name)
+			assert.Equal(t, labelPair.value, metrics.MetricLabel(m, labelPair.name), name)
 		}
 		count--
 	}
@@ -99,56 +98,15 @@ func BenchmarkCollector_Collect(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < 10000; i++ {
-		metrics := make(chan prometheus.Metric)
+		ch := make(chan prometheus.Metric)
 		go func(ch chan prometheus.Metric) {
 			c.Collect(ch)
 			close(ch)
-		}(metrics)
+		}(ch)
 
-		for range metrics {
+		for range ch {
 		}
 	}
-}
-
-// metricName returns the metric name
-func metricName(metric prometheus.Metric) string {
-	desc := metric.Desc().String()
-
-	r := regexp.MustCompile(`fqName: "([a-z,_]+)"`)
-	match := r.FindStringSubmatch(desc)
-
-	if len(match) < 2 {
-		return ""
-	}
-
-	return match[1]
-}
-
-// metricValue checks that a prometheus metric has a specified value
-func metricValue(metric prometheus.Metric) *pcg.Metric {
-	m := new(pcg.Metric)
-	if metric.Write(m) != nil {
-		panic("failed to parse metric")
-	}
-
-	return m
-}
-
-// metricLabel returns the value for a specified label
-func metricLabel(metric prometheus.Metric, labelName string) string {
-	var m pcg.Metric
-
-	if metric.Write(&m) != nil {
-		panic("failed to parse metric")
-	}
-
-	for _, label := range m.GetLabel() {
-		if label.GetName() == labelName {
-			return label.GetValue()
-		}
-	}
-
-	return ""
 }
 
 var Update = poller.Update{
