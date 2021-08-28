@@ -50,10 +50,8 @@ github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XL
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
-github.com/clambin/gotools v0.3.91 h1:aM1MJADXOlV3AD001q6TlvHJDgtEyMEqQWiI8hB7Ap4=
-github.com/clambin/gotools v0.3.91/go.mod h1:12mW+UZTyh4Mag+p6mhI2rrw9Sax/wTZjouU7WrLyuQ=
-github.com/clambin/tado v0.4.1 h1:nIbOH8lNvpXDuyBw0OPxmGH86WBe/H0+hpox+20GT7s=
-github.com/clambin/tado v0.4.1/go.mod h1:8ISRzYF9WrFscKpEM5XRRqZ2kpD6/7QuZjMCku9wYBM=
+github.com/clambin/gotools v0.4.1 h1:EtLzpkkiKMYleLQtx8vqDVoezz/VjSJ/lv/FYgPomiE=
+github.com/clambin/gotools v0.4.1/go.mod h1:CfrY8mU4ckUA/VTfBJ4qWZMGt6K/IJ2qn96eM0gwGLM=
 github.com/clambin/tado v0.4.2 h1:FHwsXXlCRRg9M17Otlca4LLhBh1Eio8z1Ig7wnewJKY=
 github.com/clambin/tado v0.4.2/go.mod h1:8ISRzYF9WrFscKpEM5XRRqZ2kpD6/7QuZjMCku9wYBM=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
@@ -330,7 +328,6 @@ golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210423082822-04245dca01da/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c h1:F1jZWGFhYfh0Ci55sIpILtKKK8p3i2/krTr0H1rg74I=
 golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20210820121016-41cdb8703e55 h1:rw6UNGRMfarCepjI8qOepea/SXwIBVfTKjztZ5gBbq4=
 golang.org/x/sys v0.0.0-20210820121016-41cdb8703e55/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

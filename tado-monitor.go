@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"github.com/clambin/gotools/metrics"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/configuration"
@@ -10,14 +10,12 @@ import (
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/slackbot"
 	"github.com/clambin/tado-exporter/version"
-	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"net/http"
 	"sync"
+	"time"
 
 	// _ "net/http/pprof"
 	"os"
@@ -61,14 +59,13 @@ func main() {
 
 	startStack(ctx, cfg, &wg)
 
+	server := metrics.NewServer(cfg.Exporter.Port)
 	go func() {
-		listenAddress := fmt.Sprintf(":%d", cfg.Exporter.Port)
-
-		r := mux.NewRouter()
-		r.Use(prometheusMiddleware)
-		r.Path("/metrics").Handler(promhttp.Handler())
-		err = http.ListenAndServe(listenAddress, r)
-		if err != nil {
+		log.Info("metrics server started")
+		err = server.Run()
+		if err == nil || err == http.ErrServerClosed {
+			log.Info("metrics server stopped")
+		} else {
 			log.WithError(err).Fatal("unable to start metrics server")
 		}
 	}()
@@ -78,8 +75,10 @@ func main() {
 
 	<-interrupt
 
+	_ = server.Shutdown(30 * time.Second)
 	cancel()
 	wg.Wait()
+
 	log.Info("tado-monitor exiting")
 }
 
@@ -146,22 +145,4 @@ func startStack(ctx context.Context, cfg *configuration.Configuration, wg *sync.
 		}()
 		tadoPoller.Register <- c.Updates
 	}
-}
-
-// Prometheus metrics
-var (
-	httpDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
-		Name: "http_duration_seconds",
-		Help: "Duration of HTTP requests",
-	}, []string{"path"})
-)
-
-func prometheusMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		route := mux.CurrentRoute(r)
-		path, _ := route.GetPathTemplate()
-		timer := prometheus.NewTimer(httpDuration.WithLabelValues(path))
-		next.ServeHTTP(w, r)
-		timer.ObserveDuration()
-	})
 }
