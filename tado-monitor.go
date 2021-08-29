@@ -91,12 +91,7 @@ func startStack(ctx context.Context, cfg *configuration.Configuration, wg *sync.
 		log.Fatal("TADO_USERNAME/TADO_PASSWORD environment variables not set. Aborting ...")
 	}
 
-	API := &tado.APIClient{
-		HTTPClient:   &http.Client{},
-		Username:     username,
-		Password:     password,
-		ClientSecret: clientSecret,
-	}
+	API := tado.New(username, password, clientSecret)
 
 	tadoPoller := poller.New(API)
 	wg.Add(1)
