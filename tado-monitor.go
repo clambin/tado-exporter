@@ -63,7 +63,7 @@ func main() {
 	go func() {
 		log.Info("metrics server started")
 		err = server.Run()
-		if err == nil || err == http.ErrServerClosed {
+		if err == http.ErrServerClosed {
 			log.Info("metrics server stopped")
 		} else {
 			log.WithError(err).Fatal("unable to start metrics server")
