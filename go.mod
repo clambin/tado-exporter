@@ -3,7 +3,7 @@ module github.com/clambin/tado-exporter
 go 1.16
 
 require (
-	github.com/clambin/gotools v0.5.0
+	github.com/clambin/gotools v0.5.1
 	github.com/clambin/tado v0.5.0
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/prometheus/client_golang v1.11.0
