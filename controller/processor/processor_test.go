@@ -113,6 +113,7 @@ func TestServer_GetNextState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateAuto), nextState)
 	assert.LessOrEqual(t, delay, time.Hour)
+	// assert.NotZero(t, delay)
 	assert.Equal(t, "manual temperature setting detected in foo", reason)
 }
 
