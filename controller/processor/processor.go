@@ -78,21 +78,25 @@ func (server *Server) getNextState(zoneID int, update *poller.Update) (current, 
 	if current == tado.ZoneStateManual {
 		log.WithField("zoneID", zoneID).Debug("zone in overlay")
 		// determine if/when to set back to auto
-		if server.zoneRules[zoneID].NightTime.Enabled && server.zoneRules[zoneID].LimitOverlay.Enabled {
+		if server.zoneRules[zoneID].NightTime.Enabled || server.zoneRules[zoneID].LimitOverlay.Enabled {
 			nextState = tado.ZoneStateAuto
-			delay = nightTimeDelay(server.zoneRules[zoneID].NightTime.Time)
-			if server.zoneRules[zoneID].LimitOverlay.Delay < delay {
-				delay = server.zoneRules[zoneID].LimitOverlay.Delay
+			reason = "manual temperature setting detected in " + update.Zones[zoneID].Name
+
+			var nightDelay, limitDelay time.Duration
+			if server.zoneRules[zoneID].NightTime.Enabled {
+				nightDelay = nightTimeDelay(server.zoneRules[zoneID].NightTime.Time)
+				delay = nightDelay
 			}
-			reason = "manual temperature setting detected in " + update.Zones[zoneID].Name
-		} else if server.zoneRules[zoneID].NightTime.Enabled {
-			nextState = tado.ZoneStateAuto
-			delay = nightTimeDelay(server.zoneRules[zoneID].NightTime.Time)
-			reason = "manual temperature setting detected in " + update.Zones[zoneID].Name
-		} else if server.zoneRules[zoneID].LimitOverlay.Enabled {
-			nextState = tado.ZoneStateAuto
-			delay = server.zoneRules[zoneID].LimitOverlay.Delay
-			reason = "manual temperature setting detected in " + update.Zones[zoneID].Name
+			if server.zoneRules[zoneID].LimitOverlay.Enabled {
+				limitDelay = server.zoneRules[zoneID].LimitOverlay.Delay
+				delay = limitDelay
+			}
+
+			if server.zoneRules[zoneID].NightTime.Enabled && server.zoneRules[zoneID].LimitOverlay.Enabled {
+				if nightDelay < delay {
+					delay = nightDelay
+				}
+			}
 		}
 	}
 	return
