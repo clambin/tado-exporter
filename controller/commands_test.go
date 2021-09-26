@@ -248,8 +248,12 @@ func TestController_DoRefresh(t *testing.T) {
 	}()
 
 	pollr.On("Refresh").Return(nil).Once()
-	c.DoRefresh(ctx)
+	attachments := c.DoRefresh(ctx)
+	require.Len(t, attachments, 1)
+	assert.Equal(t, "refreshing Tado data", attachments[0].Text)
 
 	cancel()
 	wg.Wait()
+
+	mock.AssertExpectationsForObjects(t, api, bot, pollr)
 }

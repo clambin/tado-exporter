@@ -182,5 +182,7 @@ func (controller *Controller) parseSetCommand(args ...string) (zoneID int, zoneN
 
 func (controller *Controller) DoRefresh(_ context.Context, _ ...string) (attachments []slack.Attachment) {
 	controller.refresh()
-	return
+	return []slack.Attachment{{
+		Text: "refreshing Tado data",
+	}}
 }
