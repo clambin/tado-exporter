@@ -5,6 +5,7 @@ import (
 	"github.com/clambin/tado-exporter/controller/cache"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
@@ -21,6 +22,11 @@ func TestCache_GetName(t *testing.T) {
 			2: {Name: "bar"},
 		},
 	})
+
+	zones := testCache.GetZones()
+	require.Len(t, zones, 2)
+	assert.Contains(t, zones, 1)
+	assert.Contains(t, zones, 2)
 
 	name, ok := testCache.GetZoneName(1)
 	assert.True(t, ok)

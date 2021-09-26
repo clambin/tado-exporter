@@ -19,13 +19,6 @@ type Server struct {
 	registry []chan *Update
 }
 
-type Update struct {
-	UserInfo    map[int]tado.MobileDevice
-	WeatherInfo tado.WeatherInfo
-	Zones       map[int]tado.Zone
-	ZoneInfo    map[int]tado.ZoneInfo
-}
-
 func New(API tado.API) *Server {
 	return &Server{
 		API:      API,

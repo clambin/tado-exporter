@@ -6,7 +6,7 @@ import (
 	"github.com/slack-go/slack"
 )
 
-type ClientAPI interface {
+type SlackClient interface {
 	Run(ctx context.Context)
 	Send(message SlackMessage) (err error)
 	GetChannels() (channelIDs []string, err error)
@@ -25,7 +25,7 @@ type SlackMessage struct {
 	Attachments []slack.Attachment
 }
 
-func newClient(token string, events chan slack.RTMEvent) (client ClientAPI) {
+func newClient(token string, events chan slack.RTMEvent) (client SlackClient) {
 	return &slackClient{
 		NextEvent:   events,
 		slackClient: slack.New(token),

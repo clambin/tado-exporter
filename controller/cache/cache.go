@@ -8,19 +8,14 @@ import (
 )
 
 type Cache struct {
-	zones     map[int]tado.Zone
-	zoneInfos map[int]tado.ZoneInfo
-	users     map[int]tado.MobileDevice
-	lock      sync.RWMutex
+	update *poller.Update
+	lock   sync.RWMutex
 }
 
 func (cache *Cache) Update(update *poller.Update) {
 	cache.lock.Lock()
 	defer cache.lock.Unlock()
-
-	cache.zones = update.Zones
-	cache.zoneInfos = update.ZoneInfo
-	cache.users = update.UserInfo
+	cache.update = update
 }
 
 func (cache *Cache) GetZoneName(id int) (name string, ok bool) {
@@ -28,7 +23,7 @@ func (cache *Cache) GetZoneName(id int) (name string, ok bool) {
 	defer cache.lock.RUnlock()
 
 	var zone tado.Zone
-	zone, ok = cache.zones[id]
+	zone, ok = cache.update.Zones[id]
 	if ok {
 		name = zone.Name
 	} else {
@@ -42,7 +37,7 @@ func (cache *Cache) GetUserName(id int) (name string, ok bool) {
 	defer cache.lock.RUnlock()
 
 	var device tado.MobileDevice
-	device, ok = cache.users[id]
+	device, ok = cache.update.UserInfo[id]
 
 	if ok {
 		name = device.Name
@@ -55,34 +50,20 @@ func (cache *Cache) GetUserName(id int) (name string, ok bool) {
 func (cache *Cache) LookupZone(id int, name string) (foundID int, foundName string, ok bool) {
 	cache.lock.RLock()
 	defer cache.lock.RUnlock()
-
-	var zone tado.Zone
-	for foundID, zone = range cache.zones {
-		if foundID == id || zone.Name == name {
-			return foundID, zone.Name, true
-		}
-	}
-	return
+	return cache.update.LookupZone(id, name)
 }
 
 func (cache *Cache) LookupUser(id int, name string) (foundID int, foundName string, ok bool) {
 	cache.lock.RLock()
 	defer cache.lock.RUnlock()
-
-	var device tado.MobileDevice
-	for foundID, device = range cache.users {
-		if foundID == id || device.Name == name {
-			return foundID, device.Name, true
-		}
-	}
-	return
+	return cache.update.LookupUser(id, name)
 }
 
 func (cache *Cache) GetZones() (zoneIDs []int) {
 	cache.lock.RLock()
 	defer cache.lock.RUnlock()
 
-	for zoneID := range cache.zones {
+	for zoneID := range cache.update.Zones {
 		zoneIDs = append(zoneIDs, zoneID)
 	}
 	return
@@ -93,7 +74,7 @@ func (cache *Cache) GetZoneInfo(id int) (temperature, targetTemperature float64,
 	defer cache.lock.RUnlock()
 
 	var zoneInfo tado.ZoneInfo
-	if zoneInfo, found = cache.zoneInfos[id]; found {
+	if zoneInfo, found = cache.update.ZoneInfo[id]; found {
 		temperature = zoneInfo.SensorDataPoints.Temperature.Celsius
 		zoneState = zoneInfo.GetState()
 		if zoneState == tado.ZoneStateAuto {
@@ -109,8 +90,6 @@ func (cache *Cache) GetZoneInfo(id int) (temperature, targetTemperature float64,
 				duration = time.Duration(zoneInfo.Overlay.Termination.DurationInSeconds) * time.Second
 			}
 		}
-		return
 	}
-
 	return
 }

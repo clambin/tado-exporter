@@ -5,36 +5,32 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller/cache"
-	"github.com/clambin/tado-exporter/controller/scheduler"
-	"github.com/clambin/tado-exporter/controller/statemanager"
+	"github.com/clambin/tado-exporter/controller/processor"
+	"github.com/clambin/tado-exporter/controller/setter"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/slackbot"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 // Controller object for tado-controller
 type Controller struct {
 	tado.API
-	Updates chan *poller.Update
-
-	scheduler    scheduler.Scheduler
-	stateManager statemanager.Manager
-	cache        cache.Cache
-	bot          slackbot.SlackBot
-	poller       poller.Poller
+	Updates   chan *poller.Update
+	processor processor.Processor
+	setter    setter.ZoneSetter
+	cache     cache.Cache
+	poller    poller.Poller
 }
 
 // New creates a new Controller object
 func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot slackbot.SlackBot, p poller.Poller) (controller *Controller, err error) {
 	controller = &Controller{
-		API:     API,
-		Updates: make(chan *poller.Update),
-		bot:     tadoBot,
-		poller:  p,
-	}
-	controller.stateManager = statemanager.Manager{
-		ZoneConfig: cfg.ZoneConfig,
-		Cache:      &controller.cache,
+		API:       API,
+		Updates:   make(chan *poller.Update),
+		processor: processor.New(cfg.ZoneConfig),
+		setter:    setter.New(API, tadoBot),
+		poller:    p,
 	}
 
 	if tadoBot != nil {
@@ -48,43 +44,31 @@ func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot slack
 }
 
 // Run the controller
-func (controller *Controller) Run(ctx context.Context) {
+func (controller *Controller) Run(ctx context.Context, interval time.Duration) {
 	log.Info("controller started")
 
-	go controller.scheduler.Run(ctx)
+	go controller.setter.Run(ctx, interval)
 
 	for running := true; running; {
 		select {
 		case <-ctx.Done():
 			running = false
 		case update := <-controller.Updates:
-			controller.Update(ctx, update)
+			controller.Update(update)
 		}
 	}
 
 	log.Info("controller stopped")
 }
 
-func (controller *Controller) Update(ctx context.Context, update *poller.Update) {
+// Update takes the poller's update, determines the next state for each zone and queues that state with the Setter
+func (controller *Controller) Update(update *poller.Update) {
 	controller.cache.Update(update)
-	for zoneID, zoneInfo := range update.ZoneInfo {
-
-		state := zoneInfo.GetState()
-		targetState, when, reason, err := controller.stateManager.GetNextState(zoneID, update)
-
-		if err != nil {
-			log.WithError(err).Warning("failed to get zone state")
-			continue
-		}
-
-		if targetState != state {
-			// log.WithFields(log.Fields{"old": state, "new": targetState, "id": zoneID}).Debug("new zone state determined")
-
-			// schedule the new state
-			controller.scheduleZoneStateChange(ctx, zoneID, targetState, when, reason)
+	for zoneID, nextState := range controller.processor.Process(update) {
+		if nextState != nil {
+			controller.setter.Set(zoneID, *nextState)
 		} else {
-			// already at target state. cancel any outstanding tasks
-			controller.cancelZoneStateChange(zoneID, reason)
+			controller.setter.Clear(zoneID)
 		}
 	}
 	return

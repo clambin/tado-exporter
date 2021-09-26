@@ -13,13 +13,13 @@ import (
 )
 
 func TestPoller_Run(t *testing.T) {
-	server := &mocks.API{}
+	api := &mocks.API{}
 
-	p := poller.New(server)
+	p := poller.New(api)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server.
+	api.
 		On("GetMobileDevices", mock.Anything).
 		Return([]tado.MobileDevice{
 			{
@@ -34,19 +34,19 @@ func TestPoller_Run(t *testing.T) {
 				Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
 				Location: tado.MobileDeviceLocation{AtHome: false},
 			}}, nil)
-	server.
+	api.
 		On("GetWeatherInfo", mock.Anything).
 		Return(tado.WeatherInfo{
 			OutsideTemperature: tado.Temperature{Celsius: 3.4},
 			SolarIntensity:     tado.Percentage{Percentage: 13.3},
 			WeatherState:       tado.Value{Value: "CLOUDY_MOSTLY"},
 		}, nil)
-	server.On("GetZones", mock.Anything).
+	api.On("GetZones", mock.Anything).
 		Return([]tado.Zone{
 			{ID: 1, Name: "foo"},
 			{ID: 2, Name: "bar"},
 		}, nil)
-	server.
+	api.
 		On("GetZoneInfo", mock.Anything, 1).
 		Return(tado.ZoneInfo{
 			Setting: tado.ZoneInfoSetting{
@@ -54,7 +54,7 @@ func TestPoller_Run(t *testing.T) {
 				Temperature: tado.Temperature{Celsius: 18.5},
 			},
 		}, nil)
-	server.
+	api.
 		On("GetZoneInfo", mock.Anything, 2).
 		Return(tado.ZoneInfo{
 			Setting: tado.ZoneInfoSetting{
@@ -99,5 +99,5 @@ func TestPoller_Run(t *testing.T) {
 	info = update.ZoneInfo[2]
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateOff), (&info).GetState())
 
-	server.AssertExpectations(t)
+	api.AssertExpectations(t)
 }

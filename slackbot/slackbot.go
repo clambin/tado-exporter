@@ -40,7 +40,7 @@ type SlackBot interface {
 // Agent structure
 type Agent struct {
 	postChannel PostChannel
-	SlackClient ClientAPI
+	SlackClient SlackClient
 	Events      chan slack.RTMEvent
 
 	name      string

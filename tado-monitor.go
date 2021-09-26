@@ -135,7 +135,7 @@ func startStack(ctx context.Context, cfg *configuration.Configuration, wg *sync.
 
 		wg.Add(1)
 		go func() {
-			c.Run(ctx)
+			c.Run(ctx, time.Minute)
 			wg.Done()
 		}()
 		tadoPoller.Register <- c.Updates

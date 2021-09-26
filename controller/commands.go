@@ -12,10 +12,9 @@ import (
 
 func (controller *Controller) ReportRules(_ context.Context, _ ...string) (attachments []slack.Attachment) {
 	text := make([]string, 0)
-	for _, task := range controller.scheduler.GetAllScheduled() {
-		state := task.Args[1].(tado.ZoneState)
+	for zoneID, scheduled := range controller.setter.GetScheduled() {
 		var action string
-		switch state {
+		switch scheduled.State {
 		case tado.ZoneStateOff:
 			action = "switching off heating"
 		case tado.ZoneStateAuto:
@@ -24,10 +23,10 @@ func (controller *Controller) ReportRules(_ context.Context, _ ...string) (attac
 			//	action = "setting to manual temperature control"
 		}
 
-		name, _ := controller.cache.GetZoneName(int(task.ID))
+		name, _ := controller.cache.GetZoneName(zoneID)
 
 		text = append(text,
-			name+": "+action+" in "+task.Activation.Sub(time.Now()).Round(1*time.Second).String())
+			name+": "+action+" in "+scheduled.When.Sub(time.Now()).Round(1*time.Second).String())
 	}
 
 	var slackText, slackTitle string

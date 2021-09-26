@@ -6,8 +6,8 @@ import (
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller"
 	"github.com/clambin/tado-exporter/poller"
-	mocks2 "github.com/clambin/tado-exporter/slackbot/mocks"
-	"github.com/clambin/tado/mocks"
+	slackMock "github.com/clambin/tado-exporter/slackbot/mocks"
+	tadoMock "github.com/clambin/tado/mocks"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -19,25 +19,18 @@ import (
 var (
 	updateZones = map[int]tado.Zone{
 		1: {ID: 1, Name: "foo"},
-		2: {ID: 2, Name: "bar"},
 	}
-	updateUserHome = map[int]tado.MobileDevice{
+	updateMobileDeviceUserHome = map[int]tado.MobileDevice{
 		1: {ID: 1, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}},
-		2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}},
 	}
-	updateUserAway = map[int]tado.MobileDevice{
-		1: {ID: 1, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}},
-		2: {ID: 2, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}},
+	updateMobileDeviceUserAway = map[int]tado.MobileDevice{
+		1: {ID: 1, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}},
 	}
-	updateZoneAuto = map[int]tado.ZoneInfo{
+	updateZoneInfoAuto = map[int]tado.ZoneInfo{
 		1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}}},
-		2: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}}},
 	}
-	updateZoneManual = map[int]tado.ZoneInfo{
+	updateZoneInfoManual = map[int]tado.ZoneInfo{
 		1: {
-			Setting:          tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}},
-			SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 22.0}, Humidity: tado.Percentage{Percentage: 75.0}}},
-		2: {
 			Setting:          tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}},
 			SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 22.0}, Humidity: tado.Percentage{Percentage: 75.0}},
 			Overlay: tado.ZoneInfoOverlay{
@@ -45,7 +38,7 @@ var (
 				Setting: tado.ZoneInfoOverlaySetting{
 					Type:        "HEATING",
 					Power:       "ON",
-					Temperature: tado.Temperature{Celsius: 22.0},
+					Temperature: tado.Temperature{Celsius: 18.0},
 				},
 				Termination: tado.ZoneInfoOverlayTermination{
 					Type: "MANUAL",
@@ -53,13 +46,12 @@ var (
 			},
 		},
 	}
-	updateZoneOff = map[int]tado.ZoneInfo{
-		1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}}},
-		2: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}}, Overlay: tado.ZoneInfoOverlay{
+	updateZoneInfoOff = map[int]tado.ZoneInfo{
+		1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}}, Overlay: tado.ZoneInfoOverlay{
 			Type: "MANUAL",
 			Setting: tado.ZoneInfoOverlaySetting{
 				Type:        "HEATING",
-				Power:       "ON",
+				Power:       "OFF",
 				Temperature: tado.Temperature{Celsius: 5.0},
 			},
 			Termination: tado.ZoneInfoOverlayTermination{
@@ -70,13 +62,13 @@ var (
 
 	updateZoneInOverlay = &poller.Update{
 		Zones:    updateZones,
-		ZoneInfo: updateZoneManual,
+		ZoneInfo: updateZoneInfoManual,
 	}
 )
 
 func BenchmarkController_Run(b *testing.B) {
 	zoneConfig := []configuration.ZoneConfig{{
-		ZoneName: "bar",
+		ZoneName: "foo",
 		LimitOverlay: configuration.ZoneLimitOverlay{
 			Enabled: true,
 			Delay:   20 * time.Millisecond,
@@ -86,73 +78,69 @@ func BenchmarkController_Run(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &mocks.API{}
-	server.On("DeleteZoneOverlay", mock.Anything, 2).Return(nil)
+	api := &tadoMock.API{}
+	api.
+		On("DeleteZoneOverlay", mock.Anything, 1).
+		Return(nil)
 
-	bot := &mocks2.SlackBot{}
+	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).
 		Return(nil)
-	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode in 0s").
+	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode in 0s").
 		Return(nil)
-	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode").
+	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode").
 		Return(nil)
 
-	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
-	go c.Run(ctx)
+	c, _ := controller.New(api, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
+	go c.Run(ctx, 10*time.Millisecond)
 
 	for i := 0; i < 1000; i++ {
-		c.Update(ctx, &poller.Update{
-			Zones:    updateZones,
-			ZoneInfo: updateZoneManual,
-		})
+		c.Update(updateZoneInOverlay)
 	}
 
-	time.Sleep(25 * time.Millisecond)
-	mock.AssertExpectationsForObjects(b, server, bot)
+	// time.Sleep(25 * time.Millisecond)
+	// mock.AssertExpectationsForObjects(b, api, bot)
 }
 
 func TestController_LimitOverlay(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
-		ZoneName: "bar",
-		LimitOverlay: configuration.ZoneLimitOverlay{
-			Enabled: true,
-			Delay:   20 * time.Millisecond,
-		},
+		ZoneName:     "foo",
+		LimitOverlay: configuration.ZoneLimitOverlay{Enabled: true, Delay: 20 * time.Millisecond},
 	}}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &mocks.API{}
-	server.On("DeleteZoneOverlay", mock.Anything, 2).Return(nil)
+	api := &tadoMock.API{}
+	api.
+		On("DeleteZoneOverlay", mock.Anything, 1).
+		Return(nil).
+		Once()
 
-	bot := mocks2.SlackBot{}
+	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).
 		Return(nil)
-	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode in 0s").
+	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode in 0s").
 		Return(nil).
 		Once()
-	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode").
+	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode").
 		Return(nil).
 		Once()
 
-	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, &bot, nil)
+	c, _ := controller.New(api, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 
 	log.SetLevel(log.DebugLevel)
 
-	c.Update(ctx, &poller.Update{
-		Zones:    updateZones,
-		ZoneInfo: updateZoneManual,
-	})
-	go c.Run(ctx)
+	go c.Run(ctx, 10*time.Millisecond)
+	c.Updates <- updateZoneInOverlay
 
-	time.Sleep(50 * time.Millisecond)
-	server.AssertExpectations(t)
+	time.Sleep(100 * time.Millisecond)
+	mock.AssertExpectationsForObjects(t, api, bot)
 }
 
 func TestController_RevertLimitOverlay(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
-		ZoneName: "bar",
+		ZoneName: "foo",
 		LimitOverlay: configuration.ZoneLimitOverlay{
 			Enabled: true,
 			Delay:   20 * time.Minute,
@@ -162,50 +150,36 @@ func TestController_RevertLimitOverlay(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &mocks.API{}
+	server := &tadoMock.API{}
 
-	bot := mocks2.SlackBot{}
+	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).
 		Return(nil)
 
-	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, &bot, nil)
+	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 
 	log.SetLevel(log.DebugLevel)
 
-	go c.Run(ctx)
+	go c.Run(ctx, 10*time.Millisecond)
 
-	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode in 20m0s").
-		Return(nil).
-		Once()
-	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode").
+	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode in 20m0s").
 		Return(nil).
 		Once()
 
+	c.Updates <- updateZoneInOverlay
 	c.Updates <- &poller.Update{
 		Zones:    updateZones,
-		ZoneInfo: updateZoneManual,
+		ZoneInfo: updateZoneInfoAuto,
 	}
 
 	time.Sleep(100 * time.Millisecond)
 
-	bot.
-		On("Send", "", "good", "resetting rule for bar", "").
-		Return(nil).
-		Once()
-
-	c.Updates <- &poller.Update{
-		Zones:    updateZones,
-		ZoneInfo: updateZoneAuto,
-	}
-
-	time.Sleep(100 * time.Millisecond)
-
-	server.AssertExpectations(t)
+	mock.AssertExpectationsForObjects(t, server, bot)
 }
 
-func TestZoneManager_NightTime(t *testing.T) {
+func TestController_NightTime(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
-		ZoneName: "bar",
+		ZoneName: "foo",
 		NightTime: configuration.ZoneNightTime{
 			Enabled: true,
 			Time: configuration.ZoneNightTimeTimestamp{
@@ -215,85 +189,85 @@ func TestZoneManager_NightTime(t *testing.T) {
 		},
 	}}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	server := &mocks.API{}
-	bot := &mocks2.SlackBot{}
+	server := &tadoMock.API{}
+	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).
 		Return(nil)
-	bot.On("Send", "", "good", "manual temperature setting detected in bar", mock.AnythingOfType("string")).
+	bot.On("Send", "", "good", "manual temperature setting detected in foo", mock.AnythingOfType("string")).
 		Return(nil).
 		Once()
 
 	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 
-	c.Update(ctx, updateZoneInOverlay)
+	c.Update(updateZoneInOverlay)
 
 	server.AssertExpectations(t)
 }
 
-func TestZoneManager_AutoAway(t *testing.T) {
+func TestController_AutoAway(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
-		ZoneID: 2,
+		ZoneID: 1,
 		AutoAway: configuration.ZoneAutoAway{
 			Enabled: true,
 			Delay:   20 * time.Millisecond,
-			Users:   []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+			Users:   []configuration.ZoneUser{{MobileDeviceName: "foo"}},
 		},
 	}}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &mocks.API{}
+	server := &tadoMock.API{}
 
-	bot := &mocks2.SlackBot{}
+	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).Return(nil)
 
 	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 	assert.NoError(t, err)
 
 	log.SetLevel(log.DebugLevel)
-	go c.Run(ctx)
+	go c.Run(ctx, 10*time.Millisecond)
 
-	server.On("SetZoneOverlay", mock.Anything, 2, 5.0).Return(nil).Once()
-	bot.On("Send", "", "good", "bar: bar is away", "switching off heating in 0s").
+	server.
+		On("SetZoneOverlay", mock.Anything, 1, 5.0).
 		Return(nil).
 		Once()
-	bot.On("Send", "", "good", "bar: bar is away", "switching off heating").
+	bot.On("Send", "", "good", "foo: foo is away", "switching off heating in 0s").
+		Return(nil).
+		Once()
+	bot.On("Send", "", "good", "foo: foo is away", "switching off heating").
 		Return(nil).
 		Once()
 
 	// user is away & room in auto mode
 	c.Updates <- &poller.Update{
-		UserInfo: updateUserAway,
+		UserInfo: updateMobileDeviceUserAway,
 		Zones:    updateZones,
-		ZoneInfo: updateZoneAuto,
+		ZoneInfo: updateZoneInfoAuto,
 	}
 
 	time.Sleep(100 * time.Millisecond)
 
 	// user is away & room heating is off
 	c.Updates <- &poller.Update{
-		UserInfo: updateUserAway,
+		UserInfo: updateMobileDeviceUserAway,
 		Zones:    updateZones,
-		ZoneInfo: updateZoneOff,
+		ZoneInfo: updateZoneInfoOff,
 	}
 
 	server.
-		On("DeleteZoneOverlay", mock.Anything, 2).
+		On("DeleteZoneOverlay", mock.Anything, 1).
 		Return(nil).
 		Once()
-	bot.On("Send", "", "good", "bar: bar is home", "moving to auto mode").
+	bot.On("Send", "", "good", "foo: foo is home", "moving to auto mode").
 		Return(nil).
 		Once()
 
 	// user comes home
 	c.Updates <- &poller.Update{
-		UserInfo: updateUserHome,
+		UserInfo: updateMobileDeviceUserHome,
 		Zones:    updateZones,
-		ZoneInfo: updateZoneOff,
+		ZoneInfo: updateZoneInfoOff,
 	}
 
 	time.Sleep(100 * time.Millisecond)
@@ -301,13 +275,13 @@ func TestZoneManager_AutoAway(t *testing.T) {
 	mock.AssertExpectationsForObjects(t, server, bot)
 }
 
-func TestZoneManager_Combined(t *testing.T) {
+func TestController_Combined(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
-		ZoneID: 2,
+		ZoneID: 1,
 		AutoAway: configuration.ZoneAutoAway{
 			Enabled: true,
 			Delay:   10 * time.Millisecond,
-			Users:   []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+			Users:   []configuration.ZoneUser{{MobileDeviceName: "foo"}},
 		},
 		LimitOverlay: configuration.ZoneLimitOverlay{
 			Enabled: true,
@@ -326,60 +300,58 @@ func TestZoneManager_Combined(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &mocks.API{}
-	// server.On("DeleteZoneOverlay", mock.Anything, 2).Return(nil).Once()
-
-	bot := &mocks2.SlackBot{}
+	server := &tadoMock.API{}
+	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).Return(nil)
 
 	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 	assert.NoError(t, err)
 
-	go c.Run(ctx)
+	go c.Run(ctx, 10*time.Millisecond)
 
-	server.On("SetZoneOverlay", mock.Anything, 2, 5.0).Return(nil).Once()
-	bot.On("Send", "", "good", "bar: bar is away", "switching off heating in 0s").
+	server.On("SetZoneOverlay", mock.Anything, 1, 5.0).Return(nil).Once()
+	bot.On("Send", "", "good", "foo: foo is away", "switching off heating in 0s").
 		Return(nil).
 		Once()
-	bot.On("Send", "", "good", "bar: bar is away", "switching off heating").
+	bot.On("Send", "", "good", "foo: foo is away", "switching off heating").
 		Return(nil).
 		Once()
 
 	// user is away
 	c.Updates <- &poller.Update{
-		UserInfo: updateUserAway,
+		UserInfo: updateMobileDeviceUserAway,
 		Zones:    updateZones,
-		ZoneInfo: updateZoneAuto,
+		ZoneInfo: updateZoneInfoAuto,
 	}
 
 	time.Sleep(100 * time.Millisecond)
 
 	server.
-		On("DeleteZoneOverlay", mock.Anything, 2).
+		On("DeleteZoneOverlay", mock.Anything, 1).
 		Return(nil).
 		Once()
-	bot.On("Send", "", "good", "bar: bar is home", "moving to auto mode").
+	bot.On("Send", "", "good", "foo: foo is home", "moving to auto mode").
 		Return(nil).
 		Once()
 
 	// user comes home
 	c.Updates <- &poller.Update{
-		UserInfo: updateUserHome,
+		UserInfo: updateMobileDeviceUserHome,
 		Zones:    updateZones,
-		ZoneInfo: updateZoneOff,
+		ZoneInfo: updateZoneInfoOff,
 	}
 
 	time.Sleep(100 * time.Millisecond)
 
-	bot.On("Send", "", "good", "manual temperature setting detected in bar", "moving to auto mode in 20m0s").
+	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode in 20m0s").
 		Return(nil).
 		Once()
 
 	// user is home & room set to manual
 	c.Updates <- &poller.Update{
-		UserInfo: updateUserHome,
+		UserInfo: updateMobileDeviceUserHome,
 		Zones:    updateZones,
-		ZoneInfo: updateZoneManual,
+		ZoneInfo: updateZoneInfoManual,
 	}
 
 	time.Sleep(100 * time.Millisecond)
@@ -387,18 +359,18 @@ func TestZoneManager_Combined(t *testing.T) {
 	// report should say that a rule is triggered
 	msg := c.ReportRules(ctx)
 	require.Len(t, msg, 1)
-	assert.Equal(t, "bar: moving to auto mode in 20m0s", msg[0].Text)
+	assert.Equal(t, "foo: moving to auto mode in 20m0s", msg[0].Text)
 
 	mock.AssertExpectationsForObjects(t, server, bot)
 }
 
-func TestZoneManager_ReplacedTask(t *testing.T) {
+func TestController_ReplacedTask(t *testing.T) {
 	zoneConfig := []configuration.ZoneConfig{{
-		ZoneID: 2,
+		ZoneID: 1,
 		AutoAway: configuration.ZoneAutoAway{
 			Enabled: true,
 			Delay:   20 * time.Minute,
-			Users:   []configuration.ZoneUser{{MobileDeviceName: "bar"}},
+			Users:   []configuration.ZoneUser{{MobileDeviceName: "foo"}},
 		},
 		NightTime: configuration.ZoneNightTime{
 			Enabled: true,
@@ -413,35 +385,35 @@ func TestZoneManager_ReplacedTask(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &mocks.API{}
-	bot := &mocks2.SlackBot{}
+	server := &tadoMock.API{}
+	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).Return(nil)
 
 	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 	assert.NoError(t, err)
 
-	go c.Run(ctx)
+	go c.Run(ctx, 10*time.Millisecond)
 
 	// user is home. room in manual, with night time configured
-	bot.On("Send", "", "good", "manual temperature setting detected in bar", mock.AnythingOfType("string")).
+	bot.On("Send", "", "good", "manual temperature setting detected in foo", mock.AnythingOfType("string")).
 		Return(nil).
 		Once()
 	c.Updates <- &poller.Update{
-		UserInfo: updateUserHome,
+		UserInfo: updateMobileDeviceUserHome,
 		Zones:    updateZones,
-		ZoneInfo: updateZoneManual,
+		ZoneInfo: updateZoneInfoManual,
 	}
 
 	time.Sleep(100 * time.Millisecond)
 
 	// user leaves
-	bot.On("Send", "", "good", "bar: bar is away", "switching off heating in 20m0s").
+	bot.On("Send", "", "good", "foo: foo is away", "switching off heating in 20m0s").
 		Return(nil).
 		Once()
 	c.Updates <- &poller.Update{
-		UserInfo: updateUserAway,
+		UserInfo: updateMobileDeviceUserAway,
 		Zones:    updateZones,
-		ZoneInfo: updateZoneManual,
+		ZoneInfo: updateZoneInfoManual,
 	}
 
 	time.Sleep(100 * time.Millisecond)
@@ -449,7 +421,7 @@ func TestZoneManager_ReplacedTask(t *testing.T) {
 	// report should say that a rule is triggered
 	msg := c.ReportRules(ctx)
 	require.Len(t, msg, 1)
-	assert.Equal(t, "bar: switching off heating in 20m0s", msg[0].Text)
+	assert.Equal(t, "foo: switching off heating in 20m0s", msg[0].Text)
 
 	mock.AssertExpectationsForObjects(t, server, bot)
 }
