@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/clambin/tado"
 	"github.com/slack-go/slack"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -82,6 +83,7 @@ func (controller *Controller) ReportRooms(_ context.Context, _ ...string) (attac
 	if len(text) > 0 {
 		slackColor = "good"
 		slackTitle = "rooms:"
+		sort.Strings(text)
 		slackText = strings.Join(text, "\n")
 	}
 
