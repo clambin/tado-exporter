@@ -1,13 +1,12 @@
 package processor
 
 import (
-	"github.com/clambin/tado-exporter/controller/models"
 	"github.com/clambin/tado-exporter/poller"
 	log "github.com/sirupsen/logrus"
 )
 
 func (server *Server) load(update *poller.Update) {
-	server.zoneRules = make(map[int]models.ZoneRules)
+	server.zoneRules = make(map[int]ZoneRules)
 
 	for _, entry := range server.zoneConfig {
 		var zoneID int
@@ -20,7 +19,7 @@ func (server *Server) load(update *poller.Update) {
 			continue
 		}
 
-		zoneConfigEntry := models.ZoneRules{}
+		zoneConfigEntry := ZoneRules{}
 
 		if entry.AutoAway.Enabled {
 			zoneConfigEntry.AutoAway.Enabled = true

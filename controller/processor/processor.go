@@ -3,7 +3,6 @@ package processor
 import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
-	"github.com/clambin/tado-exporter/controller/models"
 	"github.com/clambin/tado-exporter/controller/setter"
 	"github.com/clambin/tado-exporter/poller"
 	log "github.com/sirupsen/logrus"
@@ -20,7 +19,7 @@ var _ Processor = &Server{}
 // Server receives the latest zone status and determines the next zone state
 type Server struct {
 	zoneConfig []configuration.ZoneConfig
-	zoneRules  map[int]models.ZoneRules
+	zoneRules  map[int]ZoneRules
 }
 
 // New creates a new Server
@@ -102,7 +101,7 @@ func (server *Server) getNextState(zoneID int, update *poller.Update) (current, 
 	return
 }
 
-func nightTimeDelay(nightTime models.ZoneNightTimestamp) (delay time.Duration) {
+func nightTimeDelay(nightTime ZoneNightTimestamp) (delay time.Duration) {
 	now := time.Now()
 	next := time.Date(
 		now.Year(), now.Month(), now.Day(),

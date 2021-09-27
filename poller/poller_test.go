@@ -12,13 +12,7 @@ import (
 	"time"
 )
 
-func TestPoller_Run(t *testing.T) {
-	api := &mocks.API{}
-
-	p := poller.New(api)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func prepareMockAPI(api *mocks.API) {
 	api.
 		On("GetMobileDevices", mock.Anything).
 		Return([]tado.MobileDevice{
@@ -33,19 +27,22 @@ func TestPoller_Run(t *testing.T) {
 				Name:     "bar",
 				Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
 				Location: tado.MobileDeviceLocation{AtHome: false},
-			}}, nil)
+			}}, nil).
+		Once()
 	api.
 		On("GetWeatherInfo", mock.Anything).
 		Return(tado.WeatherInfo{
 			OutsideTemperature: tado.Temperature{Celsius: 3.4},
 			SolarIntensity:     tado.Percentage{Percentage: 13.3},
 			WeatherState:       tado.Value{Value: "CLOUDY_MOSTLY"},
-		}, nil)
+		}, nil).
+		Once()
 	api.On("GetZones", mock.Anything).
 		Return([]tado.Zone{
 			{ID: 1, Name: "foo"},
 			{ID: 2, Name: "bar"},
-		}, nil)
+		}, nil).
+		Once()
 	api.
 		On("GetZoneInfo", mock.Anything, 1).
 		Return(tado.ZoneInfo{
@@ -53,7 +50,8 @@ func TestPoller_Run(t *testing.T) {
 				Power:       "ON",
 				Temperature: tado.Temperature{Celsius: 18.5},
 			},
-		}, nil)
+		}, nil).
+		Once()
 	api.
 		On("GetZoneInfo", mock.Anything, 2).
 		Return(tado.ZoneInfo{
@@ -70,7 +68,18 @@ func TestPoller_Run(t *testing.T) {
 				},
 				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 			},
-		}, nil)
+		}, nil).
+		Once()
+}
+
+func TestPoller_Run(t *testing.T) {
+	api := &mocks.API{}
+
+	p := poller.New(api)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	prepareMockAPI(api)
 
 	go p.Run(ctx, 10*time.Millisecond)
 	ch := make(chan *poller.Update)
@@ -100,4 +109,45 @@ func TestPoller_Run(t *testing.T) {
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateOff), (&info).GetState())
 
 	api.AssertExpectations(t)
+}
+
+func TestServer_Poll(t *testing.T) {
+	api := &mocks.API{}
+
+	p := poller.New(api)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go p.Run(ctx, time.Minute)
+
+	prepareMockAPI(api)
+
+	ch := make(chan *poller.Update)
+	p.Register <- ch
+	update := <-ch
+
+	require.Len(t, update.UserInfo, 2)
+}
+
+func TestServer_Refresh(t *testing.T) {
+	api := &mocks.API{}
+
+	p := poller.New(api)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go p.Run(ctx, time.Minute)
+
+	prepareMockAPI(api)
+
+	ch := make(chan *poller.Update)
+	p.Register <- ch
+	update := <-ch
+	require.Len(t, update.UserInfo, 2)
+
+	prepareMockAPI(api)
+	p.Refresh()
+	update = <-ch
+	require.Len(t, update.UserInfo, 2)
+
 }

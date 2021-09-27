@@ -30,10 +30,9 @@ func New(API tado.API) *Server {
 
 func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 	var err error
-	timer := time.NewTicker(10 * time.Millisecond)
-	first := true
+	timer := time.NewTicker(interval)
 
-	log.Info("poller started")
+	log.WithField("interval", interval).Info("poller started")
 
 	for running := true; running; {
 		poll := false
@@ -42,6 +41,9 @@ func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 			running = false
 		case ch := <-poller.Register:
 			poller.registry = append(poller.registry, ch)
+			// registration typically happens when we start up. so, let's poll for data so the client doesn't
+			// need to wait for interval to expire before getting data
+			poll = true
 		case <-timer.C:
 			poll = true
 		case <-poller.refresh:
@@ -54,12 +56,6 @@ func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 			err = poller.Poll(ctx)
 			if err != nil {
 				log.WithError(err).Warning("failed to get Tado metrics")
-			}
-			// once we have registered listeners, poll at the desired interval
-			if first {
-				timer.Stop()
-				timer = time.NewTicker(interval)
-				first = false
 			}
 		}
 	}
