@@ -56,7 +56,7 @@ func (server *Server) Set(zoneID int, nextState NextState) {
 			return
 		}
 	}
-	log.WithFields(log.Fields{"zoneID": zoneID, "state": nextState}).Debug("registering next state")
+	log.WithFields(log.Fields{"zoneID": zoneID, "state": nextState}).Info("queuing next state")
 	server.tasks[zoneID] = nextState
 	if nextState.Delay > 0 {
 		server.post(nextState)
@@ -67,7 +67,10 @@ func (server *Server) Set(zoneID int, nextState NextState) {
 func (server *Server) Clear(zoneID int) {
 	server.lock.Lock()
 	defer server.lock.Unlock()
-	delete(server.tasks, zoneID)
+	if task, ok := server.tasks[zoneID]; ok {
+		log.WithFields(log.Fields{"zoneID": zoneID, "task": task}).Info("removing queued next state")
+		delete(server.tasks, zoneID)
+	}
 }
 
 // Run the server
