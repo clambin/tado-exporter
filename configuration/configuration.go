@@ -138,6 +138,11 @@ func LoadConfiguration(content []byte) (*Configuration, error) {
 				Warning("tadoBot environment variable for token not set. Disabling tadoBot")
 			configuration.Controller.TadoBot.Enabled = false
 		}
+
+		if configuration.Exporter.Port > 0 {
+			log.Warning("configuration: Exporter.Port is obsolete. move to root level")
+			configuration.Port = configuration.Exporter.Port
+		}
 	}
 
 	if configuration.Exporter.Port > 0 {
