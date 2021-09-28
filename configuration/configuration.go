@@ -11,6 +11,7 @@ import (
 // Configuration structure for tado-monitor
 type Configuration struct {
 	Debug      bool
+	Port       int
 	Interval   time.Duration
 	Exporter   ExporterConfiguration
 	Controller ControllerConfiguration
@@ -19,7 +20,8 @@ type Configuration struct {
 // ExporterConfiguration structure for exporter
 type ExporterConfiguration struct {
 	Enabled bool
-	Port    int
+	// Port is obsolete and will be removed in a future version
+	Port int
 }
 
 // ControllerConfiguration structure for controller
@@ -133,6 +135,11 @@ func LoadConfiguration(content []byte) (*Configuration, error) {
 					Warning("tadoBot environment variable for token not set. Disabling tadoBot")
 				configuration.Controller.TadoBot.Enabled = false
 			}
+		}
+
+		if configuration.Exporter.Port > 0 {
+			log.Warning("configuration: Exporter.Port is obsolete. move to root level")
+			configuration.Port = configuration.Exporter.Port
 		}
 	}
 
