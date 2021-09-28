@@ -91,7 +91,7 @@ func BenchmarkController_Run(b *testing.B) {
 	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode").
 		Return(nil)
 
-	c, _ := controller.New(api, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
+	c := controller.New(api, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 	go c.Run(ctx, 10*time.Millisecond)
 
 	for i := 0; i < 1000; i++ {
@@ -127,7 +127,7 @@ func TestController_LimitOverlay(t *testing.T) {
 		Return(nil).
 		Once()
 
-	c, _ := controller.New(api, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
+	c := controller.New(api, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 
 	log.SetLevel(log.DebugLevel)
 
@@ -156,7 +156,7 @@ func TestController_RevertLimitOverlay(t *testing.T) {
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).
 		Return(nil)
 
-	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
+	c := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 
 	log.SetLevel(log.DebugLevel)
 
@@ -197,7 +197,7 @@ func TestController_NightTime(t *testing.T) {
 		Return(nil).
 		Once()
 
-	c, _ := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
+	c := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 
 	c.Update(updateZoneInOverlay)
 
@@ -222,8 +222,7 @@ func TestController_AutoAway(t *testing.T) {
 	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).Return(nil)
 
-	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
-	assert.NoError(t, err)
+	c := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 
 	log.SetLevel(log.DebugLevel)
 	go c.Run(ctx, 10*time.Millisecond)
@@ -288,7 +287,7 @@ func TestController_Combined(t *testing.T) {
 			Delay:   20 * time.Minute,
 		},
 		NightTime: configuration.ZoneNightTime{
-			Enabled: true,
+			Enabled: false,
 			Time: configuration.ZoneNightTimeTimestamp{
 				Hour:    01,
 				Minutes: 30,
@@ -304,9 +303,7 @@ func TestController_Combined(t *testing.T) {
 	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).Return(nil)
 
-	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
-	assert.NoError(t, err)
-
+	c := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 	go c.Run(ctx, 10*time.Millisecond)
 
 	server.On("SetZoneOverlay", mock.Anything, 1, 5.0).Return(nil).Once()
@@ -389,9 +386,7 @@ func TestController_ReplacedTask(t *testing.T) {
 	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).Return(nil)
 
-	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
-	assert.NoError(t, err)
-
+	c := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, nil)
 	go c.Run(ctx, 10*time.Millisecond)
 
 	// user is home. room in manual, with night time configured

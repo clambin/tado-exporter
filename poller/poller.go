@@ -9,12 +9,16 @@ import (
 
 //go:generate mockery --name Poller
 type Poller interface {
+	Run(ctx context.Context, interval time.Duration)
 	Refresh()
+	Register(ch chan *Update)
 }
+
+var _ Poller = &Server{}
 
 type Server struct {
 	tado.API
-	Register chan chan *Update
+	register chan chan *Update
 	refresh  chan struct{}
 	registry []chan *Update
 }
@@ -22,7 +26,7 @@ type Server struct {
 func New(API tado.API) *Server {
 	return &Server{
 		API:      API,
-		Register: make(chan chan *Update),
+		register: make(chan chan *Update),
 		refresh:  make(chan struct{}),
 		registry: make([]chan *Update, 0),
 	}
@@ -39,7 +43,7 @@ func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 		select {
 		case <-ctx.Done():
 			running = false
-		case ch := <-poller.Register:
+		case ch := <-poller.register:
 			poller.registry = append(poller.registry, ch)
 			// registration typically happens when we start up. so, let's poll for data so the client doesn't
 			// need to wait for interval to expire before getting data
@@ -66,6 +70,10 @@ func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 
 func (poller *Server) Refresh() {
 	poller.refresh <- struct{}{}
+}
+
+func (poller *Server) Register(ch chan *Update) {
+	poller.register <- ch
 }
 
 func (poller *Server) Poll(ctx context.Context) (err error) {

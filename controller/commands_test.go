@@ -39,8 +39,7 @@ func TestController_Rules(t *testing.T) {
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	pollr := &pollerMock.Poller{}
 
-	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, pollr)
-	assert.NoError(t, err)
+	c := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, pollr)
 
 	log.SetLevel(log.DebugLevel)
 	go c.Run(ctx, 10*time.Millisecond)
@@ -106,8 +105,7 @@ func TestController_Rooms(t *testing.T) {
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	pollr := &pollerMock.Poller{}
 
-	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: nil}, bot, pollr)
-	require.NoError(t, err)
+	c := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: nil}, bot, pollr)
 
 	c.Update(&poller.Update{
 		UserInfo: updateMobileDeviceUserHome,
@@ -136,10 +134,9 @@ func TestController_SetRoom(t *testing.T) {
 
 	pollr := &pollerMock.Poller{}
 
-	c, err := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: nil}, bot, pollr)
-	require.NoError(t, err)
-
+	c := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: nil}, bot, pollr)
 	go c.Run(ctx, 10*time.Millisecond)
+
 	c.Updates <- &poller.Update{
 		UserInfo: updateMobileDeviceUserHome,
 		Zones:    updateZones,
@@ -237,8 +234,7 @@ func TestController_DoRefresh(t *testing.T) {
 
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 
-	c, err := controller.New(api, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: nil}, bot, pollr)
-	require.NoError(t, err)
+	c := controller.New(api, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: nil}, bot, pollr)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)

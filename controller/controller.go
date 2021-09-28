@@ -18,18 +18,18 @@ type Controller struct {
 	tado.API
 	Updates   chan *poller.Update
 	processor processor.Processor
-	setter    setter.ZoneSetter
+	Setter    setter.ZoneSetter
 	cache     cache.Cache
 	poller    poller.Poller
 }
 
 // New creates a new Controller object
-func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot slackbot.SlackBot, p poller.Poller) (controller *Controller, err error) {
+func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot slackbot.SlackBot, p poller.Poller) (controller *Controller) {
 	controller = &Controller{
 		API:       API,
 		Updates:   make(chan *poller.Update),
 		processor: processor.New(cfg.ZoneConfig),
-		setter:    setter.New(API, tadoBot),
+		Setter:    setter.New(API, tadoBot),
 		poller:    p,
 	}
 
@@ -40,14 +40,14 @@ func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot slack
 		tadoBot.RegisterCallback("refresh", controller.DoRefresh)
 	}
 
-	return controller, err
+	return controller
 }
 
 // Run the controller
 func (controller *Controller) Run(ctx context.Context, interval time.Duration) {
 	log.Info("controller started")
 
-	go controller.setter.Run(ctx, interval)
+	go controller.Setter.Run(ctx, interval)
 
 	for running := true; running; {
 		select {
@@ -66,9 +66,9 @@ func (controller *Controller) Update(update *poller.Update) {
 	controller.cache.Update(update)
 	for zoneID, nextState := range controller.processor.Process(update) {
 		if nextState != nil {
-			controller.setter.Set(zoneID, *nextState)
+			controller.Setter.Set(zoneID, *nextState)
 		} else {
-			controller.setter.Clear(zoneID)
+			controller.Setter.Clear(zoneID)
 		}
 	}
 	return

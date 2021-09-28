@@ -13,7 +13,7 @@ import (
 
 func (controller *Controller) ReportRules(_ context.Context, _ ...string) (attachments []slack.Attachment) {
 	text := make([]string, 0)
-	for zoneID, scheduled := range controller.setter.GetScheduled() {
+	for zoneID, scheduled := range controller.Setter.GetScheduled() {
 		var action string
 		switch scheduled.State {
 		case tado.ZoneStateOff:

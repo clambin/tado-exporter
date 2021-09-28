@@ -46,7 +46,7 @@ jobs:
           CGO_ENABLED=0 go build \
             -ldflags "-X github.com/$GITHUB_REPOSITORY/version.BuildVersion=$RELEASE_VERSION" \
             -o bld/$TARGET-$GOOS-$GOARCH \
-            $TARGET.go
+            cmd/$TARGET/$TARGET.go
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.target }}-${{ matrix.platform }}-${{ matrix.arch }}
