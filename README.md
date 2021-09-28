@@ -82,15 +82,13 @@ The (mandatory) configuration file option specifies a yaml file to control tado-
 ```
 # Set to true to enable debug logging
 debug: false
+# TCP port for the HTTP Server for Prometheus scraping
+port: 8080
 
 # Section for Prometheus exporter functionality
 exporter:
   # Enable exporter functionality
   enabled: true
-  # HTTP port for Prometheus scraping. Metrics are exposed on /metrics path
-  port: 8080
-  # How often the exporter should run
-  interval: 1m
   
 # Section for controller functionality
 controller:
@@ -151,14 +149,17 @@ tado-exporter exposes the following metrics:
 The following metrics are reported for each discovered zone.  The zone name is added as 'zone_name' label.
 
 ```
-* tado_zone_device_battery_status:      Battery status of devices in this zone
-* tado_zone_device_connection_status:   Connection status of devices in this zone
+* tado_outside_temp_celsius:            Current outside temperature in degrees celsius
+* tado_solar_intensity_percentage       Current solar intensity in percentage (0-100)
+* tado_weather:                         Current weather. Always one. See label 'tado_weather'
+* tado_zone_device_battery_status:      Tado device battery status
+* tado_zone_device_connection_status:   Tado device connection status
 * tado_zone_heating_percentage:         Current heating percentage in this zone in percentage (0-100)
 * tado_zone_humidity_percentage:        Current humidity percentage in this zone
 * tado_zone_open_window_duration:       Duration of open window event in seconds
 * tado_zone_open_window_remaining:      Remaining duration of open window event in seconds
 * tado_zone_power_state:                Power status of this zone
-* tado_zone_target_manual_mode:         1.0 if this zone is in manual target temp mode
+* tado_zone_target_manual_mode:         1 if this zone is in manual temp target mode
 * tado_zone_target_temp_celsius:        Target temperature of this zone in degrees celsius
 * tado_zone_temperature_celsius:        Current temperature of this zone in degrees celsius
 ```

@@ -54,7 +54,7 @@ func New() *Collector {
 
 		tadoZoneTargetTempCelsius: prometheus.NewDesc(
 			prometheus.BuildFQName("tado", "zone", "target_temp_celsius"),
-			"temperature of this zone in degrees celsius",
+			"Target temperature of this zone in degrees celsius",
 			[]string{"zone_name"},
 			nil,
 		),
