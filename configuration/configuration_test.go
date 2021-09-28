@@ -3,6 +3,7 @@ package configuration_test
 import (
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -96,10 +97,28 @@ func TestConfigLoader_Defaults(t *testing.T) {
 	assert.False(t, cfg.Debug)
 	assert.Equal(t, 1*time.Minute, cfg.Interval)
 	assert.True(t, cfg.Exporter.Enabled)
-	assert.Equal(t, 8080, cfg.Exporter.Port)
+	assert.Equal(t, 8080, cfg.Port)
 	assert.False(t, cfg.Controller.Enabled)
 	assert.False(t, cfg.Controller.TadoBot.Enabled)
 	assert.Nil(t, cfg.Controller.ZoneConfig)
+}
+
+func TestConfigLoader_Port_Backward_Compatible(t *testing.T) {
+	var testConfig = []byte(`
+debug: true
+exporter:
+  enabled: true
+  port: 8765
+`)
+
+	var (
+		err error
+		cfg *configuration.Configuration
+	)
+
+	cfg, err = configuration.LoadConfiguration(testConfig)
+	require.NoError(t, err)
+	assert.Equal(t, 8765, cfg.Port)
 }
 
 func TestConfigLoader_Tadobot(t *testing.T) {

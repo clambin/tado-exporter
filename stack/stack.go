@@ -39,9 +39,8 @@ func New(cfg *configuration.Configuration) (stack *Stack) {
 
 	API := tado.New(username, password, clientSecret)
 	stack = &Stack{
-		Poller: poller.New(API),
-		// TODO: Port should be global config parameter as it serves more than just Tado metrics
-		MetricServer: metrics.NewServer(cfg.Exporter.Port),
+		Poller:       poller.New(API),
+		MetricServer: metrics.NewServer(cfg.Port),
 		cfg:          cfg,
 	}
 

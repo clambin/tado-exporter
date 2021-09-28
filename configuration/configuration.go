@@ -11,6 +11,7 @@ import (
 // Configuration structure for tado-monitor
 type Configuration struct {
 	Debug      bool
+	Port       int
 	Interval   time.Duration
 	Exporter   ExporterConfiguration
 	Controller ControllerConfiguration
@@ -19,7 +20,8 @@ type Configuration struct {
 // ExporterConfiguration structure for exporter
 type ExporterConfiguration struct {
 	Enabled bool
-	Port    int
+	// Port is obsolete and will be removed in a future version
+	Port int
 }
 
 // ControllerConfiguration structure for controller
@@ -116,27 +118,32 @@ func LoadConfigurationFile(fileName string) (*Configuration, error) {
 // LoadConfiguration loads the tado-monitor configuration file from memory
 func LoadConfiguration(content []byte) (*Configuration, error) {
 	configuration := Configuration{
+		Port:     8080,
 		Interval: 1 * time.Minute,
 		Exporter: ExporterConfiguration{
 			Enabled: true,
-			Port:    8080,
 		},
 	}
 	err := yaml.Unmarshal(content, &configuration)
 
-	if err == nil {
-		if configuration.Controller.TadoBot.Enabled && configuration.Controller.TadoBot.Token.EnvVar != "" {
-			configuration.Controller.TadoBot.Token.Value = os.Getenv(configuration.Controller.TadoBot.Token.EnvVar)
+	if err != nil {
+		log.WithError(err).Fatal("unable to parse configuration file")
+	}
 
-			if configuration.Controller.TadoBot.Token.Value == "" {
-				log.WithField("envVar", configuration.Controller.TadoBot.Token.EnvVar).
-					Warning("tadoBot environment variable for token not set. Disabling tadoBot")
-				configuration.Controller.TadoBot.Enabled = false
-			}
+	if configuration.Controller.TadoBot.Enabled && configuration.Controller.TadoBot.Token.EnvVar != "" {
+		configuration.Controller.TadoBot.Token.Value = os.Getenv(configuration.Controller.TadoBot.Token.EnvVar)
+
+		if configuration.Controller.TadoBot.Token.Value == "" {
+			log.WithField("envVar", configuration.Controller.TadoBot.Token.EnvVar).
+				Warning("tadoBot environment variable for token not set. Disabling tadoBot")
+			configuration.Controller.TadoBot.Enabled = false
 		}
 	}
 
-	log.WithField("err", err).Debug("LoadConfiguration")
+	if configuration.Exporter.Port > 0 {
+		log.Warning("configuration: Exporter.Port is obsolete. move to top level")
+		configuration.Port = configuration.Exporter.Port
+	}
 
 	return &configuration, err
 }
