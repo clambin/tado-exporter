@@ -5,6 +5,7 @@ on:
     branches-ignore:
       - master
       - fix
+      - users
   pull_request_target:
 
 jobs:

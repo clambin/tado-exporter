@@ -188,3 +188,29 @@ func (controller *Controller) DoRefresh(_ context.Context, _ ...string) (attachm
 		Text: "refreshing Tado data",
 	}}
 }
+
+func (controller *Controller) ReportUsers(_ context.Context, _ ...string) (attachments []slack.Attachment) {
+	text := make([]string, 0)
+
+	for _, userID := range controller.cache.GetUsers() {
+		name, _ := controller.cache.GetUserName(userID)
+		state, _ := controller.cache.GetUserInfo(userID)
+		var stateString string
+		switch state {
+		case tado.DeviceHome:
+			stateString = "home"
+		case tado.DeviceAway:
+			stateString = "away"
+		default:
+			stateString = "unknown"
+		}
+		text = append(text, name+": "+stateString)
+
+	}
+	return []slack.Attachment{
+		{
+			Title: "users:",
+			Text:  strings.Join(text, "\n"),
+		},
+	}
+}

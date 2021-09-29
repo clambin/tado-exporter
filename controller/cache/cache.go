@@ -93,3 +93,25 @@ func (cache *Cache) GetZoneInfo(id int) (temperature, targetTemperature float64,
 	}
 	return
 }
+
+func (cache *Cache) GetUsers() (userIDs []int) {
+	cache.lock.RLock()
+	defer cache.lock.RUnlock()
+
+	for userID := range cache.update.UserInfo {
+		userIDs = append(userIDs, userID)
+	}
+	return
+}
+
+func (cache *Cache) GetUserInfo(userID int) (location tado.MobileDeviceLocationState, ok bool) {
+	cache.lock.RLock()
+	defer cache.lock.RUnlock()
+
+	var userInfo tado.MobileDevice
+	userInfo, ok = cache.update.UserInfo[userID]
+	if ok {
+		location = userInfo.IsHome()
+	}
+	return
+}

@@ -201,6 +201,7 @@ TadoBot supports the following commands:
 
 * **rules**: show any activated rules
 * **rooms**: show temperature & settings on each room
+* **users**: show the status of each user (home/away)
 * **set**: sets the room's target temperature, optionally for a limited duration:
   * **set Bathroom 23.5**: sets the bathroom's target temperature to 23.5ºC
   * **set Bathroom 23.5 1h**: same, but switches back to automatic mode after 1 hour

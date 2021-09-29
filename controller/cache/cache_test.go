@@ -35,6 +35,9 @@ func TestCache_GetName(t *testing.T) {
 	name, ok = testCache.GetZoneName(3)
 	assert.False(t, ok)
 
+	users := testCache.GetUsers()
+	require.Len(t, users, 2)
+
 	name, ok = testCache.GetUserName(2)
 	assert.True(t, ok)
 	assert.Equal(t, "bar", name)
@@ -120,6 +123,48 @@ func TestCache_GetZoneInfo(t *testing.T) {
 	_, _, _, _, found = testCache.GetZoneInfo(3)
 	assert.False(t, found)
 
+}
+
+func TestCache_GetUserInfo(t *testing.T) {
+	testCache := &cache.Cache{}
+	testCache.Update(&poller.Update{
+		UserInfo: map[int]tado.MobileDevice{
+			1: {
+				Name:     "foo",
+				Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
+				Location: tado.MobileDeviceLocation{
+					Stale:  false,
+					AtHome: true,
+				},
+			},
+			2: {
+				Name:     "bar",
+				Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
+				Location: tado.MobileDeviceLocation{
+					Stale:  false,
+					AtHome: false,
+				},
+			},
+			3: {
+				Name: "snafu",
+			},
+		},
+	})
+
+	home, ok := testCache.GetUserInfo(1)
+	require.True(t, ok)
+	assert.Equal(t, tado.DeviceHome, int(home))
+
+	home, ok = testCache.GetUserInfo(2)
+	require.True(t, ok)
+	assert.Equal(t, tado.DeviceAway, int(home))
+
+	home, ok = testCache.GetUserInfo(3)
+	require.True(t, ok)
+	assert.Equal(t, tado.DeviceUnknown, int(home))
+
+	_, ok = testCache.GetUserInfo(4)
+	assert.False(t, ok)
 }
 
 func BenchmarkCache_Update(b *testing.B) {

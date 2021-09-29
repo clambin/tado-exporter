@@ -253,3 +253,41 @@ func TestController_DoRefresh(t *testing.T) {
 
 	mock.AssertExpectationsForObjects(t, api, bot, pollr)
 }
+
+func TestController_DoUsers(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := &tadoMock.API{}
+	bot := &slackMock.SlackBot{}
+	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	pollr := &pollerMock.Poller{}
+
+	c := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: nil}, bot, pollr)
+	go c.Run(ctx, 10*time.Millisecond)
+
+	c.Update(&poller.Update{
+		UserInfo: updateMobileDeviceUserHome,
+		Zones:    updateZones,
+		ZoneInfo: updateZoneInfoManual,
+	})
+
+	attachments := c.ReportUsers(ctx)
+	require.Len(t, attachments, 1)
+	assert.Equal(t, "users:", attachments[0].Title)
+	assert.Equal(t, "foo: home", attachments[0].Text)
+
+	c.Update(&poller.Update{
+		UserInfo: updateMobileDeviceUserAway,
+		Zones:    updateZones,
+		ZoneInfo: updateZoneInfoManual,
+	})
+
+	attachments = c.ReportUsers(ctx)
+	require.Len(t, attachments, 1)
+	assert.Equal(t, "users:", attachments[0].Title)
+	assert.Equal(t, "foo: away", attachments[0].Text)
+
+	mock.AssertExpectationsForObjects(t, server, bot, pollr)
+
+}

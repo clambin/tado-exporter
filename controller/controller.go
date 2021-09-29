@@ -38,6 +38,7 @@ func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot slack
 		tadoBot.RegisterCallback("rooms", controller.ReportRooms)
 		tadoBot.RegisterCallback("set", controller.SetRoom)
 		tadoBot.RegisterCallback("refresh", controller.DoRefresh)
+		tadoBot.RegisterCallback("users", controller.ReportUsers)
 	}
 
 	return controller
