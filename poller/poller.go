@@ -45,6 +45,7 @@ func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 			running = false
 		case ch := <-poller.register:
 			poller.registry = append(poller.registry, ch)
+			log.Debugf("poller registered new client. total clients: %d", len(poller.registry))
 			// registration typically happens when we start up. so, let's poll for data so the client doesn't
 			// need to wait for interval to expire before getting data
 			poll = true
@@ -54,13 +55,12 @@ func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 			poll = true
 		}
 
-		// is anybody listening?
-		if running && poll && len(poller.registry) > 0 {
+		if running && poll {
 			// poll for new data
-			err = poller.Poll(ctx)
-			if err != nil {
+			if err = poller.Poll(ctx); err != nil {
 				log.WithError(err).Warning("failed to get Tado metrics")
 			}
+
 		}
 	}
 	timer.Stop()
@@ -77,10 +77,14 @@ func (poller *Server) Register(ch chan *Update) {
 }
 
 func (poller *Server) Poll(ctx context.Context) (err error) {
-	var update Update
-	update, err = poller.update(ctx)
+	// is anybody listening?
+	if len(poller.registry) == 0 {
+		log.Debug("poller has no clients. skipping update")
+		return
+	}
 
-	if err == nil {
+	var update Update
+	if update, err = poller.update(ctx); err == nil {
 		for _, ch := range poller.registry {
 			ch <- &update
 		}

@@ -43,7 +43,7 @@ func (server *Server) Process(update *poller.Update) (nextStates map[int]*setter
 			continue
 		}
 
-		// log.WithFields(log.Fields{"ZoneID": zoneID, "current": current, "next": next}).Debug("processing")
+		log.WithFields(log.Fields{"ZoneID": zoneID, "current": current, "next": next}).Debug("processing")
 
 		if next != current {
 			nextStates[zoneID] = &setter.NextState{State: next, Delay: delay, Reason: reason}
@@ -75,7 +75,6 @@ func (server *Server) getNextState(zoneID int, update *poller.Update) (current, 
 	}
 
 	if current == tado.ZoneStateManual {
-		log.WithField("zoneID", zoneID).Debug("zone in overlay")
 		// determine if/when to set back to auto
 		if server.zoneRules[zoneID].NightTime.Enabled || server.zoneRules[zoneID].LimitOverlay.Enabled {
 			nextState = tado.ZoneStateAuto

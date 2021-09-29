@@ -93,6 +93,7 @@ func (stack *Stack) Start(ctx context.Context) (wg *sync.WaitGroup) {
 			stack.Controller.Run(ctx, time.Minute)
 			wg.Done()
 		}()
+		stack.Poller.Register(stack.Controller.Updates)
 	}
 
 	wg.Add(1)

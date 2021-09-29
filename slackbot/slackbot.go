@@ -138,7 +138,7 @@ func (bot *Agent) Send(channel, color, title, text string) (err error) {
 				Text:  text,
 			}},
 		}
-		log.WithFields(log.Fields{"channel": message.Channel}).Debug("sending message")
+		log.WithFields(log.Fields{"channel": message.Channel, "title": title, "text": text}).Debug("sending message")
 		err = bot.SlackClient.Send(message)
 		if err != nil {
 			break
