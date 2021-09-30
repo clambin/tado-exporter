@@ -110,7 +110,7 @@ func (server *Server) process(ctx context.Context) {
 	var err error
 	for zoneID, scheduledTask := range server.tasks {
 		if time.Now().After(scheduledTask.When) {
-			log.WithFields(log.Fields{"zoneID": zoneID, "state": scheduledTask}).Debug("executing scheduled task")
+			log.WithFields(log.Fields{"zoneID": zoneID, "state": scheduledTask}).Info("setting next state")
 			switch scheduledTask.State {
 			case tado.ZoneStateAuto:
 				if err = server.API.DeleteZoneOverlay(ctx, zoneID); err == nil {
