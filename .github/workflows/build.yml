@@ -78,7 +78,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v3.6.1
+      - uses: docker/metadata-action@v3.6.2
         id: docker_meta
         with:
           images: ghcr.io/clambin/tado-monitor
