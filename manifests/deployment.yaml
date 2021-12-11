@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tado-monitor
+  labels:
+    app: tado-monitor
+  annotations:
+    fluxcd.io/automated: 'true'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tado-monitor
+  template:
+    metadata:
+      labels:
+        app: tado-monitor
+      annotations:
+        prometheus.io/scrape-slow: "true"
+        prometheus.io/port: "8080"
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: tado-monitor
+        image: ghcr.io/clambin/tado-monitor
+        args:
+        - '--config=/etc/tado-monitor/tado-monitor.yml'
+        env:
+        - name: TZ
+          value: "Europe/Brussels"
+        envFrom:
+        - secretRef:
+            name: tado-monitor
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+          limits:
+            memory: 32Mi
+        volumeMounts:
+        - name: config
+          mountPath: /etc/tado-monitor
+      volumes:
+      - name: config
+        configMap:
+          name: tado-monitor
+---

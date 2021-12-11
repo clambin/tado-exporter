@@ -4,8 +4,7 @@ on:
   push:
     branches-ignore:
       - master
-      - fix
-      - users
+      - okteto
   pull_request_target:
 
 jobs:

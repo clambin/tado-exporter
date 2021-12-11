@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- deployment.yaml
+- service.yaml
+images:
+- name: ghcr.io/clambin/tado-monitor
+  newTag: $TAG
+secretGenerator:
+- literals:
+  - TADO_USERNAME=$TADO_USERNAME
+  - TADO_PASSWORD=$TADO_PASSWORD
+  - TADO_SLACKBOT_TOKEN=$TADO_SLACKBOT_TOKEN
+  name: tado-monitor
+  type: Opaque

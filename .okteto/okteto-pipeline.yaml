@@ -1,0 +1,4 @@
+deploy:
+  - TAG=sha-$(echo $OKTETO_GIT_COMMIT | cut -c-7) envsubst < manifests/template/kustomization.yaml > manifests/kustomization.yaml
+  - cat manifests/kustomization.yaml
+  - kubectl apply -k manifests

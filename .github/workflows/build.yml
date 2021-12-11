@@ -4,8 +4,7 @@ on:
   push:
     branches:
     - master
-    - fix
-    - users
+    - okteto
 jobs:
   test:
     runs-on: ubuntu-latest
