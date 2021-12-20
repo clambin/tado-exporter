@@ -72,7 +72,7 @@ jobs:
         run: chmod +x bld/*
       - uses: docker/setup-qemu-action@v1.2.0
       - uses: docker/setup-buildx-action@v1.6.0
-      - uses: docker/login-action@v1.10.0
+      - uses: docker/login-action@v1.12.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
