@@ -67,7 +67,7 @@ func (controller *Controller) Update(update *poller.Update) {
 	controller.cache.Update(update)
 	for zoneID, nextState := range controller.processor.Process(update) {
 		if nextState != nil {
-			controller.Setter.Set(zoneID, *nextState)
+			controller.Setter.Set(*nextState)
 		} else {
 			controller.Setter.Clear(zoneID)
 		}

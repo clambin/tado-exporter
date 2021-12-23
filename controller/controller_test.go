@@ -120,10 +120,10 @@ func TestController_LimitOverlay(t *testing.T) {
 	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).
 		Return(nil)
-	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode in 0s").
+	bot.On("Send", "", "good", "foo: manual temperature setting detected", "moving to auto mode in 0s").
 		Return(nil).
 		Once()
-	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode").
+	bot.On("Send", "", "good", "foo: manual temperature setting detected", "moving to auto mode").
 		Return(nil).
 		Once()
 
@@ -162,10 +162,10 @@ func TestController_RevertLimitOverlay(t *testing.T) {
 
 	go c.Run(ctx, 10*time.Millisecond)
 
-	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode in 20m0s").
+	bot.On("Send", "", "good", "foo: manual temperature setting detected", "moving to auto mode in 20m0s").
 		Return(nil).
 		Once()
-	bot.On("Send", "", "good", "foo is now in auto mode", "canceling task to move to auto mode").
+	bot.On("Send", "", "good", "foo: room is now in auto mode", "canceling task to move to auto mode").
 		Return(nil).
 		Once()
 
@@ -196,7 +196,7 @@ func TestController_NightTime(t *testing.T) {
 	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.Anything, mock.Anything).
 		Return(nil)
-	bot.On("Send", "", "good", "manual temperature setting detected in foo", mock.AnythingOfType("string")).
+	bot.On("Send", "", "good", "foo: manual temperature setting detected", mock.AnythingOfType("string")).
 		Return(nil).
 		Once()
 
@@ -343,7 +343,7 @@ func TestController_Combined(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode in 20m0s").
+	bot.On("Send", "", "good", "foo: manual temperature setting detected", "moving to auto mode in 20m0s").
 		Return(nil).
 		Once()
 
@@ -393,7 +393,7 @@ func TestController_ReplacedTask(t *testing.T) {
 	go c.Run(ctx, 10*time.Millisecond)
 
 	// user is home. room in manual, with night time configured
-	bot.On("Send", "", "good", "manual temperature setting detected in foo", mock.AnythingOfType("string")).
+	bot.On("Send", "", "good", "foo: manual temperature setting detected", mock.AnythingOfType("string")).
 		Return(nil).
 		Once()
 	c.Updates <- &poller.Update{

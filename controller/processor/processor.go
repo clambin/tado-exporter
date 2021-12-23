@@ -36,22 +36,17 @@ func (server *Server) Process(update *poller.Update) (nextStates map[int]*setter
 	nextStates = make(map[int]*setter.NextState)
 
 	for zoneID := range update.ZoneInfo {
-		current, next, delay, actionReason, cancelReason, err := server.getNextState(zoneID, update)
+		current, nextState, err := server.getNextState(zoneID, update)
 
 		if err != nil {
 			log.WithError(err).WithField("zoneID", zoneID).Warning("failed to determine zone's next state")
 			continue
 		}
 
-		log.WithFields(log.Fields{"ZoneID": zoneID, "current": current, "next": next}).Debug("processing")
+		log.WithFields(log.Fields{"ZoneID": zoneID, "current": current, "next": nextState.State}).Debug("processing")
 
-		if next != current {
-			nextStates[zoneID] = &setter.NextState{
-				State:        next,
-				Delay:        delay,
-				ActionReason: actionReason,
-				CancelReason: cancelReason,
-			}
+		if nextState.State != current {
+			nextStates[zoneID] = &nextState
 		} else {
 			nextStates[zoneID] = nil
 		}
@@ -59,47 +54,49 @@ func (server *Server) Process(update *poller.Update) (nextStates map[int]*setter
 	return
 }
 
-func (server *Server) getNextState(zoneID int, update *poller.Update) (current, nextState tado.ZoneState, delay time.Duration, actionReason, cancelReason string, err error) {
-	zoneInfo, _ := update.ZoneInfo[zoneID]
+func (server *Server) getNextState(zoneID int, update *poller.Update) (current tado.ZoneState, nextState setter.NextState, err error) {
+	nextState.ZoneID = zoneID
+	nextState.ZoneName = update.Zones[zoneID].Name
 
 	// if we don't trigger any rules, keep the same state
+	zoneInfo, _ := update.ZoneInfo[zoneID]
 	current = zoneInfo.GetState()
-	nextState = current
+	nextState.State = current
 
 	// if all users are away -> set 'off'
 	if server.zoneRules[zoneID].AutoAway.Enabled {
 		if server.allUsersAway(zoneID, update) {
-			nextState = tado.ZoneStateOff
-			delay = server.zoneRules[zoneID].AutoAway.Delay
-			actionReason, cancelReason = server.getAutoAwayReason(zoneID, false, update)
+			nextState.State = tado.ZoneStateOff
+			nextState.Delay = server.zoneRules[zoneID].AutoAway.Delay
+			nextState.ActionReason, nextState.CancelReason = server.getAutoAwayReason(zoneID, false, update)
 
 			return
-		} else if current == tado.ZoneStateOff {
-			nextState = tado.ZoneStateAuto
-			actionReason, cancelReason = server.getAutoAwayReason(zoneID, true, update)
+		} else if nextState.State == tado.ZoneStateOff {
+			nextState.State = tado.ZoneStateAuto
+			nextState.ActionReason, nextState.CancelReason = server.getAutoAwayReason(zoneID, true, update)
 		}
 	}
 
-	if current == tado.ZoneStateManual {
+	if nextState.State == tado.ZoneStateManual {
 		// determine if/when to set back to auto
 		if server.zoneRules[zoneID].NightTime.Enabled || server.zoneRules[zoneID].LimitOverlay.Enabled {
-			nextState = tado.ZoneStateAuto
-			actionReason = "manual temperature setting detected in " + update.Zones[zoneID].Name
-			cancelReason = update.Zones[zoneID].Name + " is now in auto mode"
+			nextState.State = tado.ZoneStateAuto
+			nextState.ActionReason = "manual temperature setting detected"
+			nextState.CancelReason = "room is now in auto mode"
 
 			var nightDelay, limitDelay time.Duration
 			if server.zoneRules[zoneID].NightTime.Enabled {
 				nightDelay = nightTimeDelay(server.zoneRules[zoneID].NightTime.Time)
-				delay = nightDelay
+				nextState.Delay = nightDelay
 			}
 			if server.zoneRules[zoneID].LimitOverlay.Enabled {
 				limitDelay = server.zoneRules[zoneID].LimitOverlay.Delay
-				delay = limitDelay
+				nextState.Delay = limitDelay
 			}
 
 			if server.zoneRules[zoneID].NightTime.Enabled && server.zoneRules[zoneID].LimitOverlay.Enabled {
-				if nightDelay < delay {
-					delay = nightDelay
+				if nightDelay < nextState.Delay {
+					nextState.Delay = nightDelay
 				}
 			}
 		}
@@ -151,7 +148,5 @@ func (server *Server) getAutoAwayReason(zoneID int, home bool, update *poller.Up
 			cancelReason = "one or more users are home"
 		}
 	}
-	actionReason = update.Zones[zoneID].Name + ": " + actionReason
-	cancelReason = update.Zones[zoneID].Name + ": " + cancelReason
 	return
 }

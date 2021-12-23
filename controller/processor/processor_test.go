@@ -95,29 +95,39 @@ func TestServer_GetNextState(t *testing.T) {
 	p.load(&testUpdates[0])
 
 	// User is home
-	_, nextState, delay, actionReason, cancelReason, err := p.getNextState(1, &testUpdates[0])
+	_, nextState, err := p.getNextState(1, &testUpdates[0])
 	require.NoError(t, err)
-	assert.Equal(t, tado.ZoneState(tado.ZoneStateAuto), nextState)
-	assert.Zero(t, delay)
-	assert.Empty(t, actionReason)
-	assert.Empty(t, cancelReason)
+	assert.Equal(t, setter.NextState{
+		ZoneID:   1,
+		ZoneName: "foo",
+		State:    tado.ZoneStateAuto,
+	}, nextState)
 
 	// User is not home: autoAway triggers
-	_, nextState, delay, actionReason, cancelReason, err = p.getNextState(1, &testUpdates[1])
+	_, nextState, err = p.getNextState(1, &testUpdates[1])
 	require.NoError(t, err)
-	assert.Equal(t, tado.ZoneState(tado.ZoneStateOff), nextState)
-	assert.Equal(t, 2*time.Hour, delay)
-	assert.Equal(t, "foo: foo is away", actionReason)
-	assert.Equal(t, "foo: foo is home", cancelReason)
+	assert.Equal(t, setter.NextState{
+		ZoneID:       1,
+		ZoneName:     "foo",
+		State:        tado.ZoneStateOff,
+		Delay:        2 * time.Hour,
+		ActionReason: "foo is away",
+		CancelReason: "foo is home",
+	}, nextState)
 
 	// Zone is in overlay mode: limitOverlay or nightTime triggers
-	_, nextState, delay, actionReason, cancelReason, err = p.getNextState(1, &testUpdates[2])
+	_, nextState, err = p.getNextState(1, &testUpdates[2])
 	require.NoError(t, err)
-	assert.Equal(t, tado.ZoneState(tado.ZoneStateAuto), nextState)
-	assert.LessOrEqual(t, delay, time.Hour)
-	// assert.NotZero(t, delay)
-	assert.Equal(t, "manual temperature setting detected in foo", actionReason)
-	assert.Equal(t, "foo is now in auto mode", cancelReason)
+	assert.LessOrEqual(t, nextState.Delay, time.Hour)
+	nextState.Delay = 0
+	assert.Equal(t, setter.NextState{
+		ZoneID:       1,
+		ZoneName:     "foo",
+		State:        tado.ZoneStateAuto,
+		Delay:        0,
+		ActionReason: "manual temperature setting detected",
+		CancelReason: "room is now in auto mode",
+	}, nextState)
 }
 
 func TestServer_Process(t *testing.T) {
@@ -149,22 +159,43 @@ func TestServer_Process(t *testing.T) {
 	nextStates = p.Process(&testUpdates[1])
 	require.Len(t, nextStates, 1)
 	require.NotNil(t, nextStates[1])
-	assert.Equal(t, setter.NextState{State: tado.ZoneStateOff, Delay: 2 * time.Hour, ActionReason: "foo: foo is away", CancelReason: "foo: foo is home"}, *nextStates[1])
+	assert.Equal(t, setter.NextState{
+		ZoneID:       1,
+		ZoneName:     "foo",
+		State:        tado.ZoneStateOff,
+		Delay:        2 * time.Hour,
+		ActionReason: "foo is away",
+		CancelReason: "foo is home",
+	}, *nextStates[1])
 
 	// User is home, zone is in manual mode. Zone should be switched to auto mode
 	nextStates = p.Process(&testUpdates[2])
 	require.Len(t, nextStates, 1)
 	require.NotNil(t, nextStates[1])
-	assert.Equal(t, setter.NextState{State: tado.ZoneStateAuto, Delay: time.Hour, ActionReason: "manual temperature setting detected in foo", CancelReason: "foo is now in auto mode"}, *nextStates[1])
+	assert.Equal(t, setter.NextState{
+		ZoneID:       1,
+		ZoneName:     "foo",
+		State:        tado.ZoneStateAuto,
+		Delay:        time.Hour,
+		ActionReason: "manual temperature setting detected",
+		CancelReason: "room is now in auto mode",
+	}, *nextStates[1])
 
 	// User is home, zone is off. Zone should be switched to auto mode
 	nextStates = p.Process(&testUpdates[3])
 	require.Len(t, nextStates, 1)
 	require.NotNil(t, nextStates[1])
-	assert.Equal(t, setter.NextState{State: tado.ZoneStateAuto, Delay: 0, ActionReason: "foo: foo is home", CancelReason: "foo: foo is away"}, *nextStates[1])
+	assert.Equal(t, setter.NextState{
+		ZoneID:       1,
+		ZoneName:     "foo",
+		State:        tado.ZoneStateAuto,
+		Delay:        0,
+		ActionReason: "foo is home",
+		CancelReason: "foo is away",
+	}, *nextStates[1])
 
 	// User is away, zone is off. No action
 	nextStates = p.Process(&testUpdates[4])
 	require.Len(t, nextStates, 1)
-	require.Nil(t, nextStates[1])
+	assert.Contains(t, nextStates, 1)
 }

@@ -11,7 +11,7 @@ import (
 
 // ZoneSetter receives the next zone state from Controller and sets the state at the appropriate time
 type ZoneSetter interface {
-	Set(zoneID int, nextState NextState)
+	Set(nextState NextState)
 	Clear(zoneID int)
 	Run(ctx context.Context, interval time.Duration)
 	GetScheduled() (scheduled map[int]NextState)
@@ -21,6 +21,8 @@ var _ ZoneSetter = &Server{}
 
 // NextState describes the next State of a zone after a specified Delay
 type NextState struct {
+	ZoneID       int
+	ZoneName     string
 	State        tado.ZoneState
 	Delay        time.Duration
 	ActionReason string
@@ -46,19 +48,19 @@ func New(API tado.API, bot slackbot.SlackBot) *Server {
 }
 
 // Set implements the ZoneSetter interface. It registers the future state of the specified zone
-func (server *Server) Set(zoneID int, nextState NextState) {
+func (server *Server) Set(nextState NextState) {
 	server.lock.Lock()
 	defer server.lock.Unlock()
 
 	nextState.When = time.Now().Add(nextState.Delay)
-	if current, ok := server.tasks[zoneID]; ok {
+	if current, ok := server.tasks[nextState.ZoneID]; ok {
 		if current.State == nextState.State && current.When.Before(nextState.When) {
 			// log.WithFields(log.Fields{"current": current, "task": nextState}).Info("earlier task exists. dropping")
 			return
 		}
 	}
-	log.WithFields(log.Fields{"zoneID": zoneID, "state": nextState}).Info("queuing next state")
-	server.tasks[zoneID] = nextState
+	log.WithFields(log.Fields{"zoneID": nextState.ZoneID, "state": nextState}).Info("queuing next state")
+	server.tasks[nextState.ZoneID] = nextState
 	if nextState.Delay > 0 {
 		server.postAction(nextState)
 	}
@@ -146,7 +148,7 @@ func (server *Server) postAction(nextState NextState) {
 		text += " in " + nextState.Delay.Round(time.Second).String()
 	}
 
-	err := server.SlackBot.Send("", "good", nextState.ActionReason, text)
+	err := server.SlackBot.Send("", "good", nextState.ZoneName+": "+nextState.ActionReason, text)
 
 	if err != nil {
 		log.WithError(err).Warning("failed to post to slack")
@@ -162,7 +164,7 @@ func (server *Server) postCancel(previousNextState NextState) {
 		text = "canceling task to switch off heating"
 	}
 
-	err := server.SlackBot.Send("", "good", previousNextState.CancelReason, text)
+	err := server.SlackBot.Send("", "good", previousNextState.ZoneName+": "+previousNextState.CancelReason, text)
 
 	if err != nil {
 		log.WithError(err).Warning("failed to post to slack")
