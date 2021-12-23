@@ -51,9 +51,9 @@ func TestServer_SetOverlay(t *testing.T) {
 		Return(nil).
 		Once()
 
-	server.Set(1, setter.NextState{State: tado.ZoneStateOff, Delay: 15 * time.Second, Reason: "test1"})
-	server.Set(1, setter.NextState{State: tado.ZoneStateOff, Delay: 25 * time.Second, Reason: "test2"})
-	server.Set(1, setter.NextState{State: tado.ZoneStateOff, Delay: 15 * time.Millisecond, Reason: "test3"})
+	server.Set(1, setter.NextState{State: tado.ZoneStateOff, Delay: 15 * time.Second, ActionReason: "test1"})
+	server.Set(1, setter.NextState{State: tado.ZoneStateOff, Delay: 25 * time.Second, ActionReason: "test2"})
+	server.Set(1, setter.NextState{State: tado.ZoneStateOff, Delay: 15 * time.Millisecond, ActionReason: "test3"})
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -91,9 +91,9 @@ func TestServer_DeleteOverlay(t *testing.T) {
 		Return(nil).
 		Once()
 
-	server.Set(1, setter.NextState{State: tado.ZoneStateAuto, Delay: 15 * time.Second, Reason: "test1"})
-	server.Set(1, setter.NextState{State: tado.ZoneStateAuto, Delay: 25 * time.Second, Reason: "test2"})
-	server.Set(1, setter.NextState{State: tado.ZoneStateAuto, Delay: 25 * time.Millisecond, Reason: "test3"})
+	server.Set(1, setter.NextState{State: tado.ZoneStateAuto, Delay: 15 * time.Second, ActionReason: "test1"})
+	server.Set(1, setter.NextState{State: tado.ZoneStateAuto, Delay: 25 * time.Second, ActionReason: "test2"})
+	server.Set(1, setter.NextState{State: tado.ZoneStateAuto, Delay: 25 * time.Millisecond, ActionReason: "test3"})
 	time.Sleep(200 * time.Millisecond)
 
 	cancel()
@@ -151,11 +151,15 @@ func TestServer_Clear(t *testing.T) {
 	}()
 
 	bot.
-		On("Send", "", "good", "", "moving to auto mode in 0s").
+		On("Send", "", "good", "foo", "moving to auto mode in 0s").
+		Return(nil).
+		Once()
+	bot.
+		On("Send", "", "good", "bar", "canceling task to move to auto mode").
 		Return(nil).
 		Once()
 
-	server.Set(1, setter.NextState{State: tado.ZoneStateAuto, Delay: 50 * time.Millisecond})
+	server.Set(1, setter.NextState{State: tado.ZoneStateAuto, Delay: 50 * time.Millisecond, ActionReason: "foo", CancelReason: "bar"})
 	server.Clear(1)
 	time.Sleep(100 * time.Millisecond)
 
@@ -180,7 +184,7 @@ func TestServer_GetScheduled(t *testing.T) {
 		On("Send", "", "good", "test", "switching off heating in 25m0s").
 		Return(nil).
 		Once()
-	server.Set(1, setter.NextState{State: tado.ZoneStateOff, Delay: 25 * time.Minute, Reason: "test"})
+	server.Set(1, setter.NextState{State: tado.ZoneStateOff, Delay: 25 * time.Minute, ActionReason: "test"})
 
 	scheduled := server.GetScheduled()
 	require.Len(t, scheduled, 1)
@@ -188,8 +192,36 @@ func TestServer_GetScheduled(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateOff), item.State)
 	assert.Equal(t, 25*time.Minute, item.Delay)
-	assert.Equal(t, "test", item.Reason)
+	assert.Equal(t, "test", item.ActionReason)
 
 	cancel()
 	wg.Wait()
+	mock.AssertExpectationsForObjects(t, bot)
+}
+
+func TestServer_CancelTask(t *testing.T) {
+	server, api, bot := buildStack()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go func() {
+		server.Run(ctx, 25*time.Millisecond)
+		wg.Done()
+	}()
+
+	bot.
+		On("Send", "", "good", "test1", "moving to auto mode in 15s").Return(nil)
+	server.Set(1, setter.NextState{State: tado.ZoneStateAuto, Delay: 15 * time.Second, ActionReason: "test1", CancelReason: "1/test1"})
+
+	bot.
+		On("Send", "", "good", "1/test1", "canceling task to move to auto mode").
+		Return(nil)
+	server.Clear(1)
+
+	cancel()
+	wg.Wait()
+
+	mock.AssertExpectationsForObjects(t, api, bot)
 }

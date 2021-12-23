@@ -36,7 +36,7 @@ func (server *Server) Process(update *poller.Update) (nextStates map[int]*setter
 	nextStates = make(map[int]*setter.NextState)
 
 	for zoneID := range update.ZoneInfo {
-		current, next, delay, reason, err := server.getNextState(zoneID, update)
+		current, next, delay, actionReason, cancelReason, err := server.getNextState(zoneID, update)
 
 		if err != nil {
 			log.WithError(err).WithField("zoneID", zoneID).Warning("failed to determine zone's next state")
@@ -46,7 +46,12 @@ func (server *Server) Process(update *poller.Update) (nextStates map[int]*setter
 		log.WithFields(log.Fields{"ZoneID": zoneID, "current": current, "next": next}).Debug("processing")
 
 		if next != current {
-			nextStates[zoneID] = &setter.NextState{State: next, Delay: delay, Reason: reason}
+			nextStates[zoneID] = &setter.NextState{
+				State:        next,
+				Delay:        delay,
+				ActionReason: actionReason,
+				CancelReason: cancelReason,
+			}
 		} else {
 			nextStates[zoneID] = nil
 		}
@@ -54,7 +59,7 @@ func (server *Server) Process(update *poller.Update) (nextStates map[int]*setter
 	return
 }
 
-func (server *Server) getNextState(zoneID int, update *poller.Update) (current, nextState tado.ZoneState, delay time.Duration, reason string, err error) {
+func (server *Server) getNextState(zoneID int, update *poller.Update) (current, nextState tado.ZoneState, delay time.Duration, actionReason, cancelReason string, err error) {
 	zoneInfo, _ := update.ZoneInfo[zoneID]
 
 	// if we don't trigger any rules, keep the same state
@@ -66,11 +71,12 @@ func (server *Server) getNextState(zoneID int, update *poller.Update) (current, 
 		if server.allUsersAway(zoneID, update) {
 			nextState = tado.ZoneStateOff
 			delay = server.zoneRules[zoneID].AutoAway.Delay
-			reason = server.getAutoAwayReason(zoneID, false, update)
+			actionReason, cancelReason = server.getAutoAwayReason(zoneID, false, update)
+
 			return
 		} else if current == tado.ZoneStateOff {
 			nextState = tado.ZoneStateAuto
-			reason = server.getAutoAwayReason(zoneID, true, update)
+			actionReason, cancelReason = server.getAutoAwayReason(zoneID, true, update)
 		}
 	}
 
@@ -78,7 +84,8 @@ func (server *Server) getNextState(zoneID int, update *poller.Update) (current, 
 		// determine if/when to set back to auto
 		if server.zoneRules[zoneID].NightTime.Enabled || server.zoneRules[zoneID].LimitOverlay.Enabled {
 			nextState = tado.ZoneStateAuto
-			reason = "manual temperature setting detected in " + update.Zones[zoneID].Name
+			actionReason = "manual temperature setting detected in " + update.Zones[zoneID].Name
+			cancelReason = update.Zones[zoneID].Name + " is now in auto mode"
 
 			var nightDelay, limitDelay time.Duration
 			if server.zoneRules[zoneID].NightTime.Enabled {
@@ -123,21 +130,28 @@ func (server *Server) allUsersAway(zoneID int, update *poller.Update) (away bool
 	return
 }
 
-func (server *Server) getAutoAwayReason(zoneID int, home bool, update *poller.Update) (reason string) {
+func (server *Server) getAutoAwayReason(zoneID int, home bool, update *poller.Update) (actionReason, cancelReason string) {
 	if len(server.zoneRules[zoneID].AutoAway.Users) == 1 {
-		reason = update.UserInfo[server.zoneRules[zoneID].AutoAway.Users[0]].Name + " is "
+		actionReason = update.UserInfo[server.zoneRules[zoneID].AutoAway.Users[0]].Name + " is "
+		cancelReason = actionReason
 		if home {
-			reason += "home"
+			actionReason += "home"
+			cancelReason += "away"
 		} else {
-			reason += "away"
+			actionReason += "away"
+			cancelReason += "home"
+
 		}
 	} else {
 		if home {
-			reason = "one or more users are home"
+			actionReason = "one or more users are home"
+			cancelReason = "all users are away"
 		} else {
-			reason = "all users are away"
+			actionReason = "all users are away"
+			cancelReason = "one or more users are home"
 		}
 	}
-	reason = update.Zones[zoneID].Name + ": " + reason
+	actionReason = update.Zones[zoneID].Name + ": " + actionReason
+	cancelReason = update.Zones[zoneID].Name + ": " + cancelReason
 	return
 }

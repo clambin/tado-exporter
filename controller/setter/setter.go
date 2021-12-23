@@ -21,10 +21,11 @@ var _ ZoneSetter = &Server{}
 
 // NextState describes the next State of a zone after a specified Delay
 type NextState struct {
-	State  tado.ZoneState
-	Delay  time.Duration
-	Reason string
-	When   time.Time
+	State        tado.ZoneState
+	Delay        time.Duration
+	ActionReason string
+	CancelReason string
+	When         time.Time
 }
 
 // Server performs zone State changes received from Controller
@@ -59,7 +60,7 @@ func (server *Server) Set(zoneID int, nextState NextState) {
 	log.WithFields(log.Fields{"zoneID": zoneID, "state": nextState}).Info("queuing next state")
 	server.tasks[zoneID] = nextState
 	if nextState.Delay > 0 {
-		server.post(nextState)
+		server.postAction(nextState)
 	}
 }
 
@@ -69,6 +70,7 @@ func (server *Server) Clear(zoneID int) {
 	defer server.lock.Unlock()
 	if task, ok := server.tasks[zoneID]; ok {
 		log.WithFields(log.Fields{"zoneID": zoneID, "task": task}).Info("removing queued next state")
+		server.postCancel(task)
 		delete(server.tasks, zoneID)
 	}
 }
@@ -122,7 +124,7 @@ func (server *Server) process(ctx context.Context) {
 			}
 			if err == nil {
 				scheduledTask.Delay = 0
-				server.post(scheduledTask)
+				server.postAction(scheduledTask)
 				delete(server.tasks, zoneID)
 			} else {
 				log.WithError(err).Warning("failed to call Tado")
@@ -131,7 +133,7 @@ func (server *Server) process(ctx context.Context) {
 	}
 }
 
-func (server *Server) post(nextState NextState) {
+func (server *Server) postAction(nextState NextState) {
 	var text string
 	switch nextState.State {
 	case tado.ZoneStateAuto:
@@ -144,7 +146,23 @@ func (server *Server) post(nextState NextState) {
 		text += " in " + nextState.Delay.Round(time.Second).String()
 	}
 
-	err := server.SlackBot.Send("", "good", nextState.Reason, text)
+	err := server.SlackBot.Send("", "good", nextState.ActionReason, text)
+
+	if err != nil {
+		log.WithError(err).Warning("failed to post to slack")
+	}
+}
+
+func (server *Server) postCancel(previousNextState NextState) {
+	var text string
+	switch previousNextState.State {
+	case tado.ZoneStateAuto:
+		text = "canceling task to move to auto mode"
+	case tado.ZoneStateOff:
+		text = "canceling task to switch off heating"
+	}
+
+	err := server.SlackBot.Send("", "good", previousNextState.CancelReason, text)
 
 	if err != nil {
 		log.WithError(err).Warning("failed to post to slack")

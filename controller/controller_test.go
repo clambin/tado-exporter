@@ -165,6 +165,9 @@ func TestController_RevertLimitOverlay(t *testing.T) {
 	bot.On("Send", "", "good", "manual temperature setting detected in foo", "moving to auto mode in 20m0s").
 		Return(nil).
 		Once()
+	bot.On("Send", "", "good", "foo is now in auto mode", "canceling task to move to auto mode").
+		Return(nil).
+		Once()
 
 	c.Updates <- updateZoneInOverlay
 	c.Updates <- &poller.Update{
