@@ -2,7 +2,7 @@ package collector_test
 
 import (
 	"context"
-	"github.com/clambin/metrics"
+	"github.com/clambin/go-metrics"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/poller"
