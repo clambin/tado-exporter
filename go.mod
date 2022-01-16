@@ -18,7 +18,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 )
 
-require bou.ke/monkey v1.0.2
+require (
+	bou.ke/monkey v1.0.2
+	github.com/clambin/metrics v0.1.0
+)
 
 require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
