@@ -19,7 +19,7 @@ require (
 
 require (
 	bou.ke/monkey v1.0.2
-	github.com/clambin/go-metrics v0.2.0
+	github.com/clambin/go-metrics v0.2.1
 )
 
 require (
