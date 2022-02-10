@@ -3,110 +3,19 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - '*'
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2.4.0
-      - uses: actions/setup-go@v2
-        with:
-          go-version: 1.17
-      - name: test
-        run: |
-          go test ./... -race -coverprofile=coverage.txt -covermode=atomic
-      - uses: codecov/codecov-action@v2.1.0
-        with:
-          file: coverage.txt
-          token: ${{ secrets.CODECOV_TOKEN }}
+    uses: clambin/workflows/.github/workflows/test.yaml@main
+    with:
+      go-version: 1.17
   build:
     needs: test
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [ tado-monitor ]
-        platform: [ linux ]
-        arch: [ amd64, arm, arm64 ]
-    steps:
-      - uses: actions/checkout@v2.4.0
-      - uses: actions/setup-go@v2
-        with:
-          go-version: 1.17
-      - name: Version number
-        id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF##*/}
-      - name: build
-        env:
-          TARGET: ${{ matrix.target }}
-          GOOS: ${{ matrix.platform }}
-          GOARCH: ${{ matrix.arch }}
-          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
-        run: |
-          CGO_ENABLED=0 go build \
-            -ldflags "-X github.com/$GITHUB_REPOSITORY/version.BuildVersion=$RELEASE_VERSION" \
-            -o bld/$TARGET-$GOOS-$GOARCH \
-            cmd/$TARGET/$TARGET.go
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ matrix.target }}-${{ matrix.platform }}-${{ matrix.arch }}
-          path: ./bld/*
-  docker:
-    needs:  build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2.4.0
-      - uses: actions/download-artifact@v2
-        with:
-          name: tado-monitor-linux-arm
-          path: ./bld
-      - uses: actions/download-artifact@v2
-        with:
-          name: tado-monitor-linux-arm64
-          path: ./bld
-      - uses: actions/download-artifact@v2
-        with:
-          name: tado-monitor-linux-amd64
-          path: ./bld
-      - name: Fix permissions
-        run: chmod +x bld/*
-      - uses: docker/setup-qemu-action@v1.2.0
-      - uses: docker/setup-buildx-action@v1.6.0
-      - uses: docker/login-action@v1.12.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v3.6.2
-        id: docker_meta
-        with:
-          images: ghcr.io/clambin/tado-monitor
-          tags: |
-            type=sha
-            type=semver,pattern={{version}}
-      - uses: docker/build-push-action@v2.7.0
-        with:
-          context: .
-          file: ./build/Dockerfile
-          platforms: linux/amd64,linux/arm,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.docker_meta.outputs.tags }}
-          labels: ${{ steps.docker_meta.outputs.labels }}
+    uses: clambin/workflows/.github/workflows/build.yaml@main
+    with:
+      go-version: 1.17
+      target: tado-monitor
   publish:
     needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2.4.0
-      - uses: actions/download-artifact@v2
-        with:
-          path: ./artifacts
-      - name: Move binaries into place
-        run: |
-          mkdir bld
-          mv artifacts/*/* bld
-      - uses: marvinpinto/action-automatic-releases@v1.2.1
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: false
-          files: |
-            bld/*
+    uses: clambin/workflows/.github/workflows/publish.yaml@main

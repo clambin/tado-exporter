@@ -5,20 +5,11 @@ on:
     branches-ignore:
       - master
       - refactor
+      - metrics
   pull_request_target:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2.4.0
-      - uses: actions/setup-go@v2
-        with:
-          go-version: 1.17
-      - name: Test
-        run: |
-          go test ./... -race -coverprofile=coverage.txt -covermode=atomic
-      - uses: codecov/codecov-action@v2.1.0
-        with:
-          file: coverage.txt
-          token: ${{ secrets.CODECOV_TOKEN }}
+    uses: clambin/workflows/.github/workflows/test.yaml@main
+    with:
+      go-version: 1.17
