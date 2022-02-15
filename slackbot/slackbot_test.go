@@ -7,6 +7,7 @@ import (
 	"github.com/clambin/tado-exporter/version"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -112,5 +113,23 @@ func TestSlackBot_Post(t *testing.T) {
 		if assert.Len(t, msg.Attachments, 1) {
 			assert.Equal(t, "Hello world!", msg.Attachments[0].Text)
 		}
+	}
+
+	client.GetPostChannel() <- []slack.Attachment{
+		{
+			Color: "good",
+			Title: "test",
+			Text:  "hello world",
+		},
+	}
+
+	for i := 0; i < len(server.Channels); i++ {
+		msg := <-output
+
+		assert.Contains(t, server.Channels, msg.Channel)
+		require.Len(t, msg.Attachments, 1)
+		assert.Equal(t, "good", msg.Attachments[0].Color)
+		assert.Equal(t, "test", msg.Attachments[0].Title)
+		assert.Equal(t, "hello world", msg.Attachments[0].Text)
 	}
 }
