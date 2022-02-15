@@ -211,6 +211,10 @@ func (bot *Agent) processMessage(ctx context.Context, text string) (attachments 
 	return
 }
 
+func (bot *Agent) GetPostChannel() (ch PostChannel) {
+	return bot.postChannel
+}
+
 func (bot *Agent) RegisterCallback(command string, callback CommandFunc) {
 	bot.cbLock.Lock()
 	defer bot.cbLock.Unlock()
