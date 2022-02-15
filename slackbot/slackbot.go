@@ -47,7 +47,7 @@ type Agent struct {
 	channels  []string
 	userID    string
 	callbacks map[string]CommandFunc
-	reconnect bool
+	connected bool
 	cbLock    sync.RWMutex
 }
 
@@ -169,9 +169,9 @@ func (bot *Agent) processEvent(ctx context.Context, msg slack.RTMEvent) (channel
 	//	log.Debug("hello")
 	case *slack.ConnectedEvent:
 		bot.userID = ev.Info.User.ID
-		if bot.reconnect == false {
+		if bot.connected == false {
 			log.WithField("userID", bot.userID).Info("connected to slack")
-			bot.reconnect = true
+			bot.connected = true
 		} else {
 			log.WithField("userID", bot.userID).Debug("reconnected to slack")
 		}
@@ -209,10 +209,6 @@ func (bot *Agent) processMessage(ctx context.Context, text string) (attachments 
 	log.WithFields(log.Fields{"command": command, "outputs": len(attachments)}).Debug("command run")
 
 	return
-}
-
-func (bot *Agent) GetPostChannel() (ch PostChannel) {
-	return bot.postChannel
 }
 
 func (bot *Agent) RegisterCallback(command string, callback CommandFunc) {
