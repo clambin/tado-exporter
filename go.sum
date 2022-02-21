@@ -55,8 +55,8 @@ github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5P
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/clambin/go-metrics v0.2.1 h1:TlnrXbZ4lEv6KLYdtdFKCZYre8Mf9sBlWlItcdn1byg=
 github.com/clambin/go-metrics v0.2.1/go.mod h1:oEEJTGR660AzsIlFsEP2qRVJMYrSUAFvhcrhrRk5Vdk=
-github.com/clambin/tado v0.5.0 h1:bea1dbZeZm+ZcWfBmzEPtS/UOsduonQas0Ao2gigpMw=
-github.com/clambin/tado v0.5.0/go.mod h1:8ISRzYF9WrFscKpEM5XRRqZ2kpD6/7QuZjMCku9wYBM=
+github.com/clambin/tado v0.6.0 h1:AjD1IS9Z+VF7A/ZxsZRaITWC3zqRusuFP0AiVw12Fis=
+github.com/clambin/tado v0.6.0/go.mod h1:nPFJwTMod/fbqviy1GlR0AYWSPecsEB37wybK9qlzts=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
