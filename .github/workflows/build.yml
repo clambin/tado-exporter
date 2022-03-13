@@ -7,7 +7,11 @@ on:
       - workflows
 
 jobs:
+  test:
+    uses: clambin/workflows/.github/workflows/test.yaml@main
   build:
+    needs:
+      - test
     uses: clambin/workflows/.github/workflows/build.yaml@main
     with:
       target: tado-monitor
