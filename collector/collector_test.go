@@ -2,7 +2,7 @@ package collector_test
 
 import (
 	"context"
-	"github.com/clambin/go-metrics"
+	"github.com/clambin/go-metrics/tools"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/poller"
@@ -56,7 +56,7 @@ func TestCollector_Collect(t *testing.T) {
 
 	for count > 0 {
 		m := <-ch
-		name := metrics.MetricName(m)
+		name := tools.MetricName(m)
 
 		expected, ok := CollectResult[name]
 
@@ -65,7 +65,7 @@ func TestCollector_Collect(t *testing.T) {
 		}
 
 		if expected.multiKey != "" {
-			key := metrics.MetricLabel(m, expected.multiKey)
+			key := tools.MetricLabel(m, expected.multiKey)
 
 			if assert.NotEmpty(t, key) == false {
 				continue
@@ -77,10 +77,10 @@ func TestCollector_Collect(t *testing.T) {
 			}
 		}
 
-		assert.Equal(t, expected.value, metrics.MetricValue(m).GetGauge().GetValue(), name)
+		assert.Equal(t, expected.value, tools.MetricValue(m).GetGauge().GetValue(), name)
 
 		for _, labelPair := range expected.labels {
-			assert.Equal(t, labelPair.value, metrics.MetricLabel(m, labelPair.name), name)
+			assert.Equal(t, labelPair.value, tools.MetricLabel(m, labelPair.name), name)
 		}
 		count--
 	}

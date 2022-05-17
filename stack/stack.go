@@ -2,7 +2,7 @@ package stack
 
 import (
 	"context"
-	"github.com/clambin/go-metrics"
+	"github.com/clambin/go-metrics/server"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/configuration"
@@ -24,7 +24,7 @@ type Stack struct {
 	Collector    *collector.Collector
 	TadoBot      slackbot.SlackBot
 	Controller   *controller.Controller
-	MetricServer *metrics.Server
+	MetricServer *server.Server
 	cfg          *configuration.Configuration
 }
 
@@ -40,7 +40,7 @@ func New(cfg *configuration.Configuration) (stack *Stack) {
 	API := tado.New(username, password, clientSecret)
 	stack = &Stack{
 		Poller:       poller.New(API),
-		MetricServer: metrics.NewServer(cfg.Port),
+		MetricServer: server.New(cfg.Port),
 		cfg:          cfg,
 	}
 
