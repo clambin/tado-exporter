@@ -17,7 +17,6 @@ type slackClient struct {
 
 	slackClient *slack.Client
 	slackRTM    *slack.RTM
-	channels    []string
 }
 
 type SlackMessage struct {

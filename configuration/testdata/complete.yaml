@@ -1,0 +1,27 @@
+debug: true
+interval: 5m
+
+exporter:
+  enabled: true
+  port: 8080
+
+controller:
+  enabled: true
+  tadoBot:
+    enabled: true
+    token:
+      value: "1234"
+  zones:
+    - id: 1
+      autoAway:
+        enabled: true
+        delay: 1h
+        users:
+          - id: 1
+          - name: bar
+      limitOverlay:
+        enabled: true
+        delay: 1h
+      nightTime:
+        enabled: true
+        time: "23:30"

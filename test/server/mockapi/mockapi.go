@@ -47,7 +47,7 @@ func (client *MockAPI) GetZoneInfo(_ context.Context, zoneID int) (info tado.Zon
 	client.lock.RLock()
 	defer client.lock.RUnlock()
 
-	if overlay, ok := client.Overlays[zoneID]; ok == true {
+	if overlay, found := client.Overlays[zoneID]; found {
 		if overlay.expiry.IsZero() || time.Now().Before(overlay.expiry) {
 			info.Overlay = tado.ZoneInfoOverlay{
 				Type: "MANUAL",
@@ -64,7 +64,7 @@ func (client *MockAPI) GetZoneInfo(_ context.Context, zoneID int) (info tado.Zon
 			if !overlay.expiry.IsZero() {
 				info.Overlay.Termination = tado.ZoneInfoOverlayTermination{
 					Type:          "TIMER",
-					RemainingTime: int(time.Now().Sub(overlay.expiry)),
+					RemainingTime: int(time.Since(overlay.expiry).Seconds()),
 				}
 			}
 		}

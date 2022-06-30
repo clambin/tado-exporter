@@ -1,9 +1,8 @@
 package configuration
 
 import (
-	log "github.com/sirupsen/logrus"
+	"fmt"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
 	"os"
 	"time"
 )
@@ -20,8 +19,6 @@ type Configuration struct {
 // ExporterConfiguration structure for exporter
 type ExporterConfiguration struct {
 	Enabled bool
-	// Port is obsolete and will be removed in a future version
-	Port int
 }
 
 // ControllerConfiguration structure for controller
@@ -103,52 +100,32 @@ func parseTimestamp(buf string) (hour, minute, second int, err error) {
 }
 
 // LoadConfigurationFile loads the tado-monitor configuration file from file
-func LoadConfigurationFile(fileName string) (*Configuration, error) {
-	var (
-		err           error
-		content       []byte
-		configuration *Configuration
-	)
-	if content, err = ioutil.ReadFile(fileName); err == nil {
-		configuration, err = LoadConfiguration(content)
+func LoadConfigurationFile(fileName string) (cfg *Configuration, err error) {
+	var content []byte
+	if content, err = os.ReadFile(fileName); err != nil {
+		return
 	}
-	return configuration, err
+	return LoadConfiguration(content)
 }
 
 // LoadConfiguration loads the tado-monitor configuration file from memory
-func LoadConfiguration(content []byte) (*Configuration, error) {
-	configuration := Configuration{
+func LoadConfiguration(content []byte) (cfg *Configuration, err error) {
+	cfg = &Configuration{
 		Port:     8080,
 		Interval: 1 * time.Minute,
 		Exporter: ExporterConfiguration{
 			Enabled: true,
 		},
 	}
-	err := yaml.Unmarshal(content, &configuration)
+	err = yaml.Unmarshal(content, &cfg)
 
 	if err != nil {
-		log.WithError(err).Fatal("unable to parse configuration file")
+		return nil, fmt.Errorf("invalid ocnfig file: %w", err)
 	}
 
-	if configuration.Controller.TadoBot.Enabled && configuration.Controller.TadoBot.Token.EnvVar != "" {
-		configuration.Controller.TadoBot.Token.Value = os.Getenv(configuration.Controller.TadoBot.Token.EnvVar)
-
-		if configuration.Controller.TadoBot.Token.Value == "" {
-			log.WithField("envVar", configuration.Controller.TadoBot.Token.EnvVar).
-				Warning("tadoBot environment variable for token not set. Disabling tadoBot")
-			configuration.Controller.TadoBot.Enabled = false
-		}
-
-		if configuration.Exporter.Port > 0 {
-			log.Warning("configuration: Exporter.Port is obsolete. move to root level")
-			configuration.Port = configuration.Exporter.Port
-		}
+	if cfg.Controller.TadoBot.Token.EnvVar != "" {
+		cfg.Controller.TadoBot.Token.Value = os.Getenv(cfg.Controller.TadoBot.Token.EnvVar)
 	}
 
-	if configuration.Exporter.Port > 0 {
-		log.Warning("configuration: Exporter.Port is obsolete. move to top level")
-		configuration.Port = configuration.Exporter.Port
-	}
-
-	return &configuration, err
+	return
 }

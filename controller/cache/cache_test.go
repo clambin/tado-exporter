@@ -32,7 +32,7 @@ func TestCache_GetName(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "foo", name)
 
-	name, ok = testCache.GetZoneName(3)
+	_, ok = testCache.GetZoneName(3)
 	assert.False(t, ok)
 
 	users := testCache.GetUsers()
@@ -42,7 +42,7 @@ func TestCache_GetName(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "bar", name)
 
-	name, ok = testCache.GetUserName(3)
+	_, ok = testCache.GetUserName(3)
 	assert.False(t, ok)
 
 	var id int
@@ -56,7 +56,7 @@ func TestCache_GetName(t *testing.T) {
 	assert.Equal(t, 2, id)
 	assert.Equal(t, "bar", name)
 
-	id, name, ok = testCache.LookupZone(0, "snafu")
+	_, _, ok = testCache.LookupZone(0, "snafu")
 	assert.False(t, ok)
 
 	id, name, ok = testCache.LookupUser(1, "")
@@ -69,7 +69,7 @@ func TestCache_GetName(t *testing.T) {
 	assert.Equal(t, 2, id)
 	assert.Equal(t, "bar", name)
 
-	id, name, ok = testCache.LookupUser(0, "snafu")
+	_, _, ok = testCache.LookupUser(0, "snafu")
 	assert.False(t, ok)
 }
 
@@ -112,6 +112,7 @@ func TestCache_GetZoneInfo(t *testing.T) {
 	assert.Equal(t, 18.5, temperature)
 	assert.Equal(t, 22.0, targetTemperature)
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateAuto), zoneState)
+	assert.Equal(t, time.Duration(0), duration)
 
 	temperature, targetTemperature, zoneState, duration, found = testCache.GetZoneInfo(2)
 	assert.True(t, found)

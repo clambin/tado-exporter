@@ -169,7 +169,7 @@ func (bot *Agent) processEvent(ctx context.Context, msg slack.RTMEvent) (channel
 	//	log.Debug("hello")
 	case *slack.ConnectedEvent:
 		bot.userID = ev.Info.User.ID
-		if bot.connected == false {
+		if !bot.connected {
 			log.WithField("userID", bot.userID).Info("connected to slack")
 			bot.connected = true
 		} else {
@@ -196,8 +196,8 @@ func (bot *Agent) processMessage(ctx context.Context, text string) (attachments 
 		return
 	}
 
-	callback, ok := bot.getCallback(command)
-	if ok == false {
+	callback, found := bot.getCallback(command)
+	if !found {
 		return []slack.Attachment{{
 			Color: "bad",
 			Text:  "invalid command",
@@ -222,11 +222,11 @@ func (bot *Agent) RegisterCallback(command string, callback CommandFunc) {
 	bot.callbacks[command] = callback
 }
 
-func (bot *Agent) getCallback(command string) (callback CommandFunc, ok bool) {
+func (bot *Agent) getCallback(command string) (callback CommandFunc, found bool) {
 	bot.cbLock.RLock()
 	defer bot.cbLock.RUnlock()
 
-	callback, ok = bot.callbacks[command]
+	callback, found = bot.callbacks[command]
 	return
 }
 

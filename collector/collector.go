@@ -176,7 +176,7 @@ func (collector *Collector) collectZones(ch chan<- prometheus.Metric) {
 		for i, device := range zone.Devices {
 			id := zone.Name + "_" + strconv.Itoa(i)
 			value = 0.0
-			if device.ConnectionState.Value == true {
+			if device.ConnectionState.Value {
 				value = 1.0
 			}
 			ch <- prometheus.MustNewConstMetric(collector.tadoZoneDeviceConnectionStatus, prometheus.GaugeValue, value, zone.Name, id, device.DeviceType, device.Firmware)
@@ -193,9 +193,9 @@ func (collector *Collector) collectZones(ch chan<- prometheus.Metric) {
 func (collector *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 	var value float64
 	for zoneID, zoneInfo := range collector.lastUpdate.ZoneInfo {
-		zone, ok := collector.lastUpdate.Zones[zoneID]
+		zone, found := collector.lastUpdate.Zones[zoneID]
 
-		if ok == false {
+		if !found {
 			log.WithField("id", zoneID).Warning("invalid zoneID in collected tado metrics. skipping collection")
 			continue
 		}

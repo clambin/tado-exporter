@@ -118,7 +118,7 @@ func (poller *Server) getMobileDevices(ctx context.Context) (deviceMap map[int]t
 
 	if err == nil {
 		for _, device := range devices {
-			if device.Settings.GeoTrackingEnabled == true {
+			if device.Settings.GeoTrackingEnabled {
 				deviceMap[device.ID] = device
 			}
 		}
