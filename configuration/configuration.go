@@ -30,11 +30,8 @@ type ControllerConfiguration struct {
 
 // TadoBotConfiguration structure for TadoBot
 type TadoBotConfiguration struct {
-	Enabled bool `yaml:"enabled"`
-	Token   struct {
-		Value  string `yaml:"value"`
-		EnvVar string `yaml:"envVar"`
-	} `yaml:"token"`
+	Enabled bool   `yaml:"enabled"`
+	Token   string `yaml:"token"`
 }
 
 // ZoneConfig contains the rules for a zone
@@ -105,6 +102,8 @@ func LoadConfigurationFile(fileName string) (cfg *Configuration, err error) {
 	if content, err = os.ReadFile(fileName); err != nil {
 		return
 	}
+
+	content = []byte(os.ExpandEnv(string(content)))
 	return LoadConfiguration(content)
 }
 
@@ -121,10 +120,6 @@ func LoadConfiguration(content []byte) (cfg *Configuration, err error) {
 
 	if err != nil {
 		return nil, fmt.Errorf("invalid ocnfig file: %w", err)
-	}
-
-	if cfg.Controller.TadoBot.Token.EnvVar != "" {
-		cfg.Controller.TadoBot.Token.Value = os.Getenv(cfg.Controller.TadoBot.Token.EnvVar)
 	}
 
 	return

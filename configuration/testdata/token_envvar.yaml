@@ -9,8 +9,7 @@ controller:
   enabled: true
   tadoBot:
     enabled: true
-    token:
-      envVar: "TADO_TOKEN"
+    token: "${TADO_TOKEN}"
   zones:
     - id: 1
       autoAway:

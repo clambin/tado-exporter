@@ -43,8 +43,7 @@ controller:
   enabled: true
   tadoBot:
     enabled: false
-    token:
-      value: "some-token"
+    token: "some-token"
   zones:
     - name: "Study"
       limitOverlay:

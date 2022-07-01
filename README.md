@@ -99,12 +99,8 @@ controller:
   tadoBot:
     # When set, tado will start a slack bot.  See below for details.
     enabled: false
-    token:
-      # slackbot token value
-      value: ""
-      # if set, tado will use the specified environment variable's value as slackbot token.
-      # Overrides the value above.
-      envVar: ""
+    # Slackbot token value. Use an environment variable (eg. $TADOBOT_TOKEN) to avoid having secrets in the config file
+    token: ""
     # Zones defined rules for individual rooms (i.e. "zones")
     zones:
     - name: "zone name"

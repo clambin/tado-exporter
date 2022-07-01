@@ -18,16 +18,18 @@ func TestLoadConfiguration(t *testing.T) {
 	testCases := []struct {
 		filename string
 		pass     bool
+		env      EnvVars
 	}{
 		{filename: "testdata/complete.yaml", pass: true},
-		{filename: "testdata/token_envvar.yaml", pass: true},
+		{filename: "testdata/token_envvar.yaml", pass: true, env: EnvVars{"TADO_TOKEN": "1234"}},
 		{filename: "testdata/invalid.yaml", pass: false},
 		{filename: "not-a-file", pass: false},
 	}
 
-	_ = os.Setenv("TADO_TOKEN", "1234")
-
 	for _, tt := range testCases {
+		err := tt.env.Set()
+		require.NoError(t, err)
+
 		cfg, err := configuration.LoadConfigurationFile(tt.filename)
 		if tt.pass == false {
 			assert.Error(t, err, tt.filename)
@@ -39,8 +41,6 @@ func TestLoadConfiguration(t *testing.T) {
 		body, err = yaml.Marshal(cfg)
 		require.NoError(t, err, tt.filename)
 
-		assert.Equal(t, "1234", cfg.Controller.TadoBot.Token.Value)
-
 		gp := filepath.Join("testdata", t.Name()+"-"+slug.Make(tt.filename)+".golden")
 		if *update {
 			err = os.WriteFile(gp, body, 0644)
@@ -50,5 +50,28 @@ func TestLoadConfiguration(t *testing.T) {
 		golden, err = os.ReadFile(gp)
 		require.NoError(t, err, tt.filename)
 		assert.Equal(t, string(golden), string(body), tt.filename)
+
+		err = tt.env.Clear()
+		require.NoError(t, err)
 	}
+}
+
+type EnvVars map[string]string
+
+func (e EnvVars) Set() error {
+	for key, value := range e {
+		if err := os.Setenv(key, value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e EnvVars) Clear() error {
+	for key := range e {
+		if err := os.Unsetenv(key); err != nil {
+			return err
+		}
+	}
+	return nil
 }

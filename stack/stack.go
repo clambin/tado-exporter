@@ -49,7 +49,7 @@ func New(cfg *configuration.Configuration) (stack *Stack) {
 	}
 
 	if stack.cfg.Controller.Enabled {
-		stack.TadoBot = slackbot.Create("tado "+version.BuildVersion, stack.cfg.Controller.TadoBot.Token.Value, nil)
+		stack.TadoBot = slackbot.Create("tado "+version.BuildVersion, stack.cfg.Controller.TadoBot.Token, nil)
 		stack.Controller = controller.New(API, &stack.cfg.Controller, stack.TadoBot, stack.Poller)
 	}
 
