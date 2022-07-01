@@ -31,7 +31,7 @@ func TestUpdate_LookupZone(t *testing.T) {
 	assert.Equal(t, 2, zoneID)
 	assert.Equal(t, "bar", zoneName)
 
-	zoneID, zoneName, ok = testUpdate.LookupZone(0, "snafu")
+	_, _, ok = testUpdate.LookupZone(0, "snafu")
 	assert.False(t, ok)
 }
 
@@ -46,7 +46,7 @@ func TestUpdate_LookupUser(t *testing.T) {
 	assert.Equal(t, 2, zoneID)
 	assert.Equal(t, "bar", zoneName)
 
-	zoneID, zoneName, ok = testUpdate.LookupUser(0, "snafu")
+	_, _, ok = testUpdate.LookupUser(0, "snafu")
 	assert.False(t, ok)
 
 }

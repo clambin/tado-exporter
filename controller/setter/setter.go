@@ -117,8 +117,7 @@ func (server *Server) process(ctx context.Context) {
 			log.WithFields(log.Fields{"zoneID": zoneID, "state": scheduledTask}).Info("setting next state")
 			switch scheduledTask.State {
 			case tado.ZoneStateAuto:
-				if err = server.API.DeleteZoneOverlay(ctx, zoneID); err == nil {
-				}
+				err = server.API.DeleteZoneOverlay(ctx, zoneID)
 			case tado.ZoneStateOff:
 				err = server.API.SetZoneOverlay(ctx, zoneID, 5.0)
 			default:

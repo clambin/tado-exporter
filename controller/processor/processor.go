@@ -59,7 +59,7 @@ func (server *Server) getNextState(zoneID int, update *poller.Update) (current t
 	nextState.ZoneName = update.Zones[zoneID].Name
 
 	// if we don't trigger any rules, keep the same state
-	zoneInfo, _ := update.ZoneInfo[zoneID]
+	zoneInfo := update.ZoneInfo[zoneID]
 	current = zoneInfo.GetState()
 	nextState.State = current
 

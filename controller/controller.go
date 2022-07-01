@@ -72,7 +72,6 @@ func (controller *Controller) Update(update *poller.Update) {
 			controller.Setter.Clear(zoneID)
 		}
 	}
-	return
 }
 
 func (controller *Controller) refresh() {

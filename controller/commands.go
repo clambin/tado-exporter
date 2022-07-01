@@ -27,7 +27,7 @@ func (controller *Controller) ReportRules(_ context.Context, _ ...string) (attac
 		name, _ := controller.cache.GetZoneName(zoneID)
 
 		text = append(text,
-			name+": "+action+" in "+scheduled.When.Sub(time.Now()).Round(1*time.Second).String())
+			name+": "+action+" in "+time.Until(scheduled.When).Round(1*time.Second).String())
 	}
 
 	var slackText, slackTitle string
@@ -98,19 +98,19 @@ func (controller *Controller) SetRoom(ctx context.Context, args ...string) (atta
 	zoneID, zoneName, auto, temperature, duration, err := controller.parseSetCommand(args...)
 
 	if err != nil {
-		err = fmt.Errorf("invalid command: %v", err)
+		err = fmt.Errorf("invalid command: %w", err)
 	}
 
 	if err == nil {
-		if auto == true {
+		if auto {
 			err = controller.API.DeleteZoneOverlay(ctx, zoneID)
 			if err != nil {
-				err = fmt.Errorf("unable to move room to auto mode: %s", err.Error())
+				err = fmt.Errorf("unable to move room to auto mode: %w", err)
 			}
 		} else {
 			err = controller.API.SetZoneOverlayWithDuration(ctx, zoneID, temperature, duration)
 			if err != nil {
-				err = fmt.Errorf("unable to set temperature for %s: %s", zoneName, err.Error())
+				err = fmt.Errorf("unable to set temperature for %s: %w", zoneName, err)
 			}
 		}
 	}
@@ -151,10 +151,10 @@ func (controller *Controller) parseSetCommand(args ...string) (zoneID int, zoneN
 
 	zoneName = args[0]
 
-	var ok bool
-	zoneID, _, ok = controller.cache.LookupZone(0, zoneName)
+	var found bool
+	zoneID, _, found = controller.cache.LookupZone(0, zoneName)
 
-	if ok == false {
+	if !found {
 		err = fmt.Errorf("invalid room name")
 		return
 	}

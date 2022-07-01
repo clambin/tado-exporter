@@ -9,12 +9,9 @@ func (server *Server) load(update *poller.Update) {
 	server.zoneRules = make(map[int]ZoneRules)
 
 	for _, entry := range server.zoneConfig {
-		var zoneID int
-		var ok bool
+		zoneID, _, found := update.LookupZone(entry.ZoneID, entry.ZoneName)
 
-		zoneID, _, ok = update.LookupZone(entry.ZoneID, entry.ZoneName)
-
-		if ok == false {
+		if !found {
 			log.WithFields(log.Fields{"id": entry.ZoneID, "name": entry.ZoneName}).Warning("ignoring invalid zone in configuration")
 			continue
 		}
@@ -27,9 +24,9 @@ func (server *Server) load(update *poller.Update) {
 
 			for _, user := range entry.AutoAway.Users {
 				var userID int
-				userID, _, ok = update.LookupUser(user.MobileDeviceID, user.MobileDeviceName)
+				userID, _, found = update.LookupUser(user.MobileDeviceID, user.MobileDeviceName)
 
-				if ok == false {
+				if !found {
 					log.WithFields(log.Fields{"id": user.MobileDeviceID, "name": user.MobileDeviceName}).Warning("ignoring invalid user in configuration")
 					continue
 				}
@@ -51,6 +48,4 @@ func (server *Server) load(update *poller.Update) {
 
 		server.zoneRules[zoneID] = zoneConfigEntry
 	}
-
-	return
 }
