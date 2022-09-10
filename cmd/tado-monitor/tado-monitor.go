@@ -47,7 +47,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := stack.New(cfg)
-	wg := s.Start(ctx)
+	s.Start(ctx)
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
@@ -56,7 +56,6 @@ func main() {
 
 	cancel()
 	s.Stop()
-	wg.Wait()
 
 	log.Info("tado-monitor exiting")
 }

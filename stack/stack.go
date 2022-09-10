@@ -26,6 +26,7 @@ type Stack struct {
 	Controller   *controller.Controller
 	MetricServer *server.Server
 	cfg          *configuration.Configuration
+	wg           sync.WaitGroup
 }
 
 func New(cfg *configuration.Configuration) (stack *Stack) {
@@ -56,20 +57,18 @@ func New(cfg *configuration.Configuration) (stack *Stack) {
 	return
 }
 
-func (stack *Stack) Start(ctx context.Context) (wg *sync.WaitGroup) {
-	wg = &sync.WaitGroup{}
-
-	wg.Add(1)
+func (stack *Stack) Start(ctx context.Context) {
+	stack.wg.Add(1)
 	go func() {
 		stack.Poller.Run(ctx, stack.cfg.Interval)
-		wg.Done()
+		stack.wg.Done()
 	}()
 
 	if stack.Collector != nil {
-		wg.Add(1)
+		stack.wg.Add(1)
 		go func() {
 			stack.Collector.Run(ctx)
-			wg.Done()
+			stack.wg.Done()
 		}()
 
 		stack.Poller.Register(stack.Collector.Update)
@@ -78,25 +77,25 @@ func (stack *Stack) Start(ctx context.Context) (wg *sync.WaitGroup) {
 	}
 
 	if stack.TadoBot != nil {
-		wg.Add(1)
+		stack.wg.Add(1)
 		go func() {
 			if err := stack.TadoBot.Run(ctx); err != nil {
 				log.WithError(err).Fatal("tadoBot failed to start")
 			}
-			wg.Done()
+			stack.wg.Done()
 		}()
 	}
 
 	if stack.Controller != nil {
-		wg.Add(1)
+		stack.wg.Add(1)
 		go func() {
 			stack.Controller.Run(ctx, time.Minute)
-			wg.Done()
+			stack.wg.Done()
 		}()
 		stack.Poller.Register(stack.Controller.Updates)
 	}
 
-	wg.Add(1)
+	stack.wg.Add(1)
 	go func() {
 		log.Info("HTTP server started")
 		err2 := stack.MetricServer.Run()
@@ -104,15 +103,14 @@ func (stack *Stack) Start(ctx context.Context) (wg *sync.WaitGroup) {
 			log.WithError(err2).Fatal("unable to start HTTP server")
 		}
 		log.Info("HTTP server stopped")
-		wg.Done()
+		stack.wg.Done()
 	}()
-
-	return
 }
 
-func (stack Stack) Stop() {
+func (stack *Stack) Stop() {
 	err := stack.MetricServer.Shutdown(30 * time.Second)
 	if err != nil {
 		log.WithError(err).Warning("encountered error stopping HTTP Server")
 	}
+	stack.wg.Wait()
 }

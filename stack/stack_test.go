@@ -68,7 +68,7 @@ controller:
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	wg := s.Start(ctx)
+	s.Start(ctx)
 
 	assert.Eventually(t, func() bool {
 		resp, err2 := http.Get("http://localhost:8080/metrics")
@@ -77,5 +77,4 @@ controller:
 
 	cancel()
 	s.Stop()
-	wg.Wait()
 }
