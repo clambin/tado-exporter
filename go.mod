@@ -5,21 +5,21 @@ go 1.17
 require (
 	github.com/clambin/tado v0.7.1
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/prometheus/client_golang v1.12.2
-	github.com/prometheus/common v0.32.1 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/sirupsen/logrus v1.8.1
-	github.com/slack-go/slack v0.11.0
+	github.com/prometheus/client_golang v1.13.0
+	github.com/prometheus/common v0.37.0 // indirect
+	github.com/prometheus/procfs v0.8.0 // indirect
+	github.com/sirupsen/logrus v1.9.0
+	github.com/slack-go/slack v0.11.2
 	github.com/stretchr/testify v1.8.0
-	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
+	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	bou.ke/monkey v1.0.2
-	github.com/clambin/go-metrics v0.5.0
+	github.com/clambin/go-metrics v0.5.1
 	github.com/gosimple/slug v1.12.0
 )
 
