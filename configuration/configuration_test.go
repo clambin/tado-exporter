@@ -23,14 +23,18 @@ func TestLoadConfiguration(t *testing.T) {
 		{filename: "testdata/complete.yaml", pass: true},
 		{filename: "testdata/token_envvar.yaml", pass: true, env: EnvVars{"TADO_TOKEN": "1234"}},
 		{filename: "testdata/invalid.yaml", pass: false},
-		{filename: "not-a-file", pass: false},
 	}
 
 	for _, tt := range testCases {
 		err := tt.env.Set()
 		require.NoError(t, err)
 
-		cfg, err := configuration.LoadConfigurationFile(tt.filename)
+		f, err := os.Open(tt.filename)
+		require.NoError(t, err)
+
+		cfg, err := configuration.LoadConfiguration(f)
+		_ = f.Close()
+
 		if tt.pass == false {
 			assert.Error(t, err, tt.filename)
 			continue

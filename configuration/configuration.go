@@ -3,6 +3,7 @@ package configuration
 import (
 	"fmt"
 	"gopkg.in/yaml.v3"
+	"io"
 	"os"
 	"time"
 )
@@ -96,31 +97,27 @@ func parseTimestamp(buf string) (hour, minute, second int, err error) {
 	return
 }
 
-// LoadConfigurationFile loads the tado-monitor configuration file from file
-func LoadConfigurationFile(fileName string) (cfg *Configuration, err error) {
-	var content []byte
-	if content, err = os.ReadFile(fileName); err != nil {
-		return
-	}
-
-	content = []byte(os.ExpandEnv(string(content)))
-	return LoadConfiguration(content)
-}
-
 // LoadConfiguration loads the tado-monitor configuration file from memory
-func LoadConfiguration(content []byte) (cfg *Configuration, err error) {
-	cfg = &Configuration{
+func LoadConfiguration(content io.Reader) (*Configuration, error) {
+	cfg := Configuration{
 		Port:     8080,
 		Interval: 1 * time.Minute,
 		Exporter: ExporterConfiguration{
 			Enabled: true,
 		},
 	}
-	err = yaml.Unmarshal(content, &cfg)
 
+	body, err := io.ReadAll(content)
 	if err != nil {
-		return nil, fmt.Errorf("invalid ocnfig file: %w", err)
+		return nil, err
 	}
 
-	return
+	body = []byte(os.ExpandEnv(string(body)))
+	err = yaml.Unmarshal(body, &cfg)
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid config file: %w", err)
+	}
+
+	return &cfg, nil
 }

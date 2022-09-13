@@ -1,7 +1,7 @@
 package stack_test
 
 import (
-	"bou.ke/monkey"
+	"bytes"
 	"context"
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller/setter"
@@ -18,18 +18,13 @@ import (
 )
 
 func TestNew_Errors(t *testing.T) {
-	config := ``
+	config := bytes.NewBufferString(`foo: bar`)
 
-	cfg, err := configuration.LoadConfiguration([]byte(config))
+	cfg, err := configuration.LoadConfiguration(config)
 	require.NoError(t, err)
 
-	fakeExit := func(int) {
-		panic("os.Exit called")
-	}
-	patch := monkey.Patch(os.Exit, fakeExit)
-	defer patch.Unpatch()
-
-	require.Panics(t, func() { _ = stack.New(cfg) })
+	_, err = stack.New(cfg)
+	assert.Error(t, err)
 }
 
 func TestStack(t *testing.T) {
@@ -50,11 +45,11 @@ controller:
         enabled: true
         delay: 1h
 `
-	cfg, err := configuration.LoadConfiguration([]byte(config))
+	cfg, err := configuration.LoadConfiguration(bytes.NewBufferString(config))
 	require.NoError(t, err)
 
-	s := stack.New(cfg)
-	require.NotNil(t, s)
+	s, err := stack.New(cfg)
+	require.NoError(t, err)
 
 	mockPoller := &pollMock.Poller{}
 	mockPoller.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)

@@ -26,7 +26,7 @@ func main() {
 	a.HelpFlag.Short('h')
 	a.VersionFlag.Short('v')
 	a.Flag("debug", "Log debug messages").BoolVar(&debug)
-	a.Flag("config", "Configuration file").Required().StringVar(&configFile)
+	a.Flag("config", "Configuration file").Required().ExistingFileVar(&configFile)
 
 	if _, err = a.Parse(os.Args[1:]); err != nil {
 		a.Usage(os.Args[1:])
@@ -35,7 +35,12 @@ func main() {
 
 	log.WithField("version", version.BuildVersion).Info("tado-monitor starting")
 
-	if cfg, err = configuration.LoadConfigurationFile(configFile); err != nil {
+	f, _ := os.Open(configFile)
+	defer func() {
+		_ = f.Close()
+	}()
+
+	if cfg, err = configuration.LoadConfiguration(f); err != nil {
 		log.Error("Could not load configuration file: " + err.Error())
 		os.Exit(2)
 	}
@@ -46,7 +51,11 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	s := stack.New(cfg)
+	s, err := stack.New(cfg)
+	if err != nil {
+		log.WithError(err).Fatal("failed to initialize")
+	}
+
 	s.Start(ctx)
 
 	interrupt := make(chan os.Signal, 1)

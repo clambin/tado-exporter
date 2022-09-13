@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"fmt"
 	"github.com/clambin/go-metrics/server"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/collector"
@@ -29,13 +30,13 @@ type Stack struct {
 	wg           sync.WaitGroup
 }
 
-func New(cfg *configuration.Configuration) (stack *Stack) {
+func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 	username := os.Getenv("TADO_USERNAME")
 	password := os.Getenv("TADO_PASSWORD")
 	clientSecret := os.Getenv("TADO_CLIENT_SECRET")
 
 	if username == "" || password == "" {
-		log.Fatal("TADO_USERNAME/TADO_PASSWORD environment variables not set. Aborting ...")
+		return nil, fmt.Errorf("TADO_USERNAME/TADO_PASSWORD environment variables not set")
 	}
 
 	API := tado.New(username, password, clientSecret)
