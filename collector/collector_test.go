@@ -13,7 +13,7 @@ import (
 )
 
 func TestCollector_Describe(t *testing.T) {
-	c := collector.New()
+	c := collector.New(nil)
 
 	ch := make(chan *prometheus.Desc)
 	go c.Describe(ch)
@@ -40,7 +40,7 @@ func TestCollector_Describe(t *testing.T) {
 }
 
 func TestCollector_Collect(t *testing.T) {
-	c := collector.New()
+	c := collector.New(nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go c.Run(ctx)
@@ -87,7 +87,7 @@ func TestCollector_Collect(t *testing.T) {
 }
 
 func BenchmarkCollector_Collect(b *testing.B) {
-	c := collector.New()
+	c := collector.New(nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go c.Run(ctx)

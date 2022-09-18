@@ -47,7 +47,7 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 	}
 
 	if stack.cfg.Exporter.Enabled {
-		stack.Collector = collector.New()
+		stack.Collector = collector.New(stack.Poller)
 	}
 
 	if stack.cfg.Controller.Enabled {
@@ -71,10 +71,7 @@ func (stack *Stack) Start(ctx context.Context) {
 			stack.Collector.Run(ctx)
 			stack.wg.Done()
 		}()
-
-		stack.Poller.Register(stack.Collector.Update)
 		prometheus.MustRegister(stack.Collector)
-
 	}
 
 	if stack.TadoBot != nil {
@@ -93,7 +90,6 @@ func (stack *Stack) Start(ctx context.Context) {
 			stack.Controller.Run(ctx, time.Minute)
 			stack.wg.Done()
 		}()
-		stack.Poller.Register(stack.Controller.Updates)
 	}
 
 	stack.wg.Add(1)

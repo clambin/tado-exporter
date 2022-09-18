@@ -13,6 +13,7 @@ import (
 type Collector struct {
 	Update                         chan *poller.Update
 	lastUpdate                     *poller.Update
+	poller                         poller.Poller
 	lock                           sync.RWMutex
 	tadoMobileDeviceStatus         *prometheus.Desc
 	tadoOutsideSolarIntensity      *prometheus.Desc
@@ -30,9 +31,10 @@ type Collector struct {
 	tadoZoneTemperatureCelsius     *prometheus.Desc
 }
 
-func New() *Collector {
+func New(p poller.Poller) *Collector {
 	return &Collector{
 		Update: make(chan *poller.Update),
+		poller: p,
 		tadoZoneDeviceBatteryStatus: prometheus.NewDesc(
 			prometheus.BuildFQName("tado", "zone", "device_battery_status"),
 			"Tado device battery status",
@@ -234,6 +236,9 @@ func (collector *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 func (collector *Collector) Run(ctx context.Context) {
 	log.Info("exporter started")
 
+	if collector.poller != nil {
+		collector.poller.Register(collector.Update)
+	}
 	for running := true; running; {
 		select {
 		case <-ctx.Done():
@@ -243,6 +248,9 @@ func (collector *Collector) Run(ctx context.Context) {
 			collector.lastUpdate = update
 			collector.lock.Unlock()
 		}
+	}
+	if collector.poller != nil {
+		collector.poller.Unregister(collector.Update)
 	}
 	log.Info("exporter stopped")
 }
