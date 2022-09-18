@@ -58,7 +58,6 @@ controller:
 	mockBot := &slackMock.SlackBot{}
 	mockBot.On("Run", mock.Anything).Return(nil)
 	s.TadoBot = mockBot
-	//s.Controller.Setter.(*setter.Server).SlackBot = mockBot
 
 	ctx, cancel := context.WithCancel(context.Background())
 

@@ -65,8 +65,7 @@ func TestController_Run(t *testing.T) {
 	time.Sleep(5 * time.Second)
 
 	cancel()
-	// FIXME: wait never returns
-	//wg.Wait()
+	wg.Wait()
 
 	mock.AssertExpectationsForObjects(t, a, b)
 }

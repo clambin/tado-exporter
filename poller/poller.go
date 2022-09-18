@@ -83,15 +83,6 @@ func (poller *Server) Unregister(ch chan *Update) {
 }
 
 func (poller *Server) poll(ctx context.Context) error {
-	poller.lock.RLock()
-	defer poller.lock.RUnlock()
-
-	// is anybody listening?
-	if len(poller.registry) == 0 {
-		log.Debug("poller has no clients. skipping update")
-		return nil
-	}
-
 	update, err := poller.update(ctx)
 	if err != nil {
 		return err
@@ -101,7 +92,9 @@ func (poller *Server) poll(ctx context.Context) error {
 	defer poller.lock.RUnlock()
 	for ch := range poller.registry {
 		log.Debug("sending update to registered client")
-		ch <- &update
+		select {
+		case ch <- &update:
+		}
 		log.Debug("sent update to registered client")
 	}
 	return nil
