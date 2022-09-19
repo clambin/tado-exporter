@@ -56,7 +56,7 @@ func (m *Manager) getNextState(update *poller.Update) (current tado.ZoneState, n
 
 		var nightDelay, limitDelay time.Duration
 		if m.config.NightTime.Enabled {
-			nightDelay = nightTimeDelay(m.config.NightTime.Time)
+			nightDelay = nightTimeDelay(m.config.NightTime.Time, time.Now())
 			nextState.Delay = nightDelay
 		}
 		if m.config.LimitOverlay.Enabled {
@@ -73,8 +73,7 @@ func (m *Manager) getNextState(update *poller.Update) (current tado.ZoneState, n
 	return
 }
 
-func nightTimeDelay(nightTime configuration.ZoneNightTimeTimestamp) (delay time.Duration) {
-	now := time.Now()
+func nightTimeDelay(nightTime configuration.ZoneNightTimeTimestamp, now time.Time) (delay time.Duration) {
 	next := time.Date(
 		now.Year(), now.Month(), now.Day(),
 		nightTime.Hour, nightTime.Minutes, 0, 0, time.Local)

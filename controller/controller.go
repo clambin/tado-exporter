@@ -15,11 +15,11 @@ import (
 
 // Controller object for tado-controller
 type Controller struct {
-	zoneManagers zonemanager.Managers
 	tado.API
-	updates chan *poller.Update
-	poller  poller.Poller
-	cmds    *commands.Manager
+	zoneManagers zonemanager.Managers
+	cmds         *commands.Manager
+	updates      chan *poller.Update
+	poller       poller.Poller
 }
 
 // New creates a new Controller object
