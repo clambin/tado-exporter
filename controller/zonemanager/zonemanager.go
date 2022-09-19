@@ -61,7 +61,7 @@ func (m *Manager) process(update *poller.Update) (err error) {
 	if current != next.State {
 		m.queue.Queue(next)
 	} else {
-		m.queue.Clear()
+		m.queue.Cancel()
 	}
 
 	return

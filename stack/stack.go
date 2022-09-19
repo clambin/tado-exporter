@@ -58,56 +58,58 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 	return
 }
 
-func (stack *Stack) Start(ctx context.Context) {
-	stack.wg.Add(1)
+func (s *Stack) Start(ctx context.Context) {
+	s.wg.Add(1)
 	go func() {
-		stack.Poller.Run(ctx, stack.cfg.Interval)
-		stack.wg.Done()
+		s.Poller.Run(ctx, s.cfg.Interval)
+		s.wg.Done()
 	}()
 
-	if stack.Collector != nil {
-		stack.wg.Add(1)
+	if s.Collector != nil {
+		s.wg.Add(1)
 		go func() {
-			stack.Collector.Run(ctx)
-			stack.wg.Done()
+			s.Collector.Run(ctx)
+			s.wg.Done()
 		}()
-		prometheus.MustRegister(stack.Collector)
+		prometheus.MustRegister(s.Collector)
 	}
 
-	if stack.TadoBot != nil {
-		stack.wg.Add(1)
+	if s.TadoBot != nil {
+		s.wg.Add(1)
 		go func() {
-			if err := stack.TadoBot.Run(ctx); err != nil {
+			if err := s.TadoBot.Run(ctx); err != nil {
 				log.WithError(err).Fatal("tadoBot failed to start")
 			}
-			stack.wg.Done()
+			s.wg.Done()
 		}()
 	}
 
-	if stack.Controller != nil {
-		stack.wg.Add(1)
+	if s.Controller != nil {
+		s.wg.Add(1)
 		go func() {
-			stack.Controller.Run(ctx, time.Minute)
-			stack.wg.Done()
+			s.Controller.Run(ctx, time.Minute)
+			s.wg.Done()
 		}()
 	}
 
-	stack.wg.Add(1)
+	s.wg.Add(1)
 	go func() {
 		log.Info("HTTP server started")
-		err2 := stack.MetricServer.Run()
+		err2 := s.MetricServer.Run()
 		if err2 != http.ErrServerClosed {
 			log.WithError(err2).Fatal("unable to start HTTP server")
 		}
 		log.Info("HTTP server stopped")
-		stack.wg.Done()
+		s.wg.Done()
 	}()
+
+	s.Poller.Refresh()
 }
 
-func (stack *Stack) Stop() {
-	err := stack.MetricServer.Shutdown(30 * time.Second)
+func (s *Stack) Stop() {
+	err := s.MetricServer.Shutdown(30 * time.Second)
 	if err != nil {
 		log.WithError(err).Warning("encountered error stopping HTTP Server")
 	}
-	stack.wg.Wait()
+	s.wg.Wait()
 }

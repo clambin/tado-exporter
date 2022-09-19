@@ -53,6 +53,8 @@ controller:
 	mockPoller := &pollMock.Poller{}
 	mockPoller.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
 	mockPoller.On("Run", mock.Anything, mock.Anything).Return(nil)
+	mockPoller.On("Refresh").Return(nil)
+
 	s.Poller = mockPoller
 
 	mockBot := &slackMock.SlackBot{}

@@ -26,7 +26,7 @@ func (p *Poster) NotifyCanceled(state NextState) {
 		p.SlackBot.GetPostChannel() <- []slack.Attachment{{
 			Color: "good",
 			Title: state.ZoneName + ": " + state.CancelReason,
-			Text:  getAction(state),
+			Text:  "cancel " + getAction(state),
 		}}
 	}
 }
@@ -35,7 +35,7 @@ func (p *Poster) NotifyAction(state NextState) {
 	if p.SlackBot != nil {
 		p.SlackBot.GetPostChannel() <- []slack.Attachment{{
 			Color: "good",
-			Title: state.ActionReason,
+			Title: state.ZoneName + ": " + state.ActionReason,
 			Text:  getAction(state),
 		}}
 	}

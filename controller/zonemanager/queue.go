@@ -43,7 +43,7 @@ func (q *Queue) GetQueued() (next NextState, queued bool) {
 	return *q.state, true
 }
 
-func (q *Queue) Clear() {
+func (q *Queue) Cancel() {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -54,6 +54,9 @@ func (q *Queue) Clear() {
 }
 
 func (q *Queue) Process(ctx context.Context) (err error) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
 	if q.state == nil || q.state.When.After(time.Now()) {
 		return
 	}
@@ -69,7 +72,7 @@ func (q *Queue) Process(ctx context.Context) (err error) {
 
 	if err == nil {
 		q.poster.NotifyAction(*q.state)
-		q.Clear()
+		q.state = nil
 	}
 	return
 }
