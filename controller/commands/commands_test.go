@@ -3,6 +3,8 @@ package commands
 import (
 	"context"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/configuration"
+	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/poller"
 	mocks3 "github.com/clambin/tado-exporter/poller/mocks"
 	slackMock "github.com/clambin/tado-exporter/slackbot/mocks"
@@ -22,7 +24,7 @@ func TestManager_Run(t *testing.T) {
 	p := &mocks3.Poller{}
 	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return().Once()
 	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return().Once()
-	c := New(api, bot, p)
+	c := New(api, bot, p, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
@@ -46,84 +48,65 @@ func TestManager_Run(t *testing.T) {
 	mock.AssertExpectationsForObjects(t, api, bot, p)
 }
 
-/*
 func TestController_Rules(t *testing.T) {
-	zoneConfig := []configuration.ZoneConfig{
-		{
-			ZoneName: "foo",
-			AutoAway: configuration.ZoneAutoAway{
-				Enabled: true,
-				Delay:   1 * time.Hour,
-				Users:   []configuration.ZoneUser{{MobileDeviceID: 1}},
-			},
-		},
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	server := &tadoMock.API{}
+	api := &mocks.API{}
 	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
-	pollr := &pollerMock.Poller{}
+	p := &mocks3.Poller{}
+	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
+	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return(nil)
 
-	c := controller.New(server, &configuration.ControllerConfiguration{Enabled: true, ZoneConfig: zoneConfig}, bot, pollr)
-
-	log.SetLevel(log.DebugLevel)
-	go c.Run(ctx, 10*time.Millisecond)
-	c.Updates <- &poller.Update{
-		UserInfo: map[int]tado.MobileDevice{
-			1: {ID: 1, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}},
-		},
-		Zones: map[int]tado.Zone{
-			1: {ID: 1, Name: "foo"},
-		},
-		ZoneInfo: map[int]tado.ZoneInfo{
-			1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}}},
+	cfg := &configuration.ZoneConfig{
+		ZoneID:   1,
+		ZoneName: "foo",
+		NightTime: configuration.ZoneNightTime{
+			Enabled: true,
+			Time:    configuration.ZoneNightTimeTimestamp{Hour: 23, Minutes: 30, Seconds: 0},
 		},
 	}
 
-	time.Sleep(100 * time.Millisecond)
-	msg := c.ReportRules(ctx)
-	require.Len(t, msg, 1)
-	assert.Equal(t, "no rules have been triggered", msg[0].Text)
-
-	// foo: user is away. bar: room is manual
-	bot.
-		On("Send", "", "good", "foo: foo is away", "switching off heating in 1h0m0s").
-		Return(nil).
-		Once()
-
-	c.Updates <- &poller.Update{
-		UserInfo: map[int]tado.MobileDevice{
-			1: {ID: 1, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}},
-		},
-		Zones: map[int]tado.Zone{
-			1: {ID: 1, Name: "foo"},
-		},
-		ZoneInfo: map[int]tado.ZoneInfo{
-			1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 15.5}}, Overlay: tado.ZoneInfoOverlay{
-				Type: "MANUAL",
-				Setting: tado.ZoneInfoOverlaySetting{
-					Type:        "HEATING",
-					Power:       "ON",
-					Temperature: tado.Temperature{Celsius: 22.0},
-				},
-				Termination: tado.ZoneInfoOverlayTermination{
-					Type: "MANUAL",
-				},
-			}},
-		},
+	mgrs := zonemanager.Managers{
+		zonemanager.New(api, p, nil, cfg),
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	wg.Add(len(mgrs))
+	for _, mgr := range mgrs {
+		go func(m *zonemanager.Manager) {
+			m.Run(ctx, time.Hour)
+			wg.Done()
+		}(mgr)
 	}
 
-	time.Sleep(100 * time.Millisecond)
-	msg = c.ReportRules(ctx)
-	require.Len(t, msg, 1)
-	assert.Contains(t, msg[0].Text, "foo: switching off heating in ")
+	c := New(api, bot, p, mgrs)
 
-	mock.AssertExpectationsForObjects(t, server, bot, pollr)
+	attachments := c.ReportRules(ctx)
+	require.Len(t, attachments, 1)
+	assert.Equal(t, "no rules have been triggered", attachments[0].Text)
+
+	mgrs[0].Updates <- &poller.Update{
+		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+		ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
+			Type:        "MANUAL",
+			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
+			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+		}}},
+	}
+
+	require.Eventually(t, func() bool {
+		_, found := mgrs[0].Scheduled()
+		return found
+	}, time.Second, 10*time.Millisecond)
+
+	attachments = c.ReportRules(ctx)
+	require.Len(t, attachments, 1)
+	assert.Contains(t, attachments[0].Text, "foo: moving to auto mode in")
+
+	cancel()
+	wg.Wait()
+
+	mock.AssertExpectationsForObjects(t, api, bot, p)
 }
-*/
 
 func TestManager_SetRoom(t *testing.T) {
 	api := &mocks.API{}
@@ -131,19 +114,15 @@ func TestManager_SetRoom(t *testing.T) {
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	p := &mocks3.Poller{}
 
-	c := New(api, bot, p)
+	c := New(api, bot, p, nil)
 
 	c.update = &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: {
 			SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 22}},
 			Overlay: tado.ZoneInfoOverlay{
-				Type: "MANUAL",
-				Setting: tado.ZoneInfoOverlaySetting{
-					Type:        "HEATING",
-					Power:       "ON",
-					Temperature: tado.Temperature{Celsius: 18.0},
-				},
+				Type:        "MANUAL",
+				Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
 				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 			},
 		}},
@@ -231,7 +210,7 @@ func TestManager_DoRefresh(t *testing.T) {
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	p := &mocks3.Poller{}
 	p.On("Refresh").Return(nil)
-	c := New(api, bot, p)
+	c := New(api, bot, p, nil)
 
 	c.DoRefresh(context.Background())
 }
@@ -240,7 +219,7 @@ func TestManager_ReportRooms(t *testing.T) {
 	api := &mocks.API{}
 	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
-	c := New(api, bot, nil)
+	c := New(api, bot, nil, nil)
 
 	c.update = &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
@@ -269,7 +248,7 @@ func TestManager_ReportUsers(t *testing.T) {
 	api := &mocks.API{}
 	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
-	c := New(api, bot, nil)
+	c := New(api, bot, nil, nil)
 
 	testCases := []struct {
 		update   *poller.Update

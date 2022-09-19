@@ -66,3 +66,18 @@ func (m *Manager) process(update *poller.Update) (err error) {
 
 	return
 }
+
+func (m *Manager) Scheduled() (NextState, bool) {
+	return m.queue.GetQueued()
+}
+
+type Managers []*Manager
+
+func (m Managers) GetScheduled() (states []NextState) {
+	for _, mgr := range m {
+		if state, scheduled := mgr.Scheduled(); scheduled {
+			states = append(states, state)
+		}
+	}
+	return
+}

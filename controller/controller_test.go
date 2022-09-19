@@ -8,7 +8,6 @@ import (
 	"github.com/clambin/tado-exporter/poller"
 	mocks2 "github.com/clambin/tado-exporter/slackbot/mocks"
 	"github.com/clambin/tado/mocks"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"sync"
@@ -36,7 +35,7 @@ var (
 )
 
 func TestController_Run(t *testing.T) {
-	log.SetLevel(log.DebugLevel)
+	//log.SetLevel(log.DebugLevel)
 	a := &mocks.API{}
 	prepareMockAPI(a)
 

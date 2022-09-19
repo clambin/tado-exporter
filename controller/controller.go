@@ -15,7 +15,7 @@ import (
 
 // Controller object for tado-controller
 type Controller struct {
-	zoneManagers []*zonemanager.Manager
+	zoneManagers zonemanager.Managers
 	tado.API
 	updates chan *poller.Update
 	poller  poller.Poller
@@ -23,22 +23,22 @@ type Controller struct {
 }
 
 // New creates a new Controller object
-func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot slackbot.SlackBot, p poller.Poller) (controller *Controller) {
-	controller = &Controller{
+func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot slackbot.SlackBot, p poller.Poller) (c *Controller) {
+	c = &Controller{
 		API:     API,
 		updates: make(chan *poller.Update, 1),
 		poller:  p,
 	}
 
 	for _, zoneCfg := range cfg.ZoneConfig {
-		controller.zoneManagers = append(controller.zoneManagers, zonemanager.New(API, p, tadoBot, &zoneCfg))
+		c.zoneManagers = append(c.zoneManagers, zonemanager.New(API, p, tadoBot, &zoneCfg))
 	}
 
 	if tadoBot != nil {
-		controller.cmds = commands.New(API, tadoBot, p)
+		c.cmds = commands.New(API, tadoBot, p, c.zoneManagers)
 	}
 
-	return controller
+	return c
 }
 
 // Run the controller

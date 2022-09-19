@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/slackbot"
 	log "github.com/sirupsen/logrus"
@@ -20,17 +21,19 @@ type Manager struct {
 	poller  poller.Poller
 	update  *poller.Update
 	updates chan *poller.Update
+	mgrs    zonemanager.Managers
 	lock    sync.RWMutex
 }
 
-func New(api tado.API, tadoBot slackbot.SlackBot, p poller.Poller) *Manager {
+func New(api tado.API, tadoBot slackbot.SlackBot, p poller.Poller, mgrs zonemanager.Managers) *Manager {
 	m := &Manager{
 		API:     api,
 		poller:  p,
 		updates: make(chan *poller.Update),
+		mgrs:    mgrs,
 	}
 
-	//tadoBot.RegisterCallback("rules", m.ReportRules)
+	tadoBot.RegisterCallback("rules", m.ReportRules)
 	tadoBot.RegisterCallback("rooms", m.ReportRooms)
 	tadoBot.RegisterCallback("set", m.SetRoom)
 	tadoBot.RegisterCallback("refresh", m.DoRefresh)
@@ -58,12 +61,11 @@ func (m *Manager) Run(ctx context.Context) {
 	log.Info("commands manager stopped")
 }
 
-/*
 func (m *Manager) ReportRules(_ context.Context, _ ...string) (attachments []slack.Attachment) {
-	text := make([]string, 0)
-	for zoneID, scheduled := range m.Setter.GetScheduled() {
+	var text []string
+	for _, task := range m.mgrs.GetScheduled() {
 		var action string
-		switch scheduled.State {
+		switch task.State {
 		case tado.ZoneStateOff:
 			action = "switching off heating"
 		case tado.ZoneStateAuto:
@@ -72,10 +74,7 @@ func (m *Manager) ReportRules(_ context.Context, _ ...string) (attachments []sla
 			//	action = "setting to manual temperature control"
 		}
 
-		name, _ := m.cache.GetZoneName(zoneID)
-
-		text = append(text,
-			name+": "+action+" in "+time.Until(scheduled.When).Round(1*time.Second).String())
+		text = append(text, task.ZoneName+": "+action+" in "+time.Until(task.When).Round(1*time.Second).String())
 	}
 
 	var slackText, slackTitle string
@@ -92,9 +91,7 @@ func (m *Manager) ReportRules(_ context.Context, _ ...string) (attachments []sla
 		Title: slackTitle,
 		Text:  slackText,
 	}}
-
 }
-*/
 
 func (m *Manager) ReportRooms(_ context.Context, _ ...string) (attachments []slack.Attachment) {
 	m.lock.RLock()

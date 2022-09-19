@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado"
+	"sync"
 	"time"
 )
 
@@ -11,9 +12,13 @@ type Queue struct {
 	tado.API
 	poster Poster
 	state  *NextState
+	lock   sync.RWMutex
 }
 
 func (q *Queue) Queue(next NextState) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
 	next.When = time.Now().Add(next.Delay)
 
 	if q.state != nil && q.state.State == next.State {
@@ -28,7 +33,20 @@ func (q *Queue) Queue(next NextState) {
 	}
 }
 
+func (q *Queue) GetQueued() (next NextState, queued bool) {
+	q.lock.RLock()
+	defer q.lock.RUnlock()
+
+	if q.state == nil {
+		return
+	}
+	return *q.state, true
+}
+
 func (q *Queue) Clear() {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
 	if q.state != nil {
 		q.poster.NotifyCanceled(*q.state)
 	}
