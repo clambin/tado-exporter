@@ -90,13 +90,13 @@ func (poller *Server) poll(ctx context.Context) error {
 
 	poller.lock.RLock()
 	defer poller.lock.RUnlock()
+	log.Debugf("sending update to %d registered clients", len(poller.registry))
 	for ch := range poller.registry {
-		log.Debug("sending update to registered client")
 		select {
 		case ch <- &update:
 		}
-		log.Debug("sent update to registered client")
 	}
+	log.Debugf("sent update to %d registered clients", len(poller.registry))
 	return nil
 }
 

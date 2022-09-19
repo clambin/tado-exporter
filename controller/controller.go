@@ -31,7 +31,7 @@ func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot slack
 	}
 
 	for _, zoneCfg := range cfg.ZoneConfig {
-		c.zoneManagers = append(c.zoneManagers, zonemanager.New(API, p, tadoBot, &zoneCfg))
+		c.zoneManagers = append(c.zoneManagers, zonemanager.New(API, p, tadoBot, zoneCfg))
 	}
 
 	if tadoBot != nil {

@@ -13,13 +13,13 @@ import (
 
 type Manager struct {
 	Updates chan *poller.Update
-	config  *configuration.ZoneConfig
+	config  configuration.ZoneConfig
 	queue   Queue
 	poller  poller.Poller
 	loaded  bool
 }
 
-func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg *configuration.ZoneConfig) *Manager {
+func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg configuration.ZoneConfig) *Manager {
 	return &Manager{
 		Updates: make(chan *poller.Update, 1),
 		config:  cfg,

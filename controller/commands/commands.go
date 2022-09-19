@@ -263,7 +263,7 @@ func (m *Manager) ReportUsers(_ context.Context, _ ...string) (attachments []sla
 
 	text := make([]string, 0)
 
-	for _, device := range m.update.UserInfo { // m.cache.GetUsers() {
+	for _, device := range m.update.UserInfo {
 		var stateString string
 		switch device.IsHome() {
 		case tado.DeviceHome:

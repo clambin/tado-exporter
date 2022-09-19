@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	config = &configuration.ZoneConfig{
+	config = configuration.ZoneConfig{
 		ZoneID:   1,
 		ZoneName: "foo",
 		AutoAway: configuration.ZoneAutoAway{
@@ -140,24 +140,25 @@ func TestManager_Run(t *testing.T) {
 	}()
 
 	for _, tt := range testCases {
-		t.Log(tt.name)
-		if tt.call != "" {
-			c.On(tt.call, tt.args...).Return(nil).Once()
-		}
-		wg2 := sync.WaitGroup{}
-		wg2.Add(1)
-		go func() {
-			m.Updates <- tt.update
-			wg2.Done()
-		}()
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.call != "" {
+				c.On(tt.call, tt.args...).Return(nil).Once()
+			}
+			wg2 := sync.WaitGroup{}
+			wg2.Add(1)
+			go func() {
+				m.Updates <- tt.update
+				wg2.Done()
+			}()
 
-		if tt.notification != "" {
-			msg := <-postChannel
-			require.Len(t, msg, 1, tt.name)
-			assert.Equal(t, tt.notification, msg[0].Text, tt.name)
-		}
+			if tt.notification != "" {
+				msg := <-postChannel
+				require.Len(t, msg, 1, tt.name)
+				assert.Equal(t, tt.notification, msg[0].Text, tt.name)
+			}
 
-		wg2.Wait()
+			wg2.Wait()
+		})
 	}
 
 	cancel()

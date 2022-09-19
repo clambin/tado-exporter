@@ -56,7 +56,7 @@ func TestController_Rules(t *testing.T) {
 	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
 	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return(nil)
 
-	cfg := &configuration.ZoneConfig{
+	cfg := configuration.ZoneConfig{
 		ZoneID:   1,
 		ZoneName: "foo",
 		NightTime: configuration.ZoneNightTime{
