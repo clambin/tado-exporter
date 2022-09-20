@@ -108,11 +108,14 @@ func TestPoller_Run(t *testing.T) {
 	info = update.ZoneInfo[2]
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateOff), (&info).GetState())
 
+	p.Unregister(ch)
+
 	api.AssertExpectations(t)
 }
 
 func TestServer_Poll(t *testing.T) {
 	api := &mocks.API{}
+	prepareMockAPI(api)
 
 	p := poller.New(api)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -120,25 +123,25 @@ func TestServer_Poll(t *testing.T) {
 
 	go p.Run(ctx, time.Minute)
 
-	prepareMockAPI(api)
-
 	ch := make(chan *poller.Update)
 	p.Register(ch)
+	p.Refresh()
 	update := <-ch
 
 	require.Len(t, update.UserInfo, 2)
+
+	p.Unregister(ch)
 }
 
 func TestServer_Refresh(t *testing.T) {
 	api := &mocks.API{}
+	prepareMockAPI(api)
 
 	p := poller.New(api)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go p.Run(ctx, time.Minute)
-
-	prepareMockAPI(api)
+	go p.Run(ctx, time.Second)
 
 	ch := make(chan *poller.Update)
 	p.Register(ch)

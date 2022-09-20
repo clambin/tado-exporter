@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"github.com/clambin/tado-exporter/configuration"
-	"github.com/clambin/tado-exporter/controller/setter"
 	pollMock "github.com/clambin/tado-exporter/poller/mocks"
 	slackMock "github.com/clambin/tado-exporter/slackbot/mocks"
 	"github.com/clambin/tado-exporter/stack"
@@ -54,12 +53,13 @@ controller:
 	mockPoller := &pollMock.Poller{}
 	mockPoller.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
 	mockPoller.On("Run", mock.Anything, mock.Anything).Return(nil)
+	mockPoller.On("Refresh").Return(nil)
+
 	s.Poller = mockPoller
 
 	mockBot := &slackMock.SlackBot{}
 	mockBot.On("Run", mock.Anything).Return(nil)
 	s.TadoBot = mockBot
-	s.Controller.Setter.(*setter.Server).SlackBot = mockBot
 
 	ctx, cancel := context.WithCancel(context.Background())
 

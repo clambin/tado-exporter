@@ -1,22 +1,22 @@
 // Package slackbot provides a basic slackbot implementation.
 // Using this package typically involves creating an Bot as follows:
 //
-//     bot := slackbot.New(botName, slackToken, callbacks)
-//     go bot.Run()
+//	bot := slackbot.New(botName, slackToken, callbacks)
+//	go bot.Run()
 //
 // Once running, the bot will listen for any commands specified on the channel and execute them. Slackbot itself
 // implements two commands: "version" (which responds with botName) and "help" (which shows all implemented commands).
 // Additional commands can be added through the callbacks parameter (see Create & CommandFunc):
 //
-//     func doHello(args ...string) []slack.Attachment {
-//	       return []slack.Attachment{{Text: "hello world " + strings.Join(args, ", ")}}
-//     }
+//	    func doHello(args ...string) []slack.Attachment {
+//		       return []slack.Attachment{{Text: "hello world " + strings.Join(args, ", ")}}
+//	    }
 //
 // The returned attachments will be sent to the slack channel where the command was issued.
 //
 // Additionally, output can be sent to the slack channel(s) using PostChannel, e.g.:
 //
-//     bot.GetPostChannel() <- []slack.Attachment{{Text: "Hello world"}}
+//	bot.GetPostChannel() <- []slack.Attachment{{Text: "Hello world"}}
 package slackbot
 
 import (
@@ -29,6 +29,7 @@ import (
 )
 
 // SlackBot interface
+//
 //go:generate mockery --name SlackBot
 type SlackBot interface {
 	RegisterCallback(command string, commandFunc CommandFunc)
@@ -55,7 +56,7 @@ type Agent struct {
 //
 // args will contain any additional tokens after the command, e.g.:
 //
-//      @slackbot say 1 2 3
+//	@slackbot say 1 2 3
 //
 // args will be []string{"1", "2", "3"}
 //
@@ -97,11 +98,10 @@ func (bot *Agent) Run(ctx context.Context) (err error) {
 
 	go bot.SlackClient.Run(ctx)
 
-loop:
-	for {
+	for running := true; running; {
 		select {
 		case <-ctx.Done():
-			break loop
+			running = false
 		case event := <-bot.Events:
 			channel, attachments := bot.processEvent(ctx, event)
 			if len(attachments) > 0 {
