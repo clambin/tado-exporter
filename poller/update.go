@@ -3,10 +3,10 @@ package poller
 import "github.com/clambin/tado"
 
 type Update struct {
-	UserInfo    map[int]tado.MobileDevice
-	WeatherInfo tado.WeatherInfo
 	Zones       map[int]tado.Zone
 	ZoneInfo    map[int]tado.ZoneInfo
+	UserInfo    map[int]tado.MobileDevice
+	WeatherInfo tado.WeatherInfo
 }
 
 func (update *Update) LookupZone(id int, name string) (foundID int, foundName string, ok bool) {
