@@ -8,6 +8,7 @@ import (
 	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller"
+	"github.com/clambin/tado-exporter/health"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/slackbot"
 	"github.com/clambin/tado-exporter/version"
@@ -19,9 +20,10 @@ import (
 	"time"
 )
 
-// Stack groups all components so they can be easily started/stopped
+// Stack groups all components, so they can be easily started/stopped
 type Stack struct {
 	Poller       poller.Poller
+	Health       *health.Handler
 	Collector    *collector.Collector
 	TadoBot      slackbot.SlackBot
 	Controller   *controller.Controller
@@ -41,10 +43,15 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 
 	API := tado.New(username, password, clientSecret)
 	stack = &Stack{
-		Poller:       poller.New(API),
-		MetricServer: server.New(cfg.Port),
-		cfg:          cfg,
+		Poller: poller.New(API),
+		cfg:    cfg,
 	}
+
+	stack.Health = &health.Handler{Poller: stack.Poller, Ch: make(chan *poller.Update)}
+
+	stack.MetricServer = server.NewWithHandlers(cfg.Port, []server.Handler{
+		{Path: "/health", Handler: http.HandlerFunc(stack.Health.Handle)},
+	})
 
 	if stack.cfg.Exporter.Enabled {
 		stack.Collector = collector.New(stack.Poller)
@@ -62,6 +69,12 @@ func (s *Stack) Start(ctx context.Context) {
 	s.wg.Add(1)
 	go func() {
 		s.Poller.Run(ctx, s.cfg.Interval)
+		s.wg.Done()
+	}()
+
+	s.wg.Add(1)
+	go func() {
+		s.Health.Run(ctx)
 		s.wg.Done()
 	}()
 
@@ -103,7 +116,7 @@ func (s *Stack) Start(ctx context.Context) {
 		s.wg.Done()
 	}()
 
-	s.Poller.Refresh()
+	//s.Poller.Refresh()
 }
 
 func (s *Stack) Stop() {

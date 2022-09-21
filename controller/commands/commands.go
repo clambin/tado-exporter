@@ -61,7 +61,7 @@ func (m *Manager) Run(ctx context.Context) {
 	log.Info("commands manager stopped")
 }
 
-func (m *Manager) ReportRules(_ context.Context, _ ...string) (attachments []slack.Attachment) {
+func (m *Manager) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
 	var text []string
 	for _, task := range m.mgrs.GetScheduled() {
 		var action string
@@ -74,7 +74,7 @@ func (m *Manager) ReportRules(_ context.Context, _ ...string) (attachments []sla
 			//	action = "setting to manual temperature control"
 		}
 
-		text = append(text, task.ZoneName+": "+action+" in "+time.Until(task.When).Round(1*time.Second).String())
+		text = append(text, task.ZoneName+": "+action+" in "+time.Until(task.When).Round(time.Second).String())
 	}
 
 	var slackText, slackTitle string
@@ -93,7 +93,7 @@ func (m *Manager) ReportRules(_ context.Context, _ ...string) (attachments []sla
 	}}
 }
 
-func (m *Manager) ReportRooms(_ context.Context, _ ...string) (attachments []slack.Attachment) {
+func (m *Manager) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -146,7 +146,7 @@ func (m *Manager) ReportRooms(_ context.Context, _ ...string) (attachments []sla
 	}}
 }
 
-func (m *Manager) SetRoom(ctx context.Context, args ...string) (attachments []slack.Attachment) {
+func (m *Manager) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -171,31 +171,29 @@ func (m *Manager) SetRoom(ctx context.Context, args ...string) (attachments []sl
 	}
 
 	if err != nil {
-		attachments = []slack.Attachment{{
+		return []slack.Attachment{{
 			Color: "bad",
 			Title: "",
 			Text:  err.Error(),
 		}}
-	} else {
-		m.poller.Refresh()
-
-		var text string
-		if auto {
-			text = "Setting " + zoneName + " to automatic mode"
-		} else {
-			text = fmt.Sprintf("Setting target temperature for %s to %.1fºC", zoneName, temperature)
-			if duration > 0 {
-				text += " for " + duration.String()
-			}
-		}
-		attachments = []slack.Attachment{{
-			Color: "good",
-			Title: "",
-			Text:  text,
-		}}
 	}
 
-	return
+	m.poller.Refresh()
+
+	var text string
+	if auto {
+		text = "Setting " + zoneName + " to automatic mode"
+	} else {
+		text = fmt.Sprintf("Setting target temperature for %s to %.1fºC", zoneName, temperature)
+		if duration > 0 {
+			text += " for " + duration.String()
+		}
+	}
+	return []slack.Attachment{{
+		Color: "good",
+		Title: "",
+		Text:  text,
+	}}
 }
 
 func (m *Manager) parseSetCommand(args ...string) (zoneID int, zoneName string, auto bool, temperature float64, duration time.Duration, err error) {
@@ -243,14 +241,14 @@ func (m *Manager) parseSetCommand(args ...string) (zoneID int, zoneName string, 
 	return
 }
 
-func (m *Manager) DoRefresh(_ context.Context, _ ...string) (attachments []slack.Attachment) {
+func (m *Manager) DoRefresh(_ context.Context, _ ...string) []slack.Attachment {
 	m.poller.Refresh()
 	return []slack.Attachment{{
 		Text: "refreshing Tado data",
 	}}
 }
 
-func (m *Manager) ReportUsers(_ context.Context, _ ...string) (attachments []slack.Attachment) {
+func (m *Manager) ReportUsers(_ context.Context, _ ...string) []slack.Attachment {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 

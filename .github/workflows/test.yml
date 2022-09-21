@@ -3,7 +3,8 @@ name: Test
 on:
   push:
     branches-ignore:
-      - refactor
+      - health
+      - master
   pull_request_target:
 
 jobs:
