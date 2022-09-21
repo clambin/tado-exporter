@@ -22,7 +22,6 @@ var _ Poller = &Server{}
 type Server struct {
 	tado.API
 	refresh    chan struct{}
-	health     chan chan Update
 	lastUpdate time.Time
 	registry   map[chan *Update]struct{}
 	lock       sync.RWMutex
@@ -89,20 +88,16 @@ func (poller *Server) Unregister(ch chan *Update) {
 
 func (poller *Server) poll(ctx context.Context) error {
 	update, err := poller.update(ctx)
-	if err != nil {
-		return err
-	}
-
-	poller.lock.RLock()
-	defer poller.lock.RUnlock()
-	log.Debugf("sending update to %d registered clients", len(poller.registry))
-	for ch := range poller.registry {
-		select {
-		case ch <- &update:
+	if err == nil {
+		poller.lock.RLock()
+		defer poller.lock.RUnlock()
+		log.Debugf("sending update to %d registered clients", len(poller.registry))
+		for ch := range poller.registry {
+			ch <- &update
 		}
+		log.Debugf("sent update to %d registered clients", len(poller.registry))
 	}
-	log.Debugf("sent update to %d registered clients", len(poller.registry))
-	return nil
+	return err
 }
 
 func (poller *Server) update(ctx context.Context) (update Update, err error) {
@@ -119,35 +114,30 @@ func (poller *Server) update(ctx context.Context) (update Update, err error) {
 	return
 }
 
-func (poller *Server) getMobileDevices(ctx context.Context) (map[int]tado.MobileDevice, error) {
-	deviceMap := make(map[int]tado.MobileDevice)
-
-	devices, err := poller.API.GetMobileDevices(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, device := range devices {
-		if device.Settings.GeoTrackingEnabled {
-			deviceMap[device.ID] = device
+func (poller *Server) getMobileDevices(ctx context.Context) (deviceMap map[int]tado.MobileDevice, err error) {
+	var devices []tado.MobileDevice
+	if devices, err = poller.API.GetMobileDevices(ctx); err == nil {
+		deviceMap = make(map[int]tado.MobileDevice)
+		for _, device := range devices {
+			if device.Settings.GeoTrackingEnabled {
+				deviceMap[device.ID] = device
+			}
 		}
 	}
 
-	return deviceMap, nil
+	return
 }
 
-func (poller *Server) getZones(ctx context.Context) (map[int]tado.Zone, error) {
-	zoneMap := make(map[int]tado.Zone)
+func (poller *Server) getZones(ctx context.Context) (zoneMap map[int]tado.Zone, err error) {
+	var zones []tado.Zone
+	if zones, err = poller.API.GetZones(ctx); err == nil {
+		zoneMap = make(map[int]tado.Zone)
+		for _, zone := range zones {
+			zoneMap[zone.ID] = zone
+		}
 
-	zones, err := poller.API.GetZones(ctx)
-	if err != nil {
-		return nil, err
 	}
-
-	for _, zone := range zones {
-		zoneMap[zone.ID] = zone
-	}
-	return zoneMap, nil
+	return
 }
 
 func (poller *Server) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) (map[int]tado.ZoneInfo, error) {
