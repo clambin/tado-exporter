@@ -12,26 +12,26 @@ import (
 type Handler struct {
 	poller.Poller
 	update *poller.Update
-	ch     chan *poller.Update
+	Ch     chan *poller.Update
 	lock   sync.RWMutex
 }
 
 func (h *Handler) Run(ctx context.Context) {
-	h.ch = make(chan *poller.Update)
-	h.Register(h.ch)
+	//h.Ch = make(chan *poller.Update)
+	h.Register(h.Ch)
 
 	for running := true; running; {
 		select {
 		case <-ctx.Done():
 			running = false
-		case update := <-h.ch:
+		case update := <-h.Ch:
 			h.lock.Lock()
 			h.update = update
 			h.lock.Unlock()
 		}
 	}
 
-	h.Unregister(h.ch)
+	h.Unregister(h.Ch)
 }
 
 func (h *Handler) Handle(w http.ResponseWriter, _ *http.Request) {

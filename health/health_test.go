@@ -18,7 +18,7 @@ func TestHandler_Handle(t *testing.T) {
 	p := &mocks.Poller{}
 	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
 	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return(nil)
-	h := Handler{Poller: p}
+	h := Handler{Poller: p, Ch: make(chan *poller.Update)}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
@@ -34,7 +34,7 @@ func TestHandler_Handle(t *testing.T) {
 	h.Handle(resp, &http.Request{})
 	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
 
-	h.ch <- &poller.Update{
+	h.Ch <- &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{
 			1: {
