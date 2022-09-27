@@ -18,7 +18,7 @@ require (
 )
 
 require (
-	github.com/clambin/go-metrics v0.5.1
+	github.com/clambin/go-metrics v0.6.0
 	github.com/gosimple/slug v1.12.0
 )
 
