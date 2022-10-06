@@ -31,13 +31,12 @@ func (s *Scheduler) Cancel() {
 }
 
 func (s *Scheduler) Result() (completed bool, err error) {
-	if s.task == nil {
-		return
-	}
-	var result state
-	result, err = s.task.getState()
-	if completed = result.done(); completed {
-		s.Cancel()
+	if s.task != nil {
+		var result state
+		result, err = s.task.getState()
+		if completed = result.done(); completed {
+			s.Cancel()
+		}
 	}
 	return
 }

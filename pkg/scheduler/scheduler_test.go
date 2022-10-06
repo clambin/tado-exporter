@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
@@ -47,4 +48,23 @@ func TestScheduler_Cancel(t *testing.T) {
 
 	_, ok := s.Scheduled()
 	assert.False(t, ok)
+}
+
+func TestScheduler_Scheduled(t *testing.T) {
+	s := scheduler.Scheduler{}
+
+	_, ok := s.Scheduled()
+	assert.False(t, ok)
+
+	job := &MyJob{}
+	s.Schedule(context.Background(), job.Run, time.Hour)
+
+	duration, ok := s.Scheduled()
+	require.True(t, ok)
+	assert.NotZero(t, duration)
+
+	s.Cancel()
+	_, ok = s.Scheduled()
+	assert.False(t, ok)
+
 }

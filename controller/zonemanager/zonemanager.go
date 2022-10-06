@@ -19,7 +19,7 @@ type Manager struct {
 	scheduler scheduler.Scheduler
 	job       *Job
 	api       tado.API
-	poster    *Poster
+	poster    Poster
 	poller    poller.Poller
 	loaded    bool
 	lock      sync.RWMutex
@@ -30,7 +30,7 @@ func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg configuration
 		Updates: make(chan *poller.Update, 1),
 		config:  cfg,
 		api:     api,
-		poster:  &Poster{SlackBot: bot},
+		poster:  Poster{SlackBot: bot},
 		poller:  p,
 	}
 }
@@ -49,12 +49,13 @@ func (m *Manager) Run(ctx context.Context, interval time.Duration) {
 			}
 		case <-ticker.C:
 			if completed, err := m.scheduler.Result(); completed {
-				if err != nil {
+				if err == nil {
+					m.poster.NotifyAction(m.job.nextState)
+				} else {
 					log.WithError(err).WithField("zone", m.config.ZoneName).Error("failed to set next state")
+					// TODO: reschedule the failed job?
 				}
-				//m.lock.Lock()
 				m.job = nil
-				//m.lock.Unlock()
 			}
 		}
 	}
@@ -67,6 +68,7 @@ func (m *Manager) process(ctx context.Context, update *poller.Update) (err error
 	if err = m.load(update); err != nil {
 		return fmt.Errorf("failed to load rules: %w", err)
 	}
+
 	// next state
 	current, next := m.getNextState(update)
 
@@ -85,7 +87,6 @@ func (m *Manager) scheduleJob(ctx context.Context, next NextState) {
 
 	m.job = &Job{
 		api:       m.api,
-		poster:    m.poster,
 		nextState: next,
 	}
 	m.scheduler.Schedule(ctx, m.job.Run, next.Delay)
@@ -128,7 +129,6 @@ func (m Managers) GetScheduled() (states []NextState) {
 
 type Job struct {
 	api       tado.API
-	poster    *Poster
 	nextState NextState
 }
 
@@ -140,10 +140,6 @@ func (j *Job) Run(ctx context.Context) (err error) {
 		err = j.api.SetZoneOverlay(ctx, j.nextState.ZoneID, 5.0)
 	default:
 		err = fmt.Errorf("invalid queued state for zone '%s': %d", j.nextState.ZoneName, j.nextState.State)
-	}
-
-	if err == nil {
-		j.poster.NotifyAction(j.nextState)
 	}
 	return
 }
