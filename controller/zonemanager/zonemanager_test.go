@@ -78,6 +78,27 @@ var (
 			notification: "moving to auto mode in 1h0m0s",
 		},
 		{
+			name: "manual temp setting #2",
+			update: &poller.Update{
+				Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
+					Type:        "MANUAL",
+					Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
+					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+				}}},
+				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+			},
+			current: tado.ZoneStateManual,
+			next: NextState{
+				ZoneID:       1,
+				ZoneName:     "foo",
+				State:        tado.ZoneStateAuto,
+				Delay:        time.Hour,
+				ActionReason: "manual temperature setting detected",
+				CancelReason: "room is now in auto mode",
+			},
+		},
+		{
 			name: "user away",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
