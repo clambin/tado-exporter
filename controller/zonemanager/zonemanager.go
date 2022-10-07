@@ -85,7 +85,7 @@ func (m *Manager) scheduleJob(ctx context.Context, next NextState) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if m.job != nil && m.job.nextState.State == next.State && m.job.nextState.When.Before(time.Now().Add(next.Delay)) {
+	if m.job != nil && m.job.nextState.State == next.State && next.Delay >= time.Until(m.job.nextState.When) {
 		return
 	}
 
