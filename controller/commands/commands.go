@@ -62,23 +62,10 @@ func (m *Manager) Run(ctx context.Context) {
 }
 
 func (m *Manager) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
-	var text []string
-	for _, task := range m.mgrs.GetScheduled() {
-		var action string
-		switch task.State {
-		case tado.ZoneStateOff:
-			action = "switching off heating"
-		case tado.ZoneStateAuto:
-			action = "moving to auto mode"
-			//case tado.ZoneStateManual:
-			//	action = "setting to manual temperature control"
-		}
-
-		text = append(text, task.ZoneName+": "+action+" in "+time.Until(task.When).Round(time.Second).String())
-	}
+	text, ok := m.mgrs.ReportTasks()
 
 	var slackText, slackTitle string
-	if len(text) > 0 {
+	if ok {
 		slackTitle = "rules:"
 		slackText = strings.Join(text, "\n")
 	} else {

@@ -229,3 +229,45 @@ func TestManager_Scheduled(t *testing.T) {
 	cancel()
 	wg.Wait()
 }
+
+func TestManagers_ReportTasks(t *testing.T) {
+	c := &mocks.API{}
+	p := &mocks3.Poller{}
+	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
+	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return(nil)
+	m := New(c, p, nil, config)
+	ctx, cancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		m.Run(ctx, 10*time.Millisecond)
+		wg.Done()
+	}()
+
+	mgrs := Managers{m}
+	_, ok := mgrs.ReportTasks()
+	assert.False(t, ok)
+
+	m.Updates <- &poller.Update{
+		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+		ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
+			Type:        "MANUAL",
+			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
+			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+		}}},
+		UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+	}
+
+	assert.Eventually(t, func() bool {
+		_, scheduled := m.Scheduled()
+		return scheduled
+	}, time.Second, 10*time.Millisecond)
+
+	tasks, ok := mgrs.ReportTasks()
+	assert.True(t, ok)
+	require.NotEmpty(t, tasks)
+	assert.Contains(t, tasks[0], "foo: moving to auto mode in")
+
+	cancel()
+	wg.Wait()
+}

@@ -85,14 +85,15 @@ func (m *Manager) scheduleJob(ctx context.Context, next NextState) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if m.job != nil && m.job.nextState.State == next.State && next.Delay >= time.Until(m.job.nextState.When) {
+	// if the same state is already scheduled for an earlier time, don't schedule it again.
+	if m.job != nil && m.job.nextState.State == next.State && next.Delay >= time.Until(m.job.when) {
 		return
 	}
 
-	next.When = time.Now().Add(next.Delay)
 	m.job = &Job{
 		api:       m.api,
 		nextState: next,
+		when:      time.Now().Add(next.Delay),
 	}
 	m.scheduler.Schedule(ctx, m.job.Run, next.Delay)
 	if next.Delay > 0 {
@@ -121,20 +122,29 @@ func (m *Manager) Scheduled() (NextState, bool) {
 	return NextState{}, false
 }
 
-type Managers []*Manager
+func (m *Manager) ReportTask() (string, bool) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 
-func (m Managers) GetScheduled() (states []NextState) {
-	for _, mgr := range m {
-		if state, scheduled := mgr.Scheduled(); scheduled {
-			states = append(states, state)
-		}
+	if m.job == nil {
+		return "", false
 	}
-	return
+
+	var action string
+	switch m.job.nextState.State {
+	case tado.ZoneStateOff:
+		action = "switching off heating"
+	case tado.ZoneStateAuto:
+		action = "moving to auto mode"
+	}
+
+	return m.job.nextState.ZoneName + ": " + action + " in " + time.Until(m.job.when).Round(time.Second).String(), true
 }
 
 type Job struct {
 	api       tado.API
 	nextState NextState
+	when      time.Time
 }
 
 func (j *Job) Run(ctx context.Context) (err error) {
@@ -147,4 +157,25 @@ func (j *Job) Run(ctx context.Context) (err error) {
 		err = fmt.Errorf("invalid queued state for zone '%s': %d", j.nextState.ZoneName, j.nextState.State)
 	}
 	return
+}
+
+type Managers []*Manager
+
+func (m Managers) GetScheduled() (states []NextState) {
+	for _, mgr := range m {
+		if state, scheduled := mgr.Scheduled(); scheduled {
+			states = append(states, state)
+		}
+	}
+	return
+}
+
+func (m Managers) ReportTasks() ([]string, bool) {
+	var tasks []string
+	for _, mgr := range m {
+		if task, ok := mgr.ReportTask(); ok {
+			tasks = append(tasks, task)
+		}
+	}
+	return tasks, len(tasks) > 0
 }
