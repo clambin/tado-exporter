@@ -2,7 +2,7 @@ package zonemanager
 
 import (
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/slackbot"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/slack-go/slack"
 	"time"
 )

@@ -9,8 +9,8 @@ import (
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller"
 	"github.com/clambin/tado-exporter/health"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/poller"
-	"github.com/clambin/tado-exporter/slackbot"
 	"github.com/clambin/tado-exporter/version"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -58,7 +58,7 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 	}
 
 	if stack.cfg.Controller.Enabled {
-		stack.TadoBot = slackbot.Create("tado "+version.BuildVersion, stack.cfg.Controller.TadoBot.Token, nil)
+		stack.TadoBot = slackbot.New("tado "+version.BuildVersion, stack.cfg.Controller.TadoBot.Token, nil)
 		stack.Controller = controller.New(API, &stack.cfg.Controller, stack.TadoBot, stack.Poller)
 	}
 

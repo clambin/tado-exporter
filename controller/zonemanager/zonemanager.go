@@ -6,8 +6,8 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/poller"
-	"github.com/clambin/tado-exporter/slackbot"
 	log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
@@ -86,8 +86,13 @@ func (m *Manager) scheduleJob(ctx context.Context, next NextState) {
 	defer m.lock.Unlock()
 
 	// if the same state is already scheduled for an earlier time, don't schedule it again.
-	if m.job != nil && m.job.nextState.State == next.State && next.Delay >= time.Until(m.job.when) {
-		return
+	if m.job != nil && m.job.nextState.State == next.State {
+		scheduled := int64(time.Until(m.job.when).Seconds())
+		newJob := int64(next.Delay.Seconds())
+		log.Debugf("%s: scheduled: %d, newJob: %d", m.job.nextState.ZoneName, scheduled, newJob)
+		if newJob >= scheduled {
+			return
+		}
 	}
 
 	m.job = &Job{

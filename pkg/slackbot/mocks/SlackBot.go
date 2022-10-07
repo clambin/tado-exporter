@@ -4,8 +4,8 @@ package mocks
 
 import (
 	context "context"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 
-	slackbot "github.com/clambin/tado-exporter/slackbot"
 	mock "github.com/stretchr/testify/mock"
 )
 

@@ -2,8 +2,8 @@ package zonemanager
 
 import (
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/slackbot"
-	"github.com/clambin/tado-exporter/slackbot/mocks"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
+	"github.com/clambin/tado-exporter/pkg/slackbot/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
