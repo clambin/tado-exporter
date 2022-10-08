@@ -2,9 +2,14 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 )
+
+type Task interface {
+	Run(ctx context.Context) error
+}
 
 func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
 	ctx2, cancel := context.WithCancel(ctx)
@@ -13,13 +18,9 @@ func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
 		state:  stateUnknown,
 		cancel: cancel,
 	}
-	go j.Run(ctx2, waitTime)
+	go j.run(ctx2, waitTime)
 
 	return j
-}
-
-type Task interface {
-	Run(ctx context.Context) error
 }
 
 type Job struct {
@@ -30,7 +31,7 @@ type Job struct {
 	lock   sync.RWMutex
 }
 
-func (j *Job) Run(ctx context.Context, waitTime time.Duration) {
+func (j *Job) run(ctx context.Context, waitTime time.Duration) {
 	j.setState(stateScheduled, nil)
 	select {
 	case <-ctx.Done():
@@ -53,8 +54,12 @@ func (j *Job) Cancel() {
 func (j *Job) Result() (completed bool, err error) {
 	var result state
 	result, err = j.getState()
-	if completed = result.done(); completed {
+	switch result {
+	case stateCompleted, stateFailed:
+		completed = true
 		j.cancel()
+	case stateCanceled:
+		err = errors.New("job canceled")
 	}
 	return
 }
@@ -81,7 +86,3 @@ const (
 	stateCompleted
 	stateFailed
 )
-
-func (s state) done() bool {
-	return s == stateCompleted || s == stateFailed || s == stateCanceled
-}

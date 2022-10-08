@@ -35,6 +35,12 @@ func (j *Task) Run(ctx context.Context) (err error) {
 	return
 }
 
+func (j *Task) firesBefore(delay time.Duration) bool {
+	scheduled := int64(time.Until(j.when).Seconds())
+	newJob := int64(delay.Seconds())
+	return scheduled < newJob
+}
+
 func (j *Task) Report() string {
 	var action string
 	switch j.nextState.State {

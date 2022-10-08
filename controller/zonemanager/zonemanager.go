@@ -96,13 +96,10 @@ func (m *Manager) scheduleJob(ctx context.Context, next NextState) {
 	defer m.lock.Unlock()
 
 	// if the same state is already scheduled for an earlier time, don't schedule it again.
-	if m.task != nil && m.task.nextState.State == next.State {
-		scheduled := int64(time.Until(m.task.when).Seconds())
-		newJob := int64(next.Delay.Seconds())
-		//log.Debugf("%s: scheduled: %d, newJob: %d", m.task.nextState.ZoneName, scheduled, newJob)
-		if newJob >= scheduled {
-			return
-		}
+	if m.task != nil &&
+		m.task.nextState.State == next.State &&
+		m.task.firesBefore(next.Delay) {
+		return
 	}
 
 	m.task = newTask(m.api, next)
