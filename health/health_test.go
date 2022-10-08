@@ -6,7 +6,6 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/poller/mocks"
-	"github.com/gosimple/slug"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -63,7 +62,7 @@ func TestHandler_Handle(t *testing.T) {
 
 	response := resp.Body.Bytes()
 
-	gp := filepath.Join("testdata", t.Name()+"-"+slug.Make(t.Name())+".golden")
+	gp := filepath.Join("testdata", t.Name()+".golden")
 	if *update {
 		err := os.WriteFile(gp, response, 0644)
 		require.NoError(t, err)
