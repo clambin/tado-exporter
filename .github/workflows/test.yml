@@ -4,7 +4,7 @@ on:
   push:
     branches-ignore:
       - health
-      - task
+      - scheduler
   pull_request_target:
 
 jobs:
