@@ -11,9 +11,10 @@ import (
 
 type Handler struct {
 	poller.Poller
-	update *poller.Update
-	Ch     chan *poller.Update
-	lock   sync.RWMutex
+	Ch         chan *poller.Update
+	update     *poller.Update
+	lastUpdate time.Time
+	lock       sync.RWMutex
 }
 
 func (h *Handler) Run(ctx context.Context) {
@@ -27,6 +28,7 @@ func (h *Handler) Run(ctx context.Context) {
 		case update := <-h.Ch:
 			h.lock.Lock()
 			h.update = update
+			h.lastUpdate = time.Now()
 			h.lock.Unlock()
 		}
 	}
@@ -38,14 +40,7 @@ func (h *Handler) Handle(w http.ResponseWriter, _ *http.Request) {
 	h.lock.RLock()
 	defer h.lock.RUnlock()
 
-	if h.update == nil {
-		http.Error(w, "no update yet", http.StatusServiceUnavailable)
-		h.Poller.Refresh()
-		return
-	}
-
-	lastUpdate := h.GetLastUpdate()
-	if time.Since(lastUpdate) > time.Hour {
+	if time.Since(h.lastUpdate) > time.Hour {
 		http.Error(w, "no update yet", http.StatusServiceUnavailable)
 		h.Poller.Refresh()
 		return

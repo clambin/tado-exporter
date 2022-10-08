@@ -34,6 +34,7 @@ func TestHandler_Handle(t *testing.T) {
 	h.Handle(resp, &http.Request{})
 	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
 
+	//p.On("Refresh").Return().Once()
 	h.Ch <- &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{
@@ -42,14 +43,12 @@ func TestHandler_Handle(t *testing.T) {
 			},
 		},
 	}
-	p.On("GetLastUpdate").Return(time.Now().Add(-24 * time.Hour)).Once()
-	p.On("Refresh").Return().Once()
 
-	resp = httptest.NewRecorder()
-	h.Handle(resp, &http.Request{})
-	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
-
-	p.On("GetLastUpdate").Return(time.Now()).Once()
+	assert.Eventually(t, func() bool {
+		h.lock.RLock()
+		defer h.lock.RUnlock()
+		return h.update != nil
+	}, time.Second, 10*time.Millisecond)
 
 	resp = httptest.NewRecorder()
 	h.Handle(resp, &http.Request{})

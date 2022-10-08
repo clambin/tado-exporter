@@ -14,17 +14,15 @@ type Poller interface {
 	Register(ch chan *Update)
 	Unregister(ch chan *Update)
 	Refresh()
-	GetLastUpdate() time.Time
 }
 
 var _ Poller = &Server{}
 
 type Server struct {
 	tado.API
-	refresh    chan struct{}
-	lastUpdate time.Time
-	registry   map[chan *Update]struct{}
-	lock       sync.RWMutex
+	refresh  chan struct{}
+	registry map[chan *Update]struct{}
+	lock     sync.RWMutex
 }
 
 func New(API tado.API) *Server {
@@ -59,9 +57,6 @@ func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 		if err := poller.poll(ctx); err != nil {
 			log.WithError(err).Warning("failed to get Tado metrics")
 		}
-		poller.lock.Lock()
-		poller.lastUpdate = time.Now()
-		poller.lock.Unlock()
 	}
 	timer.Stop()
 
@@ -153,10 +148,4 @@ func (poller *Server) getZoneInfos(ctx context.Context, zones map[int]tado.Zone)
 	}
 
 	return zoneInfoMap, nil
-}
-
-func (poller *Server) GetLastUpdate() time.Time {
-	poller.lock.RLock()
-	defer poller.lock.RUnlock()
-	return poller.lastUpdate
 }
