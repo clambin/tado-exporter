@@ -135,15 +135,7 @@ func (m *Manager) ReportTask() (string, bool) {
 		return "", false
 	}
 
-	var action string
-	switch m.job.nextState.State {
-	case tado.ZoneStateOff:
-		action = "switching off heating"
-	case tado.ZoneStateAuto:
-		action = "moving to auto mode"
-	}
-
-	return m.job.nextState.ZoneName + ": " + action + " in " + time.Until(m.job.when).Round(time.Second).String(), true
+	return m.job.Report(), true
 }
 
 type Job struct {
@@ -162,6 +154,18 @@ func (j *Job) Run(ctx context.Context) (err error) {
 		err = fmt.Errorf("invalid queued state for zone '%s': %d", j.nextState.ZoneName, j.nextState.State)
 	}
 	return
+}
+
+func (j *Job) Report() string {
+	var action string
+	switch j.nextState.State {
+	case tado.ZoneStateOff:
+		action = "switching off heating"
+	case tado.ZoneStateAuto:
+		action = "moving to auto mode"
+	}
+
+	return j.nextState.ZoneName + ": " + action + " in " + time.Until(j.when).Round(time.Second).String()
 }
 
 type Managers []*Manager

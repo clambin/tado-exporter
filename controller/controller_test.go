@@ -1,20 +1,6 @@
 package controller_test
 
-import (
-	"context"
-	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
-	"github.com/clambin/tado-exporter/controller"
-	mocks2 "github.com/clambin/tado-exporter/pkg/slackbot/mocks"
-	"github.com/clambin/tado-exporter/poller"
-	"github.com/clambin/tado/mocks"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"sync"
-	"testing"
-	"time"
-)
-
+/*
 var (
 	cfg = &configuration.ControllerConfiguration{
 		Enabled: true,
@@ -34,40 +20,40 @@ var (
 	}
 )
 
-func TestController_Run(t *testing.T) {
-	//log.SetLevel(log.DebugLevel)
-	a := &mocks.API{}
-	prepareMockAPI(a)
+	func TestController_Run(t *testing.T) {
+		//log.SetLevel(log.DebugLevel)
+		a := &mocks.API{}
+		prepareMockAPI(a)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	wg := sync.WaitGroup{}
+		ctx, cancel := context.WithCancel(context.Background())
+		wg := sync.WaitGroup{}
 
-	p := poller.New(a)
-	wg.Add(1)
-	go func() {
-		p.Run(ctx, time.Second)
-		wg.Done()
-	}()
+		p := poller.New(a)
+		wg.Add(1)
+		go func() {
+			p.Run(ctx, time.Second)
+			wg.Done()
+		}()
 
-	b := &mocks2.SlackBot{}
-	b.On("RegisterCallback", mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc")).Return(nil)
+		b := &mocks2.SlackBot{}
+		b.On("RegisterCallback", mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc")).Return(nil)
 
-	c := controller.New(a, cfg, b, p)
-	assert.NotNil(t, c)
+		c := controller.New(a, cfg, b, p)
+		assert.NotNil(t, c)
 
-	wg.Add(1)
-	go func() {
-		c.Run(ctx, time.Minute)
-		wg.Done()
-	}()
+		wg.Add(1)
+		go func() {
+			c.Run(ctx, time.Minute)
+			wg.Done()
+		}()
 
-	time.Sleep(5 * time.Second)
+		time.Sleep(5 * time.Second)
 
-	cancel()
-	wg.Wait()
+		cancel()
+		wg.Wait()
 
-	mock.AssertExpectationsForObjects(t, a, b)
-}
+		mock.AssertExpectationsForObjects(t, a, b)
+	}
 
 func prepareMockAPI(api *mocks.API) {
 	api.
@@ -123,3 +109,4 @@ func prepareMockAPI(api *mocks.API) {
 			},
 		}, nil)
 }
+*/

@@ -100,7 +100,7 @@ func (s *Stack) Start(ctx context.Context) {
 	if s.Controller != nil {
 		s.wg.Add(1)
 		go func() {
-			s.Controller.Run(ctx, time.Minute)
+			s.Controller.Run(ctx, 30*time.Second)
 			s.wg.Done()
 		}()
 	}
@@ -110,7 +110,7 @@ func (s *Stack) Start(ctx context.Context) {
 		log.Info("HTTP server started")
 		err2 := s.MetricServer.Run()
 		if err2 != http.ErrServerClosed {
-			log.WithError(err2).Fatal("unable to start HTTP server")
+			log.WithError(err2).Fatal("failed to start HTTP server")
 		}
 		log.Info("HTTP server stopped")
 		s.wg.Done()
@@ -120,9 +120,8 @@ func (s *Stack) Start(ctx context.Context) {
 }
 
 func (s *Stack) Stop() {
-	err := s.MetricServer.Shutdown(30 * time.Second)
-	if err != nil {
-		log.WithError(err).Warning("encountered error stopping HTTP Server")
+	if err := s.MetricServer.Shutdown(30 * time.Second); err != nil {
+		log.WithError(err).Warning("failed to stop HTTP Server")
 	}
 	s.wg.Wait()
 }
