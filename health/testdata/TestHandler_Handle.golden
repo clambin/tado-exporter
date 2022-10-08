@@ -1,0 +1,63 @@
+{
+  "Zones": {
+    "1": {
+      "id": 1,
+      "name": "foo",
+      "devices": null
+    }
+  },
+  "ZoneInfo": {
+    "1": {
+      "setting": {
+        "power": "",
+        "temperature": {
+          "celsius": 0
+        }
+      },
+      "activityDataPoints": {
+        "heatingPower": {
+          "percentage": 0
+        }
+      },
+      "sensorDataPoints": {
+        "insideTemperature": {
+          "celsius": 22
+        },
+        "humidity": {
+          "percentage": 0
+        }
+      },
+      "openwindow": {
+        "detectedTime": "0001-01-01T00:00:00Z",
+        "durationInSeconds": 0,
+        "expiry": "0001-01-01T00:00:00Z",
+        "remainingTimeInSeconds": 0
+      },
+      "overlay": {
+        "type": "",
+        "setting": {
+          "type": "",
+          "power": "",
+          "temperature": {
+            "celsius": 0
+          }
+        },
+        "termination": {
+          "type": ""
+        }
+      }
+    }
+  },
+  "UserInfo": null,
+  "WeatherInfo": {
+    "outsideTemperature": {
+      "celsius": 0
+    },
+    "solarIntensity": {
+      "percentage": 0
+    },
+    "weatherState": {
+      "value": ""
+    }
+  }
+}

@@ -2,8 +2,8 @@ package zonemanager
 
 import (
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/slackbot"
-	"github.com/clambin/tado-exporter/slackbot/mocks"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
+	"github.com/clambin/tado-exporter/pkg/slackbot/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -30,7 +30,6 @@ func TestPoster(t *testing.T) {
 				Delay:        time.Hour,
 				ActionReason: "bar is away",
 				CancelReason: "bar is home",
-				When:         time.Now().Add(time.Hour),
 			},
 			action: "switching off heating",
 		},
@@ -42,7 +41,6 @@ func TestPoster(t *testing.T) {
 				Delay:        0,
 				ActionReason: "bar is home",
 				CancelReason: "bar is away",
-				When:         time.Now(),
 			},
 			action: "moving to auto mode",
 		},

@@ -1,12 +1,11 @@
-package controller_test
+package controller
 
 import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
-	"github.com/clambin/tado-exporter/controller"
+	mocks2 "github.com/clambin/tado-exporter/pkg/slackbot/mocks"
 	"github.com/clambin/tado-exporter/poller"
-	mocks2 "github.com/clambin/tado-exporter/slackbot/mocks"
 	"github.com/clambin/tado/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -45,14 +44,14 @@ func TestController_Run(t *testing.T) {
 	p := poller.New(a)
 	wg.Add(1)
 	go func() {
-		p.Run(ctx, time.Second)
+		p.Run(ctx, time.Minute)
 		wg.Done()
 	}()
 
 	b := &mocks2.SlackBot{}
 	b.On("RegisterCallback", mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc")).Return(nil)
 
-	c := controller.New(a, cfg, b, p)
+	c := New(a, cfg, b, p)
 	assert.NotNil(t, c)
 
 	wg.Add(1)
@@ -61,7 +60,13 @@ func TestController_Run(t *testing.T) {
 		wg.Done()
 	}()
 
-	time.Sleep(5 * time.Second)
+	response := c.cmds.DoRefresh(context.Background())
+	assert.Len(t, response, 1)
+
+	assert.Eventually(t, func() bool {
+		response = c.cmds.ReportUsers(context.Background())
+		return len(response) > 0
+	}, time.Minute, 100*time.Millisecond)
 
 	cancel()
 	wg.Wait()

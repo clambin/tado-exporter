@@ -15,7 +15,6 @@ type NextState struct {
 	Delay        time.Duration
 	ActionReason string
 	CancelReason string
-	When         time.Time
 }
 
 func (m *Manager) getNextState(update *poller.Update) (current tado.ZoneState, nextState NextState) {

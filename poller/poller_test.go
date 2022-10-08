@@ -152,6 +152,4 @@ func TestServer_Refresh(t *testing.T) {
 	p.Refresh()
 	update = <-ch
 	require.Len(t, update.UserInfo, 2)
-
-	assert.NotZero(t, p.GetLastUpdate())
 }

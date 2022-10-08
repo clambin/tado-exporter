@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/clambin/go-metrics/server"
 	"github.com/clambin/tado"
@@ -9,8 +10,8 @@ import (
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller"
 	"github.com/clambin/tado-exporter/health"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/poller"
-	"github.com/clambin/tado-exporter/slackbot"
 	"github.com/clambin/tado-exporter/version"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -23,7 +24,7 @@ import (
 // Stack groups all components, so they can be easily started/stopped
 type Stack struct {
 	Poller       poller.Poller
-	Health       *health.Handler
+	Health       *health.Health
 	Collector    *collector.Collector
 	TadoBot      slackbot.SlackBot
 	Controller   *controller.Controller
@@ -47,7 +48,7 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 		cfg:    cfg,
 	}
 
-	stack.Health = &health.Handler{Poller: stack.Poller, Ch: make(chan *poller.Update)}
+	stack.Health = &health.Health{Poller: stack.Poller, Ch: make(chan *poller.Update)}
 
 	stack.MetricServer = server.NewWithHandlers(cfg.Port, []server.Handler{
 		{Path: "/health", Handler: http.HandlerFunc(stack.Health.Handle)},
@@ -58,7 +59,7 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 	}
 
 	if stack.cfg.Controller.Enabled {
-		stack.TadoBot = slackbot.Create("tado "+version.BuildVersion, stack.cfg.Controller.TadoBot.Token, nil)
+		stack.TadoBot = slackbot.New("tado "+version.BuildVersion, stack.cfg.Controller.TadoBot.Token, nil)
 		stack.Controller = controller.New(API, &stack.cfg.Controller, stack.TadoBot, stack.Poller)
 	}
 
@@ -100,7 +101,7 @@ func (s *Stack) Start(ctx context.Context) {
 	if s.Controller != nil {
 		s.wg.Add(1)
 		go func() {
-			s.Controller.Run(ctx, time.Minute)
+			s.Controller.Run(ctx, 30*time.Second)
 			s.wg.Done()
 		}()
 	}
@@ -108,21 +109,17 @@ func (s *Stack) Start(ctx context.Context) {
 	s.wg.Add(1)
 	go func() {
 		log.Info("HTTP server started")
-		err2 := s.MetricServer.Run()
-		if err2 != http.ErrServerClosed {
-			log.WithError(err2).Fatal("unable to start HTTP server")
+		if err := s.MetricServer.Run(); !errors.Is(err, http.ErrServerClosed) {
+			log.WithError(err).Fatal("failed to start HTTP server")
 		}
 		log.Info("HTTP server stopped")
 		s.wg.Done()
 	}()
-
-	//s.Poller.Refresh()
 }
 
 func (s *Stack) Stop() {
-	err := s.MetricServer.Shutdown(30 * time.Second)
-	if err != nil {
-		log.WithError(err).Warning("encountered error stopping HTTP Server")
+	if err := s.MetricServer.Shutdown(30 * time.Second); err != nil {
+		log.WithError(err).Warning("failed to stop HTTP Server")
 	}
 	s.wg.Wait()
 }

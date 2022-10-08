@@ -2,8 +2,8 @@ package slackbot_test
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/slackbot"
-	"github.com/clambin/tado-exporter/slackbot/fake"
+	slackbot2 "github.com/clambin/tado-exporter/pkg/slackbot"
+	"github.com/clambin/tado-exporter/pkg/slackbot/fake"
 	"github.com/clambin/tado-exporter/version"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
@@ -12,7 +12,7 @@ import (
 )
 
 func TestSlackBot_Commands(t *testing.T) {
-	callbacks := map[string]slackbot.CommandFunc{
+	callbacks := map[string]slackbot2.CommandFunc{
 		"test": func(_ context.Context, _ ...string) []slack.Attachment {
 			return []slack.Attachment{
 				{
@@ -21,10 +21,10 @@ func TestSlackBot_Commands(t *testing.T) {
 			}
 		},
 	}
-	client := slackbot.Create("test-client-"+version.BuildVersion, "12345678", callbacks)
+	client := slackbot2.New("test-client-"+version.BuildVersion, "12345678", callbacks)
 
 	events := make(chan slack.RTMEvent)
-	output := make(chan slackbot.SlackMessage)
+	output := make(chan slackbot2.SlackMessage)
 	server := &fake.Client{
 		UserID:    "1234",
 		Channels:  []string{"1", "2", "3"},
@@ -79,10 +79,10 @@ func TestSlackBot_Commands(t *testing.T) {
 }
 
 func TestSlackBot_Post(t *testing.T) {
-	client := slackbot.Create("test-client"+version.BuildVersion, "12345678", nil)
+	client := slackbot2.New("test-client"+version.BuildVersion, "12345678", nil)
 
 	events := make(chan slack.RTMEvent)
-	output := make(chan slackbot.SlackMessage, 5)
+	output := make(chan slackbot2.SlackMessage, 5)
 	server := &fake.Client{
 		UserID:    "1234",
 		Channels:  []string{"1", "2", "3"},

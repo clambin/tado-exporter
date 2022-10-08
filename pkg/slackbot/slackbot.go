@@ -1,20 +1,20 @@
 // Package slackbot provides a basic slackbot implementation.
-// Using this package typically involves creating an Bot as follows:
+// Using this package typically involves creating a bot as follows:
 //
 //	bot := slackbot.New(botName, slackToken, callbacks)
 //	go bot.Run()
 //
 // Once running, the bot will listen for any commands specified on the channel and execute them. Slackbot itself
 // implements two commands: "version" (which responds with botName) and "help" (which shows all implemented commands).
-// Additional commands can be added through the callbacks parameter (see Create & CommandFunc):
+// Additional commands can be added through the callbacks parameter (see New & CommandFunc):
 //
 //	    func doHello(args ...string) []slack.Attachment {
 //		       return []slack.Attachment{{Text: "hello world " + strings.Join(args, ", ")}}
 //	    }
 //
-// The returned attachments will be sent to the slack channel where the command was issued.
+// The returned attachments will be sent to the Slack channel where the command was issued.
 //
-// Additionally, output can be sent to the slack channel(s) using PostChannel, e.g.:
+// Additionally, output can be sent to the Slack channel(s) using PostChannel, e.g.:
 //
 //	bot.GetPostChannel() <- []slack.Attachment{{Text: "Hello world"}}
 package slackbot
@@ -66,8 +66,8 @@ type CommandFunc func(ctx context.Context, args ...string) []slack.Attachment
 // PostChannel to send output to slack
 type PostChannel chan []slack.Attachment
 
-// Create a slackbot
-func Create(name string, slackToken string, callbacks map[string]CommandFunc) (bot *Agent) {
+// New creates a new slackbot
+func New(name string, slackToken string, callbacks map[string]CommandFunc) (bot *Agent) {
 	eventsChannel := make(chan slack.RTMEvent, 10)
 
 	bot = &Agent{

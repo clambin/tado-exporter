@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/poller"
-	"github.com/clambin/tado-exporter/slackbot"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"sort"
@@ -62,23 +62,10 @@ func (m *Manager) Run(ctx context.Context) {
 }
 
 func (m *Manager) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
-	var text []string
-	for _, task := range m.mgrs.GetScheduled() {
-		var action string
-		switch task.State {
-		case tado.ZoneStateOff:
-			action = "switching off heating"
-		case tado.ZoneStateAuto:
-			action = "moving to auto mode"
-			//case tado.ZoneStateManual:
-			//	action = "setting to manual temperature control"
-		}
-
-		text = append(text, task.ZoneName+": "+action+" in "+time.Until(task.When).Round(time.Second).String())
-	}
+	text, ok := m.mgrs.ReportTasks()
 
 	var slackText, slackTitle string
-	if len(text) > 0 {
+	if ok {
 		slackTitle = "rules:"
 		slackText = strings.Join(text, "\n")
 	} else {

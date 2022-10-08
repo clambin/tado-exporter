@@ -2,7 +2,7 @@ package fake
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/slackbot"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/slack-go/slack"
 )
 
