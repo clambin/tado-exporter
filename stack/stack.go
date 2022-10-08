@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/clambin/go-metrics/server"
 	"github.com/clambin/tado"
@@ -23,7 +24,7 @@ import (
 // Stack groups all components, so they can be easily started/stopped
 type Stack struct {
 	Poller       poller.Poller
-	Health       *health.Handler
+	Health       *health.Health
 	Collector    *collector.Collector
 	TadoBot      slackbot.SlackBot
 	Controller   *controller.Controller
@@ -47,7 +48,7 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 		cfg:    cfg,
 	}
 
-	stack.Health = &health.Handler{Poller: stack.Poller, Ch: make(chan *poller.Update)}
+	stack.Health = &health.Health{Poller: stack.Poller, Ch: make(chan *poller.Update)}
 
 	stack.MetricServer = server.NewWithHandlers(cfg.Port, []server.Handler{
 		{Path: "/health", Handler: http.HandlerFunc(stack.Health.Handle)},
@@ -108,15 +109,12 @@ func (s *Stack) Start(ctx context.Context) {
 	s.wg.Add(1)
 	go func() {
 		log.Info("HTTP server started")
-		err2 := s.MetricServer.Run()
-		if err2 != http.ErrServerClosed {
-			log.WithError(err2).Fatal("failed to start HTTP server")
+		if err := s.MetricServer.Run(); !errors.Is(err, http.ErrServerClosed) {
+			log.WithError(err).Fatal("failed to start HTTP server")
 		}
 		log.Info("HTTP server stopped")
 		s.wg.Done()
 	}()
-
-	//s.Poller.Refresh()
 }
 
 func (s *Stack) Stop() {

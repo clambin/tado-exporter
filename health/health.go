@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type Handler struct {
+type Health struct {
 	poller.Poller
 	Ch         chan *poller.Update
 	update     *poller.Update
@@ -17,7 +17,7 @@ type Handler struct {
 	lock       sync.RWMutex
 }
 
-func (h *Handler) Run(ctx context.Context) {
+func (h *Health) Run(ctx context.Context) {
 	//h.Ch = make(chan *poller.Update)
 	h.Register(h.Ch)
 
@@ -36,7 +36,7 @@ func (h *Handler) Run(ctx context.Context) {
 	h.Unregister(h.Ch)
 }
 
-func (h *Handler) Handle(w http.ResponseWriter, _ *http.Request) {
+func (h *Health) Handle(w http.ResponseWriter, _ *http.Request) {
 	h.lock.RLock()
 	defer h.lock.RUnlock()
 

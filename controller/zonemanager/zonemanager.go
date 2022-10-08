@@ -89,7 +89,7 @@ func (m *Manager) scheduleJob(ctx context.Context, next NextState) {
 	if m.job != nil && m.job.nextState.State == next.State {
 		scheduled := int64(time.Until(m.job.when).Seconds())
 		newJob := int64(next.Delay.Seconds())
-		log.Debugf("%s: scheduled: %d, newJob: %d", m.job.nextState.ZoneName, scheduled, newJob)
+		//log.Debugf("%s: scheduled: %d, newJob: %d", m.job.nextState.ZoneName, scheduled, newJob)
 		if newJob >= scheduled {
 			return
 		}
@@ -121,10 +121,10 @@ func (m *Manager) Scheduled() (NextState, bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	if m.job != nil {
-		return m.job.nextState, true
+	if m.job == nil {
+		return NextState{}, false
 	}
-	return NextState{}, false
+	return m.job.nextState, true
 }
 
 func (m *Manager) ReportTask() (string, bool) {

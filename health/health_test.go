@@ -2,23 +2,30 @@ package health
 
 import (
 	"context"
+	"flag"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/poller/mocks"
+	"github.com/gosimple/slug"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 )
 
+var update = flag.Bool("update", false, "update .golden files")
+
 func TestHandler_Handle(t *testing.T) {
 	p := &mocks.Poller{}
 	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
 	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return(nil)
-	h := Handler{Poller: p, Ch: make(chan *poller.Update)}
+	h := Health{Poller: p, Ch: make(chan *poller.Update)}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
@@ -52,71 +59,19 @@ func TestHandler_Handle(t *testing.T) {
 
 	resp = httptest.NewRecorder()
 	h.Handle(resp, &http.Request{})
-	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.Equal(t, `{
-  "Zones": {
-    "1": {
-      "id": 1,
-      "name": "foo",
-      "devices": null
-    }
-  },
-  "ZoneInfo": {
-    "1": {
-      "setting": {
-        "power": "",
-        "temperature": {
-          "celsius": 0
-        }
-      },
-      "activityDataPoints": {
-        "heatingPower": {
-          "percentage": 0
-        }
-      },
-      "sensorDataPoints": {
-        "insideTemperature": {
-          "celsius": 22
-        },
-        "humidity": {
-          "percentage": 0
-        }
-      },
-      "openwindow": {
-        "detectedTime": "0001-01-01T00:00:00Z",
-        "durationInSeconds": 0,
-        "expiry": "0001-01-01T00:00:00Z",
-        "remainingTimeInSeconds": 0
-      },
-      "overlay": {
-        "type": "",
-        "setting": {
-          "type": "",
-          "power": "",
-          "temperature": {
-            "celsius": 0
-          }
-        },
-        "termination": {
-          "type": ""
-        }
-      }
-    }
-  },
-  "UserInfo": null,
-  "WeatherInfo": {
-    "outsideTemperature": {
-      "celsius": 0
-    },
-    "solarIntensity": {
-      "percentage": 0
-    },
-    "weatherState": {
-      "value": ""
-    }
-  }
-}
-`, resp.Body.String())
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	response := resp.Body.Bytes()
+
+	gp := filepath.Join("testdata", t.Name()+"-"+slug.Make(t.Name())+".golden")
+	if *update {
+		err := os.WriteFile(gp, response, 0644)
+		require.NoError(t, err)
+	}
+
+	golden, err := os.ReadFile(gp)
+	require.NoError(t, err)
+	assert.Equal(t, string(golden), string(response))
 
 	cancel()
 	wg.Wait()
