@@ -14,15 +14,14 @@ import (
 )
 
 type Manager struct {
-	Updates   chan *poller.Update
-	config    configuration.ZoneConfig
-	scheduler scheduler.Scheduler
-	job       *Job
-	api       tado.API
-	poster    Poster
-	poller    poller.Poller
-	loaded    bool
-	lock      sync.RWMutex
+	Updates chan *poller.Update
+	config  configuration.ZoneConfig
+	task    *Task
+	api     tado.API
+	poster  Poster
+	poller  poller.Poller
+	loaded  bool
+	lock    sync.RWMutex
 }
 
 func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg configuration.ZoneConfig) *Manager {
@@ -44,18 +43,12 @@ func (m *Manager) Run(ctx context.Context, interval time.Duration) {
 		case <-ctx.Done():
 			running = false
 		case update := <-m.Updates:
-			if err := m.process(ctx, update); err != nil {
+			if err := m.processUpdate(ctx, update); err != nil {
 				log.WithError(err).WithField("zone", m.config.ZoneName).Error("failed to process tado update")
 			}
 		case <-ticker.C:
-			if completed, err := m.scheduler.Result(); completed {
-				if err == nil {
-					m.poster.NotifyAction(m.job.nextState)
-				} else {
-					log.WithError(err).WithField("zone", m.config.ZoneName).Error("failed to set next state")
-					// TODO: reschedule the failed job?
-				}
-				m.job = nil
+			if err := m.processResult(); err != nil {
+				log.WithError(err).WithField("zone", m.config.ZoneName).Error("failed to set next state")
 			}
 		}
 	}
@@ -64,7 +57,7 @@ func (m *Manager) Run(ctx context.Context, interval time.Duration) {
 	m.poller.Unregister(m.Updates)
 }
 
-func (m *Manager) process(ctx context.Context, update *poller.Update) (err error) {
+func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) (err error) {
 	if err = m.load(update); err != nil {
 		return fmt.Errorf("failed to load rules: %w", err)
 	}
@@ -81,26 +74,39 @@ func (m *Manager) process(ctx context.Context, update *poller.Update) (err error
 	return
 }
 
+func (m *Manager) processResult() (err error) {
+	if m.task == nil {
+		return
+	}
+
+	var completed bool
+	completed, err = m.task.job.Result()
+	if completed {
+		if err == nil {
+			m.poster.NotifyAction(m.task.nextState)
+		}
+		// TODO: reschedule task if it failed?
+		m.task = nil
+	}
+	return
+}
+
 func (m *Manager) scheduleJob(ctx context.Context, next NextState) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	// if the same state is already scheduled for an earlier time, don't schedule it again.
-	if m.job != nil && m.job.nextState.State == next.State {
-		scheduled := int64(time.Until(m.job.when).Seconds())
+	if m.task != nil && m.task.nextState.State == next.State {
+		scheduled := int64(time.Until(m.task.when).Seconds())
 		newJob := int64(next.Delay.Seconds())
-		//log.Debugf("%s: scheduled: %d, newJob: %d", m.job.nextState.ZoneName, scheduled, newJob)
+		//log.Debugf("%s: scheduled: %d, newJob: %d", m.task.nextState.ZoneName, scheduled, newJob)
 		if newJob >= scheduled {
 			return
 		}
 	}
 
-	m.job = &Job{
-		api:       m.api,
-		nextState: next,
-		when:      time.Now().Add(next.Delay),
-	}
-	m.scheduler.Schedule(ctx, m.job.Run, next.Delay)
+	m.task = newTask(m.api, next)
+	m.task.job = scheduler.Schedule(ctx, m.task, next.Delay)
 	if next.Delay > 0 {
 		m.poster.NotifyQueued(next)
 	}
@@ -110,10 +116,10 @@ func (m *Manager) cancelJob() {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	m.scheduler.Cancel()
-	if m.job != nil {
-		m.poster.NotifyCanceled(m.job.nextState)
-		m.job = nil
+	if m.task != nil {
+		m.task.job.Cancel()
+		m.poster.NotifyCanceled(m.task.nextState)
+		m.task = nil
 	}
 }
 
@@ -121,51 +127,21 @@ func (m *Manager) Scheduled() (NextState, bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	if m.job == nil {
+	if m.task == nil {
 		return NextState{}, false
 	}
-	return m.job.nextState, true
+	return m.task.nextState, true
 }
 
 func (m *Manager) ReportTask() (string, bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	if m.job == nil {
+	if m.task == nil {
 		return "", false
 	}
 
-	return m.job.Report(), true
-}
-
-type Job struct {
-	api       tado.API
-	nextState NextState
-	when      time.Time
-}
-
-func (j *Job) Run(ctx context.Context) (err error) {
-	switch j.nextState.State {
-	case tado.ZoneStateAuto:
-		err = j.api.DeleteZoneOverlay(ctx, j.nextState.ZoneID)
-	case tado.ZoneStateOff:
-		err = j.api.SetZoneOverlay(ctx, j.nextState.ZoneID, 5.0)
-	default:
-		err = fmt.Errorf("invalid queued state for zone '%s': %d", j.nextState.ZoneName, j.nextState.State)
-	}
-	return
-}
-
-func (j *Job) Report() string {
-	var action string
-	switch j.nextState.State {
-	case tado.ZoneStateOff:
-		action = "switching off heating"
-	case tado.ZoneStateAuto:
-		action = "moving to auto mode"
-	}
-
-	return j.nextState.ZoneName + ": " + action + " in " + time.Until(j.when).Round(time.Second).String()
+	return m.task.Report(), true
 }
 
 type Managers []*Manager

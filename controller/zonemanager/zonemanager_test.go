@@ -99,6 +99,21 @@ var (
 			},
 		},
 		{
+			name: "no action",
+			update: &poller.Update{
+				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}}},
+				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+			},
+			current: tado.ZoneStateAuto,
+			next: NextState{
+				ZoneID:   1,
+				ZoneName: "foo",
+				State:    tado.ZoneStateAuto,
+			},
+			notification: "cancel moving to auto mode",
+		},
+		{
 			name: "user away",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
@@ -159,6 +174,8 @@ func TestManager_Run(t *testing.T) {
 		m.Run(ctx, 10*time.Millisecond)
 		wg.Done()
 	}()
+
+	time.Sleep(20 * time.Millisecond)
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {

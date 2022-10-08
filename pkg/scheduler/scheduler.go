@@ -6,46 +6,70 @@ import (
 	"time"
 )
 
-type Scheduler struct {
-	task *Task
-}
-
-func (s *Scheduler) Schedule(ctx context.Context, job func(ctx context.Context) error, waitTime time.Duration) {
-	s.Cancel()
-
+func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
 	ctx2, cancel := context.WithCancel(ctx)
-	s.task = &Task{
+	j := &Job{
+		task:   task,
 		state:  stateUnknown,
-		job:    job,
-		when:   time.Now().Add(waitTime),
 		cancel: cancel,
 	}
-	go s.task.Run(ctx2, waitTime)
+	go j.Run(ctx2, waitTime)
+
+	return j
 }
 
-func (s *Scheduler) Cancel() {
-	if s.task != nil {
-		s.task.cancel()
-		s.task = nil
+type Task interface {
+	Run(ctx context.Context) error
+}
+
+type Job struct {
+	task   Task
+	state  state
+	cancel context.CancelFunc
+	err    error
+	lock   sync.RWMutex
+}
+
+func (j *Job) Run(ctx context.Context, waitTime time.Duration) {
+	j.setState(stateScheduled, nil)
+	select {
+	case <-ctx.Done():
+		return
+	case <-time.After(waitTime):
+		err := j.task.Run(ctx)
+		s := stateCompleted
+		if err != nil {
+			s = stateFailed
+		}
+		j.setState(s, err)
 	}
 }
 
-func (s *Scheduler) Result() (completed bool, err error) {
-	if s.task != nil {
-		var result state
-		result, err = s.task.getState()
-		if completed = result.done(); completed {
-			s.Cancel()
-		}
+func (j *Job) Cancel() {
+	j.cancel()
+	j.setState(stateCanceled, nil)
+}
+
+func (j *Job) Result() (completed bool, err error) {
+	var result state
+	result, err = j.getState()
+	if completed = result.done(); completed {
+		j.cancel()
 	}
 	return
 }
 
-func (s *Scheduler) Scheduled() (duration time.Duration, ok bool) {
-	if s.task == nil {
-		return
-	}
-	return time.Until(s.task.when), true
+func (j *Job) setState(state state, err error) {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+	j.state = state
+	j.err = err
+}
+
+func (j *Job) getState() (state state, err error) {
+	j.lock.RLock()
+	defer j.lock.RUnlock()
+	return j.state, j.err
 }
 
 type state int
@@ -53,47 +77,11 @@ type state int
 const (
 	stateUnknown state = iota
 	stateScheduled
+	stateCanceled
 	stateCompleted
 	stateFailed
 )
 
 func (s state) done() bool {
-	return s == stateCompleted || s == stateFailed
-}
-
-type Task struct {
-	job    func(ctx context.Context) error
-	when   time.Time
-	state  state
-	err    error
-	cancel context.CancelFunc
-	lock   sync.RWMutex
-}
-
-func (t *Task) Run(ctx context.Context, waitTime time.Duration) {
-	t.setState(stateScheduled, nil)
-	select {
-	case <-ctx.Done():
-		return
-	case <-time.After(waitTime):
-		err := t.job(ctx)
-		s := stateCompleted
-		if err != nil {
-			s = stateFailed
-		}
-		t.setState(s, err)
-	}
-}
-
-func (t *Task) setState(state state, err error) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	t.state = state
-	t.err = err
-}
-
-func (t *Task) getState() (state state, err error) {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-	return t.state, t.err
+	return s == stateCompleted || s == stateFailed || s == stateCanceled
 }
