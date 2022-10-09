@@ -21,8 +21,9 @@ func (e *errFailed) Error() string {
 	return "job failed: " + reason
 }
 
-func (e *errFailed) Is(err error) bool {
-	return err == ErrFailed
+func (e *errFailed) Is(target error) bool {
+	_, ok := target.(*errFailed)
+	return ok
 }
 
 func (e *errFailed) Unwrap() error {
