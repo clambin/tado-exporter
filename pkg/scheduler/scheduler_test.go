@@ -39,10 +39,6 @@ func TestSchedule_Failure(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 
 	_, err := job.Result()
-	assert.True(t, errors.Is(err, scheduler.ErrFailed))
-	assert.Equal(t, "job failed: failed", err.Error())
-
-	err = errors.Unwrap(err)
 	require.Error(t, err)
 	assert.Equal(t, "failed", err.Error())
 }

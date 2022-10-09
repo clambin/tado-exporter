@@ -2,9 +2,12 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 )
+
+var ErrCanceled = errors.New("job canceled")
 
 type Task interface {
 	Run(ctx context.Context) error
@@ -38,9 +41,6 @@ func (j *Job) run(ctx context.Context, waitTime time.Duration) {
 		return
 	case <-time.After(waitTime):
 		err := j.task.Run(ctx)
-		if err != nil {
-			err = &errFailed{err: err}
-		}
 		j.Cancel()
 		j.setState(stateCompleted, err)
 	}
