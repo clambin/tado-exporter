@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 )
@@ -11,56 +10,48 @@ type Task interface {
 	Run(ctx context.Context) error
 }
 
+type Job struct {
+	Cancel context.CancelFunc
+	task   Task
+	state  state
+	err    error
+	lock   sync.RWMutex
+}
+
 func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
-	ctx2, cancel := context.WithCancel(ctx)
 	j := &Job{
-		task:   task,
-		state:  stateUnknown,
-		cancel: cancel,
+		task:  task,
+		state: stateUnknown,
 	}
+	var ctx2 context.Context
+	ctx2, j.Cancel = context.WithCancel(ctx)
 	go j.run(ctx2, waitTime)
 
 	return j
-}
-
-type Job struct {
-	task   Task
-	state  state
-	cancel context.CancelFunc
-	err    error
-	lock   sync.RWMutex
 }
 
 func (j *Job) run(ctx context.Context, waitTime time.Duration) {
 	j.setState(stateScheduled, nil)
 	select {
 	case <-ctx.Done():
+		j.setState(stateCanceled, ErrCanceled)
 		return
 	case <-time.After(waitTime):
 		err := j.task.Run(ctx)
 		s := stateCompleted
 		if err != nil {
 			s = stateFailed
+			err = errFailed{err: err}
 		}
+		j.Cancel()
 		j.setState(s, err)
 	}
-}
-
-func (j *Job) Cancel() {
-	j.cancel()
-	j.setState(stateCanceled, nil)
 }
 
 func (j *Job) Result() (completed bool, err error) {
 	var result state
 	result, err = j.getState()
-	switch result {
-	case stateCompleted, stateFailed:
-		completed = true
-		j.cancel()
-	case stateCanceled:
-		err = errors.New("job canceled")
-	}
+	completed = result == stateCompleted || result == stateFailed || result == stateCanceled
 	return
 }
 

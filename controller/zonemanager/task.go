@@ -15,6 +15,8 @@ type Task struct {
 	job       *scheduler.Job
 }
 
+var _ scheduler.Task = &Task{}
+
 func newTask(api tado.API, next NextState) *Task {
 	return &Task{
 		api:       api,
