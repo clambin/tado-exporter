@@ -2,6 +2,7 @@ package zonemanager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
@@ -74,23 +75,6 @@ func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) (err
 	return
 }
 
-func (m *Manager) processResult() (err error) {
-	if m.task == nil {
-		return
-	}
-
-	var completed bool
-	completed, err = m.task.job.Result()
-	if completed {
-		if err == nil {
-			m.poster.NotifyAction(m.task.nextState)
-		}
-		// TODO: reschedule task if it failed?
-		m.task = nil
-	}
-	return
-}
-
 func (m *Manager) scheduleJob(ctx context.Context, next NextState) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -115,9 +99,33 @@ func (m *Manager) cancelJob() {
 
 	if m.task != nil {
 		m.task.job.Cancel()
-		m.poster.NotifyCanceled(m.task.nextState)
-		m.task = nil
 	}
+}
+
+func (m *Manager) processResult() error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if m.task == nil {
+		return nil
+	}
+
+	completed, err := m.task.job.Result()
+	if !completed {
+		return nil
+	}
+
+	if err == nil {
+		m.poster.NotifyAction(m.task.nextState)
+	} else if errors.Is(err, scheduler.ErrCanceled) {
+		m.poster.NotifyCanceled(m.task.nextState)
+		err = nil
+	}
+	// TODO: reschedule task if it failed?
+
+	m.task = nil
+
+	return err
 }
 
 func (m *Manager) Scheduled() (NextState, bool) {

@@ -38,20 +38,18 @@ func (j *Job) run(ctx context.Context, waitTime time.Duration) {
 		return
 	case <-time.After(waitTime):
 		err := j.task.Run(ctx)
-		s := stateCompleted
 		if err != nil {
-			s = stateFailed
 			err = errFailed{err: err}
 		}
 		j.Cancel()
-		j.setState(s, err)
+		j.setState(stateCompleted, err)
 	}
 }
 
 func (j *Job) Result() (completed bool, err error) {
 	var result state
 	result, err = j.getState()
-	completed = result == stateCompleted || result == stateFailed || result == stateCanceled
+	completed = result == stateCompleted || result == stateCanceled
 	return
 }
 
@@ -75,5 +73,4 @@ const (
 	stateScheduled
 	stateCanceled
 	stateCompleted
-	stateFailed
 )
