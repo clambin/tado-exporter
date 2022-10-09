@@ -39,7 +39,7 @@ func (j *Job) run(ctx context.Context, waitTime time.Duration) {
 	case <-time.After(waitTime):
 		err := j.task.Run(ctx)
 		if err != nil {
-			err = errFailed{err: err}
+			err = &errFailed{err: err}
 		}
 		j.Cancel()
 		j.setState(stateCompleted, err)

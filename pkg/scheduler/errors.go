@@ -13,7 +13,7 @@ type errFailed struct {
 	err error
 }
 
-func (e errFailed) Error() string {
+func (e *errFailed) Error() string {
 	reason := "unknown reason"
 	if e.err != nil {
 		reason = e.err.Error()
@@ -21,10 +21,10 @@ func (e errFailed) Error() string {
 	return "job failed: " + reason
 }
 
-func (e errFailed) Is(_ error) bool {
-	return true
+func (e *errFailed) Is(err error) bool {
+	return err == ErrFailed
 }
 
-func (e errFailed) Unwrap() error {
+func (e *errFailed) Unwrap() error {
 	return e.err
 }
