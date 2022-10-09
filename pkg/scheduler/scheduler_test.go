@@ -2,6 +2,7 @@ package scheduler_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/stretchr/testify/assert"
@@ -10,61 +11,63 @@ import (
 	"time"
 )
 
-type MyJob struct {
+type MyTask struct {
 	err error
 }
 
-func (j MyJob) Run(_ context.Context) error {
-	return j.err
+func (t MyTask) Run(_ context.Context) error {
+	return t.err
 }
 
-func TestScheduler_Queue(t *testing.T) {
-	s := scheduler.Scheduler{}
-
-	job := &MyJob{}
-	s.Schedule(context.Background(), job.Run, 100*time.Millisecond)
+func TestSchedule_Success(t *testing.T) {
+	task := &MyTask{}
+	job := scheduler.Schedule(context.Background(), task, 100*time.Millisecond)
 
 	assert.Eventually(t, func() bool {
-		done, err := s.Result()
+		done, err := job.Result()
 		return done && err == nil
 	}, time.Second, 10*time.Millisecond)
+}
 
-	job = &MyJob{err: fmt.Errorf("failed")}
-	s.Schedule(context.Background(), job.Run, 100*time.Millisecond)
+func TestSchedule_Failure(t *testing.T) {
+	task := &MyTask{err: fmt.Errorf("failed")}
+	job := scheduler.Schedule(context.Background(), task, 100*time.Millisecond)
 
 	assert.Eventually(t, func() bool {
-		done, err := s.Result()
+		done, err := job.Result()
 		return done && err != nil
+	}, time.Second, 10*time.Millisecond)
+
+	_, err := job.Result()
+	assert.True(t, errors.Is(err, scheduler.ErrFailed))
+	assert.Equal(t, "job failed: failed", err.Error())
+
+	err = errors.Unwrap(err)
+	require.Error(t, err)
+	assert.Equal(t, "failed", err.Error())
+}
+
+func TestJob_Cancel(t *testing.T) {
+	task := &MyTask{}
+	job := scheduler.Schedule(context.Background(), task, time.Hour)
+
+	job.Cancel()
+
+	assert.Eventually(t, func() bool {
+		completed, err := job.Result()
+		return completed && errors.Is(err, scheduler.ErrCanceled)
 	}, time.Second, 10*time.Millisecond)
 }
 
-func TestScheduler_Cancel(t *testing.T) {
-	s := scheduler.Scheduler{}
+func TestJob_Cancel_Chained(t *testing.T) {
+	task := &MyTask{}
+	ctx, cancel := context.WithCancel(context.Background())
+	job := scheduler.Schedule(ctx, task, time.Hour)
 
-	job := &MyJob{}
-	s.Schedule(context.Background(), job.Run, time.Hour)
+	cancel()
 
-	s.Cancel()
-
-	_, ok := s.Scheduled()
-	assert.False(t, ok)
-}
-
-func TestScheduler_Scheduled(t *testing.T) {
-	s := scheduler.Scheduler{}
-
-	_, ok := s.Scheduled()
-	assert.False(t, ok)
-
-	job := &MyJob{}
-	s.Schedule(context.Background(), job.Run, time.Hour)
-
-	duration, ok := s.Scheduled()
-	require.True(t, ok)
-	assert.NotZero(t, duration)
-
-	s.Cancel()
-	_, ok = s.Scheduled()
-	assert.False(t, ok)
-
+	assert.Eventually(t, func() bool {
+		completed, err := job.Result()
+		return completed && errors.Is(err, scheduler.ErrCanceled)
+	}, time.Second, 10*time.Millisecond)
 }
