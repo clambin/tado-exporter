@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/poller"
@@ -15,23 +16,22 @@ import (
 )
 
 type Manager struct {
-	Updates chan *poller.Update
-	config  configuration.ZoneConfig
-	task    *Task
-	api     tado.API
-	poster  Poster
-	poller  poller.Poller
-	loaded  bool
-	lock    sync.RWMutex
+	Updates   chan *poller.Update
+	evaluator *rules.Evaluator
+	task      *Task
+	api       tado.API
+	poster    Poster
+	poller    poller.Poller
+	lock      sync.RWMutex
 }
 
 func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg configuration.ZoneConfig) *Manager {
 	return &Manager{
-		Updates: make(chan *poller.Update, 1),
-		config:  cfg,
-		api:     api,
-		poster:  Poster{SlackBot: bot},
-		poller:  p,
+		Updates:   make(chan *poller.Update),
+		evaluator: &rules.Evaluator{Config: &cfg},
+		api:       api,
+		poster:    Poster{SlackBot: bot},
+		poller:    p,
 	}
 }
 
@@ -45,11 +45,11 @@ func (m *Manager) Run(ctx context.Context, interval time.Duration) {
 			running = false
 		case update := <-m.Updates:
 			if err := m.processUpdate(ctx, update); err != nil {
-				log.WithError(err).WithField("zone", m.config.ZoneName).Error("failed to process tado update")
+				log.WithError(err).WithField("zone", m.evaluator.ZoneName).Error("failed to process tado update")
 			}
 		case <-ticker.C:
 			if err := m.processResult(); err != nil {
-				log.WithError(err).WithField("zone", m.config.ZoneName).Error("failed to set next state")
+				log.WithError(err).WithField("zone", m.evaluator.ZoneName).Error("failed to set next state")
 			}
 		}
 	}
@@ -58,24 +58,22 @@ func (m *Manager) Run(ctx context.Context, interval time.Duration) {
 	m.poller.Unregister(m.Updates)
 }
 
-func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) (err error) {
-	if err = m.load(update); err != nil {
-		return fmt.Errorf("failed to load rules: %w", err)
+func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) error {
+	next, err := m.evaluator.Evaluate(update)
+	if err != nil {
+		return fmt.Errorf("failed to evaluate rules: %w", err)
 	}
 
-	// next state
-	current, next := m.getNextState(update)
-
-	if current != next.State {
+	if next != nil {
 		m.scheduleJob(ctx, next)
 	} else {
 		m.cancelJob()
 	}
 
-	return
+	return nil
 }
 
-func (m *Manager) scheduleJob(ctx context.Context, next NextState) {
+func (m *Manager) scheduleJob(ctx context.Context, next *rules.NextState) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -128,12 +126,12 @@ func (m *Manager) processResult() error {
 	return err
 }
 
-func (m *Manager) Scheduled() (NextState, bool) {
+func (m *Manager) Scheduled() (*rules.NextState, bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	if m.task == nil {
-		return NextState{}, false
+		return nil, false
 	}
 	return m.task.nextState, true
 }
@@ -151,7 +149,7 @@ func (m *Manager) ReportTask() (string, bool) {
 
 type Managers []*Manager
 
-func (m Managers) GetScheduled() (states []NextState) {
+func (m Managers) GetScheduled() (states []*rules.NextState) {
 	for _, mgr := range m {
 		if state, scheduled := mgr.Scheduled(); scheduled {
 			states = append(states, state)

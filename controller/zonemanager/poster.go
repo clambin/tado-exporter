@@ -2,6 +2,7 @@ package zonemanager
 
 import (
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/slack-go/slack"
 	"time"
@@ -11,7 +12,7 @@ type Poster struct {
 	slackbot.SlackBot
 }
 
-func (p *Poster) NotifyQueued(state NextState) {
+func (p *Poster) NotifyQueued(state *rules.NextState) {
 	if p.SlackBot != nil {
 		p.SlackBot.GetPostChannel() <- []slack.Attachment{{
 			Color: "good",
@@ -21,7 +22,7 @@ func (p *Poster) NotifyQueued(state NextState) {
 	}
 }
 
-func (p *Poster) NotifyCanceled(state NextState) {
+func (p *Poster) NotifyCanceled(state *rules.NextState) {
 	if p.SlackBot != nil {
 		p.SlackBot.GetPostChannel() <- []slack.Attachment{{
 			Color: "good",
@@ -31,7 +32,7 @@ func (p *Poster) NotifyCanceled(state NextState) {
 	}
 }
 
-func (p *Poster) NotifyAction(state NextState) {
+func (p *Poster) NotifyAction(state *rules.NextState) {
 	if p.SlackBot != nil {
 		p.SlackBot.GetPostChannel() <- []slack.Attachment{{
 			Color: "good",
@@ -41,7 +42,7 @@ func (p *Poster) NotifyAction(state NextState) {
 	}
 }
 
-func getAction(state NextState) (text string) {
+func getAction(state *rules.NextState) (text string) {
 	switch state.State {
 	case tado.ZoneStateAuto:
 		text = "moving to auto mode"

@@ -2,6 +2,7 @@ package zonemanager
 
 import (
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/pkg/slackbot/mocks"
 	"github.com/stretchr/testify/assert"
@@ -19,11 +20,11 @@ func TestPoster(t *testing.T) {
 	p := Poster{SlackBot: &b}
 
 	for _, tt := range []struct {
-		state  NextState
+		state  *rules.NextState
 		action string
 	}{
 		{
-			state: NextState{
+			state: &rules.NextState{
 				ZoneID:       1,
 				ZoneName:     "foo",
 				State:        tado.ZoneStateOff,
@@ -34,7 +35,7 @@ func TestPoster(t *testing.T) {
 			action: "switching off heating",
 		},
 		{
-			state: NextState{
+			state: &rules.NextState{
 				ZoneID:       1,
 				ZoneName:     "foo",
 				State:        tado.ZoneStateAuto,

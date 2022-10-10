@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/slackbot"
 	mocks2 "github.com/clambin/tado-exporter/pkg/slackbot/mocks"
 	"github.com/clambin/tado-exporter/poller"
@@ -29,14 +30,13 @@ var (
 			},
 		},
 		LimitOverlay: configuration.ZoneLimitOverlay{Enabled: true, Delay: time.Hour},
-		//NightTime:    configuration.ZoneNightTime{Enabled: true, Time: configuration.ZoneNightTimeTimestamp{Hour: 23, Minutes: 30}},
 	}
 
 	testCases = []struct {
 		name         string
 		update       *poller.Update
 		current      tado.ZoneState
-		next         NextState
+		next         *rules.NextState
 		call         string
 		args         []interface{}
 		notification string
@@ -49,7 +49,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado.ZoneStateAuto,
-			next: NextState{
+			next: &rules.NextState{
 				ZoneID:   1,
 				ZoneName: "foo",
 				State:    tado.ZoneStateAuto,
@@ -67,7 +67,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado.ZoneStateManual,
-			next: NextState{
+			next: &rules.NextState{
 				ZoneID:       1,
 				ZoneName:     "foo",
 				State:        tado.ZoneStateAuto,
@@ -89,7 +89,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado.ZoneStateManual,
-			next: NextState{
+			next: &rules.NextState{
 				ZoneID:       1,
 				ZoneName:     "foo",
 				State:        tado.ZoneStateAuto,
@@ -99,14 +99,14 @@ var (
 			},
 		},
 		{
-			name: "no action",
+			name: "no action #2",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}}},
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado.ZoneStateAuto,
-			next: NextState{
+			next: &rules.NextState{
 				ZoneID:   1,
 				ZoneName: "foo",
 				State:    tado.ZoneStateAuto,
@@ -121,7 +121,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 			},
 			current: tado.ZoneStateAuto,
-			next: NextState{
+			next: &rules.NextState{
 				ZoneID:       1,
 				ZoneName:     "foo",
 				State:        tado.ZoneStateOff,
@@ -143,7 +143,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado.ZoneStateOff,
-			next: NextState{
+			next: &rules.NextState{
 				ZoneID:       1,
 				ZoneName:     "foo",
 				State:        tado.ZoneStateAuto,
