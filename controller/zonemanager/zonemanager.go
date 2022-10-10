@@ -27,7 +27,7 @@ type Manager struct {
 
 func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg configuration.ZoneConfig) *Manager {
 	return &Manager{
-		Updates:   make(chan *poller.Update),
+		Updates:   make(chan *poller.Update, 1),
 		evaluator: &rules.Evaluator{Config: &cfg},
 		api:       api,
 		poster:    Poster{SlackBot: bot},
