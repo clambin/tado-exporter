@@ -78,10 +78,15 @@ func (m *Manager) scheduleJob(ctx context.Context, next *rules.NextState) {
 	defer m.lock.Unlock()
 
 	// if the same state is already scheduled for an earlier time, don't schedule it again.
-	if m.task != nil &&
-		m.task.nextState.State == next.State &&
-		m.task.firesBefore(next.Delay) {
-		return
+	if m.task != nil {
+		if m.task.nextState.State == next.State &&
+			m.task.firesNoLaterThan(next.Delay) {
+			log.Debugf("task already scheduled. ignoring")
+			return
+		}
+
+		// we will replace the running job, so cancel the old one
+		m.task.job.Cancel()
 	}
 
 	m.task = newTask(m.api, next)

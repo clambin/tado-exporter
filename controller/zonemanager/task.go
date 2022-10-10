@@ -6,6 +6,7 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
+	log "github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -38,10 +39,13 @@ func (j *Task) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (j *Task) firesBefore(delay time.Duration) bool {
+func (j *Task) firesNoLaterThan(delay time.Duration) bool {
 	scheduled := int64(time.Until(j.when).Seconds())
 	newJob := int64(delay.Seconds())
-	return scheduled < newJob
+
+	log.Debugf("scheduled job: %d, new job: %d", scheduled, newJob)
+
+	return scheduled <= newJob
 }
 
 func (j *Task) Report() string {
