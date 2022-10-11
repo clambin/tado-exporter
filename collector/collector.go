@@ -33,7 +33,7 @@ type Collector struct {
 
 func New(p poller.Poller) *Collector {
 	return &Collector{
-		Update: make(chan *poller.Update),
+		Update: make(chan *poller.Update, 1),
 		poller: p,
 		tadoZoneDeviceBatteryStatus: prometheus.NewDesc(
 			prometheus.BuildFQName("tado", "zone", "device_battery_status"),

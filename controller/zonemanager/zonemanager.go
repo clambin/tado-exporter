@@ -131,25 +131,26 @@ func (m *Manager) processResult() error {
 	return err
 }
 
-func (m *Manager) Scheduled() (*rules.NextState, bool) {
+func (m *Manager) Scheduled() (next *rules.NextState, scheduled bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	if m.task == nil {
-		return nil, false
+	if m.task != nil {
+		next = m.task.nextState
+		scheduled = true
 	}
-	return m.task.nextState, true
+	return
 }
 
-func (m *Manager) ReportTask() (string, bool) {
+func (m *Manager) ReportTask() (report string, scheduled bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	if m.task == nil {
-		return "", false
+	if m.task != nil {
+		report = m.task.Report()
+		scheduled = true
 	}
-
-	return m.task.Report(), true
+	return
 }
 
 type Managers []*Manager
