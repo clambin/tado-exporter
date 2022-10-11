@@ -173,3 +173,42 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkEvaluator(b *testing.B) {
+	update := &poller.Update{
+		Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
+		ZoneInfo: map[int]tado.ZoneInfo{10: {Overlay: tado.ZoneInfoOverlay{
+			Type:        "MANUAL",
+			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
+			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+		}}},
+		UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+	}
+
+	e := &Evaluator{
+		Config: &configuration.ZoneConfig{
+			ZoneID: 10,
+			AutoAway: configuration.ZoneAutoAway{
+				Enabled: true,
+				Delay:   time.Hour,
+				Users:   []configuration.ZoneUser{{MobileDeviceName: "foo"}},
+			},
+			LimitOverlay: configuration.ZoneLimitOverlay{
+				Enabled: true,
+				Delay:   15 * time.Minute,
+			},
+			NightTime: configuration.ZoneNightTime{
+				Enabled: true,
+				Time: configuration.ZoneNightTimeTimestamp{
+					Hour:    23,
+					Minutes: 30,
+				},
+			},
+		},
+	}
+	for i := 0; i < b.N; i++ {
+		if _, err := e.Evaluate(update); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
