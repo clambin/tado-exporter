@@ -164,8 +164,9 @@ func TestManager_Run(t *testing.T) {
 	b := &mocks2.SlackBot{}
 	b.On("GetPostChannel").Return(postChannel)
 	p := &mocks3.Poller{}
-	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
-	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return(nil)
+	ch := make(chan *poller.Update)
+	p.On("Register").Return(ch)
+	p.On("Unregister", ch).Return()
 	m := New(c, p, b, config)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
@@ -182,20 +183,13 @@ func TestManager_Run(t *testing.T) {
 			if tt.call != "" {
 				c.On(tt.call, tt.args...).Return(nil).Once()
 			}
-			wg2 := sync.WaitGroup{}
-			wg2.Add(1)
-			go func() {
-				m.Updates <- tt.update
-				wg2.Done()
-			}()
+			ch <- tt.update
 
 			if tt.notification != "" {
 				msg := <-postChannel
 				require.Len(t, msg, 1, tt.name)
 				assert.Equal(t, tt.notification, msg[0].Text, tt.name)
 			}
-
-			wg2.Wait()
 		})
 	}
 
@@ -208,8 +202,9 @@ func TestManager_Run(t *testing.T) {
 func TestManager_Scheduled(t *testing.T) {
 	c := &mocks.API{}
 	p := &mocks3.Poller{}
-	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
-	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return(nil)
+	ch := make(chan *poller.Update)
+	p.On("Register").Return(ch)
+	p.On("Unregister", ch).Return()
 	m := New(c, p, nil, config)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
@@ -219,7 +214,7 @@ func TestManager_Scheduled(t *testing.T) {
 		wg.Done()
 	}()
 
-	m.Updates <- &poller.Update{
+	ch <- &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
 			Type:        "MANUAL",
@@ -250,8 +245,9 @@ func TestManager_Scheduled(t *testing.T) {
 func TestManagers_ReportTasks(t *testing.T) {
 	c := &mocks.API{}
 	p := &mocks3.Poller{}
-	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
-	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return(nil)
+	ch := make(chan *poller.Update)
+	p.On("Register").Return(ch)
+	p.On("Unregister", ch).Return()
 	m := New(c, p, nil, config)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
@@ -265,7 +261,7 @@ func TestManagers_ReportTasks(t *testing.T) {
 	_, ok := mgrs.ReportTasks()
 	assert.False(t, ok)
 
-	m.Updates <- &poller.Update{
+	ch <- &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
 			Type:        "MANUAL",

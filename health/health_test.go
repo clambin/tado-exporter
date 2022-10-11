@@ -22,9 +22,10 @@ var update = flag.Bool("update", false, "update .golden files")
 
 func TestHandler_Handle(t *testing.T) {
 	p := &mocks.Poller{}
-	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
-	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return(nil)
-	h := Health{Poller: p, Ch: make(chan *poller.Update)}
+	ch := make(chan *poller.Update)
+	p.On("Register").Return(ch)
+	p.On("Unregister", ch).Return()
+	h := Health{Poller: p}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
@@ -41,7 +42,7 @@ func TestHandler_Handle(t *testing.T) {
 	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
 
 	//p.On("Refresh").Return().Once()
-	h.Ch <- &poller.Update{
+	ch <- &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{
 			1: {

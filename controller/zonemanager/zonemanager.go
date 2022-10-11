@@ -16,7 +16,6 @@ import (
 )
 
 type Manager struct {
-	Updates   chan *poller.Update
 	evaluator *rules.Evaluator
 	task      *Task
 	api       tado.API
@@ -27,7 +26,6 @@ type Manager struct {
 
 func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg configuration.ZoneConfig) *Manager {
 	return &Manager{
-		Updates:   make(chan *poller.Update, 1),
 		evaluator: &rules.Evaluator{Config: &cfg},
 		api:       api,
 		poster:    Poster{SlackBot: bot},
@@ -36,14 +34,13 @@ func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg configuration
 }
 
 func (m *Manager) Run(ctx context.Context, interval time.Duration) {
-	m.poller.Register(m.Updates)
-
+	ch := m.poller.Register()
 	ticker := time.NewTicker(interval)
 	for running := true; running; {
 		select {
 		case <-ctx.Done():
 			running = false
-		case update := <-m.Updates:
+		case update := <-ch:
 			if err := m.processUpdate(ctx, update); err != nil {
 				log.WithError(err).WithField("zone", m.evaluator.ZoneName).Error("failed to process tado update")
 			}
@@ -54,8 +51,7 @@ func (m *Manager) Run(ctx context.Context, interval time.Duration) {
 		}
 	}
 	ticker.Stop()
-
-	m.poller.Unregister(m.Updates)
+	m.poller.Unregister(ch)
 }
 
 func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) error {

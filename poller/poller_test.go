@@ -82,8 +82,7 @@ func TestPoller_Run(t *testing.T) {
 	prepareMockAPI(api)
 
 	go p.Run(ctx, 10*time.Millisecond)
-	ch := make(chan *poller.Update)
-	p.Register(ch)
+	ch := p.Register()
 	update := <-ch
 
 	require.Len(t, update.UserInfo, 2)
@@ -123,8 +122,7 @@ func TestServer_Poll(t *testing.T) {
 
 	go p.Run(ctx, time.Minute)
 
-	ch := make(chan *poller.Update)
-	p.Register(ch)
+	ch := p.Register()
 	p.Refresh()
 	update := <-ch
 
@@ -143,8 +141,7 @@ func TestServer_Refresh(t *testing.T) {
 
 	go p.Run(ctx, time.Second)
 
-	ch := make(chan *poller.Update)
-	p.Register(ch)
+	ch := p.Register()
 	update := <-ch
 	require.Len(t, update.UserInfo, 2)
 

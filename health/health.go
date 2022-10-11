@@ -11,29 +11,25 @@ import (
 
 type Health struct {
 	poller.Poller
-	Ch         chan *poller.Update
 	update     *poller.Update
 	lastUpdate time.Time
 	lock       sync.RWMutex
 }
 
 func (h *Health) Run(ctx context.Context) {
-	//h.Ch = make(chan *poller.Update)
-	h.Register(h.Ch)
-
+	ch := h.Register()
 	for running := true; running; {
 		select {
 		case <-ctx.Done():
 			running = false
-		case update := <-h.Ch:
+		case update := <-ch:
 			h.lock.Lock()
 			h.update = update
 			h.lastUpdate = time.Now()
 			h.lock.Unlock()
 		}
 	}
-
-	h.Unregister(h.Ch)
+	h.Unregister(ch)
 }
 
 func (h *Health) Handle(w http.ResponseWriter, _ *http.Request) {

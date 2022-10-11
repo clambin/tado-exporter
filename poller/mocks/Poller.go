@@ -21,9 +21,20 @@ func (_m *Poller) Refresh() {
 	_m.Called()
 }
 
-// Register provides a mock function with given fields: ch
-func (_m *Poller) Register(ch chan *poller.Update) {
-	_m.Called(ch)
+// Register provides a mock function with given fields:
+func (_m *Poller) Register() chan *poller.Update {
+	ret := _m.Called()
+
+	var r0 chan *poller.Update
+	if rf, ok := ret.Get(0).(func() chan *poller.Update); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(chan *poller.Update)
+		}
+	}
+
+	return r0
 }
 
 // Run provides a mock function with given fields: ctx, interval

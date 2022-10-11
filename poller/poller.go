@@ -11,7 +11,7 @@ import (
 //go:generate mockery --name Poller
 type Poller interface {
 	Run(ctx context.Context, interval time.Duration)
-	Register(ch chan *Update)
+	Register() chan *Update
 	Unregister(ch chan *Update)
 	Refresh()
 }
@@ -67,11 +67,13 @@ func (poller *Server) Refresh() {
 	poller.refresh <- struct{}{}
 }
 
-func (poller *Server) Register(ch chan *Update) {
+func (poller *Server) Register() chan *Update {
 	poller.lock.Lock()
 	defer poller.lock.Unlock()
+	ch := make(chan *Update, 1)
 	poller.registry[ch] = struct{}{}
 	log.Debugf("poller has %d clients", len(poller.registry))
+	return ch
 }
 
 func (poller *Server) Unregister(ch chan *Update) {

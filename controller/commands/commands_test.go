@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -19,11 +20,15 @@ import (
 
 func TestManager_Run(t *testing.T) {
 	api := &mocks.API{}
+
 	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+
+	ch := make(chan *poller.Update)
 	p := &mocks3.Poller{}
-	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return().Once()
-	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return().Once()
+	p.On("Register").Return(ch).Once()
+	p.On("Unregister", ch).Return().Once()
+
 	c := New(api, bot, p, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -34,7 +39,7 @@ func TestManager_Run(t *testing.T) {
 		wg.Done()
 	}()
 
-	c.updates <- &poller.Update{}
+	ch <- &poller.Update{}
 
 	assert.Eventually(t, func() bool {
 		c.lock.RLock()
@@ -53,8 +58,9 @@ func TestController_Rules(t *testing.T) {
 	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	p := &mocks3.Poller{}
-	p.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
-	p.On("Unregister", mock.AnythingOfType("chan *poller.Update")).Return(nil)
+	ch := make(chan *poller.Update)
+	p.On("Register").Return(ch)
+	p.On("Unregister", ch).Return()
 
 	cfg := configuration.ZoneConfig{
 		ZoneID:   1,
@@ -84,7 +90,7 @@ func TestController_Rules(t *testing.T) {
 	require.Len(t, attachments, 1)
 	assert.Equal(t, "no rules have been triggered", attachments[0].Text)
 
-	mgrs[0].Updates <- &poller.Update{
+	ch <- &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
 			Type:        "MANUAL",
@@ -110,13 +116,26 @@ func TestController_Rules(t *testing.T) {
 
 func TestManager_SetRoom(t *testing.T) {
 	api := &mocks.API{}
+
 	bot := &slackMock.SlackBot{}
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+
+	ch := make(chan *poller.Update)
 	p := &mocks3.Poller{}
+	p.On("Register").Return(ch).Once()
+	p.On("Unregister", ch).Return().Once()
 
 	c := New(api, bot, p, nil)
 
-	c.update = &poller.Update{
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		c.Run(ctx)
+		wg.Done()
+	}()
+
+	ch <- &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: {
 			SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 22}},
@@ -184,23 +203,27 @@ func TestManager_SetRoom(t *testing.T) {
 	}
 
 	for index, testCase := range testCases {
-		if testCase.Action {
-			if testCase.Delete {
-				api.On("DeleteZoneOverlay", mock.Anything, 1).Return(nil).Once()
-			} else {
-				api.On("SetZoneOverlayWithDuration", mock.Anything, 1, 25.0, testCase.Duration).Return(nil).Once()
+		t.Run(strconv.Itoa(index), func(t *testing.T) {
+			if testCase.Action {
+				if testCase.Delete {
+					api.On("DeleteZoneOverlay", mock.Anything, 1).Return(nil).Once()
+				} else {
+					api.On("SetZoneOverlayWithDuration", mock.Anything, 1, 25.0, testCase.Duration).Return(nil).Once()
+				}
+				p.On("Refresh").Return(nil).Once()
 			}
-			p.On("Refresh").Return(nil).Once()
-		}
 
-		attachments := c.SetRoom(context.Background(), testCase.Args...)
+			attachments := c.SetRoom(context.Background(), testCase.Args...)
 
-		require.Len(t, attachments, 1, index)
-		assert.Equal(t, testCase.Color, attachments[0].Color, index)
-		assert.Empty(t, attachments[0].Title, index)
-		assert.Equal(t, testCase.Text, attachments[0].Text, index)
+			require.Len(t, attachments, 1, index)
+			assert.Equal(t, testCase.Color, attachments[0].Color, index)
+			assert.Empty(t, attachments[0].Title, index)
+			assert.Equal(t, testCase.Text, attachments[0].Text, index)
+		})
 	}
 
+	cancel()
+	wg.Wait()
 	mock.AssertExpectationsForObjects(t, api, bot, p)
 }
 
@@ -213,6 +236,8 @@ func TestManager_DoRefresh(t *testing.T) {
 	c := New(api, bot, p, nil)
 
 	c.DoRefresh(context.Background())
+
+	mock.AssertExpectationsForObjects(t, api, bot, p)
 }
 
 func TestManager_ReportRooms(t *testing.T) {
