@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
+	"github.com/clambin/tado-exporter/controller/zonemanager/logger"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/clambin/tado-exporter/pkg/slackbot"
@@ -19,16 +20,21 @@ type Manager struct {
 	evaluator *rules.Evaluator
 	task      *Task
 	api       tado.API
-	poster    Poster
+	loggers   logger.Loggers
 	poller    poller.Poller
 	lock      sync.RWMutex
 }
 
 func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg configuration.ZoneConfig) *Manager {
+	loggers := logger.Loggers{&logger.StdOutLogger{}}
+	if bot != nil {
+		loggers = append(loggers, &logger.SlackLogger{PostChannel: bot.GetPostChannel()})
+	}
+
 	return &Manager{
 		evaluator: &rules.Evaluator{Config: &cfg},
 		api:       api,
-		poster:    Poster{SlackBot: bot},
+		loggers:   loggers,
 		poller:    p,
 	}
 }
@@ -88,8 +94,7 @@ func (m *Manager) scheduleJob(ctx context.Context, next *rules.NextState) {
 	m.task.job = scheduler.Schedule(ctx, m.task, next.Delay)
 
 	if next.Delay > 0 {
-		m.poster.NotifyQueued(next)
-		log.Infof("moving %s to %s in %s", m.task.nextState.ZoneName, zoneStateString(m.task.nextState.State), next.Delay.String())
+		m.loggers.Log(logger.Queued, next)
 	}
 }
 
@@ -100,20 +105,6 @@ func (m *Manager) cancelJob() {
 	if m.task != nil {
 		m.task.job.Cancel()
 	}
-}
-
-func zoneStateString(state tado.ZoneState) string {
-	switch state {
-	case tado.ZoneStateAuto:
-		return "auto"
-	case tado.ZoneStateOff:
-		return "off"
-	case tado.ZoneStateManual:
-		return "manual"
-	case tado.ZoneStateTemporaryManual:
-		return "temp manual"
-	}
-	return "unknown"
 }
 
 func (m *Manager) processResult() error {
@@ -130,12 +121,10 @@ func (m *Manager) processResult() error {
 	}
 
 	if err == nil {
-		m.poster.NotifyAction(m.task.nextState)
-		log.Infof("moving %s to %s", m.task.nextState.ZoneName, zoneStateString(m.task.nextState.State))
+		m.loggers.Log(logger.Done, m.task.nextState)
 	} else if errors.Is(err, scheduler.ErrCanceled) {
-		m.poster.NotifyCanceled(m.task.nextState)
+		m.loggers.Log(logger.Canceled, m.task.nextState)
 		err = nil
-		log.Infof("canceling move of %s to %s", m.task.nextState.ZoneName, zoneStateString(m.task.nextState.State))
 	}
 	// TODO: reschedule task if it failed?
 
