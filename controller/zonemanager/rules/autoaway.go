@@ -5,6 +5,7 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/poller"
+	"strings"
 )
 
 type AutoAwayRule struct {
@@ -20,38 +21,54 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (next *NextState, err err
 	if err = a.load(update); err != nil {
 		return nil, err
 	}
-	var home bool
+
+	var home []string
+	var away []string
 	for _, id := range a.mobileDeviceID {
 		if entry, exists := update.UserInfo[id]; exists {
-			if entry.IsHome() != tado.DeviceAway {
-				home = true
-				break
+			if entry.IsHome() == tado.DeviceAway {
+				away = append(away, entry.Name)
+			} else {
+				home = append(home, entry.Name)
 			}
 		}
 	}
-	state := update.ZoneInfo[a.zoneID].GetState()
 
-	if !home && state != tado.ZoneStateOff {
-		next = &NextState{
-			ZoneID:       a.zoneID,
-			ZoneName:     a.zoneName,
-			State:        tado.ZoneStateOff,
-			Delay:        a.config.Delay,
-			ActionReason: "user(s) is/are away",
-			CancelReason: "user(s) is/are home",
+	state := update.ZoneInfo[a.zoneID].GetState()
+	if state == tado.ZoneStateOff {
+		if len(home) != 0 {
+			next = &NextState{
+				ZoneID:       a.zoneID,
+				ZoneName:     a.zoneName,
+				State:        tado.ZoneStateAuto,
+				Delay:        0,
+				ActionReason: makeReason(home, "home"),
+				CancelReason: makeReason(home, "away"),
+			}
 		}
-	} else if home && state == tado.ZoneStateOff {
-		next = &NextState{
-			ZoneID:       a.zoneID,
-			ZoneName:     a.zoneName,
-			State:        tado.ZoneStateAuto,
-			Delay:        0,
-			ActionReason: "user(s) is/are home",
-			CancelReason: "user(s) is/are away",
+	} else {
+		if len(home) == 0 {
+			next = &NextState{
+				ZoneID:       a.zoneID,
+				ZoneName:     a.zoneName,
+				State:        tado.ZoneStateOff,
+				Delay:        a.config.Delay,
+				ActionReason: makeReason(away, "away"),
+				CancelReason: makeReason(away, "home"),
+			}
 		}
 	}
-
 	return
+}
+
+func makeReason(users []string, state string) string {
+	var verb string
+	if len(users) == 1 {
+		verb = "is"
+	} else {
+		verb = "are"
+	}
+	return fmt.Sprintf("%s %s %s", strings.Join(users, ", "), verb, state)
 }
 
 func (a *AutoAwayRule) load(update *poller.Update) error {
