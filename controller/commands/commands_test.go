@@ -147,6 +147,12 @@ func TestManager_SetRoom(t *testing.T) {
 		}},
 	}
 
+	assert.Eventually(t, func() bool {
+		c.lock.RLock()
+		defer c.lock.RUnlock()
+		return c.update != nil
+	}, time.Second, 10*time.Millisecond)
+
 	var testCases = []struct {
 		Args     []string
 		Color    string
