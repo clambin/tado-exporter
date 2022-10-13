@@ -6,8 +6,11 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/poller"
+	"github.com/clambin/tado-exporter/poller/mocks"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"sync"
 	"testing"
 	"time"
 )
@@ -40,22 +43,31 @@ func TestCollector_Describe(t *testing.T) {
 }
 
 func TestCollector_Collect(t *testing.T) {
-	c := collector.New(nil)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go c.Run(ctx)
+	ch := make(chan *poller.Update, 1)
+	p := &mocks.Poller{}
+	p.On("Register").Return(ch).Once()
+	p.On("Unregister", ch).Return().Once()
 
-	c.Update <- &Update
+	c := collector.New(p)
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		c.Run(ctx)
+		wg.Done()
+	}()
+
+	ch <- &Update
 
 	time.Sleep(100 * time.Millisecond)
 
-	ch := make(chan prometheus.Metric)
-	go c.Collect(ch)
+	ch2 := make(chan prometheus.Metric)
+	go c.Collect(ch2)
 
 	count := countMetricResults(CollectResult)
 
 	for count > 0 {
-		m := <-ch
+		m := <-ch2
 		name := tools.MetricName(m)
 
 		expected, ok := CollectResult[name]
@@ -84,29 +96,11 @@ func TestCollector_Collect(t *testing.T) {
 		}
 		count--
 	}
-}
 
-func BenchmarkCollector_Collect(b *testing.B) {
-	c := collector.New(nil)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go c.Run(ctx)
+	cancel()
+	wg.Wait()
 
-	c.Update <- &Update
-	time.Sleep(10 * time.Millisecond)
-
-	b.ResetTimer()
-
-	for i := 0; i < 10000; i++ {
-		ch := make(chan prometheus.Metric)
-		go func(ch chan prometheus.Metric) {
-			c.Collect(ch)
-			close(ch)
-		}(ch)
-
-		for range ch {
-		}
-	}
+	mock.AssertExpectationsForObjects(t, p)
 }
 
 var Update = poller.Update{

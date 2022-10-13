@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
+	"github.com/clambin/tado-exporter/pkg/slackbot"
 	mocks2 "github.com/clambin/tado-exporter/pkg/slackbot/mocks"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado/mocks"
@@ -34,7 +35,6 @@ var (
 )
 
 func TestController_Run(t *testing.T) {
-	//log.SetLevel(log.DebugLevel)
 	a := &mocks.API{}
 	prepareMockAPI(a)
 
@@ -49,7 +49,9 @@ func TestController_Run(t *testing.T) {
 	}()
 
 	b := &mocks2.SlackBot{}
+	ch := make(slackbot.PostChannel, 10)
 	b.On("RegisterCallback", mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc")).Return(nil)
+	b.On("GetPostChannel").Return(ch)
 
 	c := New(a, cfg, b, p)
 	assert.NotNil(t, c)

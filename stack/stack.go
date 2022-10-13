@@ -48,7 +48,7 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 		cfg:    cfg,
 	}
 
-	stack.Health = &health.Health{Poller: stack.Poller, Ch: make(chan *poller.Update)}
+	stack.Health = &health.Health{Poller: stack.Poller}
 
 	stack.MetricServer = server.NewWithHandlers(cfg.Port, []server.Handler{
 		{Path: "/health", Handler: http.HandlerFunc(stack.Health.Handle)},

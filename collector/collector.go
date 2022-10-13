@@ -33,7 +33,6 @@ type Collector struct {
 
 func New(p poller.Poller) *Collector {
 	return &Collector{
-		Update: make(chan *poller.Update),
 		poller: p,
 		tadoZoneDeviceBatteryStatus: prometheus.NewDesc(
 			prometheus.BuildFQName("tado", "zone", "device_battery_status"),
@@ -236,21 +235,17 @@ func (collector *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 func (collector *Collector) Run(ctx context.Context) {
 	log.Info("exporter started")
 
-	if collector.poller != nil {
-		collector.poller.Register(collector.Update)
-	}
+	ch := collector.poller.Register()
 	for running := true; running; {
 		select {
 		case <-ctx.Done():
 			running = false
-		case update := <-collector.Update:
+		case update := <-ch:
 			collector.lock.Lock()
 			collector.lastUpdate = update
 			collector.lock.Unlock()
 		}
 	}
-	if collector.poller != nil {
-		collector.poller.Unregister(collector.Update)
-	}
+	collector.poller.Unregister(ch)
 	log.Info("exporter stopped")
 }

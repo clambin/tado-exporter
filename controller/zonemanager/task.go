@@ -4,20 +4,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"time"
 )
 
 type Task struct {
 	api       tado.API
-	nextState NextState
+	nextState *rules.NextState
 	when      time.Time
 	job       *scheduler.Job
 }
 
 var _ scheduler.Task = &Task{}
 
-func newTask(api tado.API, next NextState) *Task {
+func newTask(api tado.API, next *rules.NextState) *Task {
 	return &Task{
 		api:       api,
 		nextState: next,
@@ -37,10 +38,10 @@ func (j *Task) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (j *Task) firesBefore(delay time.Duration) bool {
+func (j *Task) firesNoLaterThan(delay time.Duration) bool {
 	scheduled := int64(time.Until(j.when).Seconds())
 	newJob := int64(delay.Seconds())
-	return scheduled < newJob
+	return scheduled <= newJob
 }
 
 func (j *Task) Report() string {

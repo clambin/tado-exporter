@@ -18,19 +18,17 @@ import (
 
 type Manager struct {
 	tado.API
-	poller  poller.Poller
-	update  *poller.Update
-	updates chan *poller.Update
-	mgrs    zonemanager.Managers
-	lock    sync.RWMutex
+	poller poller.Poller
+	update *poller.Update
+	mgrs   zonemanager.Managers
+	lock   sync.RWMutex
 }
 
 func New(api tado.API, tadoBot slackbot.SlackBot, p poller.Poller, mgrs zonemanager.Managers) *Manager {
 	m := &Manager{
-		API:     api,
-		poller:  p,
-		updates: make(chan *poller.Update),
-		mgrs:    mgrs,
+		API:    api,
+		poller: p,
+		mgrs:   mgrs,
 	}
 
 	tadoBot.RegisterCallback("rules", m.ReportRules)
@@ -46,18 +44,18 @@ func New(api tado.API, tadoBot slackbot.SlackBot, p poller.Poller, mgrs zonemana
 func (m *Manager) Run(ctx context.Context) {
 	log.Info("commands manager started")
 
-	m.poller.Register(m.updates)
+	ch := m.poller.Register()
 	for running := true; running; {
 		select {
 		case <-ctx.Done():
 			running = false
-		case update := <-m.updates:
+		case update := <-ch:
 			m.lock.Lock()
 			m.update = update
 			m.lock.Unlock()
 		}
 	}
-	m.poller.Unregister(m.updates)
+	m.poller.Unregister(ch)
 	log.Info("commands manager stopped")
 }
 
