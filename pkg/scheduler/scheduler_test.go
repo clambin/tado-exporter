@@ -20,8 +20,8 @@ func (t MyTask) Run(_ context.Context) error {
 }
 
 func TestSchedule_Success(t *testing.T) {
-	task := &MyTask{}
-	job := scheduler.Schedule(context.Background(), task, 100*time.Millisecond)
+	var task MyTask
+	job := scheduler.Schedule(context.Background(), &task, 100*time.Millisecond)
 
 	assert.Eventually(t, func() bool {
 		done, err := job.Result()
@@ -44,8 +44,8 @@ func TestSchedule_Failure(t *testing.T) {
 }
 
 func TestJob_Cancel(t *testing.T) {
-	task := &MyTask{}
-	job := scheduler.Schedule(context.Background(), task, time.Hour)
+	var task MyTask
+	job := scheduler.Schedule(context.Background(), &task, time.Hour)
 
 	job.Cancel()
 
@@ -56,9 +56,9 @@ func TestJob_Cancel(t *testing.T) {
 }
 
 func TestJob_Cancel_Chained(t *testing.T) {
-	task := &MyTask{}
+	var task MyTask
 	ctx, cancel := context.WithCancel(context.Background())
-	job := scheduler.Schedule(ctx, task, time.Hour)
+	job := scheduler.Schedule(ctx, &task, time.Hour)
 
 	cancel()
 

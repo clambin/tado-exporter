@@ -159,15 +159,15 @@ var (
 )
 
 func TestManager_Run(t *testing.T) {
-	c := &mocks.API{}
+	a := mocks.NewAPI(t)
 	postChannel := make(slackbot.PostChannel, 10)
-	b := &mocks2.SlackBot{}
+	b := mocks2.NewSlackBot(t)
 	b.On("GetPostChannel").Return(postChannel)
-	p := &mocks3.Poller{}
+	p := mocks3.NewPoller(t)
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
-	m := New(c, p, b, config)
+	m := New(a, p, b, config)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -181,7 +181,7 @@ func TestManager_Run(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.call != "" {
-				c.On(tt.call, tt.args...).Return(nil).Once()
+				a.On(tt.call, tt.args...).Return(nil).Once()
 			}
 			ch <- tt.update
 
@@ -195,17 +195,15 @@ func TestManager_Run(t *testing.T) {
 
 	cancel()
 	wg.Wait()
-
-	mock.AssertExpectationsForObjects(t, c)
 }
 
 func TestManager_Scheduled(t *testing.T) {
-	c := &mocks.API{}
-	p := &mocks3.Poller{}
+	a := mocks.NewAPI(t)
+	p := mocks3.NewPoller(t)
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
-	m := New(c, p, nil, config)
+	m := New(a, p, nil, config)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -243,8 +241,8 @@ func TestManager_Scheduled(t *testing.T) {
 }
 
 func TestManagers_ReportTasks(t *testing.T) {
-	c := &mocks.API{}
-	p := &mocks3.Poller{}
+	c := mocks.NewAPI(t)
+	p := mocks3.NewPoller(t)
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()

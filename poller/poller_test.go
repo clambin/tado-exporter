@@ -73,7 +73,7 @@ func prepareMockAPI(api *mocks.API) {
 }
 
 func TestPoller_Run(t *testing.T) {
-	api := &mocks.API{}
+	api := mocks.NewAPI(t)
 
 	p := poller.New(api)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -108,12 +108,10 @@ func TestPoller_Run(t *testing.T) {
 	assert.Equal(t, tado.ZoneState(tado.ZoneStateOff), (&info).GetState())
 
 	p.Unregister(ch)
-
-	api.AssertExpectations(t)
 }
 
 func TestServer_Poll(t *testing.T) {
-	api := &mocks.API{}
+	api := mocks.NewAPI(t)
 	prepareMockAPI(api)
 
 	p := poller.New(api)
@@ -132,7 +130,7 @@ func TestServer_Poll(t *testing.T) {
 }
 
 func TestServer_Refresh(t *testing.T) {
-	api := &mocks.API{}
+	api := mocks.NewAPI(t)
 	prepareMockAPI(api)
 
 	p := poller.New(api)

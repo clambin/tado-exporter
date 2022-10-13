@@ -19,13 +19,13 @@ import (
 )
 
 func TestManager_Run(t *testing.T) {
-	api := &mocks.API{}
+	api := mocks.NewAPI(t)
 
-	bot := &slackMock.SlackBot{}
+	bot := slackMock.NewSlackBot(t)
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 
 	ch := make(chan *poller.Update)
-	p := &mocks3.Poller{}
+	p := mocks3.NewPoller(t)
 	p.On("Register").Return(ch).Once()
 	p.On("Unregister", ch).Return().Once()
 
@@ -49,15 +49,13 @@ func TestManager_Run(t *testing.T) {
 
 	cancel()
 	wg.Wait()
-
-	mock.AssertExpectationsForObjects(t, api, bot, p)
 }
 
 func TestController_Rules(t *testing.T) {
-	api := &mocks.API{}
-	bot := &slackMock.SlackBot{}
+	api := mocks.NewAPI(t)
+	bot := slackMock.NewSlackBot(t)
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
-	p := &mocks3.Poller{}
+	p := mocks3.NewPoller(t)
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
@@ -75,7 +73,7 @@ func TestController_Rules(t *testing.T) {
 		zonemanager.New(api, p, nil, cfg),
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	wg := sync.WaitGroup{}
+	var wg sync.WaitGroup
 	wg.Add(len(mgrs))
 	for _, mgr := range mgrs {
 		go func(m *zonemanager.Manager) {
@@ -110,18 +108,16 @@ func TestController_Rules(t *testing.T) {
 
 	cancel()
 	wg.Wait()
-
-	mock.AssertExpectationsForObjects(t, api, bot, p)
 }
 
 func TestManager_SetRoom(t *testing.T) {
-	api := &mocks.API{}
+	api := mocks.NewAPI(t)
 
-	bot := &slackMock.SlackBot{}
+	bot := slackMock.NewSlackBot(t)
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 
 	ch := make(chan *poller.Update)
-	p := &mocks3.Poller{}
+	p := mocks3.NewPoller(t)
 	p.On("Register").Return(ch).Once()
 	p.On("Unregister", ch).Return().Once()
 
@@ -230,25 +226,22 @@ func TestManager_SetRoom(t *testing.T) {
 
 	cancel()
 	wg.Wait()
-	mock.AssertExpectationsForObjects(t, api, bot, p)
 }
 
 func TestManager_DoRefresh(t *testing.T) {
-	api := &mocks.API{}
-	bot := &slackMock.SlackBot{}
+	api := mocks.NewAPI(t)
+	bot := slackMock.NewSlackBot(t)
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
-	p := &mocks3.Poller{}
+	p := mocks3.NewPoller(t)
 	p.On("Refresh").Return(nil)
 	c := New(api, bot, p, nil)
 
 	c.DoRefresh(context.Background())
-
-	mock.AssertExpectationsForObjects(t, api, bot, p)
 }
 
 func TestManager_ReportRooms(t *testing.T) {
-	api := &mocks.API{}
-	bot := &slackMock.SlackBot{}
+	api := mocks.NewAPI(t)
+	bot := slackMock.NewSlackBot(t)
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	c := New(api, bot, nil, nil)
 
@@ -272,12 +265,11 @@ func TestManager_ReportRooms(t *testing.T) {
 	require.Len(t, attachments, 1)
 	assert.Equal(t, "rooms:", attachments[0].Title)
 	assert.Equal(t, "foo: 22.0ºC (target: 18.0, MANUAL)", attachments[0].Text)
-
 }
 
 func TestManager_ReportUsers(t *testing.T) {
-	api := &mocks.API{}
-	bot := &slackMock.SlackBot{}
+	api := mocks.NewAPI(t)
+	bot := slackMock.NewSlackBot(t)
 	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	c := New(api, bot, nil, nil)
 
@@ -334,6 +326,4 @@ func TestManager_ReportUsers(t *testing.T) {
 		assert.Equal(t, "users:", attachments[0].Title)
 		assert.Equal(t, tt.expected, attachments[0].Text)
 	}
-
-	mock.AssertExpectationsForObjects(t, api, bot)
 }

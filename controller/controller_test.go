@@ -35,7 +35,7 @@ var (
 )
 
 func TestController_Run(t *testing.T) {
-	a := &mocks.API{}
+	a := mocks.NewAPI(t)
 	prepareMockAPI(a)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -48,7 +48,7 @@ func TestController_Run(t *testing.T) {
 		wg.Done()
 	}()
 
-	b := &mocks2.SlackBot{}
+	b := mocks2.NewSlackBot(t)
 	ch := make(slackbot.PostChannel, 10)
 	b.On("RegisterCallback", mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc")).Return(nil)
 	b.On("GetPostChannel").Return(ch)
@@ -72,8 +72,6 @@ func TestController_Run(t *testing.T) {
 
 	cancel()
 	wg.Wait()
-
-	mock.AssertExpectationsForObjects(t, a, b)
 }
 
 func prepareMockAPI(api *mocks.API) {
