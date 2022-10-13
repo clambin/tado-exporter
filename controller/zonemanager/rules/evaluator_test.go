@@ -49,6 +49,19 @@ func TestEvaluator_Evaluate(t *testing.T) {
 			},
 			action: &NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: 15 * time.Minute, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
 		},
+		{
+			name: "user away - manual control",
+			update: &poller.Update{
+				Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: {Overlay: tado.ZoneInfoOverlay{
+					Type:        "MANUAL",
+					Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
+					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+				}}},
+				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
+			},
+			action: &NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
+		},
 	}
 
 	e := &Evaluator{

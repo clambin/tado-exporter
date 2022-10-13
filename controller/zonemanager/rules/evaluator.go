@@ -76,15 +76,6 @@ func (e *Evaluator) load(update *poller.Update) error {
 		return fmt.Errorf("invalid zone found in config file: zoneID: %d, zoneName: %s", e.Config.ZoneID, e.Config.ZoneName)
 	}
 
-	if e.Config.AutoAway.Enabled {
-		e.rules = append(e.rules, &AutoAwayRule{
-			zoneID:   e.ZoneID,
-			zoneName: e.ZoneName,
-			config:   &e.Config.AutoAway,
-		})
-
-	}
-
 	if e.Config.LimitOverlay.Enabled {
 		e.rules = append(e.rules, &LimitOverlayRule{
 			zoneID:   e.ZoneID,
@@ -100,5 +91,14 @@ func (e *Evaluator) load(update *poller.Update) error {
 			config:   &e.Config.NightTime,
 		})
 	}
+
+	if e.Config.AutoAway.Enabled {
+		e.rules = append(e.rules, &AutoAwayRule{
+			zoneID:   e.ZoneID,
+			zoneName: e.ZoneName,
+			config:   &e.Config.AutoAway,
+		})
+	}
+
 	return nil
 }
