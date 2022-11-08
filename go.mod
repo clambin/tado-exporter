@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/clambin/tado v0.7.4
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/prometheus/client_golang v1.13.1
+	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/sirupsen/logrus v1.9.0
