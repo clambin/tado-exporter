@@ -9,7 +9,7 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/sirupsen/logrus v1.9.0
-	github.com/slack-go/slack v0.11.3
+	github.com/slack-go/slack v0.11.4
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
