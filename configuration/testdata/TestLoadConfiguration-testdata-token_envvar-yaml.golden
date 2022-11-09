@@ -2,7 +2,7 @@ debug: true
 port: 8080
 interval: 5m0s
 exporter:
-    enabled: true
+    port: 9090
 controller:
     enabled: true
     tadoBot:

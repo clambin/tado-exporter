@@ -3,8 +3,8 @@ name: Test
 on:
   push:
     branches-ignore:
-      - health
-      - evaluator
+      - master
+      - httpserver
   pull_request_target:
 
 jobs:

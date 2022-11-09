@@ -2,9 +2,8 @@ package stack
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/clambin/go-metrics/server"
+	"github.com/clambin/httpserver"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/configuration"
@@ -23,14 +22,14 @@ import (
 
 // Stack groups all components, so they can be easily started/stopped
 type Stack struct {
-	Poller       poller.Poller
-	Health       *health.Health
-	Collector    *collector.Collector
-	TadoBot      slackbot.SlackBot
-	Controller   *controller.Controller
-	MetricServer *server.Server
-	cfg          *configuration.Configuration
-	wg           sync.WaitGroup
+	Poller     poller.Poller
+	Health     *health.Health
+	Collector  *collector.Collector
+	TadoBot    slackbot.SlackBot
+	Controller *controller.Controller
+	HTTPServer *httpserver.Server
+	cfg        *configuration.Configuration
+	wg         sync.WaitGroup
 }
 
 func New(cfg *configuration.Configuration) (stack *Stack, err error) {
@@ -43,19 +42,23 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 	}
 
 	API := tado.New(username, password, clientSecret)
+	p := poller.New(API)
+	h := &health.Health{Poller: p}
 	stack = &Stack{
-		Poller: poller.New(API),
-		cfg:    cfg,
-	}
-
-	stack.Health = &health.Health{Poller: stack.Poller}
-
-	stack.MetricServer = server.NewWithHandlers(cfg.Port, []server.Handler{
-		{Path: "/health", Handler: http.HandlerFunc(stack.Health.Handle)},
-	})
-
-	if stack.cfg.Exporter.Enabled {
-		stack.Collector = collector.New(stack.Poller)
+		Poller:    p,
+		cfg:       cfg,
+		Health:    h,
+		Collector: collector.New(p),
+		HTTPServer: &httpserver.Server{
+			Application: httpserver.Application{
+				Name: "tado-exporter",
+				Port: cfg.Port,
+				Handlers: []httpserver.Handler{
+					{Path: "/health", Handler: http.HandlerFunc(h.Handle)},
+				},
+			},
+			Prometheus: httpserver.Prometheus{Port: cfg.Exporter.Port},
+		},
 	}
 
 	if stack.cfg.Controller.Enabled {
@@ -109,8 +112,8 @@ func (s *Stack) Start(ctx context.Context) {
 	s.wg.Add(1)
 	go func() {
 		log.Info("HTTP server started")
-		if err := s.MetricServer.Run(); !errors.Is(err, http.ErrServerClosed) {
-			log.WithError(err).Fatal("failed to start HTTP server")
+		if errs := s.HTTPServer.Run(); len(errs) > 0 {
+			log.WithError(errs[0]).Fatal("failed to start HTTP server")
 		}
 		log.Info("HTTP server stopped")
 		s.wg.Done()
@@ -118,8 +121,8 @@ func (s *Stack) Start(ctx context.Context) {
 }
 
 func (s *Stack) Stop() {
-	if err := s.MetricServer.Shutdown(30 * time.Second); err != nil {
-		log.WithError(err).Warning("failed to stop HTTP Server")
+	if errs := s.HTTPServer.Shutdown(30 * time.Second); len(errs) > 0 {
+		log.WithError(errs[0]).Warning("failed to stop HTTP Server")
 	}
 	s.wg.Wait()
 }

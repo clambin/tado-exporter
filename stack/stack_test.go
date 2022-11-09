@@ -32,7 +32,7 @@ func TestStack(t *testing.T) {
 	config := `interval: 30s
 exporter:
   enabled: true
-  port: 8080
+  port: 9091
 controller:
   enabled: true
   tadoBot:
@@ -66,9 +66,14 @@ controller:
 	s.Start(ctx)
 
 	assert.Eventually(t, func() bool {
-		resp, err2 := http.Get("http://localhost:8080/metrics")
+		_, err2 := http.Get("http://localhost:8080/")
+		return err2 == nil
+	}, time.Second, 10*time.Millisecond)
+
+	assert.Eventually(t, func() bool {
+		resp, err2 := http.Get("http://localhost:9091/metrics")
 		return err2 == nil && resp.StatusCode == http.StatusOK
-	}, 500*time.Millisecond, 10*time.Millisecond)
+	}, time.Second, 10*time.Millisecond)
 
 	cancel()
 	s.Stop()

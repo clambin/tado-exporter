@@ -3,7 +3,7 @@ interval: 5m
 
 exporter:
   enabled: true
-  port: 8080
+  port: 9090
 
 controller:
   enabled: true

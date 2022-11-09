@@ -1,7 +1,6 @@
 package configuration
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v3"
 	"io"
 	"os"
@@ -17,9 +16,9 @@ type Configuration struct {
 	Controller ControllerConfiguration
 }
 
-// ExporterConfiguration structure for exporter
+// ExporterConfiguration structure
 type ExporterConfiguration struct {
-	Enabled bool
+	Port int
 }
 
 // ControllerConfiguration structure for controller
@@ -103,21 +102,15 @@ func LoadConfiguration(content io.Reader) (*Configuration, error) {
 		Port:     8080,
 		Interval: 1 * time.Minute,
 		Exporter: ExporterConfiguration{
-			Enabled: true,
+			Port: 9090,
 		},
 	}
 
 	body, err := io.ReadAll(content)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		body = []byte(os.ExpandEnv(string(body)))
+		err = yaml.Unmarshal(body, &cfg)
 	}
 
-	body = []byte(os.ExpandEnv(string(body)))
-	err = yaml.Unmarshal(body, &cfg)
-
-	if err != nil {
-		return nil, fmt.Errorf("invalid config file: %w", err)
-	}
-
-	return &cfg, nil
+	return &cfg, err
 }
