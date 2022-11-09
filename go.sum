@@ -54,8 +54,8 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/clambin/cache v0.0.5/go.mod h1:+BKmGZ4iIz30+yxq9gOD9ZLCBNPzu8dLyejefdkQQes=
 github.com/clambin/go-metrics v0.6.0 h1:ACBCD9tqDWdCV3xDSCYK249AKKh3oeCUbtpjhDvojpU=
 github.com/clambin/go-metrics v0.6.0/go.mod h1:v/FFsSZlvDqUIf1NgtYwthrOb5efirZONt62uLlv6hM=
-github.com/clambin/httpserver v0.2.1 h1:1dQxxg7MOMTI75pDp+K2dyL6i7d3zNqLfahp2ZJoeww=
-github.com/clambin/httpserver v0.2.1/go.mod h1:UeBzgLoCO2ftiBZ0/Zl3J15S36ljmWEUhuuAVseXwEk=
+github.com/clambin/httpserver v0.2.2 h1:A/d3REjIVxHHlXbNLqJCBjNXhu2cIKat+W/WaJ4rK3c=
+github.com/clambin/httpserver v0.2.2/go.mod h1:UeBzgLoCO2ftiBZ0/Zl3J15S36ljmWEUhuuAVseXwEk=
 github.com/clambin/tado v0.7.4 h1:frl7zQ6SMIjGWhY8WrFQ2stXM72BAV8MEjvyXFhP0t0=
 github.com/clambin/tado v0.7.4/go.mod h1:4xUnBTe8oskVF+eaXnDaF0bsIq9nICTTICR8aH1FdIk=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
