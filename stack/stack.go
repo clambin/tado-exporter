@@ -28,6 +28,7 @@ type Stack struct {
 	TadoBot    slackbot.SlackBot
 	Controller *controller.Controller
 	HTTPServer *httpserver.Server
+	PromServer *httpserver.Server
 	cfg        *configuration.Configuration
 	wg         sync.WaitGroup
 }
@@ -44,21 +45,33 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 	API := tado.New(username, password, clientSecret)
 	p := poller.New(API)
 	h := &health.Health{Poller: p}
+	promServer, err := httpserver.New(
+		httpserver.WithPort{Port: cfg.Exporter.Port},
+		httpserver.WithPrometheus{},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("prometheus: %w", err)
+	}
+	metrics := httpserver.NewMetrics("tado-monitor")
+	metrics.Register(prometheus.DefaultRegisterer)
+	appServer, err := httpserver.New(
+		httpserver.WithPort{Port: cfg.Port},
+		httpserver.WithMetrics{Metrics: metrics},
+		httpserver.WithHandlers{Handlers: []httpserver.Handler{
+			{Path: "/health", Handler: http.HandlerFunc(h.Handle)},
+		}},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("health: %w", err)
+	}
+
 	stack = &Stack{
-		Poller:    p,
-		cfg:       cfg,
-		Health:    h,
-		Collector: collector.New(p),
-		HTTPServer: &httpserver.Server{
-			Application: httpserver.Application{
-				Name: "tado-exporter",
-				Port: cfg.Port,
-				Handlers: []httpserver.Handler{
-					{Path: "/health", Handler: http.HandlerFunc(h.Handle)},
-				},
-			},
-			Prometheus: httpserver.Prometheus{Port: cfg.Exporter.Port},
-		},
+		Poller:     p,
+		cfg:        cfg,
+		Health:     h,
+		Collector:  collector.New(p),
+		PromServer: promServer,
+		HTTPServer: appServer,
 	}
 
 	if stack.cfg.Controller.Enabled {
@@ -111,9 +124,19 @@ func (s *Stack) Start(ctx context.Context) {
 
 	s.wg.Add(1)
 	go func() {
-		log.Info("HTTP server started")
-		if errs := s.HTTPServer.Run(); len(errs) > 0 {
-			log.WithError(errs[0]).Fatal("failed to start HTTP server")
+		log.WithField("port", s.PromServer.GetPort()).Info("Prometheus metrics server started")
+		if err := s.PromServer.Run(); err != nil {
+			log.WithError(err).Fatal("failed to start Prometheus metrics server")
+		}
+		log.Info("Prometheus metrics server stopped")
+		s.wg.Done()
+	}()
+
+	s.wg.Add(1)
+	go func() {
+		log.WithField("port", s.HTTPServer.GetPort()).Info("HTTP server started")
+		if err := s.HTTPServer.Run(); err != nil {
+			log.WithError(err).Fatal("failed to start HTTP server")
 		}
 		log.Info("HTTP server stopped")
 		s.wg.Done()
@@ -121,8 +144,11 @@ func (s *Stack) Start(ctx context.Context) {
 }
 
 func (s *Stack) Stop() {
-	if errs := s.HTTPServer.Shutdown(30 * time.Second); len(errs) > 0 {
-		log.WithError(errs[0]).Warning("failed to stop HTTP Server")
+	if err := s.HTTPServer.Shutdown(30 * time.Second); err != nil {
+		log.WithError(err).Warning("failed to stop HTTP Server")
+	}
+	if err := s.PromServer.Shutdown(30 * time.Second); err != nil {
+		log.WithError(err).Warning("failed to stop Prometheus metrics Server")
 	}
 	s.wg.Wait()
 }

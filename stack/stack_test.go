@@ -50,14 +50,14 @@ controller:
 	s, err := stack.New(cfg)
 	require.NoError(t, err)
 
-	mockPoller := &pollMock.Poller{}
-	mockPoller.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
+	mockPoller := pollMock.NewPoller(t)
+	//mockPoller.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
 	mockPoller.On("Run", mock.Anything, mock.Anything).Return(nil)
-	mockPoller.On("Refresh").Return(nil)
+	//mockPoller.On("Refresh").Return(nil)
 
 	s.Poller = mockPoller
 
-	mockBot := &slackMock.SlackBot{}
+	mockBot := slackMock.NewSlackBot(t)
 	mockBot.On("Run", mock.Anything).Return(nil)
 	s.TadoBot = mockBot
 
@@ -75,6 +75,7 @@ controller:
 		return err2 == nil && resp.StatusCode == http.StatusOK
 	}, time.Second, 10*time.Millisecond)
 
+	//time.Sleep(time.Minute)
 	cancel()
 	s.Stop()
 }

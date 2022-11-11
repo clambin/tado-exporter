@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/clambin/go-metrics v0.6.0
-	github.com/clambin/httpserver v0.2.1
+	github.com/clambin/httpserver v0.3.0
 	github.com/clambin/tado v0.7.4
 	github.com/gosimple/slug v1.13.1
 	github.com/prometheus/client_golang v1.14.0
@@ -31,6 +31,6 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
-	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/sys v0.2.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )
