@@ -52,8 +52,8 @@ github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWR
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/clambin/cache v0.0.5/go.mod h1:+BKmGZ4iIz30+yxq9gOD9ZLCBNPzu8dLyejefdkQQes=
-github.com/clambin/go-metrics v0.6.0 h1:ACBCD9tqDWdCV3xDSCYK249AKKh3oeCUbtpjhDvojpU=
-github.com/clambin/go-metrics v0.6.0/go.mod h1:v/FFsSZlvDqUIf1NgtYwthrOb5efirZONt62uLlv6hM=
+github.com/clambin/go-metrics v0.6.3 h1:awuonTV7BCr0xYoVVkuS1W0HQblzZ/1AiIj9RUO1Ruk=
+github.com/clambin/go-metrics v0.6.3/go.mod h1:6XBV5IpnL9N4xGV50i6eo7AB5mPcLb7XUtTtv3wD7qE=
 github.com/clambin/httpserver v0.4.0 h1:YyhtOCIIWPrJ0a0N2lPceAxoLAPyz34kghrJ9cuY86M=
 github.com/clambin/httpserver v0.4.0/go.mod h1:QfashUAIoGpaUtNMUIv4JBLk+4V3v/pEJc0dpc6KpZ8=
 github.com/clambin/tado v0.7.4 h1:frl7zQ6SMIjGWhY8WrFQ2stXM72BAV8MEjvyXFhP0t0=

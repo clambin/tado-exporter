@@ -3,7 +3,7 @@ module github.com/clambin/tado-exporter
 go 1.17
 
 require (
-	github.com/clambin/go-metrics v0.6.0
+	github.com/clambin/go-metrics v0.6.3
 	github.com/clambin/httpserver v0.4.0
 	github.com/clambin/tado v0.7.4
 	github.com/gosimple/slug v1.13.1
