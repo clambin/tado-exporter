@@ -52,11 +52,9 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("prometheus: %w", err)
 	}
-	metrics := httpserver.NewMetrics("tado-monitor")
-	metrics.Register(prometheus.DefaultRegisterer)
 	appServer, err := httpserver.New(
 		httpserver.WithPort{Port: cfg.Port},
-		httpserver.WithMetrics{Metrics: metrics},
+		httpserver.WithMetrics{Metrics: httpserver.NewAvgMetrics("tado-monitor", nil)},
 		httpserver.WithHandlers{Handlers: []httpserver.Handler{
 			{Path: "/health", Handler: http.HandlerFunc(h.Handle)},
 		}},
