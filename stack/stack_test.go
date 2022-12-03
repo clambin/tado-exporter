@@ -22,7 +22,7 @@ func TestNew_Errors(t *testing.T) {
 	cfg, err := configuration.LoadConfiguration(config)
 	require.NoError(t, err)
 
-	_, err = stack.New(cfg)
+	_, err = stack.New(cfg, nil)
 	assert.Error(t, err)
 }
 
@@ -47,7 +47,7 @@ controller:
 	cfg, err := configuration.LoadConfiguration(bytes.NewBufferString(config))
 	require.NoError(t, err)
 
-	s, err := stack.New(cfg)
+	s, err := stack.New(cfg, nil)
 	require.NoError(t, err)
 
 	mockPoller := pollMock.NewPoller(t)

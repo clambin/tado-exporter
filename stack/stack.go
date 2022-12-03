@@ -33,7 +33,7 @@ type Stack struct {
 	wg         sync.WaitGroup
 }
 
-func New(cfg *configuration.Configuration) (stack *Stack, err error) {
+func New(cfg *configuration.Configuration, serverMetrics httpserver.Metrics) (stack *Stack, err error) {
 	username := os.Getenv("TADO_USERNAME")
 	password := os.Getenv("TADO_PASSWORD")
 	clientSecret := os.Getenv("TADO_CLIENT_SECRET")
@@ -54,7 +54,7 @@ func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 	}
 	appServer, err := httpserver.New(
 		httpserver.WithPort{Port: cfg.Port},
-		httpserver.WithMetrics{Metrics: httpserver.NewAvgMetrics("tado-monitor", nil)},
+		httpserver.WithMetrics{Metrics: serverMetrics},
 		httpserver.WithHandlers{Handlers: []httpserver.Handler{
 			{Path: "/health", Handler: http.HandlerFunc(h.Handle)},
 		}},
