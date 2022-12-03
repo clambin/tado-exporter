@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"github.com/clambin/httpserver"
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/stack"
 	"github.com/clambin/tado-exporter/version"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	// _ "net/http/pprof"
@@ -49,13 +51,15 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	serverMetrics := httpserver.NewAvgMetrics("tado-monitor")
+	prometheus.DefaultRegisterer.MustRegister(serverMetrics)
 
-	s, err := stack.New(cfg)
+	s, err := stack.New(cfg, serverMetrics)
 	if err != nil {
 		log.WithError(err).Fatal("failed to initialize")
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	s.Start(ctx)
 
 	interrupt := make(chan os.Signal, 1)
