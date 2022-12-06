@@ -3,13 +3,14 @@ package stack
 import (
 	"context"
 	"fmt"
+	slackbot2 "github.com/clambin/go-common/slackbot"
 	"github.com/clambin/httpserver"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller"
+	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/health"
-	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/version"
 	"github.com/prometheus/client_golang/prometheus"
@@ -73,7 +74,7 @@ func New(cfg *configuration.Configuration, serverMetrics httpserver.Metrics) (st
 	}
 
 	if stack.cfg.Controller.Enabled {
-		stack.TadoBot = slackbot.New("tado "+version.BuildVersion, stack.cfg.Controller.TadoBot.Token, nil)
+		stack.TadoBot = slackbot2.New("tado "+version.BuildVersion, stack.cfg.Controller.TadoBot.Token, nil)
 		stack.Controller = controller.New(API, &stack.cfg.Controller, stack.TadoBot, stack.Poller)
 	}
 

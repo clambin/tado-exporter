@@ -4,12 +4,12 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
+	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
-	"github.com/clambin/tado-exporter/pkg/slackbot"
-	mocks2 "github.com/clambin/tado-exporter/pkg/slackbot/mocks"
 	"github.com/clambin/tado-exporter/poller"
 	mocks3 "github.com/clambin/tado-exporter/poller/mocks"
 	"github.com/clambin/tado/mocks"
+	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -160,14 +160,13 @@ var (
 
 func TestManager_Run(t *testing.T) {
 	a := mocks.NewAPI(t)
-	postChannel := make(slackbot.PostChannel, 10)
-	b := mocks2.NewSlackBot(t)
-	b.On("GetPostChannel").Return(postChannel)
+	b := slackbot.NewSlackBot(t)
 	p := mocks3.NewPoller(t)
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
 	m := New(a, p, b, config)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -176,6 +175,7 @@ func TestManager_Run(t *testing.T) {
 		wg.Done()
 	}()
 
+	// TODO
 	time.Sleep(20 * time.Millisecond)
 
 	for _, tt := range testCases {
@@ -183,13 +183,21 @@ func TestManager_Run(t *testing.T) {
 			if tt.call != "" {
 				a.On(tt.call, tt.args...).Return(nil).Once()
 			}
-			ch <- tt.update
 
+			var wg2 sync.WaitGroup
 			if tt.notification != "" {
-				msg := <-postChannel
-				require.Len(t, msg, 1, tt.name)
-				assert.Equal(t, tt.notification, msg[0].Text, tt.name)
+				wg2.Add(1)
+				b.On("Send", "", mock.AnythingOfType("[]slack.Attachment")).Run(func(args mock.Arguments) {
+					defer wg2.Done()
+					require.Len(t, args, 2)
+					attachments, ok := args[1].([]slack.Attachment)
+					require.True(t, ok)
+					require.Len(t, attachments, 1)
+					assert.Equal(t, tt.notification, attachments[0].Text)
+				}).Return(nil).Once()
 			}
+			ch <- tt.update
+			wg2.Wait()
 		})
 	}
 

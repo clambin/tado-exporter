@@ -4,8 +4,7 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
-	"github.com/clambin/tado-exporter/pkg/slackbot"
-	mocks2 "github.com/clambin/tado-exporter/pkg/slackbot/mocks"
+	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado/mocks"
 	"github.com/stretchr/testify/assert"
@@ -48,10 +47,8 @@ func TestController_Run(t *testing.T) {
 		wg.Done()
 	}()
 
-	b := mocks2.NewSlackBot(t)
-	ch := make(slackbot.PostChannel, 10)
-	b.On("RegisterCallback", mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc")).Return(nil)
-	b.On("GetPostChannel").Return(ch)
+	b := slackbot.NewSlackBot(t)
+	b.On("Register", mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc")).Return(nil)
 
 	c := New(a, cfg, b, p)
 	assert.NotNil(t, c)

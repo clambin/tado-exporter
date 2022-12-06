@@ -2,10 +2,12 @@ package logger_test
 
 import (
 	"github.com/clambin/tado"
+	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/controller/zonemanager/logger"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
-	"github.com/clambin/tado-exporter/pkg/slackbot"
+	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"strconv"
 	"testing"
@@ -50,21 +52,25 @@ func TestLoggers_Log(t *testing.T) {
 		},
 	}
 
-	ch := make(slackbot.PostChannel, 1)
+	b := slackbot.NewSlackBot(t)
 	l := logger.Loggers{
 		&logger.StdOutLogger{},
-		&logger.SlackLogger{PostChannel: ch},
+		&logger.SlackLogger{Bot: b},
 	}
 
 	for _, tt := range testCases {
 		t.Run(strconv.Itoa(int(tt.action)), func(t *testing.T) {
+			b.On("Send", "", mock.AnythingOfType("[]slack.Attachment")).Run(func(args mock.Arguments) {
+				require.Len(t, args, 2)
+				attachments, ok := args[1].([]slack.Attachment)
+				require.True(t, ok)
+				require.Len(t, attachments, 1)
+				assert.Equal(t, tt.color, attachments[0].Color)
+				assert.Equal(t, tt.title, attachments[0].Title)
+				assert.Equal(t, tt.text, attachments[0].Text)
+			}).Return(nil)
 			l.Log(tt.action, &tt.state)
-			response := <-ch
 
-			require.Len(t, response, 1)
-			assert.Equal(t, tt.color, response[0].Color)
-			assert.Equal(t, tt.title, response[0].Title)
-			assert.Equal(t, tt.text, response[0].Text)
 		})
 	}
 }

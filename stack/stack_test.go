@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"github.com/clambin/tado-exporter/configuration"
-	slackMock "github.com/clambin/tado-exporter/pkg/slackbot/mocks"
-	pollMock "github.com/clambin/tado-exporter/poller/mocks"
+	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
+	poller "github.com/clambin/tado-exporter/poller/mocks"
 	"github.com/clambin/tado-exporter/stack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -50,16 +50,17 @@ controller:
 	s, err := stack.New(cfg, nil)
 	require.NoError(t, err)
 
-	mockPoller := pollMock.NewPoller(t)
+	mockPoller := poller.NewPoller(t)
 	//mockPoller.On("Register", mock.AnythingOfType("chan *poller.Update")).Return(nil)
 	mockPoller.On("Run", mock.Anything, mock.Anything).Return(nil)
 	//mockPoller.On("Refresh").Return(nil)
 
 	s.Poller = mockPoller
 
-	mockBot := slackMock.NewSlackBot(t)
-	mockBot.On("Run", mock.Anything).Return(nil)
-	s.TadoBot = mockBot
+	bot := slackbot.NewSlackBot(t)
+	//bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	bot.On("Run", mock.Anything).Return(nil)
+	s.TadoBot = bot
 
 	ctx, cancel := context.WithCancel(context.Background())
 

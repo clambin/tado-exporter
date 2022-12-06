@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
-	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/poller"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
@@ -31,11 +31,11 @@ func New(api tado.API, tadoBot slackbot.SlackBot, p poller.Poller, mgrs zonemana
 		mgrs:   mgrs,
 	}
 
-	tadoBot.RegisterCallback("rules", m.ReportRules)
-	tadoBot.RegisterCallback("rooms", m.ReportRooms)
-	tadoBot.RegisterCallback("set", m.SetRoom)
-	tadoBot.RegisterCallback("refresh", m.DoRefresh)
-	tadoBot.RegisterCallback("users", m.ReportUsers)
+	tadoBot.Register("rules", m.ReportRules)
+	tadoBot.Register("rooms", m.ReportRooms)
+	tadoBot.Register("set", m.SetRoom)
+	tadoBot.Register("refresh", m.DoRefresh)
+	tadoBot.Register("users", m.ReportUsers)
 
 	return m
 }

@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
+	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
-	slackMock "github.com/clambin/tado-exporter/pkg/slackbot/mocks"
 	"github.com/clambin/tado-exporter/poller"
 	mocks3 "github.com/clambin/tado-exporter/poller/mocks"
 	"github.com/clambin/tado/mocks"
@@ -21,8 +21,8 @@ import (
 func TestManager_Run(t *testing.T) {
 	api := mocks.NewAPI(t)
 
-	bot := slackMock.NewSlackBot(t)
-	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	bot := slackbot.NewSlackBot(t)
+	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 
 	ch := make(chan *poller.Update)
 	p := mocks3.NewPoller(t)
@@ -53,8 +53,8 @@ func TestManager_Run(t *testing.T) {
 
 func TestController_Rules(t *testing.T) {
 	api := mocks.NewAPI(t)
-	bot := slackMock.NewSlackBot(t)
-	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	bot := slackbot.NewSlackBot(t)
+	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	p := mocks3.NewPoller(t)
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
@@ -113,8 +113,8 @@ func TestController_Rules(t *testing.T) {
 func TestManager_SetRoom(t *testing.T) {
 	api := mocks.NewAPI(t)
 
-	bot := slackMock.NewSlackBot(t)
-	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	bot := slackbot.NewSlackBot(t)
+	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 
 	ch := make(chan *poller.Update)
 	p := mocks3.NewPoller(t)
@@ -230,8 +230,8 @@ func TestManager_SetRoom(t *testing.T) {
 
 func TestManager_DoRefresh(t *testing.T) {
 	api := mocks.NewAPI(t)
-	bot := slackMock.NewSlackBot(t)
-	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	bot := slackbot.NewSlackBot(t)
+	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	p := mocks3.NewPoller(t)
 	p.On("Refresh").Return(nil)
 	c := New(api, bot, p, nil)
@@ -241,8 +241,8 @@ func TestManager_DoRefresh(t *testing.T) {
 
 func TestManager_ReportRooms(t *testing.T) {
 	api := mocks.NewAPI(t)
-	bot := slackMock.NewSlackBot(t)
-	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	bot := slackbot.NewSlackBot(t)
+	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	c := New(api, bot, nil, nil)
 
 	c.update = &poller.Update{
@@ -269,8 +269,8 @@ func TestManager_ReportRooms(t *testing.T) {
 
 func TestManager_ReportUsers(t *testing.T) {
 	api := mocks.NewAPI(t)
-	bot := slackMock.NewSlackBot(t)
-	bot.On("RegisterCallback", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	bot := slackbot.NewSlackBot(t)
+	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	c := New(api, bot, nil, nil)
 
 	testCases := []struct {

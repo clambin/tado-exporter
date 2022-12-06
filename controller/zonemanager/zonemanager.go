@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/configuration"
+	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager/logger"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
-	"github.com/clambin/tado-exporter/pkg/slackbot"
 	"github.com/clambin/tado-exporter/poller"
 	log "github.com/sirupsen/logrus"
 	"sync"
@@ -28,7 +28,7 @@ type Manager struct {
 func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg configuration.ZoneConfig) *Manager {
 	loggers := logger.Loggers{&logger.StdOutLogger{}}
 	if bot != nil {
-		loggers = append(loggers, &logger.SlackLogger{PostChannel: bot.GetPostChannel()})
+		loggers = append(loggers, &logger.SlackLogger{Bot: bot})
 	}
 
 	return &Manager{
