@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"github.com/clambin/httpserver"
+	"github.com/clambin/go-common/httpserver"
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/stack"
 	"github.com/clambin/tado-exporter/version"
