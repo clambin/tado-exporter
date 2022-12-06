@@ -175,9 +175,6 @@ func TestManager_Run(t *testing.T) {
 		wg.Done()
 	}()
 
-	// TODO
-	time.Sleep(20 * time.Millisecond)
-
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.call != "" {
