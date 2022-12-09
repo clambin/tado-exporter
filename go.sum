@@ -55,8 +55,6 @@ github.com/clambin/go-common/httpserver v0.1.0 h1:fGU8Uy4VjaQdyRJNw3FlBe1solCZ2W
 github.com/clambin/go-common/httpserver v0.1.0/go.mod h1:IlwlVQklRfkEbmWhsBiZWrUMHNUxkftklQDgYSCh5wU=
 github.com/clambin/go-common/slackbot v0.1.2 h1:r3ndWkQpapaSxwpqIO5c3YsVrvfLwbiDXtk9xJjZ26I=
 github.com/clambin/go-common/slackbot v0.1.2/go.mod h1:k0P7wHEMFTqwvCvYAzzjD1I3ZAS2jN8UkeL+nrPaf3g=
-github.com/clambin/httpserver v0.5.0 h1:plVkkZiTbYnQESyeLP8NH+sYG54Z2kB+4zYGhL8+bCE=
-github.com/clambin/httpserver v0.5.0/go.mod h1:QfashUAIoGpaUtNMUIv4JBLk+4V3v/pEJc0dpc6KpZ8=
 github.com/clambin/tado v0.7.4 h1:frl7zQ6SMIjGWhY8WrFQ2stXM72BAV8MEjvyXFhP0t0=
 github.com/clambin/tado v0.7.4/go.mod h1:4xUnBTe8oskVF+eaXnDaF0bsIq9nICTTICR8aH1FdIk=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
