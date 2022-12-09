@@ -3,8 +3,8 @@ package stack
 import (
 	"context"
 	"fmt"
+	"github.com/clambin/go-common/httpserver"
 	slackbot2 "github.com/clambin/go-common/slackbot"
-	"github.com/clambin/httpserver"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/configuration"
