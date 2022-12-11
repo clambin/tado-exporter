@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/clambin/go-common/httpserver"
 	slackbot2 "github.com/clambin/go-common/slackbot"
@@ -34,7 +35,7 @@ type Stack struct {
 	wg         sync.WaitGroup
 }
 
-func New(cfg *configuration.Configuration, serverMetrics httpserver.Metrics) (stack *Stack, err error) {
+func New(cfg *configuration.Configuration) (stack *Stack, err error) {
 	username := os.Getenv("TADO_USERNAME")
 	password := os.Getenv("TADO_PASSWORD")
 	clientSecret := os.Getenv("TADO_CLIENT_SECRET")
@@ -55,7 +56,7 @@ func New(cfg *configuration.Configuration, serverMetrics httpserver.Metrics) (st
 	}
 	appServer, err := httpserver.New(
 		httpserver.WithPort{Port: cfg.Port},
-		httpserver.WithMetrics{Metrics: serverMetrics},
+		httpserver.WithMetrics{Application: "tado-monitor"},
 		httpserver.WithHandlers{Handlers: []httpserver.Handler{
 			{Path: "/health", Handler: http.HandlerFunc(h.Handle)},
 		}},
@@ -124,7 +125,7 @@ func (s *Stack) Start(ctx context.Context) {
 	s.wg.Add(1)
 	go func() {
 		log.WithField("port", s.PromServer.GetPort()).Info("Prometheus metrics server started")
-		if err := s.PromServer.Run(); err != nil {
+		if err := s.PromServer.Serve(); !errors.Is(err, http.ErrServerClosed) {
 			log.WithError(err).Fatal("failed to start Prometheus metrics server")
 		}
 		log.Info("Prometheus metrics server stopped")
@@ -134,7 +135,7 @@ func (s *Stack) Start(ctx context.Context) {
 	s.wg.Add(1)
 	go func() {
 		log.WithField("port", s.HTTPServer.GetPort()).Info("HTTP server started")
-		if err := s.HTTPServer.Run(); err != nil {
+		if err := s.HTTPServer.Serve(); !errors.Is(err, http.ErrServerClosed) {
 			log.WithError(err).Fatal("failed to start HTTP server")
 		}
 		log.Info("HTTP server stopped")

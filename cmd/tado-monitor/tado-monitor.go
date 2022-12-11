@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"github.com/clambin/go-common/httpserver"
 	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/stack"
 	"github.com/clambin/tado-exporter/version"
@@ -51,13 +50,11 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	serverMetrics := httpserver.NewAvgMetrics("tado-monitor")
-	prometheus.DefaultRegisterer.MustRegister(serverMetrics)
-
-	s, err := stack.New(cfg, serverMetrics)
+	s, err := stack.New(cfg)
 	if err != nil {
 		log.WithError(err).Fatal("failed to initialize")
 	}
+	prometheus.DefaultRegisterer.MustRegister(s.HTTPServer)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	s.Start(ctx)
