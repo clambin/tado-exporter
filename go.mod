@@ -3,7 +3,7 @@ module github.com/clambin/tado-exporter
 go 1.17
 
 require (
-	github.com/clambin/go-common/httpserver v0.2.0
+	github.com/clambin/go-common/httpserver v0.3.0
 	github.com/clambin/go-common/slackbot v0.1.2
 	github.com/clambin/tado v0.7.4
 	github.com/gosimple/slug v1.13.1
@@ -21,9 +21,9 @@ require (
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/clambin/go-common/set v0.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
