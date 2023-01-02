@@ -85,8 +85,8 @@ github.com/clambin/go-common/set v0.1.2 h1:Pr0FXPVJsH4dc/OelhjXYo0xVmOLIUurg3saM
 github.com/clambin/go-common/set v0.1.2/go.mod h1:GFjAZynNo4BNjlx2hzDMHIU4ays7QjpJUSHXB/3b1ZE=
 github.com/clambin/go-common/slackbot v0.1.2 h1:r3ndWkQpapaSxwpqIO5c3YsVrvfLwbiDXtk9xJjZ26I=
 github.com/clambin/go-common/slackbot v0.1.2/go.mod h1:k0P7wHEMFTqwvCvYAzzjD1I3ZAS2jN8UkeL+nrPaf3g=
-github.com/clambin/tado v0.7.4 h1:frl7zQ6SMIjGWhY8WrFQ2stXM72BAV8MEjvyXFhP0t0=
-github.com/clambin/tado v0.7.4/go.mod h1:4xUnBTe8oskVF+eaXnDaF0bsIq9nICTTICR8aH1FdIk=
+github.com/clambin/tado v0.7.5 h1:grwSAwgto53fAgExkAVdIy/yA0b+cJBxyoU2m0MrCnc=
+github.com/clambin/tado v0.7.5/go.mod h1:kfZRs0wBwILxXtwNytLn8g5SZWoq1EXS3GLN1yr6eS8=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=

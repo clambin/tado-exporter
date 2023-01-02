@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/clambin/go-common/httpserver v0.3.0
 	github.com/clambin/go-common/slackbot v0.1.2
-	github.com/clambin/tado v0.7.4
+	github.com/clambin/tado v0.7.5
 	github.com/gosimple/slug v1.13.1
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
