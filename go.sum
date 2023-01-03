@@ -79,8 +79,8 @@ github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XL
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
-github.com/clambin/go-common/httpserver v0.3.0 h1:UtlvBrlw/gWkTOhkZhbXz+b0FIFLsQp44xtV5R8bPAU=
-github.com/clambin/go-common/httpserver v0.3.0/go.mod h1:DQrnJehMlHai3Y/l9mF53evzCRfiXVc2O8+WqBLLhHQ=
+github.com/clambin/go-common/httpserver v0.4.0 h1:t9wH0W9P/mMHacWSdDqRdOrxhNRV58o5pLK5fF8630s=
+github.com/clambin/go-common/httpserver v0.4.0/go.mod h1:DQrnJehMlHai3Y/l9mF53evzCRfiXVc2O8+WqBLLhHQ=
 github.com/clambin/go-common/set v0.1.2 h1:Pr0FXPVJsH4dc/OelhjXYo0xVmOLIUurg3saMh8KTz8=
 github.com/clambin/go-common/set v0.1.2/go.mod h1:GFjAZynNo4BNjlx2hzDMHIU4ays7QjpJUSHXB/3b1ZE=
 github.com/clambin/go-common/slackbot v0.1.2 h1:r3ndWkQpapaSxwpqIO5c3YsVrvfLwbiDXtk9xJjZ26I=
