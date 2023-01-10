@@ -11,7 +11,7 @@ import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/clambin/tado-exporter/poller"
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 	"sync"
 	"time"
 )
@@ -41,23 +41,24 @@ func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg configuration
 
 func (m *Manager) Run(ctx context.Context, interval time.Duration) {
 	ch := m.poller.Register()
+	defer m.poller.Unregister(ch)
 	ticker := time.NewTicker(interval)
-	for running := true; running; {
+	defer ticker.Stop()
+
+	for {
 		select {
 		case <-ctx.Done():
-			running = false
+			return
 		case update := <-ch:
 			if err := m.processUpdate(ctx, update); err != nil {
-				log.WithError(err).WithField("zone", m.evaluator.ZoneName).Error("failed to process tado update")
+				slog.Error("failed to process tado update", err, "zone", m.evaluator.ZoneName)
 			}
 		case <-ticker.C:
 			if err := m.processResult(); err != nil {
-				log.WithError(err).WithField("zone", m.evaluator.ZoneName).Error("failed to set next state")
+				slog.Error("failed to set next state", err, "zone", m.evaluator.ZoneName)
 			}
 		}
 	}
-	ticker.Stop()
-	m.poller.Unregister(ch)
 }
 
 func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) error {

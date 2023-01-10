@@ -1,51 +1,71 @@
 package health
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/clambin/go-common/cache"
 	"github.com/clambin/tado-exporter/poller"
+	"github.com/go-http-utils/headers"
 	"net/http"
-	"sync"
 	"time"
 )
 
 type Health struct {
 	poller.Poller
-	update     *poller.Update
-	lastUpdate time.Time
-	lock       sync.RWMutex
+	cache *cache.Cache[string, *bytes.Buffer]
+}
+
+func New(p poller.Poller) *Health {
+	return &Health{
+		Poller: p,
+		cache:  cache.New[string, *bytes.Buffer](15*time.Minute, time.Hour),
+	}
 }
 
 func (h *Health) Run(ctx context.Context) {
-	ch := h.Register()
-	for running := true; running; {
+	ch := h.Poller.Register()
+	defer h.Poller.Unregister(ch)
+
+	for {
 		select {
 		case <-ctx.Done():
-			running = false
+			return
 		case update := <-ch:
-			h.lock.Lock()
-			h.update = update
-			h.lastUpdate = time.Now()
-			h.lock.Unlock()
+			h.store(update)
 		}
 	}
-	h.Unregister(ch)
+}
+
+func (h *Health) store(update *poller.Update) {
+	b, ok := h.cache.Get("update")
+	if !ok {
+		b = new(bytes.Buffer)
+	} else {
+		b.Reset()
+	}
+	encoder := json.NewEncoder(b)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(update); err != nil {
+		panic(err)
+	}
+	h.cache.Add("update", b)
 }
 
 func (h *Health) Handle(w http.ResponseWriter, _ *http.Request) {
-	h.lock.RLock()
-	defer h.lock.RUnlock()
-
-	if time.Since(h.lastUpdate) > time.Hour {
+	b, ok := h.cache.Get("update")
+	if !ok {
 		http.Error(w, "no update yet", http.StatusServiceUnavailable)
 		h.Poller.Refresh()
 		return
 	}
 
-	encoder := json.NewEncoder(w)
-	encoder.SetIndent("", "  ")
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set(headers.ContentType, "application/json")
 
-	if err := encoder.Encode(h.update); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if _, err := w.Write(b.Bytes()); err != nil {
+		http.Error(w, fmt.Errorf("write: %w)", err).Error(), http.StatusInternalServerError)
+		return
 	}
 }

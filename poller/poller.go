@@ -2,8 +2,9 @@ package poller
 
 import (
 	"context"
+	"fmt"
 	"github.com/clambin/tado"
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 	"sync"
 	"time"
 )
@@ -35,14 +36,16 @@ func New(API tado.API) *Server {
 
 func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 	timer := time.NewTicker(interval)
+	defer timer.Stop()
 
-	log.WithField("interval", interval).Info("poller started")
+	slog.Info("poller started", "interval", interval)
 
-	for running := true; running; {
+	for {
 		poll := false
 		select {
 		case <-ctx.Done():
-			running = false
+			slog.Info("poller stopped")
+			return
 		case <-timer.C:
 			poll = true
 		case <-poller.refresh:
@@ -55,12 +58,10 @@ func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 
 		// poll for new data
 		if err := poller.poll(ctx); err != nil {
-			log.WithError(err).Warning("failed to get Tado metrics")
+			slog.Error("failed to get Tado metrics", err)
 		}
 	}
-	timer.Stop()
 
-	log.Info("poller stopped")
 }
 
 func (poller *Server) Refresh() {
@@ -72,7 +73,7 @@ func (poller *Server) Register() chan *Update {
 	defer poller.lock.Unlock()
 	ch := make(chan *Update, 1)
 	poller.registry[ch] = struct{}{}
-	log.Debugf("poller has %d clients", len(poller.registry))
+	slog.Debug(fmt.Sprintf("poller has %d clients", len(poller.registry)))
 	return ch
 }
 
@@ -80,7 +81,7 @@ func (poller *Server) Unregister(ch chan *Update) {
 	poller.lock.Lock()
 	defer poller.lock.Unlock()
 	delete(poller.registry, ch)
-	log.Debugf("poller has %d clients", len(poller.registry))
+	slog.Debug(fmt.Sprintf("poller has %d clients", len(poller.registry)))
 }
 
 func (poller *Server) poll(ctx context.Context) error {
@@ -88,11 +89,10 @@ func (poller *Server) poll(ctx context.Context) error {
 	if err == nil {
 		poller.lock.RLock()
 		defer poller.lock.RUnlock()
-		log.Debugf("sending update to %d registered clients", len(poller.registry))
 		for ch := range poller.registry {
 			ch <- &update
 		}
-		log.Debugf("sent update to %d registered clients", len(poller.registry))
+		slog.Debug("update sent", "clients", len(poller.registry))
 	}
 	return err
 }

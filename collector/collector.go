@@ -5,7 +5,7 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 	"strconv"
 	"sync"
 )
@@ -124,128 +124,128 @@ func New(p poller.Poller) *Collector {
 	}
 }
 
-func (collector *Collector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- collector.tadoMobileDeviceStatus
-	ch <- collector.tadoOutsideSolarIntensity
-	ch <- collector.tadoOutsideTemperature
-	ch <- collector.tadoOutsideWeather
-	ch <- collector.tadoZoneDeviceBatteryStatus
-	ch <- collector.tadoZoneDeviceConnectionStatus
-	ch <- collector.tadoZoneHeatingPercentage
-	ch <- collector.tadoZoneHumidityPercentage
-	ch <- collector.tadoZoneOpenWindowDuration
-	ch <- collector.tadoZoneOpenWindowRemaining
-	ch <- collector.tadoZonePowerState
-	ch <- collector.tadoZoneTargetManualMode
-	ch <- collector.tadoZoneTargetTempCelsius
-	ch <- collector.tadoZoneTemperatureCelsius
+func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- c.tadoMobileDeviceStatus
+	ch <- c.tadoOutsideSolarIntensity
+	ch <- c.tadoOutsideTemperature
+	ch <- c.tadoOutsideWeather
+	ch <- c.tadoZoneDeviceBatteryStatus
+	ch <- c.tadoZoneDeviceConnectionStatus
+	ch <- c.tadoZoneHeatingPercentage
+	ch <- c.tadoZoneHumidityPercentage
+	ch <- c.tadoZoneOpenWindowDuration
+	ch <- c.tadoZoneOpenWindowRemaining
+	ch <- c.tadoZonePowerState
+	ch <- c.tadoZoneTargetManualMode
+	ch <- c.tadoZoneTargetTempCelsius
+	ch <- c.tadoZoneTemperatureCelsius
 }
 
-func (collector *Collector) Collect(ch chan<- prometheus.Metric) {
-	log.Debug("prometheus collect called")
-	collector.lock.RLock()
-	defer collector.lock.RUnlock()
+func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	slog.Debug("prometheus collect called")
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
-	if collector.lastUpdate != nil {
-		collector.collectUsers(ch)
-		collector.collectWeather(ch)
-		collector.collectZones(ch)
-		collector.collectZoneInfos(ch)
+	if c.lastUpdate != nil {
+		c.collectUsers(ch)
+		c.collectWeather(ch)
+		c.collectZones(ch)
+		c.collectZoneInfos(ch)
 	}
 }
 
-func (collector *Collector) collectUsers(ch chan<- prometheus.Metric) {
+func (c *Collector) collectUsers(ch chan<- prometheus.Metric) {
 	var value float64
-	for _, userInfo := range collector.lastUpdate.UserInfo {
+	for _, userInfo := range c.lastUpdate.UserInfo {
 		value = 0.0
 		if userInfo.IsHome() == tado.DeviceHome {
 			value = 1.0
 		}
-		ch <- prometheus.MustNewConstMetric(collector.tadoMobileDeviceStatus, prometheus.GaugeValue, value, userInfo.Name)
+		ch <- prometheus.MustNewConstMetric(c.tadoMobileDeviceStatus, prometheus.GaugeValue, value, userInfo.Name)
 	}
 }
 
-func (collector *Collector) collectWeather(ch chan<- prometheus.Metric) {
-	ch <- prometheus.MustNewConstMetric(collector.tadoOutsideSolarIntensity, prometheus.GaugeValue, collector.lastUpdate.WeatherInfo.SolarIntensity.Percentage)
-	ch <- prometheus.MustNewConstMetric(collector.tadoOutsideTemperature, prometheus.GaugeValue, collector.lastUpdate.WeatherInfo.OutsideTemperature.Celsius)
-	ch <- prometheus.MustNewConstMetric(collector.tadoOutsideWeather, prometheus.GaugeValue, 1, collector.lastUpdate.WeatherInfo.WeatherState.Value)
+func (c *Collector) collectWeather(ch chan<- prometheus.Metric) {
+	ch <- prometheus.MustNewConstMetric(c.tadoOutsideSolarIntensity, prometheus.GaugeValue, c.lastUpdate.WeatherInfo.SolarIntensity.Percentage)
+	ch <- prometheus.MustNewConstMetric(c.tadoOutsideTemperature, prometheus.GaugeValue, c.lastUpdate.WeatherInfo.OutsideTemperature.Celsius)
+	ch <- prometheus.MustNewConstMetric(c.tadoOutsideWeather, prometheus.GaugeValue, 1, c.lastUpdate.WeatherInfo.WeatherState.Value)
 }
 
-func (collector *Collector) collectZones(ch chan<- prometheus.Metric) {
+func (c *Collector) collectZones(ch chan<- prometheus.Metric) {
 	var value float64
-	for _, zone := range collector.lastUpdate.Zones {
+	for _, zone := range c.lastUpdate.Zones {
 		for i, device := range zone.Devices {
 			id := zone.Name + "_" + strconv.Itoa(i)
 			value = 0.0
 			if device.ConnectionState.Value {
 				value = 1.0
 			}
-			ch <- prometheus.MustNewConstMetric(collector.tadoZoneDeviceConnectionStatus, prometheus.GaugeValue, value, zone.Name, id, device.DeviceType, device.Firmware)
+			ch <- prometheus.MustNewConstMetric(c.tadoZoneDeviceConnectionStatus, prometheus.GaugeValue, value, zone.Name, id, device.DeviceType, device.Firmware)
 
 			value = 0.0
 			if device.BatteryState == "NORMAL" {
 				value = 1.0
 			}
-			ch <- prometheus.MustNewConstMetric(collector.tadoZoneDeviceBatteryStatus, prometheus.GaugeValue, value, zone.Name, id, device.DeviceType)
+			ch <- prometheus.MustNewConstMetric(c.tadoZoneDeviceBatteryStatus, prometheus.GaugeValue, value, zone.Name, id, device.DeviceType)
 		}
 	}
 }
 
-func (collector *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
+func (c *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 	var value float64
-	for zoneID, zoneInfo := range collector.lastUpdate.ZoneInfo {
-		zone, found := collector.lastUpdate.Zones[zoneID]
+	for zoneID, zoneInfo := range c.lastUpdate.ZoneInfo {
+		zone, found := c.lastUpdate.Zones[zoneID]
 
 		if !found {
-			log.WithField("id", zoneID).Warning("invalid zoneID in collected tado metrics. skipping collection")
+			slog.Warn("invalid zoneID in collected tado metrics. skipping collection", "id", zoneID)
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(collector.tadoZoneHeatingPercentage, prometheus.GaugeValue, zoneInfo.ActivityDataPoints.HeatingPower.Percentage, zone.Name)
-		ch <- prometheus.MustNewConstMetric(collector.tadoZoneHumidityPercentage, prometheus.GaugeValue, zoneInfo.SensorDataPoints.Humidity.Percentage, zone.Name)
-		ch <- prometheus.MustNewConstMetric(collector.tadoZoneOpenWindowDuration, prometheus.GaugeValue, float64(zoneInfo.OpenWindow.DurationInSeconds), zone.Name)
-		ch <- prometheus.MustNewConstMetric(collector.tadoZoneOpenWindowRemaining, prometheus.GaugeValue, float64(zoneInfo.OpenWindow.RemainingTimeInSeconds), zone.Name)
+		ch <- prometheus.MustNewConstMetric(c.tadoZoneHeatingPercentage, prometheus.GaugeValue, zoneInfo.ActivityDataPoints.HeatingPower.Percentage, zone.Name)
+		ch <- prometheus.MustNewConstMetric(c.tadoZoneHumidityPercentage, prometheus.GaugeValue, zoneInfo.SensorDataPoints.Humidity.Percentage, zone.Name)
+		ch <- prometheus.MustNewConstMetric(c.tadoZoneOpenWindowDuration, prometheus.GaugeValue, float64(zoneInfo.OpenWindow.DurationInSeconds), zone.Name)
+		ch <- prometheus.MustNewConstMetric(c.tadoZoneOpenWindowRemaining, prometheus.GaugeValue, float64(zoneInfo.OpenWindow.RemainingTimeInSeconds), zone.Name)
 
 		if zoneInfo.Setting.Power == "ON" {
 			value = 1.0
 		} else {
 			value = 0.0
 		}
-		ch <- prometheus.MustNewConstMetric(collector.tadoZonePowerState, prometheus.GaugeValue, value, zone.Name)
+		ch <- prometheus.MustNewConstMetric(c.tadoZonePowerState, prometheus.GaugeValue, value, zone.Name)
 
 		if zoneInfo.GetState() == tado.ZoneStateAuto {
 			value = 0.0
 		} else {
 			value = 1.0
 		}
-		ch <- prometheus.MustNewConstMetric(collector.tadoZoneTargetManualMode, prometheus.GaugeValue, value, zone.Name)
+		ch <- prometheus.MustNewConstMetric(c.tadoZoneTargetManualMode, prometheus.GaugeValue, value, zone.Name)
 
 		if zoneInfo.GetState() == tado.ZoneStateAuto {
 			value = zoneInfo.Setting.Temperature.Celsius
 		} else {
 			value = zoneInfo.Overlay.Setting.Temperature.Celsius
 		}
-		ch <- prometheus.MustNewConstMetric(collector.tadoZoneTargetTempCelsius, prometheus.GaugeValue, value, zone.Name)
+		ch <- prometheus.MustNewConstMetric(c.tadoZoneTargetTempCelsius, prometheus.GaugeValue, value, zone.Name)
 
-		ch <- prometheus.MustNewConstMetric(collector.tadoZoneTemperatureCelsius, prometheus.GaugeValue, zoneInfo.SensorDataPoints.Temperature.Celsius, zone.Name)
+		ch <- prometheus.MustNewConstMetric(c.tadoZoneTemperatureCelsius, prometheus.GaugeValue, zoneInfo.SensorDataPoints.Temperature.Celsius, zone.Name)
 	}
 
 }
 
-func (collector *Collector) Run(ctx context.Context) {
-	log.Info("exporter started")
+func (c *Collector) Run(ctx context.Context) {
+	slog.Info("exporter started")
 
-	ch := collector.poller.Register()
+	ch := c.poller.Register()
 	for running := true; running; {
 		select {
 		case <-ctx.Done():
 			running = false
 		case update := <-ch:
-			collector.lock.Lock()
-			collector.lastUpdate = update
-			collector.lock.Unlock()
+			c.lock.Lock()
+			c.lastUpdate = update
+			c.lock.Unlock()
 		}
 	}
-	collector.poller.Unregister(ch)
-	log.Info("exporter stopped")
+	c.poller.Unregister(ch)
+	slog.Info("exporter stopped")
 }

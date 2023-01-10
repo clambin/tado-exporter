@@ -2,7 +2,7 @@ package logger
 
 import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 type StdOutLogger struct {
@@ -11,5 +11,5 @@ type StdOutLogger struct {
 var _ Logger = &StdOutLogger{}
 
 func (l *StdOutLogger) Log(action Action, next *rules.NextState) {
-	log.WithField("reason", getReason(action, next)).Info(next.ZoneName + ": " + buildMessage(action, next))
+	slog.Info(next.ZoneName+": "+buildMessage(action, next), "reason", getReason(action, next))
 }

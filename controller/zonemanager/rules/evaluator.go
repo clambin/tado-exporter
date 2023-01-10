@@ -54,9 +54,7 @@ func (e *Evaluator) Evaluate(update *poller.Update) (action *NextState, err erro
 		if a.State == action.State {
 			// same target state. take the action that fires the earliest
 			if a.Delay < action.Delay {
-				action.Delay = a.Delay
-				action.ActionReason = a.ActionReason
-				action.CancelReason = a.CancelReason
+				action = a
 			}
 		} else if a.State == tado.ZoneStateOff {
 			// we give preference to rules that switch off the zone (i.e. currently the AutoAway rule)

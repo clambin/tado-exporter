@@ -8,42 +8,35 @@ import (
 	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/poller"
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 	"sync"
 	"time"
 )
 
 // Controller object for tado-controller
 type Controller struct {
-	tado.API
 	zoneManagers zonemanager.Managers
 	cmds         *commands.Manager
-	updates      chan *poller.Update
-	poller       poller.Poller
 }
 
 // New creates a new Controller object
-func New(API tado.API, cfg *configuration.ControllerConfiguration, tadoBot slackbot.SlackBot, p poller.Poller) (c *Controller) {
-	c = &Controller{
-		API:     API,
-		updates: make(chan *poller.Update, 1),
-		poller:  p,
-	}
+func New(api tado.API, cfg *configuration.ControllerConfiguration, tadoBot slackbot.SlackBot, p poller.Poller) *Controller {
+	var c Controller
 
 	for _, zoneCfg := range cfg.ZoneConfig {
-		c.zoneManagers = append(c.zoneManagers, zonemanager.New(API, p, tadoBot, zoneCfg))
+		c.zoneManagers = append(c.zoneManagers, zonemanager.New(api, p, tadoBot, zoneCfg))
 	}
 
 	if tadoBot != nil {
-		c.cmds = commands.New(API, tadoBot, p, c.zoneManagers)
+		c.cmds = commands.New(api, tadoBot, p, c.zoneManagers)
 	}
 
-	return c
+	return &c
 }
 
 // Run the controller
 func (c *Controller) Run(ctx context.Context, interval time.Duration) {
-	log.Info("controller started")
+	slog.Info("controller started")
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(c.zoneManagers))
@@ -63,5 +56,5 @@ func (c *Controller) Run(ctx context.Context, interval time.Duration) {
 	}
 
 	wg.Wait()
-	log.Info("controller stopped")
+	slog.Info("controller stopped")
 }

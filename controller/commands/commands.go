@@ -7,8 +7,8 @@ import (
 	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/poller"
-	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
+	"golang.org/x/exp/slog"
 	"sort"
 	"strconv"
 	"strings"
@@ -42,7 +42,7 @@ func New(api tado.API, tadoBot slackbot.SlackBot, p poller.Poller, mgrs zonemana
 
 // Run the controller
 func (m *Manager) Run(ctx context.Context) {
-	log.Info("commands manager started")
+	slog.Info("commands manager started")
 
 	ch := m.poller.Register()
 	for running := true; running; {
@@ -56,7 +56,7 @@ func (m *Manager) Run(ctx context.Context) {
 		}
 	}
 	m.poller.Unregister(ch)
-	log.Info("commands manager stopped")
+	slog.Info("commands manager stopped")
 }
 
 func (m *Manager) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
