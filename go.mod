@@ -6,7 +6,7 @@ require (
 	github.com/clambin/go-common/cache v0.1.1
 	github.com/clambin/go-common/httpserver v0.4.1
 	github.com/clambin/go-common/slackbot v0.2.1
-	github.com/clambin/tado v0.7.5
+	github.com/clambin/tado v0.8.0
 	github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a
 	github.com/gosimple/slug v1.13.1
 	github.com/prometheus/client_golang v1.14.0

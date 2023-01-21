@@ -41,24 +41,22 @@ func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 	slog.Info("poller started", "interval", interval)
 
 	for {
-		poll := false
+		shouldPoll := false
 		select {
 		case <-ctx.Done():
 			slog.Info("poller stopped")
 			return
 		case <-timer.C:
-			poll = true
+			shouldPoll = true
 		case <-poller.refresh:
-			poll = true
+			shouldPoll = true
 		}
 
-		if !poll {
-			continue
-		}
-
-		// poll for new data
-		if err := poller.poll(ctx); err != nil {
-			slog.Error("failed to get Tado metrics", err)
+		if shouldPoll {
+			// poll for new data
+			if err := poller.poll(ctx); err != nil {
+				slog.Error("failed to get Tado metrics", err)
+			}
 		}
 	}
 

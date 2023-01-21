@@ -16,6 +16,8 @@ github.com/clambin/go-common/slackbot v0.2.1 h1:G7d82wp9d5PdyWzcvpNzKp798Fc5PQvn
 github.com/clambin/go-common/slackbot v0.2.1/go.mod h1:3qrvvhFM98PW3WiAuqxwvmYJ0mwO0RahWRAF5JaosIw=
 github.com/clambin/tado v0.7.5 h1:grwSAwgto53fAgExkAVdIy/yA0b+cJBxyoU2m0MrCnc=
 github.com/clambin/tado v0.7.5/go.mod h1:kfZRs0wBwILxXtwNytLn8g5SZWoq1EXS3GLN1yr6eS8=
+github.com/clambin/tado v0.8.0 h1:G4wbb9cIpHvgrnntMENrCTP2aGxHbacl8o2ee0fcRBs=
+github.com/clambin/tado v0.8.0/go.mod h1:kfZRs0wBwILxXtwNytLn8g5SZWoq1EXS3GLN1yr6eS8=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

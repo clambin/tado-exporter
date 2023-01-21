@@ -137,9 +137,9 @@ func TestServer_Refresh(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go p.Run(ctx, time.Second)
-
 	ch := p.Register()
+	go p.Run(ctx, 10*time.Millisecond)
+
 	update := <-ch
 	require.Len(t, update.UserInfo, 2)
 
