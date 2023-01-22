@@ -3,7 +3,6 @@ package zonemanager
 import (
 	"context"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
@@ -19,24 +18,26 @@ import (
 )
 
 var (
-	config = configuration.ZoneConfig{
-		ZoneID:   1,
-		ZoneName: "foo",
-		AutoAway: configuration.ZoneAutoAway{
-			Enabled: true,
-			Delay:   2 * time.Hour,
-			Users: []configuration.ZoneUser{
-				{MobileDeviceID: 10, MobileDeviceName: "foo"},
+	config = rules.ZoneConfig{
+		Zone: "foo",
+		Rules: []rules.RuleConfig{
+			{
+				Kind:  rules.AutoAway,
+				Delay: 2 * time.Hour,
+				Users: []string{"foo"},
+			},
+			{
+				Kind:  rules.LimitOverlay,
+				Delay: time.Hour,
 			},
 		},
-		LimitOverlay: configuration.ZoneLimitOverlay{Enabled: true, Delay: time.Hour},
 	}
 
 	testCases = []struct {
 		name         string
 		update       *poller.Update
 		current      tado.ZoneState
-		next         *rules.NextState
+		next         rules.NextState
 		call         string
 		args         []interface{}
 		notification string
@@ -49,7 +50,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado.ZoneStateAuto,
-			next: &rules.NextState{
+			next: rules.NextState{
 				ZoneID:   1,
 				ZoneName: "foo",
 				State:    tado.ZoneStateAuto,
@@ -67,7 +68,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado.ZoneStateManual,
-			next: &rules.NextState{
+			next: rules.NextState{
 				ZoneID:       1,
 				ZoneName:     "foo",
 				State:        tado.ZoneStateAuto,
@@ -89,7 +90,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado.ZoneStateManual,
-			next: &rules.NextState{
+			next: rules.NextState{
 				ZoneID:       1,
 				ZoneName:     "foo",
 				State:        tado.ZoneStateAuto,
@@ -106,7 +107,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado.ZoneStateAuto,
-			next: &rules.NextState{
+			next: rules.NextState{
 				ZoneID:   1,
 				ZoneName: "foo",
 				State:    tado.ZoneStateAuto,
@@ -121,7 +122,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 			},
 			current: tado.ZoneStateAuto,
-			next: &rules.NextState{
+			next: rules.NextState{
 				ZoneID:       1,
 				ZoneName:     "foo",
 				State:        tado.ZoneStateOff,
@@ -143,7 +144,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado.ZoneStateOff,
-			next: &rules.NextState{
+			next: rules.NextState{
 				ZoneID:       1,
 				ZoneName:     "foo",
 				State:        tado.ZoneStateAuto,
@@ -234,12 +235,12 @@ func TestManager_Scheduled(t *testing.T) {
 
 	state, scheduled := m.Scheduled()
 	require.True(t, scheduled)
-	assert.Equal(t, tado.ZoneState(tado.ZoneStateAuto), state.State)
+	assert.Equal(t, tado.ZoneStateAuto, state.State)
 
 	var mgrs Managers = []*Manager{m}
 	states := mgrs.GetScheduled()
 	require.Len(t, states, 1)
-	assert.Equal(t, tado.ZoneState(tado.ZoneStateAuto), states[0].State)
+	assert.Equal(t, tado.ZoneStateAuto, states[0].State)
 
 	cancel()
 	wg.Wait()

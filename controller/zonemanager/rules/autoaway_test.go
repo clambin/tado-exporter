@@ -2,7 +2,6 @@ package rules
 
 import (
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestAutoAwayRule_Evaluate(t *testing.T) {
-	var testCases = []testCase{
+	tests := []testCase{
 		{
 			name: "user goes away",
 			update: &poller.Update{
@@ -19,7 +18,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZoneInfoSetting{Power: "ON"}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 			},
-			action: &NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
 		},
 		{
 			name: "user comes home",
@@ -32,7 +31,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			action: &NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: 0, ActionReason: "foo is home", CancelReason: "foo is away"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: 0, ActionReason: "foo is home", CancelReason: "foo is away"},
 		},
 		{
 			name: "user is home",
@@ -41,7 +40,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZoneInfoSetting{Power: "ON"}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			action: nil,
+			//action: nil,
 		},
 		{
 			name: "non-geolocation user",
@@ -54,20 +53,17 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: false}}},
 			},
-			action: &NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: 0, ActionReason: "foo is home", CancelReason: "foo is away"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: 0, ActionReason: "foo is home", CancelReason: "foo is away"},
 		},
 	}
 
 	r := &AutoAwayRule{
 		zoneID:   10,
 		zoneName: "living room",
-		config: &configuration.ZoneAutoAway{
-			Enabled: true,
-			Delay:   time.Hour,
-			Users:   []configuration.ZoneUser{{MobileDeviceName: "foo"}},
-		},
+		delay:    time.Hour,
+		users:    []string{"foo"},
 	}
-	for _, tt := range testCases {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a, err := r.Evaluate(tt.update)
 			require.NoError(t, err)

@@ -9,22 +9,20 @@ type Update struct {
 	WeatherInfo tado.WeatherInfo
 }
 
-func (update *Update) LookupZone(id int, name string) (foundID int, foundName string, ok bool) {
-	var zone tado.Zone
-	for foundID, zone = range update.Zones {
-		if foundID == id || zone.Name == name {
-			return foundID, zone.Name, true
+func (update Update) GetZoneID(name string) (int, bool) {
+	for zoneID, zone := range update.Zones {
+		if zone.Name == name {
+			return zoneID, true
 		}
 	}
-	return
+	return 0, false
 }
 
-func (update *Update) LookupUser(id int, name string) (foundID int, foundName string, ok bool) {
-	var device tado.MobileDevice
-	for foundID, device = range update.UserInfo {
-		if foundID == id || device.Name == name {
-			return foundID, device.Name, true
+func (update Update) GetUserID(name string) (int, bool) {
+	for userID, user := range update.UserInfo {
+		if user.Name == name {
+			return userID, true
 		}
 	}
-	return
+	return 0, false
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager/logger"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
@@ -17,7 +16,7 @@ import (
 )
 
 type Manager struct {
-	evaluator *rules.Evaluator
+	evaluator rules.Evaluator
 	task      *Task
 	api       tado.API
 	loggers   logger.Loggers
@@ -25,14 +24,14 @@ type Manager struct {
 	lock      sync.RWMutex
 }
 
-func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg configuration.ZoneConfig) *Manager {
+func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneConfig) *Manager {
 	loggers := logger.Loggers{&logger.StdOutLogger{}}
 	if bot != nil {
 		loggers = append(loggers, &logger.SlackLogger{Bot: bot})
 	}
 
 	return &Manager{
-		evaluator: &rules.Evaluator{Config: &cfg},
+		evaluator: rules.Evaluator{Config: &cfg},
 		api:       api,
 		loggers:   loggers,
 		poller:    p,
@@ -51,11 +50,11 @@ func (m *Manager) Run(ctx context.Context, interval time.Duration) {
 			return
 		case update := <-ch:
 			if err := m.processUpdate(ctx, update); err != nil {
-				slog.Error("failed to process tado update", err, "zone", m.evaluator.ZoneName)
+				slog.Error("failed to process tado update", err, "zone", m.evaluator.Config.Zone)
 			}
 		case <-ticker.C:
 			if err := m.processResult(); err != nil {
-				slog.Error("failed to set next state", err, "zone", m.evaluator.ZoneName)
+				slog.Error("failed to set next state", err, "zone", m.evaluator.Config.Zone)
 			}
 		}
 	}
@@ -67,7 +66,7 @@ func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) erro
 		return fmt.Errorf("failed to evaluate rules: %w", err)
 	}
 
-	if next != nil {
+	if !next.IsZero() {
 		m.scheduleJob(ctx, next)
 	} else {
 		m.cancelJob()
@@ -76,7 +75,7 @@ func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) erro
 	return nil
 }
 
-func (m *Manager) scheduleJob(ctx context.Context, next *rules.NextState) {
+func (m *Manager) scheduleJob(ctx context.Context, next rules.NextState) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -134,7 +133,7 @@ func (m *Manager) processResult() error {
 	return err
 }
 
-func (m *Manager) Scheduled() (next *rules.NextState, scheduled bool) {
+func (m *Manager) Scheduled() (next rules.NextState, scheduled bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -158,7 +157,7 @@ func (m *Manager) ReportTask() (report string, scheduled bool) {
 
 type Managers []*Manager
 
-func (m Managers) GetScheduled() (states []*rules.NextState) {
+func (m Managers) GetScheduled() (states []rules.NextState) {
 	for _, mgr := range m {
 		if state, scheduled := mgr.Scheduled(); scheduled {
 			states = append(states, state)

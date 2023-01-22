@@ -3,23 +3,24 @@ package rules
 import (
 	"fmt"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/poller"
 	"strings"
+	"time"
 )
 
 type AutoAwayRule struct {
 	zoneID         int
 	zoneName       string
-	config         *configuration.ZoneAutoAway
+	delay          time.Duration
+	users          []string
 	mobileDeviceID []int
 }
 
 var _ Rule = &AutoAwayRule{}
 
-func (a *AutoAwayRule) Evaluate(update *poller.Update) (next *NextState, err error) {
+func (a *AutoAwayRule) Evaluate(update *poller.Update) (next NextState, err error) {
 	if err = a.load(update); err != nil {
-		return nil, err
+		return NextState{}, err
 	}
 
 	var home []string
@@ -37,7 +38,7 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (next *NextState, err err
 	state := update.ZoneInfo[a.zoneID].GetState()
 	if state == tado.ZoneStateOff {
 		if len(home) != 0 {
-			next = &NextState{
+			next = NextState{
 				ZoneID:       a.zoneID,
 				ZoneName:     a.zoneName,
 				State:        tado.ZoneStateAuto,
@@ -48,11 +49,11 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (next *NextState, err err
 		}
 	} else {
 		if len(home) == 0 {
-			next = &NextState{
+			next = NextState{
 				ZoneID:       a.zoneID,
 				ZoneName:     a.zoneName,
 				State:        tado.ZoneStateOff,
-				Delay:        a.config.Delay,
+				Delay:        a.delay,
 				ActionReason: makeReason(away, "away"),
 				CancelReason: makeReason(away, "home"),
 			}
@@ -76,12 +77,17 @@ func (a *AutoAwayRule) load(update *poller.Update) error {
 		return nil
 	}
 
+	var ok bool
+	if a.zoneID, ok = update.GetZoneID(a.zoneName); !ok {
+		return fmt.Errorf("invalid zone name found in config: %s", a.zoneName)
+	}
+
 	var userIDs []int
-	for _, user := range a.config.Users {
-		if userID, _, found := update.LookupUser(user.MobileDeviceID, user.MobileDeviceName); found {
+	for _, user := range a.users {
+		if userID, found := update.GetUserID(user); found {
 			userIDs = append(userIDs, userID)
 		} else {
-			return fmt.Errorf("invalid user found in config file: zoneID: %d, zoneName: %s", user.MobileDeviceID, user.MobileDeviceName)
+			return fmt.Errorf("invalid user found in config file: zoneID: %s", user)
 		}
 
 	}

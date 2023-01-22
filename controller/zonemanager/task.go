@@ -11,14 +11,14 @@ import (
 
 type Task struct {
 	api       tado.API
-	nextState *rules.NextState
+	nextState rules.NextState
 	when      time.Time
 	job       *scheduler.Job
 }
 
 var _ scheduler.Task = &Task{}
 
-func newTask(api tado.API, next *rules.NextState) *Task {
+func newTask(api tado.API, next rules.NextState) *Task {
 	return &Task{
 		api:       api,
 		nextState: next,

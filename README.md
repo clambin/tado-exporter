@@ -209,7 +209,7 @@ To enable the bot, add a bot to the workspace's Custom Integrations and add the 
 
 ## Tado Client API
 
-The Tado Client API implementation can be found in [github](https://github.com/clambin/tado). The API should be fairly stable at this point, 
+The Tado Client API implementation can be found in [GitHub](https://github.com/clambin/tado). The API should be fairly stable at this point, 
 so feel free to reuse for your own projects.
 
 ## Authors

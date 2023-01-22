@@ -69,7 +69,7 @@ func TestLoggers_Log(t *testing.T) {
 				assert.Equal(t, tt.title, attachments[0].Title)
 				assert.Equal(t, tt.text, attachments[0].Text)
 			}).Return(nil)
-			l.Log(tt.action, &tt.state)
+			l.Log(tt.action, tt.state)
 
 		})
 	}

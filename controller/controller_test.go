@@ -3,8 +3,8 @@ package controller
 import (
 	"context"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado/mocks"
 	"github.com/stretchr/testify/assert"
@@ -15,22 +15,7 @@ import (
 )
 
 var (
-	cfg = &configuration.ControllerConfiguration{
-		Enabled: true,
-		ZoneConfig: []configuration.ZoneConfig{{
-			ZoneID:   1,
-			ZoneName: "foo",
-			AutoAway: configuration.ZoneAutoAway{
-				Enabled: true,
-				Delay:   2 * time.Hour,
-				Users: []configuration.ZoneUser{
-					{MobileDeviceID: 10, MobileDeviceName: "foo"},
-				},
-			},
-			LimitOverlay: configuration.ZoneLimitOverlay{Enabled: true, Delay: time.Hour},
-			NightTime:    configuration.ZoneNightTime{Enabled: true, Time: configuration.ZoneNightTimeTimestamp{Hour: 23, Minutes: 30}},
-		}},
-	}
+	zoneCfg []rules.ZoneConfig
 )
 
 func TestController_Run(t *testing.T) {
@@ -50,7 +35,7 @@ func TestController_Run(t *testing.T) {
 	b := slackbot.NewSlackBot(t)
 	b.On("Register", mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc")).Return(nil)
 
-	c := New(a, cfg, b, p)
+	c := New(a, zoneCfg, b, p)
 	assert.NotNil(t, c)
 
 	wg.Add(1)

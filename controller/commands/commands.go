@@ -43,20 +43,19 @@ func New(api tado.API, tadoBot slackbot.SlackBot, p poller.Poller, mgrs zonemana
 // Run the controller
 func (m *Manager) Run(ctx context.Context) {
 	slog.Info("commands manager started")
-
 	ch := m.poller.Register()
-	for running := true; running; {
+	defer m.poller.Unregister(ch)
+	for {
 		select {
 		case <-ctx.Done():
-			running = false
+			slog.Info("commands manager stopped")
+			return
 		case update := <-ch:
 			m.lock.Lock()
 			m.update = update
 			m.lock.Unlock()
 		}
 	}
-	m.poller.Unregister(ch)
-	slog.Info("commands manager stopped")
 }
 
 func (m *Manager) ReportRules(_ context.Context, _ ...string) []slack.Attachment {

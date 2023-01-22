@@ -20,33 +20,64 @@ var (
 	}
 )
 
-func TestUpdate_LookupZone(t *testing.T) {
-	zoneID, zoneName, ok := testUpdate.LookupZone(1, "")
-	assert.True(t, ok)
-	assert.Equal(t, 1, zoneID)
-	assert.Equal(t, "foo", zoneName)
+func TestUpdate_GetZoneID(t *testing.T) {
+	tests := []struct {
+		name string
+		zone string
+		pass bool
+		id   int
+	}{
+		{
+			name: "pass",
+			zone: "foo",
+			pass: true,
+			id:   1,
+		},
+		{
+			name: "fail",
+			zone: "snafu",
+			pass: false,
+		},
+	}
 
-	zoneID, zoneName, ok = testUpdate.LookupZone(0, "bar")
-	assert.True(t, ok)
-	assert.Equal(t, 2, zoneID)
-	assert.Equal(t, "bar", zoneName)
-
-	_, _, ok = testUpdate.LookupZone(0, "snafu")
-	assert.False(t, ok)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			zoneID, ok := testUpdate.GetZoneID(tt.zone)
+			assert.Equal(t, tt.pass, ok)
+			if tt.pass {
+				assert.Equal(t, tt.id, zoneID)
+			}
+		})
+	}
 }
 
-func TestUpdate_LookupUser(t *testing.T) {
-	zoneID, zoneName, ok := testUpdate.LookupUser(1, "")
-	assert.True(t, ok)
-	assert.Equal(t, 1, zoneID)
-	assert.Equal(t, "foo", zoneName)
+func TestUpdate_GetUserID(t *testing.T) {
+	tests := []struct {
+		name string
+		zone string
+		pass bool
+		id   int
+	}{
+		{
+			name: "pass",
+			zone: "foo",
+			pass: true,
+			id:   1,
+		},
+		{
+			name: "fail",
+			zone: "snafu",
+			pass: false,
+		},
+	}
 
-	zoneID, zoneName, ok = testUpdate.LookupUser(0, "bar")
-	assert.True(t, ok)
-	assert.Equal(t, 2, zoneID)
-	assert.Equal(t, "bar", zoneName)
-
-	_, _, ok = testUpdate.LookupUser(0, "snafu")
-	assert.False(t, ok)
-
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			zoneID, ok := testUpdate.GetUserID(tt.zone)
+			assert.Equal(t, tt.pass, ok)
+			if tt.pass {
+				assert.Equal(t, tt.id, zoneID)
+			}
+		})
+	}
 }

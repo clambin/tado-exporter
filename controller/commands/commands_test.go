@@ -3,9 +3,9 @@ package commands
 import (
 	"context"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
 	mocks3 "github.com/clambin/tado-exporter/poller/mocks"
 	"github.com/clambin/tado/mocks"
@@ -60,12 +60,13 @@ func TestController_Rules(t *testing.T) {
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
 
-	cfg := configuration.ZoneConfig{
-		ZoneID:   1,
-		ZoneName: "foo",
-		NightTime: configuration.ZoneNightTime{
-			Enabled: true,
-			Time:    configuration.ZoneNightTimeTimestamp{Hour: 23, Minutes: 30, Seconds: 0},
+	cfg := rules.ZoneConfig{
+		Zone: "foo",
+		Rules: []rules.RuleConfig{
+			{
+				Kind:      rules.NightTime,
+				Timestamp: rules.Timestamp{Hour: 23, Minutes: 30},
+			},
 		},
 	}
 
@@ -168,7 +169,7 @@ func TestManager_SetRoom(t *testing.T) {
 			Text:  "invalid command: missing parameters\nUsage: set <room> [auto|<temperature> [<duration>]",
 		},
 		{
-			Args:  []string{"notaroom", "auto"},
+			Args:  []string{"not-a-room", "auto"},
 			Color: "bad",
 			Text:  "invalid command: invalid room name",
 		},

@@ -12,7 +12,7 @@ type SlackLogger struct {
 
 var _ Logger = &SlackLogger{}
 
-func (s SlackLogger) Log(action Action, state *rules.NextState) {
+func (s SlackLogger) Log(action Action, state rules.NextState) {
 	_ = s.Bot.Send("", []slack.Attachment{{
 		Color: "good",
 		Title: state.ZoneName + ": " + getReason(action, state),

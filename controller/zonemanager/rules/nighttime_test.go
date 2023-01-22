@@ -2,7 +2,6 @@ package rules
 
 import (
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,7 +25,7 @@ func TestGetNextNightTimeDelay(t *testing.T) {
 		},
 	}
 
-	limit := configuration.ZoneNightTimeTimestamp{
+	limit := Timestamp{
 		Hour:    23,
 		Minutes: 30,
 		Seconds: 0,
@@ -45,7 +44,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 		{
 			name:   "auto mode",
 			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {}}},
-			action: nil,
+			//action: nil,
 		},
 		{
 			name: "manual control",
@@ -54,7 +53,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 				Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
 				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 			}}}},
-			action: &NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: time.Hour, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: time.Hour, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
 		},
 		{
 			name: "manual control w/ expiration",
@@ -63,20 +62,17 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 				Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
 				Termination: tado.ZoneInfoOverlayTermination{Type: "AUTO", RemainingTime: 300},
 			}}}},
-			action: nil,
+			//action: nil,
 		},
 	}
 
 	r := &NightTimeRule{
 		zoneID:   10,
 		zoneName: "living room",
-		config: &configuration.ZoneNightTime{
-			Enabled: true,
-			Time: configuration.ZoneNightTimeTimestamp{
-				Hour:    23,
-				Minutes: 30,
-				Seconds: 0,
-			},
+		timestamp: Timestamp{
+			Hour:    23,
+			Minutes: 30,
+			Seconds: 0,
 		},
 	}
 
