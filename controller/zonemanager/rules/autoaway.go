@@ -78,18 +78,12 @@ func (a *AutoAwayRule) load(update *poller.Update) error {
 		return nil
 	}
 
-	var ok bool
-	if a.zoneID, ok = update.GetZoneID(a.zoneName); !ok {
-		return fmt.Errorf("invalid zone: %s", a.zoneName)
-	}
-
 	for _, user := range a.users {
-		if userID, found := update.GetUserID(user); found {
+		if userID, ok := update.GetUserID(user); ok {
 			a.mobileDeviceIDs = append(a.mobileDeviceIDs, userID)
 		} else {
 			return fmt.Errorf("invalid user: %s", user)
 		}
-
 	}
 
 	return nil

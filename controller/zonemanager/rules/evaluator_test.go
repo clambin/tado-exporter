@@ -154,7 +154,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 		config ZoneConfig
 	}{
 		{
-			name: "bad zone name",
+			name: "limitOverlay - bad zone name",
 			config: ZoneConfig{
 				Zone: "foo",
 				Rules: []RuleConfig{
@@ -166,9 +166,22 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "bad user name",
+			name: "autoAway - bad zone name",
 			config: ZoneConfig{
 				Zone: "foo",
+				Rules: []RuleConfig{
+					{
+						Kind:  AutoAway,
+						Delay: time.Hour,
+						Users: []string{"foo"},
+					},
+				},
+			},
+		},
+		{
+			name: "autoAway - bad user name",
+			config: ZoneConfig{
+				Zone: "living room",
 				Rules: []RuleConfig{
 					{
 						Kind:  AutoAway,
