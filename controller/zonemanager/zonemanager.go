@@ -90,7 +90,7 @@ func (m *Manager) scheduleJob(ctx context.Context, next rules.NextState) {
 	}
 
 	m.task = newTask(m.api, next)
-	m.task.job = scheduler.ScheduleWithNotification(ctx, m.task, next.Delay, &m.notifier)
+	m.task.job = scheduler.ScheduleWithNotification(ctx, m.task, next.Delay, m.notifier)
 
 	if next.Delay > 0 {
 		m.loggers.Log(logger.Queued, next)

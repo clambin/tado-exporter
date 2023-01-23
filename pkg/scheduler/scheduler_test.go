@@ -34,7 +34,7 @@ func TestSchedule(t *testing.T) {
 func TestScheduleWithNotification(t *testing.T) {
 	ch := make(chan struct{})
 	var task MyTask
-	job := scheduler.ScheduleWithNotification(context.Background(), &task, 100*time.Millisecond, &ch)
+	job := scheduler.ScheduleWithNotification(context.Background(), &task, 100*time.Millisecond, ch)
 
 	<-ch
 	done, err := job.Result()
@@ -45,7 +45,7 @@ func TestScheduleWithNotification(t *testing.T) {
 func TestSchedule_Failure(t *testing.T) {
 	ch := make(chan struct{})
 	task := MyTask{err: fmt.Errorf("failed")}
-	job := scheduler.ScheduleWithNotification(context.Background(), &task, 100*time.Millisecond, &ch)
+	job := scheduler.ScheduleWithNotification(context.Background(), &task, 100*time.Millisecond, ch)
 
 	<-ch
 	_, err := job.Result()
@@ -56,7 +56,7 @@ func TestSchedule_Failure(t *testing.T) {
 func TestJob_Cancel(t *testing.T) {
 	ch := make(chan struct{})
 	var task MyTask
-	job := scheduler.ScheduleWithNotification(context.Background(), &task, time.Hour, &ch)
+	job := scheduler.ScheduleWithNotification(context.Background(), &task, time.Hour, ch)
 
 	job.Cancel()
 	<-ch
@@ -69,7 +69,7 @@ func TestJob_Cancel_Chained(t *testing.T) {
 	ch := make(chan struct{})
 	var task MyTask
 	ctx, cancel := context.WithCancel(context.Background())
-	job := scheduler.ScheduleWithNotification(ctx, &task, time.Hour, &ch)
+	job := scheduler.ScheduleWithNotification(ctx, &task, time.Hour, ch)
 
 	cancel()
 	<-ch

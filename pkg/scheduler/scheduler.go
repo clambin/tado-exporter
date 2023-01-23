@@ -19,14 +19,14 @@ type Job struct {
 	state  state
 	err    error
 	lock   sync.RWMutex
-	notify *chan struct{}
+	notify chan struct{}
 }
 
 func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
 	return ScheduleWithNotification(ctx, task, waitTime, nil)
 }
 
-func ScheduleWithNotification(ctx context.Context, task Task, waitTime time.Duration, ch *chan struct{}) *Job {
+func ScheduleWithNotification(ctx context.Context, task Task, waitTime time.Duration, ch chan struct{}) *Job {
 	ctx2, cancel := context.WithCancel(ctx)
 	j := Job{
 		task:   task,
@@ -50,7 +50,7 @@ func (j *Job) run(ctx context.Context, waitTime time.Duration) {
 	}
 	j.Cancel()
 	if j.notify != nil {
-		*j.notify <- struct{}{}
+		j.notify <- struct{}{}
 	}
 }
 
