@@ -184,7 +184,7 @@ func initConfig() {
 	viper.SetDefault("tado.password", "")
 	viper.SetDefault("tado.clientSecret", "")
 	viper.SetDefault("exporter.addr", ":9090")
-	viper.SetDefault("poller.interval", 15*time.Second)
+	viper.SetDefault("poller.interval", 30*time.Second)
 	viper.SetDefault("health.addr", ":8080")
 	viper.SetDefault("controller.interval", 5*time.Second)
 	viper.SetDefault("controller.tadobot.enabled", true)
@@ -192,6 +192,7 @@ func initConfig() {
 
 	viper.SetEnvPrefix("TADO_MONITOR")
 	viper.AutomaticEnv()
+
 	if err := viper.ReadInConfig(); err != nil {
 		slog.Error("failed to read config file", err)
 		os.Exit(1)

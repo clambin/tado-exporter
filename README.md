@@ -54,7 +54,7 @@ exporter:
 # Section related to polling Tado for new metrics
 poller:
     # How often we should poll for new metrics
-    interval: 15s
+    interval: 30s
 # Section related to the /health endpoint
 health:
     # Listener address for the /health endpoint
@@ -84,11 +84,11 @@ $HOME/.tado-monitor
 ```
 
 Tado-monitor uses Viper to manage the configuration.  Any value in the configuration file may be overriden by setting an environment variable
-with a prefix `TADO_MONITOR.`. E.g. to avoid setting your Tado credentials in the configuration file, set the following environment variables:
+with a prefix `TADO_MONITOR_`. E.g. to avoid setting your Tado credentials in the configuration file, set the following environment variables:
 
 ```
-export TADO_MONITOR.TADO_USERNAME="username@example.com"
-export TADO_MONITOR.TADO_PASSWORD="your-password"
+export TADO_MONITOR_TADO.USERNAME="username@example.com"
+export TADO_MONITOR_TADO.PASSWORD="your-password"
 ```
 
 ### Tadoº credentials
@@ -197,7 +197,7 @@ Feel free to customize as you see fit.
 
 ## Slack bot
 
-Tado-controller can run a slack bot that will report on any rules being triggered:
+Tado-controller can run a Slack bot that will report on any rules being triggered:
 
 ![screenshot](assets/screenshots/tadobot_2.png?raw=true)
 
