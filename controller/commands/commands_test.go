@@ -78,7 +78,7 @@ func TestController_Rules(t *testing.T) {
 	wg.Add(len(mgrs))
 	for _, mgr := range mgrs {
 		go func(m *zonemanager.Manager) {
-			m.Run(ctx, time.Hour)
+			m.Run(ctx)
 			wg.Done()
 		}(mgr)
 	}

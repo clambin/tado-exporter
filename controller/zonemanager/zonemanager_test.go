@@ -172,7 +172,7 @@ func TestManager_Run(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		m.Run(ctx, 10*time.Millisecond)
+		m.Run(ctx)
 		wg.Done()
 	}()
 
@@ -214,7 +214,7 @@ func TestManager_Scheduled(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		m.Run(ctx, 10*time.Millisecond)
+		m.Run(ctx)
 		wg.Done()
 	}()
 
@@ -257,7 +257,7 @@ func TestManagers_ReportTasks(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		m.Run(ctx, 10*time.Millisecond)
+		m.Run(ctx)
 		wg.Done()
 	}()
 

@@ -40,7 +40,7 @@ func TestController_Run(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		c.Run(ctx, time.Minute)
+		c.Run(ctx)
 		wg.Done()
 	}()
 

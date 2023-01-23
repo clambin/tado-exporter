@@ -10,7 +10,6 @@ import (
 	"github.com/clambin/tado-exporter/poller"
 	"golang.org/x/exp/slog"
 	"sync"
-	"time"
 )
 
 // Controller object for tado-controller
@@ -35,14 +34,14 @@ func New(api tado.API, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p poll
 }
 
 // Run the controller
-func (c *Controller) Run(ctx context.Context, interval time.Duration) {
-	slog.Info("controller started", "interval", interval)
+func (c *Controller) Run(ctx context.Context) {
+	slog.Info("controller started")
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(c.zoneManagers))
 	for _, mgr := range c.zoneManagers {
 		go func(m *zonemanager.Manager) {
-			m.Run(ctx, interval)
+			m.Run(ctx)
 			wg.Done()
 		}(mgr)
 	}

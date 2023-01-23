@@ -12,7 +12,6 @@ import (
 	"github.com/clambin/tado-exporter/poller"
 	"golang.org/x/exp/slog"
 	"sync"
-	"time"
 )
 
 type Manager struct {
@@ -21,6 +20,7 @@ type Manager struct {
 	api       tado.API
 	loggers   logger.Loggers
 	poller    poller.Poller
+	notifier  chan struct{}
 	lock      sync.RWMutex
 }
 
@@ -35,14 +35,13 @@ func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneCon
 		api:       api,
 		loggers:   loggers,
 		poller:    p,
+		notifier:  make(chan struct{}, 1),
 	}
 }
 
-func (m *Manager) Run(ctx context.Context, interval time.Duration) {
+func (m *Manager) Run(ctx context.Context) {
 	ch := m.poller.Register()
 	defer m.poller.Unregister(ch)
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
 
 	for {
 		select {
@@ -52,7 +51,7 @@ func (m *Manager) Run(ctx context.Context, interval time.Duration) {
 			if err := m.processUpdate(ctx, update); err != nil {
 				slog.Error("failed to process tado update", err, "zone", m.evaluator.Config.Zone)
 			}
-		case <-ticker.C:
+		case <-m.notifier:
 			if err := m.processResult(); err != nil {
 				slog.Error("failed to set next state", err, "zone", m.evaluator.Config.Zone)
 			}
@@ -91,7 +90,7 @@ func (m *Manager) scheduleJob(ctx context.Context, next rules.NextState) {
 	}
 
 	m.task = newTask(m.api, next)
-	m.task.job = scheduler.Schedule(ctx, m.task, next.Delay)
+	m.task.job = scheduler.ScheduleWithNotification(ctx, m.task, next.Delay, &m.notifier)
 
 	if next.Delay > 0 {
 		m.loggers.Log(logger.Queued, next)

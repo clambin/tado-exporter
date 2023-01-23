@@ -131,7 +131,7 @@ func runController(ctx context.Context, p poller.Poller, api tado.API, r []rules
 	// controller
 	c := controller.New(api, r, tadoBot, p)
 	wg.Add(1)
-	c.Run(ctx, viper.GetDuration("controller.interval"))
+	c.Run(ctx)
 	wg.Done()
 }
 
@@ -186,7 +186,6 @@ func initConfig() {
 	viper.SetDefault("exporter.addr", ":9090")
 	viper.SetDefault("poller.interval", 30*time.Second)
 	viper.SetDefault("health.addr", ":8080")
-	viper.SetDefault("controller.interval", 5*time.Second)
 	viper.SetDefault("controller.tadobot.enabled", true)
 	viper.SetDefault("controller.tadobot.token", "")
 

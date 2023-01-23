@@ -66,8 +66,6 @@ tado:
     clientsecret: ""
 # Section for controller functionality
 controller:
-    # How often should controller check for completed tasks
-    interval: 5s
     tadobot:
         # When set, the controller will start a slack bot. See below for details
         enabled: true
