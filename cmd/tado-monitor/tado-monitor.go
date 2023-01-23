@@ -38,6 +38,13 @@ var (
 	}
 )
 
+func main() {
+	if err := cmd.Execute(); err != nil {
+		slog.Error("failed to start", err)
+		os.Exit(1)
+	}
+}
+
 func Main(_ *cobra.Command, _ []string) {
 	slog.Info("tado-monitor starting", "version", version.BuildVersion)
 
@@ -77,7 +84,7 @@ func Main(_ *cobra.Command, _ []string) {
 	}
 
 	if len(r) > 0 {
-		runController(ctx, p, api, r, &wg)
+		go runController(ctx, p, api, r, &wg)
 	} else {
 		slog.Warn("no rules found. controller will not run")
 	}
@@ -101,17 +108,15 @@ func runPrometheusServer() {
 }
 
 func runHealthEndpoint(ctx context.Context, p poller.Poller, wg *sync.WaitGroup) {
-	// health endpoint
 	h := health.New(p)
 	wg.Add(1)
 	go func() { defer wg.Done(); h.Run(ctx) }()
-	go func() {
-		handler := http.NewServeMux()
-		handler.Handle("/health", http.HandlerFunc(h.Handle))
-		if err := http.ListenAndServe(viper.GetString("health.addr"), handler); !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("failed to start health server", err)
-		}
-	}()
+
+	handler := http.NewServeMux()
+	handler.Handle("/health", http.HandlerFunc(h.Handle))
+	if err := http.ListenAndServe(viper.GetString("health.addr"), handler); !errors.Is(err, http.ErrServerClosed) {
+		slog.Error("failed to start health server", err)
+	}
 }
 
 func runController(ctx context.Context, p poller.Poller, api tado.API, r []rules.ZoneConfig, wg *sync.WaitGroup) {
@@ -126,7 +131,8 @@ func runController(ctx context.Context, p poller.Poller, api tado.API, r []rules
 	// controller
 	c := controller.New(api, r, tadoBot, p)
 	wg.Add(1)
-	go func() { defer wg.Done(); c.Run(ctx, viper.GetDuration("controller.interval")) }()
+	c.Run(ctx, viper.GetDuration("controller.interval"))
+	wg.Done()
 }
 
 func GetZoneRules() ([]rules.ZoneConfig, error) {
@@ -153,13 +159,6 @@ func GetZoneRules() ([]rules.ZoneConfig, error) {
 		slog.Info("zone rules found", "zone", zone.Zone, "rules", strings.Join(kinds, ","))
 	}
 	return config.Zones, nil
-}
-
-func main() {
-	if err := cmd.Execute(); err != nil {
-		slog.Error("failed to start", err)
-		os.Exit(1)
-	}
 }
 
 func init() {
