@@ -26,6 +26,18 @@ const (
 	NightTime
 )
 
+func (k Kind) String() string {
+	switch k {
+	case AutoAway:
+		return "autoAway"
+	case LimitOverlay:
+		return "limitOverlay"
+	case NightTime:
+		return "nightTime"
+	}
+	return ""
+}
+
 func (k *Kind) UnmarshalYAML(node *yaml.Node) error {
 	var err error
 	switch node.Value {
@@ -42,13 +54,9 @@ func (k *Kind) UnmarshalYAML(node *yaml.Node) error {
 }
 
 func (k Kind) MarshalYAML() (interface{}, error) {
-	switch k {
-	case AutoAway:
-		return "autoAway", nil
-	case LimitOverlay:
-		return "limitOverlay", nil
-	case NightTime:
-		return "nightTime", nil
+	v := k.String()
+	if v == "" {
+		return "", fmt.Errorf("invalid Kind: %d", k)
 	}
-	return "", fmt.Errorf("invalid Kind: %d", k)
+	return v, nil
 }

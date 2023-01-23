@@ -63,7 +63,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 		},
 	}
 
-	e := &Evaluator{
+	e := Evaluator{
 		Config: &ZoneConfig{
 			Zone: "living room",
 			Rules: []RuleConfig{
@@ -121,7 +121,7 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 		},
 	}
 
-	e := &Evaluator{
+	e := Evaluator{
 		Config: &ZoneConfig{
 			Zone: "living room",
 			Rules: []RuleConfig{
@@ -188,7 +188,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &Evaluator{Config: &tt.config}
+			e := Evaluator{Config: &tt.config}
 			_, err := e.Evaluate(update)
 			assert.Error(t, err)
 		})
@@ -206,7 +206,7 @@ func BenchmarkEvaluator(b *testing.B) {
 		UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 	}
 
-	e := &Evaluator{
+	e := Evaluator{
 		Config: &ZoneConfig{
 			Zone: "living room",
 			Rules: []RuleConfig{

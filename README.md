@@ -25,16 +25,6 @@ The controller is rule-based. It currently supports three types of rules:
 
 Binaries are available on the [release](https://github.com/clambin/tado-exporter/releases) page. Docker images are available on [ghcr.io](https://github.com/clambin/tado-exporter/pkgs/container/tado-monitor).
 
-Alternatively, you can clone the repository and build from source:
-
-```
-git clone https://github.com/clambin/tado-exporter.git
-cd tado-exporter
-go build tado-monitor
-```
-
-You will need to have Go 1.15 installed on your system.
-
 ## Running tado-monitor
 ### Command-line options
 
@@ -42,7 +32,7 @@ The following command-line arguments can be passed:
 
 ```
 Usage:
-  tado-exporter [flags]
+  tado-monitor [flags]
 
 Flags:
       --config string   Configuration file
@@ -55,37 +45,8 @@ Flags:
 The  configuration file option specifies a yaml file to control tado-monitor's behaviour:
 
 ```
-# Section for controller functionality
-controller:
-    # Listener address for the controller's /health endpoint
-    addr: :8080
-    # How often should controller check for completed tasks
-    interval: 5s
-    tadobot:
-        # When set, the controller will start a slack bot. See below for details
-        enabled: true
-        # Slackbot token value
-        token: ""
-    # Rules for the zones
-    zones:
-        - zone: Study
-          rules:
-            # An autoAway rule switches off the heating in a room when all defined users are away from home
-            - kind: autoAway
-              delay: 1h
-              users: ["Christophe"]
-        - zone: Bathroom
-          rules:
-            # A limitOverlay rule removes a manual temperature control after a specified amount of time
-            - kind: limitOverlay
-              delay: 1h
-        - rules:
-            # A nightTime rule removes any manual temperature control at a specified time of day
-            - kind: nightTime
-              time: "23:30:00"
-          zone: Living room
 # Set to true to enable debug logging
-debug: true
+debug: false
 # Section for Prometheus exporter functionality
 exporter:
     # Listener address for the Prometheus metrics server
@@ -94,11 +55,24 @@ exporter:
 poller:
     # How often we should poll for new metrics
     interval: 15s
+# Section related to the /health endpoint
+health:
+    # Listener address for the /health endpoint
+  addr: :8080
 # Section containing Tado credentials
 tado:
     username: ""
     password: ""
     clientsecret: ""
+# Section for controller functionality
+controller:
+    # How often should controller check for completed tasks
+    interval: 5s
+    tadobot:
+        # When set, the controller will start a slack bot. See below for details
+        enabled: true
+        # Slackbot token value
+        token: ""
 ```
 
 If the filename is not specified on the command line, tado-monitor will look for a file `config.yaml` in the following directories:
@@ -133,6 +107,33 @@ var TD = {
 	}
 };
 ```
+
+## Zone Rules
+
+Tado-monitor will look for a file `rules.yaml` in the same directory it found the `config.yaml` file described above.
+This file defines the rules to apply for each listed zone:
+
+```
+zones:
+  - zone: Study
+    rules:
+      # An autoAway rule switches off the heating in a room when all defined users are away from home
+      - kind: autoAway
+        delay: 1h
+        users: ["Christophe"]
+  - zone: Bathroom
+    rules:
+      # A limitOverlay rule removes a manual temperature control after a specified amount of time
+      - kind: limitOverlay
+        delay: 1h
+  - zone: Living room
+    rules:
+      # A nightTime rule removes any manual temperature control at a specified time of day
+      - kind: nightTime
+        time: "23:30:00"
+```
+
+If the file does not exist, tado-monitor will only run as a Prometheus exporter.
 
 ## Prometheus
 
