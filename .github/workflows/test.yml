@@ -4,7 +4,7 @@ on:
   push:
     branches-ignore:
       - master
-      - slog
+      - viper
   pull_request_target:
 
 jobs:
