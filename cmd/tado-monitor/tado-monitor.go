@@ -2,76 +2,198 @@ package main
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/configuration"
-	"github.com/clambin/tado-exporter/stack"
+	"errors"
+	slackbot2 "github.com/clambin/go-common/slackbot"
+	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/collector"
+	"github.com/clambin/tado-exporter/controller"
+	"github.com/clambin/tado-exporter/controller/slackbot"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
+	"github.com/clambin/tado-exporter/health"
+	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/version"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"golang.org/x/exp/slog"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/yaml.v3"
+	"net/http"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
 	//_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"path/filepath"
+)
+
+var (
+	configFilename string
+	cmd            = cobra.Command{
+		Use:   "tado-monitor",
+		Short: "exporter / controller for Tadoº thermostats",
+		Run:   Main,
+	}
 )
 
 func main() {
-	var (
-		err        error
-		debug      bool
-		configFile string
-		cfg        *configuration.Configuration
-	)
-
-	a := kingpin.New(filepath.Base(os.Args[0]), "tado-monitor")
-	a.Version(version.BuildVersion)
-	a.HelpFlag.Short('h')
-	a.VersionFlag.Short('v')
-	a.Flag("debug", "Log debug messages").BoolVar(&debug)
-	a.Flag("config", "Configuration file").Required().ExistingFileVar(&configFile)
-
-	if _, err = a.Parse(os.Args[1:]); err != nil {
-		a.Usage(os.Args[1:])
+	if err := cmd.Execute(); err != nil {
+		slog.Error("failed to start", err)
 		os.Exit(1)
 	}
+}
 
-	f, _ := os.Open(configFile)
-	defer func() {
-		_ = f.Close()
-	}()
-
-	if cfg, err = configuration.LoadConfiguration(f); err != nil {
-		slog.Error("Could not load configuration file: ", err)
-		os.Exit(2)
-	}
-
-	var opts slog.HandlerOptions
-	if debug || cfg.Debug {
-		opts.Level = slog.LevelDebug
-		opts.AddSource = true
-	}
-	slog.SetDefault(slog.New(opts.NewTextHandler(os.Stdout)))
-
+func Main(_ *cobra.Command, _ []string) {
 	slog.Info("tado-monitor starting", "version", version.BuildVersion)
 
-	s, err := stack.New(cfg)
-	if err != nil {
-		slog.Error("failed to initialize", err)
+	if viper.GetBool("debug") {
+		opts := slog.HandlerOptions{Level: slog.LevelDebug}
+		slog.SetDefault(slog.New(opts.NewTextHandler(os.Stderr)))
+	}
+
+	// context to terminate the created go routines
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+
+	// Poller
+	api := tado.New(
+		viper.GetString("tado.username"),
+		viper.GetString("tado.password"),
+		viper.GetString("tado.clientSecret"),
+	)
+
+	p := poller.New(api)
+	wg.Add(1)
+	go func() { defer wg.Done(); p.Run(ctx, viper.GetDuration("poller.interval")) }()
+
+	// Collector
+	coll := collector.New(p)
+	prometheus.DefaultRegisterer.MustRegister(coll)
+	go runPrometheusServer()
+
+	// Health endpoint
+	go runHealthEndpoint(ctx, p, &wg)
+
+	// Do we have zone rules?
+	r, err := GetZoneRules()
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		slog.Error("failed to read zone rules", err)
 		os.Exit(1)
 	}
-	prometheus.DefaultRegisterer.MustRegister(s.HTTPServer)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	s.Start(ctx)
-
-	// go http.ListenAndServe(":9091", http.DefaultServeMux)
+	if len(r) > 0 {
+		go runController(ctx, p, api, r, &wg)
+	} else {
+		slog.Warn("no rules found. controller will not run")
+	}
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
 	<-interrupt
 
+	slog.Info("tado-monitor shutting down")
 	cancel()
-	s.Stop()
+	wg.Wait()
+	slog.Info("tado-monitor stopped")
+}
 
-	slog.Info("tado-monitor exiting")
+func runPrometheusServer() {
+	http.Handle("/metrics", promhttp.Handler())
+	if err := http.ListenAndServe(viper.GetString("exporter.addr"), nil); !errors.Is(err, http.ErrServerClosed) {
+		slog.Error("failed to start prometheus metrics server", err)
+	}
+}
+
+func runHealthEndpoint(ctx context.Context, p poller.Poller, wg *sync.WaitGroup) {
+	h := health.New(p)
+	wg.Add(1)
+	go func() { defer wg.Done(); h.Run(ctx) }()
+
+	handler := http.NewServeMux()
+	handler.Handle("/health", http.HandlerFunc(h.Handle))
+	if err := http.ListenAndServe(viper.GetString("health.addr"), handler); !errors.Is(err, http.ErrServerClosed) {
+		slog.Error("failed to start health server", err)
+	}
+}
+
+func runController(ctx context.Context, p poller.Poller, api tado.API, r []rules.ZoneConfig, wg *sync.WaitGroup) {
+	// slack bot
+	var tadoBot slackbot.SlackBot
+	if viper.GetBool("controller.tadoBot.enabled") {
+		tadoBot = slackbot2.New("tado "+version.BuildVersion, viper.GetString("controller.tadoBot.token"), nil)
+		wg.Add(1)
+		go func() { defer wg.Done(); _ = tadoBot.Run(ctx) }()
+	}
+
+	// controller
+	c := controller.New(api, r, tadoBot, p)
+	wg.Add(1)
+	c.Run(ctx)
+	wg.Done()
+}
+
+func GetZoneRules() ([]rules.ZoneConfig, error) {
+	f, err := os.Open(filepath.Join(filepath.Dir(viper.ConfigFileUsed()), "rules.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	defer func(f *os.File) {
+		_ = f.Close()
+	}(f)
+
+	var config struct {
+		Zones []rules.ZoneConfig `yaml:"zones"`
+	}
+
+	if err = yaml.NewDecoder(f).Decode(&config); err != nil {
+		return nil, err
+	}
+	for _, zone := range config.Zones {
+		var kinds []string
+		for _, rule := range zone.Rules {
+			kinds = append(kinds, rule.Kind.String())
+		}
+		slog.Info("zone rules found", "zone", zone.Zone, "rules", strings.Join(kinds, ","))
+	}
+	return config.Zones, nil
+}
+
+func init() {
+	cobra.OnInitialize(initConfig)
+	cmd.Version = version.BuildVersion
+	cmd.Flags().StringVar(&configFilename, "config", "", "Configuration file")
+	cmd.Flags().Bool("debug", false, "Log debug messages")
+	_ = viper.BindPFlag("debug", cmd.Flags().Lookup("debug"))
+}
+
+func initConfig() {
+	if configFilename != "" {
+		viper.SetConfigFile(configFilename)
+	} else {
+		viper.AddConfigPath("/etc/tado-monitor/")
+		viper.AddConfigPath("$HOME/.tado-monitor")
+		viper.AddConfigPath(".")
+		viper.SetConfigName("config")
+	}
+
+	viper.SetDefault("debug", false)
+	viper.SetDefault("tado.username", "")
+	viper.SetDefault("tado.password", "")
+	viper.SetDefault("tado.clientSecret", "")
+	viper.SetDefault("exporter.addr", ":9090")
+	viper.SetDefault("poller.interval", 30*time.Second)
+	viper.SetDefault("health.addr", ":8080")
+	viper.SetDefault("controller.tadobot.enabled", true)
+	viper.SetDefault("controller.tadobot.token", "")
+
+	viper.SetEnvPrefix("TADO_MONITOR")
+	viper.AutomaticEnv()
+
+	if err := viper.ReadInConfig(); err != nil {
+		slog.Error("failed to read config file", err)
+		os.Exit(1)
+	}
 }

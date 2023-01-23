@@ -6,7 +6,7 @@ import (
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/poller/mocks"
 	"github.com/prometheus/client_golang/prometheus"
-	io_prometheus_client "github.com/prometheus/client_model/go"
+	promGo "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sync"
@@ -66,10 +66,10 @@ func TestCollector(t *testing.T) {
 	wg.Wait()
 }
 
-func testMetricResult(t *testing.T, expected MetricResult, metric *io_prometheus_client.Metric, metricType io_prometheus_client.MetricType) {
+func testMetricResult(t *testing.T, expected MetricResult, metric *promGo.Metric, metricType promGo.MetricType) {
 	t.Helper()
 	switch metricType {
-	case io_prometheus_client.MetricType_GAUGE:
+	case promGo.MetricType_GAUGE:
 		require.NotNil(t, metric.Gauge)
 		assert.Equal(t, expected.value, metric.Gauge.GetValue())
 	default:

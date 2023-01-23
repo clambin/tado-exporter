@@ -2,42 +2,42 @@ package rules
 
 import (
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/poller"
 	"time"
 )
 
 type NightTimeRule struct {
-	zoneID   int
-	zoneName string
-	config   *configuration.ZoneNightTime
+	zoneID    int
+	zoneName  string
+	timestamp Timestamp
 }
 
 var _ Rule = &NightTimeRule{}
 
 var testForceTime time.Time
 
-func (n *NightTimeRule) Evaluate(update *poller.Update) (*NextState, error) {
-	if state := update.ZoneInfo[n.zoneID].GetState(); state != tado.ZoneStateManual {
-		return nil, nil
-	}
+func (n *NightTimeRule) Evaluate(update *poller.Update) (NextState, error) {
+	var next NextState
+	if state := update.ZoneInfo[n.zoneID].GetState(); state == tado.ZoneStateManual {
 
-	now := time.Now()
-	if !testForceTime.IsZero() {
-		now = testForceTime
-	}
+		now := time.Now()
+		if !testForceTime.IsZero() {
+			now = testForceTime
+		}
 
-	return &NextState{
-		ZoneID:       n.zoneID,
-		ZoneName:     n.zoneName,
-		State:        tado.ZoneStateAuto,
-		Delay:        getNextNightTimeDelay(now, n.config.Time),
-		ActionReason: "manual temp setting detected",
-		CancelReason: "room no longer in manual temp setting",
-	}, nil
+		next = NextState{
+			ZoneID:       n.zoneID,
+			ZoneName:     n.zoneName,
+			State:        tado.ZoneStateAuto,
+			Delay:        getNextNightTimeDelay(now, n.timestamp),
+			ActionReason: "manual temp setting detected",
+			CancelReason: "room no longer in manual temp setting",
+		}
+	}
+	return next, nil
 }
 
-func getNextNightTimeDelay(now time.Time, limit configuration.ZoneNightTimeTimestamp) time.Duration {
+func getNextNightTimeDelay(now time.Time, limit Timestamp) time.Duration {
 	next := time.Date(
 		now.Year(), now.Month(), now.Day(),
 		limit.Hour, limit.Minutes, limit.Seconds, 0, time.Local)

@@ -2,7 +2,6 @@ package rules
 
 import (
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,7 +12,7 @@ import (
 type testCase struct {
 	name   string
 	update *poller.Update
-	action *NextState
+	action NextState
 }
 
 func TestEvaluator_Evaluate(t *testing.T) {
@@ -25,7 +24,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZoneInfoSetting{Power: "ON"}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 			},
-			action: &NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
 		},
 		{
 			name: "user home - auto control",
@@ -34,7 +33,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZoneInfoSetting{Power: "ON"}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			action: nil,
+			//action: nil,
 		},
 		{
 			name: "user home - manual control",
@@ -47,7 +46,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			action: &NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: 15 * time.Minute, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: 15 * time.Minute, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
 		},
 		{
 			name: "user away - manual control",
@@ -60,27 +59,26 @@ func TestEvaluator_Evaluate(t *testing.T) {
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 			},
-			action: &NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
 		},
 	}
 
-	e := &Evaluator{
-		Config: &configuration.ZoneConfig{
-			ZoneID: 10,
-			AutoAway: configuration.ZoneAutoAway{
-				Enabled: true,
-				Delay:   time.Hour,
-				Users:   []configuration.ZoneUser{{MobileDeviceName: "foo"}},
-			},
-			LimitOverlay: configuration.ZoneLimitOverlay{
-				Enabled: true,
-				Delay:   15 * time.Minute,
-			},
-			NightTime: configuration.ZoneNightTime{
-				Enabled: true,
-				Time: configuration.ZoneNightTimeTimestamp{
-					Hour:    23,
-					Minutes: 30,
+	e := Evaluator{
+		Config: &ZoneConfig{
+			Zone: "living room",
+			Rules: []RuleConfig{
+				{
+					Kind:  LimitOverlay,
+					Delay: 15 * time.Minute,
+				},
+				{
+					Kind:      NightTime,
+					Timestamp: Timestamp{Hour: 23, Minutes: 30},
+				},
+				{
+					Kind:  AutoAway,
+					Delay: time.Hour,
+					Users: []string{"foo"},
 				},
 			},
 		},
@@ -106,7 +104,7 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZoneInfoSetting{Power: "ON"}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			action: nil,
+			//action: nil,
 		},
 		{
 			name: "user home - manual control",
@@ -119,22 +117,21 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			action: &NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: 30 * time.Minute, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: 30 * time.Minute, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
 		},
 	}
 
-	e := &Evaluator{
-		Config: &configuration.ZoneConfig{
-			ZoneID: 10,
-			LimitOverlay: configuration.ZoneLimitOverlay{
-				Enabled: true,
-				Delay:   time.Hour,
-			},
-			NightTime: configuration.ZoneNightTime{
-				Enabled: true,
-				Time: configuration.ZoneNightTimeTimestamp{
-					Hour:    23,
-					Minutes: 30,
+	e := Evaluator{
+		Config: &ZoneConfig{
+			Zone: "living room",
+			Rules: []RuleConfig{
+				{
+					Kind:  LimitOverlay,
+					Delay: time.Hour,
+				},
+				{
+					Kind:      NightTime,
+					Timestamp: Timestamp{Hour: 23, Minutes: 30},
 				},
 			},
 		},
@@ -154,20 +151,44 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 	testCases := []struct {
 		name   string
-		config *configuration.ZoneConfig
+		config ZoneConfig
 	}{
 		{
-			name: "bad zone name",
-			config: &configuration.ZoneConfig{
-				ZoneName:     "foo",
-				LimitOverlay: configuration.ZoneLimitOverlay{Enabled: true, Delay: time.Hour},
+			name: "limitOverlay - bad zone name",
+			config: ZoneConfig{
+				Zone: "foo",
+				Rules: []RuleConfig{
+					{
+						Kind:  LimitOverlay,
+						Delay: time.Hour,
+					},
+				},
 			},
 		},
 		{
-			name: "bad user name",
-			config: &configuration.ZoneConfig{
-				ZoneID:   10,
-				AutoAway: configuration.ZoneAutoAway{Enabled: true, Delay: time.Hour, Users: []configuration.ZoneUser{{MobileDeviceName: "bar"}}},
+			name: "autoAway - bad zone name",
+			config: ZoneConfig{
+				Zone: "foo",
+				Rules: []RuleConfig{
+					{
+						Kind:  AutoAway,
+						Delay: time.Hour,
+						Users: []string{"foo"},
+					},
+				},
+			},
+		},
+		{
+			name: "autoAway - bad user name",
+			config: ZoneConfig{
+				Zone: "living room",
+				Rules: []RuleConfig{
+					{
+						Kind:  AutoAway,
+						Delay: time.Hour,
+						Users: []string{"bar"},
+					},
+				},
 			},
 		},
 	}
@@ -180,7 +201,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &Evaluator{Config: tt.config}
+			e := Evaluator{Config: &tt.config}
 			_, err := e.Evaluate(update)
 			assert.Error(t, err)
 		})
@@ -198,23 +219,22 @@ func BenchmarkEvaluator(b *testing.B) {
 		UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 	}
 
-	e := &Evaluator{
-		Config: &configuration.ZoneConfig{
-			ZoneID: 10,
-			AutoAway: configuration.ZoneAutoAway{
-				Enabled: true,
-				Delay:   time.Hour,
-				Users:   []configuration.ZoneUser{{MobileDeviceName: "foo"}},
-			},
-			LimitOverlay: configuration.ZoneLimitOverlay{
-				Enabled: true,
-				Delay:   15 * time.Minute,
-			},
-			NightTime: configuration.ZoneNightTime{
-				Enabled: true,
-				Time: configuration.ZoneNightTimeTimestamp{
-					Hour:    23,
-					Minutes: 30,
+	e := Evaluator{
+		Config: &ZoneConfig{
+			Zone: "living room",
+			Rules: []RuleConfig{
+				{
+					Kind:  AutoAway,
+					Delay: time.Hour,
+					Users: []string{"foo"},
+				},
+				{
+					Kind:  LimitOverlay,
+					Delay: 15 * time.Minute,
+				},
+				{
+					Kind:      NightTime,
+					Timestamp: Timestamp{Hour: 23, Minutes: 30},
 				},
 			},
 		},

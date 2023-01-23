@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/clambin/go-common/cache"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/go-http-utils/headers"
+	"golang.org/x/exp/slog"
 	"net/http"
 	"time"
 )
@@ -25,12 +25,14 @@ func New(p poller.Poller) *Health {
 }
 
 func (h *Health) Run(ctx context.Context) {
+	slog.Info("health monitor started")
 	ch := h.Poller.Register()
 	defer h.Poller.Unregister(ch)
 
 	for {
 		select {
 		case <-ctx.Done():
+			slog.Info("health monitor stopped")
 			return
 		case update := <-ch:
 			h.store(update)
@@ -64,8 +66,5 @@ func (h *Health) Handle(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set(headers.ContentType, "application/json")
 
-	if _, err := w.Write(b.Bytes()); err != nil {
-		http.Error(w, fmt.Errorf("write: %w)", err).Error(), http.StatusInternalServerError)
-		return
-	}
+	_, _ = w.Write(b.Bytes())
 }

@@ -21,7 +21,7 @@ func (t MyTask) Run(_ context.Context) error {
 	return t.err
 }
 
-func TestSchedule_Success(t *testing.T) {
+func TestSchedule(t *testing.T) {
 	var task MyTask
 	job := scheduler.Schedule(context.Background(), &task, 100*time.Millisecond)
 
@@ -31,41 +31,49 @@ func TestSchedule_Success(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 }
 
+func TestScheduleWithNotification(t *testing.T) {
+	ch := make(chan struct{})
+	var task MyTask
+	job := scheduler.ScheduleWithNotification(context.Background(), &task, 100*time.Millisecond, ch)
+
+	<-ch
+	done, err := job.Result()
+	require.NoError(t, err)
+	assert.True(t, done)
+}
+
 func TestSchedule_Failure(t *testing.T) {
+	ch := make(chan struct{})
 	task := MyTask{err: fmt.Errorf("failed")}
-	job := scheduler.Schedule(context.Background(), &task, 100*time.Millisecond)
+	job := scheduler.ScheduleWithNotification(context.Background(), &task, 100*time.Millisecond, ch)
 
-	assert.Eventually(t, func() bool {
-		completed, err := job.Result()
-		return completed && err != nil
-	}, time.Second, 10*time.Millisecond)
-
+	<-ch
 	_, err := job.Result()
 	require.Error(t, err)
 	assert.Equal(t, "failed", err.Error())
 }
 
 func TestJob_Cancel(t *testing.T) {
+	ch := make(chan struct{})
 	var task MyTask
-	job := scheduler.Schedule(context.Background(), &task, time.Hour)
+	job := scheduler.ScheduleWithNotification(context.Background(), &task, time.Hour, ch)
 
 	job.Cancel()
-
-	assert.Eventually(t, func() bool {
-		completed, err := job.Result()
-		return completed && errors.Is(err, scheduler.ErrCanceled)
-	}, time.Second, 10*time.Millisecond)
+	<-ch
+	completed, err := job.Result()
+	assert.True(t, completed)
+	assert.True(t, errors.Is(err, scheduler.ErrCanceled))
 }
 
 func TestJob_Cancel_Chained(t *testing.T) {
+	ch := make(chan struct{})
 	var task MyTask
 	ctx, cancel := context.WithCancel(context.Background())
-	job := scheduler.Schedule(ctx, &task, time.Hour)
+	job := scheduler.ScheduleWithNotification(ctx, &task, time.Hour, ch)
 
 	cancel()
-
-	assert.Eventually(t, func() bool {
-		completed, err := job.Result()
-		return completed && errors.Is(err, scheduler.ErrCanceled)
-	}, time.Second, 10*time.Millisecond)
+	<-ch
+	completed, err := job.Result()
+	assert.True(t, completed)
+	assert.True(t, errors.Is(err, scheduler.ErrCanceled))
 }

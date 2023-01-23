@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - slog
+      - viper
   pull_request_target:
     branches-ignore:
       - master

@@ -3,14 +3,13 @@ package controller
 import (
 	"context"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/controller/commands"
 	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
 	"golang.org/x/exp/slog"
 	"sync"
-	"time"
 )
 
 // Controller object for tado-controller
@@ -20,10 +19,10 @@ type Controller struct {
 }
 
 // New creates a new Controller object
-func New(api tado.API, cfg *configuration.ControllerConfiguration, tadoBot slackbot.SlackBot, p poller.Poller) *Controller {
+func New(api tado.API, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p poller.Poller) *Controller {
 	var c Controller
 
-	for _, zoneCfg := range cfg.ZoneConfig {
+	for _, zoneCfg := range cfg {
 		c.zoneManagers = append(c.zoneManagers, zonemanager.New(api, p, tadoBot, zoneCfg))
 	}
 
@@ -35,14 +34,14 @@ func New(api tado.API, cfg *configuration.ControllerConfiguration, tadoBot slack
 }
 
 // Run the controller
-func (c *Controller) Run(ctx context.Context, interval time.Duration) {
+func (c *Controller) Run(ctx context.Context) {
 	slog.Info("controller started")
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(c.zoneManagers))
 	for _, mgr := range c.zoneManagers {
 		go func(m *zonemanager.Manager) {
-			m.Run(ctx, interval)
+			m.Run(ctx)
 			wg.Done()
 		}(mgr)
 	}

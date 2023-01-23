@@ -2,28 +2,29 @@ package rules
 
 import (
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/poller"
+	"time"
 )
 
 type LimitOverlayRule struct {
 	zoneID   int
 	zoneName string
-	config   *configuration.ZoneLimitOverlay
+	delay    time.Duration
 }
 
 var _ Rule = &LimitOverlayRule{}
 
-func (l *LimitOverlayRule) Evaluate(update *poller.Update) (*NextState, error) {
-	if state := update.ZoneInfo[l.zoneID].GetState(); state != tado.ZoneStateManual {
-		return nil, nil
+func (l *LimitOverlayRule) Evaluate(update *poller.Update) (NextState, error) {
+	var next NextState
+	if state := update.ZoneInfo[l.zoneID].GetState(); state == tado.ZoneStateManual {
+		next = NextState{
+			ZoneID:       l.zoneID,
+			ZoneName:     l.zoneName,
+			State:        tado.ZoneStateAuto,
+			Delay:        l.delay,
+			ActionReason: "manual temp setting detected",
+			CancelReason: "room no longer in manual temp setting",
+		}
 	}
-	return &NextState{
-		ZoneID:       l.zoneID,
-		ZoneName:     l.zoneName,
-		State:        tado.ZoneStateAuto,
-		Delay:        l.config.Delay,
-		ActionReason: "manual temp setting detected",
-		CancelReason: "room no longer in manual temp setting",
-	}, nil
+	return next, nil
 }

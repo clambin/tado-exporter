@@ -3,20 +3,17 @@ package rules
 import (
 	"fmt"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/configuration"
 	"github.com/clambin/tado-exporter/poller"
 	"time"
 )
 
 type Evaluator struct {
-	Config   *configuration.ZoneConfig
-	ZoneID   int
-	ZoneName string
-	rules    []Rule
+	Config *ZoneConfig
+	rules  []Rule
 }
 
 type Rule interface {
-	Evaluate(*poller.Update) (*NextState, error)
+	Evaluate(*poller.Update) (NextState, error)
 }
 
 var _ Rule = &Evaluator{}
@@ -30,26 +27,30 @@ type NextState struct {
 	CancelReason string
 }
 
-func (e *Evaluator) Evaluate(update *poller.Update) (action *NextState, err error) {
-	if err = e.load(update); err != nil {
-		return nil, err
+func (s NextState) IsZero() bool {
+	return s.ZoneID == 0 || s.ZoneName == ""
+}
+
+func (e *Evaluator) Evaluate(update *poller.Update) (NextState, error) {
+	if err := e.load(update); err != nil {
+		return NextState{}, err
 	}
 
-	actions := make([]*NextState, 0, len(e.rules))
+	actions := make([]NextState, 0, len(e.rules))
 	for _, rule := range e.rules {
-		var next *NextState
-		if next, err = rule.Evaluate(update); err != nil {
-			return nil, err
+		next, err := rule.Evaluate(update)
+		if err != nil {
+			return NextState{}, err
 		}
-		if next != nil {
+		if !next.IsZero() {
 			actions = append(actions, next)
 		}
 	}
 	if len(actions) == 0 {
-		return nil, nil
+		return NextState{}, nil
 	}
 
-	action = actions[0]
+	action := actions[0]
 	for _, a := range actions[1:] {
 		if a.State == action.State {
 			// same target state. take the action that fires the earliest
@@ -61,7 +62,7 @@ func (e *Evaluator) Evaluate(update *poller.Update) (action *NextState, err erro
 			action = a
 		}
 	}
-	return
+	return action, nil
 }
 
 func (e *Evaluator) load(update *poller.Update) error {
@@ -69,33 +70,33 @@ func (e *Evaluator) load(update *poller.Update) error {
 		return nil
 	}
 
-	var exists bool
-	if e.ZoneID, e.ZoneName, exists = update.LookupZone(e.Config.ZoneID, e.Config.ZoneName); !exists {
-		return fmt.Errorf("invalid zone found in config file: zoneID: %d, zoneName: %s", e.Config.ZoneID, e.Config.ZoneName)
+	zoneID, ok := update.GetZoneID(e.Config.Zone)
+	if !ok {
+		return fmt.Errorf("invalid zone found in config file: %s", e.Config.Zone)
 	}
 
-	if e.Config.LimitOverlay.Enabled {
-		e.rules = append(e.rules, &LimitOverlayRule{
-			zoneID:   e.ZoneID,
-			zoneName: e.ZoneName,
-			config:   &e.Config.LimitOverlay,
-		})
-	}
-
-	if e.Config.NightTime.Enabled {
-		e.rules = append(e.rules, &NightTimeRule{
-			zoneID:   e.ZoneID,
-			zoneName: e.ZoneName,
-			config:   &e.Config.NightTime,
-		})
-	}
-
-	if e.Config.AutoAway.Enabled {
-		e.rules = append(e.rules, &AutoAwayRule{
-			zoneID:   e.ZoneID,
-			zoneName: e.ZoneName,
-			config:   &e.Config.AutoAway,
-		})
+	for _, rawRule := range e.Config.Rules {
+		switch rawRule.Kind {
+		case AutoAway:
+			e.rules = append(e.rules, &AutoAwayRule{
+				zoneID:   zoneID,
+				zoneName: e.Config.Zone,
+				delay:    rawRule.Delay,
+				users:    rawRule.Users,
+			})
+		case LimitOverlay:
+			e.rules = append(e.rules, &LimitOverlayRule{
+				zoneID:   zoneID,
+				zoneName: e.Config.Zone,
+				delay:    rawRule.Delay,
+			})
+		case NightTime:
+			e.rules = append(e.rules, &NightTimeRule{
+				zoneID:    zoneID,
+				zoneName:  e.Config.Zone,
+				timestamp: rawRule.Timestamp,
+			})
+		}
 	}
 
 	return nil

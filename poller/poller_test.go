@@ -88,10 +88,10 @@ func TestPoller_Run(t *testing.T) {
 	require.Len(t, update.UserInfo, 2)
 	assert.Equal(t, "foo", update.UserInfo[1].Name)
 	device := update.UserInfo[1]
-	assert.Equal(t, tado.MobileDeviceLocationState(tado.DeviceHome), (&device).IsHome())
+	assert.Equal(t, tado.DeviceHome, (&device).IsHome())
 	assert.Equal(t, "bar", update.UserInfo[2].Name)
 	device = update.UserInfo[2]
-	assert.Equal(t, tado.MobileDeviceLocationState(tado.DeviceAway), (&device).IsHome())
+	assert.Equal(t, tado.DeviceAway, (&device).IsHome())
 
 	assert.Equal(t, "CLOUDY_MOSTLY", update.WeatherInfo.WeatherState.Value)
 	assert.Equal(t, 3.4, update.WeatherInfo.OutsideTemperature.Celsius)
@@ -103,9 +103,9 @@ func TestPoller_Run(t *testing.T) {
 
 	require.Len(t, update.ZoneInfo, 2)
 	info := update.ZoneInfo[1]
-	assert.Equal(t, tado.ZoneState(tado.ZoneStateAuto), (&info).GetState())
+	assert.Equal(t, tado.ZoneStateAuto, (&info).GetState())
 	info = update.ZoneInfo[2]
-	assert.Equal(t, tado.ZoneState(tado.ZoneStateOff), (&info).GetState())
+	assert.Equal(t, tado.ZoneStateOff, (&info).GetState())
 
 	p.Unregister(ch)
 }

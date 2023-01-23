@@ -142,7 +142,6 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
-	slog.Debug("prometheus collect called")
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -236,16 +235,17 @@ func (c *Collector) Run(ctx context.Context) {
 	slog.Info("exporter started")
 
 	ch := c.poller.Register()
-	for running := true; running; {
+	defer c.poller.Unregister(ch)
+
+	for {
 		select {
 		case <-ctx.Done():
-			running = false
+			slog.Info("exporter stopped")
+			return
 		case update := <-ch:
 			c.lock.Lock()
 			c.lastUpdate = update
 			c.lock.Unlock()
 		}
 	}
-	c.poller.Unregister(ch)
-	slog.Info("exporter stopped")
 }
