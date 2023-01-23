@@ -43,6 +43,7 @@ func TestKind_MarshalYAML(t *testing.T) {
 		{name: "autoAway", input: rules.AutoAway, pass: true},
 		{name: "limitOverlay", input: rules.LimitOverlay, pass: true},
 		{name: "nightTime", input: rules.NightTime, pass: true},
+		{name: "bad", input: rules.Kind(-1), pass: false},
 	}
 
 	for _, tt := range tests {

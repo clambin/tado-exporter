@@ -68,17 +68,17 @@ func TestEvaluator_Evaluate(t *testing.T) {
 			Zone: "living room",
 			Rules: []RuleConfig{
 				{
-					Kind:  AutoAway,
-					Delay: time.Hour,
-					Users: []string{"foo"},
-				},
-				{
 					Kind:  LimitOverlay,
 					Delay: 15 * time.Minute,
 				},
 				{
 					Kind:      NightTime,
 					Timestamp: Timestamp{Hour: 23, Minutes: 30},
+				},
+				{
+					Kind:  AutoAway,
+					Delay: time.Hour,
+					Users: []string{"foo"},
 				},
 			},
 		},

@@ -27,15 +27,16 @@ const (
 )
 
 func (k Kind) String() string {
+	var result string
 	switch k {
 	case AutoAway:
-		return "autoAway"
+		result = "autoAway"
 	case LimitOverlay:
-		return "limitOverlay"
+		result = "limitOverlay"
 	case NightTime:
-		return "nightTime"
+		result = "nightTime"
 	}
-	return ""
+	return result
 }
 
 func (k *Kind) UnmarshalYAML(node *yaml.Node) error {
