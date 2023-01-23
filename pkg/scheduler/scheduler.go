@@ -22,15 +22,15 @@ type Job struct {
 }
 
 func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
-	j := &Job{
-		task:  task,
-		state: stateUnknown,
+	ctx2, cancel := context.WithCancel(ctx)
+	j := Job{
+		task:   task,
+		state:  stateUnknown,
+		Cancel: cancel,
 	}
-	var ctx2 context.Context
-	ctx2, j.Cancel = context.WithCancel(ctx)
 	go j.run(ctx2, waitTime)
 
-	return j
+	return &j
 }
 
 func (j *Job) run(ctx context.Context, waitTime time.Duration) {
@@ -38,19 +38,17 @@ func (j *Job) run(ctx context.Context, waitTime time.Duration) {
 	select {
 	case <-ctx.Done():
 		j.setState(stateCanceled, ErrCanceled)
-		return
 	case <-time.After(waitTime):
 		err := j.task.Run(ctx)
-		j.Cancel()
 		j.setState(stateCompleted, err)
 	}
+	j.Cancel()
 }
 
-func (j *Job) Result() (completed bool, err error) {
-	var result state
-	result, err = j.getState()
-	completed = result == stateCompleted || result == stateCanceled
-	return
+func (j *Job) Result() (bool, error) {
+	result, err := j.getState()
+	completed := result == stateCompleted || result == stateCanceled
+	return completed, err
 }
 
 func (j *Job) setState(state state, err error) {
@@ -60,7 +58,7 @@ func (j *Job) setState(state state, err error) {
 	j.err = err
 }
 
-func (j *Job) getState() (state state, err error) {
+func (j *Job) getState() (state, error) {
 	j.lock.RLock()
 	defer j.lock.RUnlock()
 	return j.state, j.err
