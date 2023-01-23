@@ -41,27 +41,85 @@ You will need to have Go 1.15 installed on your system.
 The following command-line arguments can be passed:
 
 ```
-usage: tado-monitor --config=CONFIG [<flags>]
-
-tado-monitor
+Usage:
+  tado-exporter [flags]
 
 Flags:
-  -h, --help           Show context-sensitive help (also try --help-long and --help-man).
-  -v, --version        Show application version.
-      --debug          Log debug messages
-      --config=CONFIG  Configuration file
+      --config string   Configuration file
+      --debug           Log debug messages
+  -h, --help            help for tado-exporter
+  -v, --version         version for tado-exporter
+```
+
+### Configuration file
+The  configuration file option specifies a yaml file to control tado-monitor's behaviour:
+
+```
+# Section for controller functionality
+controller:
+    # Listener address for the controller's /health endpoint
+    addr: :8080
+    # How often should controller check for completed tasks
+    interval: 5s
+    tadobot:
+        # When set, the controller will start a slack bot. See below for details
+        enabled: true
+        # Slackbot token value
+        token: ""
+    # Rules for the zones
+    zones:
+        - zone: Study
+          rules:
+            # An autoAway rule switches off the heating in a room when all defined users are away from home
+            - kind: autoAway
+              delay: 1h
+              users: ["Christophe"]
+        - zone: Bathroom
+          rules:
+            # A limitOverlay rule removes a manual temperature control after a specified amount of time
+            - kind: limitOverlay
+              delay: 1h
+        - rules:
+            # A nightTime rule removes any manual temperature control at a specified time of day
+            - kind: nightTime
+              time: "23:30:00"
+          zone: Living room
+# Set to true to enable debug logging
+debug: true
+# Section for Prometheus exporter functionality
+exporter:
+    # Listener address for the Prometheus metrics server
+    addr: :9090
+# Section related to polling Tado for new metrics
+poller:
+    # How often we should poll for new metrics
+    interval: 15s
+# Section containing Tado credentials
+tado:
+    username: ""
+    password: ""
+    clientsecret: ""
+```
+
+If the filename is not specified on the command line, tado-monitor will look for a file `config.yaml` in the following directories:
+
+```
+/etc/tado-monitor
+$HOME/.tado-monitor
+.
+```
+
+Tado-monitor uses Viper to manage the configuration.  Any value in the configuration file may be overriden by setting an environment variable
+with a prefix `TADO_MONITOR.`. E.g. to avoid setting your Tado credentials in the configuration file, set the following environment variables:
+
+```
+export TADO_MONITOR.TADO_USERNAME="username@example.com"
+export TADO_MONITOR.TADO_PASSWORD="your-password"
 ```
 
 ### Tadoº credentials
-Set the following environment variables prior to starting tado-monitor:
-
-```
-* TADO_USERNAME: your Tado username
-* TADO_PASSWORD: your Tado password
-```
-
-In case you run into authentication problems, you may need to retrieve your `CLIENT_SECRET` and export this environment variable as well.
-To get your `CLIENT_SECRET`, log into tado.com and visit [https://my.tado.com/webapp/env.js](https://my.tado.com/webapp/env.js).
+In case you run into authentication problems, you may need to retrieve your `CLIENT_SECRET` and add it to the "tado" configuration section
+(or set it as a environment variable). To get your `CLIENT_SECRET`, log into tado.com and visit [https://my.tado.com/webapp/env.js](https://my.tado.com/webapp/env.js).
 The client secret can be found in the oauth section:
 
 ```
@@ -74,53 +132,6 @@ var TD = {
 		}
 	}
 };
-```
-
-### Configuration file
-The (mandatory) configuration file option specifies a yaml file to control tado-monitor's behaviour:
-
-```
-# Set to true to enable debug logging
-debug: false
-# TCP port for the HTTP Server for Prometheus scraping
-port: 8080
-
-# Section for Prometheus exporter functionality
-exporter:
-  # Enable exporter functionality
-  enabled: true
-  
-# Section for controller functionality
-controller:
-  # Enable controller functionality
-  enabled: false
-  # How often rules should be evaluated
-  interval: 5m
-  tadoBot:
-    # When set, tado will start a slack bot.  See below for details.
-    enabled: false
-    # Slackbot token value. Use an environment variable (eg. $TADOBOT_TOKEN) to avoid having secrets in the config file
-    token: ""
-    # Zones defined rules for individual rooms (i.e. "zones")
-    zones:
-    - name: "zone name"
-      # autoAway switches off heating in a room when all associated users are not home
-      autoAway:
-        enabled: false
-        delay: 1h
-        # users specifies the list of users assocated with that room. 
-        # either name or id can be used
-        users:
-          - name: "my Phone"
-      # limitOverlay switches off a room's manual temperature setting after a configured amount of time
-      limitOverlay:
-        enabled: false
-        delay: 10m
-      # nighttime sets a room to automatic temperature control at a fixed time of day
-      nightTime:
-        enabled: false
-        time: "23:30:00"
-
 ```
 
 ## Prometheus

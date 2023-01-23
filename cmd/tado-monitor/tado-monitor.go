@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slog"
+	"gopkg.in/yaml.v3"
 	"net/http"
 	"sort"
 	"sync"
@@ -31,8 +32,8 @@ import (
 var (
 	configFilename string
 	cmd            = cobra.Command{
-		Use:   "tado-exporter",
-		Short: "exports tado metrics to Prometheus",
+		Use:   "tado-monitor",
+		Short: "exporter / controller for Tadoº thermostats",
 		Run:   Main,
 	}
 )
@@ -40,15 +41,15 @@ var (
 func Main(_ *cobra.Command, _ []string) {
 	slog.Info("tado-monitor starting", "version", version.BuildVersion)
 
+	body, _ := yaml.Marshal(viper.AllSettings())
+	fmt.Println(string(body))
+
 	if viper.GetBool("debug") {
 		opts := slog.HandlerOptions{Level: slog.LevelDebug}
 		slog.SetDefault(slog.New(opts.NewTextHandler(os.Stdout)))
 	}
 
-	if viper.GetBool("exporter.enabled") {
-		go runPrometheusServer(viper.GetString("exporter.addr"))
-
-	}
+	go runPrometheusServer(viper.GetString("exporter.addr"))
 
 	api := tado.New(
 		viper.GetString("tado.username"),
@@ -139,8 +140,8 @@ func initConfig() {
 	if configFilename != "" {
 		viper.SetConfigFile(configFilename)
 	} else {
-		viper.AddConfigPath("/etc/solaredge/")
-		viper.AddConfigPath("$HOME/.solaredge")
+		viper.AddConfigPath("/etc/tado-monitor/")
+		viper.AddConfigPath("$HOME/.tado-monitor")
 		viper.AddConfigPath(".")
 		viper.SetConfigName("config")
 	}
@@ -149,7 +150,6 @@ func initConfig() {
 	viper.SetDefault("tado.username", "")
 	viper.SetDefault("tado.password", "")
 	viper.SetDefault("tado.clientSecret", "")
-	viper.SetDefault("exporter.enabled", true)
 	viper.SetDefault("exporter.addr", ":9090")
 	viper.SetDefault("poller.interval", 15*time.Second)
 	viper.SetDefault("controller.addr", ":8080")
@@ -157,7 +157,7 @@ func initConfig() {
 	viper.SetDefault("controller.tadobot.enabled", true)
 	viper.SetDefault("controller.tadobot.token", "")
 
-	viper.SetEnvPrefix("TADO")
+	viper.SetEnvPrefix("TADO_MONITOR")
 	viper.AutomaticEnv()
 	if err := viper.ReadInConfig(); err != nil {
 		slog.Error("failed to read config file", err)

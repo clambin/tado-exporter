@@ -9,23 +9,24 @@ import (
 )
 
 type AutoAwayRule struct {
-	zoneID         int
-	zoneName       string
-	delay          time.Duration
-	users          []string
-	mobileDeviceID []int
+	zoneID          int
+	zoneName        string
+	delay           time.Duration
+	users           []string
+	mobileDeviceIDs []int
 }
 
 var _ Rule = &AutoAwayRule{}
 
-func (a *AutoAwayRule) Evaluate(update *poller.Update) (next NextState, err error) {
-	if err = a.load(update); err != nil {
-		return NextState{}, err
+func (a *AutoAwayRule) Evaluate(update *poller.Update) (NextState, error) {
+	var next NextState
+	if err := a.load(update); err != nil {
+		return next, err
 	}
 
 	var home []string
 	var away []string
-	for _, id := range a.mobileDeviceID {
+	for _, id := range a.mobileDeviceIDs {
 		if entry, exists := update.UserInfo[id]; exists {
 			if entry.IsHome() == tado.DeviceAway {
 				away = append(away, entry.Name)
@@ -59,7 +60,7 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (next NextState, err erro
 			}
 		}
 	}
-	return
+	return next, nil
 }
 
 func makeReason(users []string, state string) string {
@@ -73,25 +74,23 @@ func makeReason(users []string, state string) string {
 }
 
 func (a *AutoAwayRule) load(update *poller.Update) error {
-	if len(a.mobileDeviceID) > 0 {
+	if len(a.mobileDeviceIDs) > 0 {
 		return nil
 	}
 
 	var ok bool
 	if a.zoneID, ok = update.GetZoneID(a.zoneName); !ok {
-		return fmt.Errorf("invalid zone name found in config: %s", a.zoneName)
+		return fmt.Errorf("invalid zone: %s", a.zoneName)
 	}
 
-	var userIDs []int
 	for _, user := range a.users {
 		if userID, found := update.GetUserID(user); found {
-			userIDs = append(userIDs, userID)
+			a.mobileDeviceIDs = append(a.mobileDeviceIDs, userID)
 		} else {
-			return fmt.Errorf("invalid user found in config file: zoneID: %s", user)
+			return fmt.Errorf("invalid user: %s", user)
 		}
 
 	}
-	a.mobileDeviceID = userIDs
 
 	return nil
 }
