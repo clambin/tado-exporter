@@ -2,7 +2,6 @@ package scheduler_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/stretchr/testify/assert"
@@ -62,7 +61,7 @@ func TestJob_Cancel(t *testing.T) {
 	<-ch
 	completed, err := job.Result()
 	assert.True(t, completed)
-	assert.True(t, errors.Is(err, scheduler.ErrCanceled))
+	assert.ErrorIs(t, err, scheduler.ErrCanceled)
 }
 
 func TestJob_Cancel_Chained(t *testing.T) {
@@ -75,5 +74,5 @@ func TestJob_Cancel_Chained(t *testing.T) {
 	<-ch
 	completed, err := job.Result()
 	assert.True(t, completed)
-	assert.True(t, errors.Is(err, scheduler.ErrCanceled))
+	assert.ErrorIs(t, err, scheduler.ErrCanceled)
 }

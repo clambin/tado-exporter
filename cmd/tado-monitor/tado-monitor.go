@@ -71,6 +71,8 @@ func Main(_ *cobra.Command, _ []string) {
 	// Collector
 	coll := collector.New(p)
 	prometheus.DefaultRegisterer.MustRegister(coll)
+	wg.Add(1)
+	go func() { defer wg.Done(); coll.Run(ctx) }()
 	go runPrometheusServer()
 
 	// Health endpoint
