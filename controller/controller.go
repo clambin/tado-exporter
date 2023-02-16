@@ -2,12 +2,12 @@ package controller
 
 import (
 	"context"
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/commands"
 	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
+	tadoAPI "github.com/clambin/tado-exporter/tado"
 	"golang.org/x/exp/slog"
 	"sync"
 )
@@ -19,7 +19,7 @@ type Controller struct {
 }
 
 // New creates a new Controller object
-func New(api tado.API, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p poller.Poller) *Controller {
+func New(api tadoAPI.API, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p poller.Poller) *Controller {
 	var c Controller
 
 	for _, zoneCfg := range cfg {

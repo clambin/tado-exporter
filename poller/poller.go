@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado"
+	tadoAPI "github.com/clambin/tado-exporter/tado"
 	"golang.org/x/exp/slog"
 	"sync"
 	"time"
@@ -20,13 +21,13 @@ type Poller interface {
 var _ Poller = &Server{}
 
 type Server struct {
-	tado.API
+	API      tadoAPI.API
 	refresh  chan struct{}
 	registry map[chan *Update]struct{}
 	lock     sync.RWMutex
 }
 
-func New(API tado.API) *Server {
+func New(API tadoAPI.API) *Server {
 	return &Server{
 		API:      API,
 		refresh:  make(chan struct{}),
@@ -125,7 +126,7 @@ func (poller *Server) getMobileDevices(ctx context.Context) (deviceMap map[int]t
 }
 
 func (poller *Server) getZones(ctx context.Context) (zoneMap map[int]tado.Zone, err error) {
-	var zones []tado.Zone
+	var zones tado.Zones
 	if zones, err = poller.API.GetZones(ctx); err == nil {
 		zoneMap = make(map[int]tado.Zone)
 		for _, zone := range zones {

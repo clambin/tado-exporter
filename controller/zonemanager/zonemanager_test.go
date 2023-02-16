@@ -6,8 +6,8 @@ import (
 	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
-	mocks3 "github.com/clambin/tado-exporter/poller/mocks"
-	"github.com/clambin/tado/mocks"
+	mockPoller "github.com/clambin/tado-exporter/poller/mocks"
+	"github.com/clambin/tado-exporter/tado/mocks"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -62,7 +62,7 @@ var (
 				Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
 					Type:        "MANUAL",
-					Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
+					Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
 					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 				}}},
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
@@ -84,7 +84,7 @@ var (
 				Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
 					Type:        "MANUAL",
-					Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
+					Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
 					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 				}}},
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
@@ -138,7 +138,7 @@ var (
 				Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
 					Type:        "MANUAL",
-					Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "OFF", Temperature: tado.Temperature{Celsius: 5.0}},
+					Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "OFF", Temperature: tado.Temperature{Celsius: 5.0}},
 					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 				}}},
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
@@ -162,7 +162,7 @@ var (
 func TestManager_Run(t *testing.T) {
 	a := mocks.NewAPI(t)
 	b := slackbot.NewSlackBot(t)
-	p := mocks3.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
@@ -205,7 +205,7 @@ func TestManager_Run(t *testing.T) {
 
 func TestManager_Scheduled(t *testing.T) {
 	a := mocks.NewAPI(t)
-	p := mocks3.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
@@ -222,7 +222,7 @@ func TestManager_Scheduled(t *testing.T) {
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
 			Type:        "MANUAL",
-			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
+			Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
 			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 		}}},
 		UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
@@ -248,7 +248,7 @@ func TestManager_Scheduled(t *testing.T) {
 
 func TestManagers_ReportTasks(t *testing.T) {
 	c := mocks.NewAPI(t)
-	p := mocks3.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
@@ -269,7 +269,7 @@ func TestManagers_ReportTasks(t *testing.T) {
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
 			Type:        "MANUAL",
-			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
+			Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
 			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 		}}},
 		UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},

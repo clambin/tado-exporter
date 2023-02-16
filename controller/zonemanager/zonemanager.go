@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager/logger"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/clambin/tado-exporter/poller"
+	tadoAPI "github.com/clambin/tado-exporter/tado"
 	"golang.org/x/exp/slog"
 	"sync"
 )
@@ -17,14 +17,14 @@ import (
 type Manager struct {
 	evaluator rules.Evaluator
 	task      *Task
-	api       tado.API
+	api       tadoAPI.API
 	loggers   logger.Loggers
 	poller    poller.Poller
 	notifier  chan struct{}
 	lock      sync.RWMutex
 }
 
-func New(api tado.API, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneConfig) *Manager {
+func New(api tadoAPI.API, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneConfig) *Manager {
 	loggers := logger.Loggers{&logger.StdOutLogger{}}
 	if bot != nil {
 		loggers = append(loggers, &logger.SlackLogger{Bot: bot})

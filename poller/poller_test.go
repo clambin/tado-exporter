@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
-	"github.com/clambin/tado/mocks"
+	"github.com/clambin/tado-exporter/tado/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -38,7 +38,7 @@ func prepareMockAPI(api *mocks.API) {
 		}, nil).
 		Once()
 	api.On("GetZones", mock.Anything).
-		Return([]tado.Zone{
+		Return(tado.Zones{
 			{ID: 1, Name: "foo"},
 			{ID: 2, Name: "bar"},
 		}, nil).
@@ -61,7 +61,7 @@ func prepareMockAPI(api *mocks.API) {
 			},
 			Overlay: tado.ZoneInfoOverlay{
 				Type: "MANUAL",
-				Setting: tado.ZoneInfoOverlaySetting{
+				Setting: tado.ZonePowerSetting{
 					Type:        "HEATING",
 					Power:       "OFF",
 					Temperature: tado.Temperature{Celsius: 5.0},

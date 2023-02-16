@@ -3,11 +3,12 @@ package commands
 import (
 	"context"
 	"github.com/clambin/tado"
-	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
+	mockSlackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
-	mocks3 "github.com/clambin/tado-exporter/poller/mocks"
+	mockPoller "github.com/clambin/tado-exporter/poller/mocks"
+	mockTado "github.com/clambin/tado-exporter/tado/mocks"
 	"github.com/clambin/tado/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -19,13 +20,13 @@ import (
 )
 
 func TestManager_Run(t *testing.T) {
-	api := mocks.NewAPI(t)
+	api := mockTado.NewAPI(t)
 
-	bot := slackbot.NewSlackBot(t)
+	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 
 	ch := make(chan *poller.Update)
-	p := mocks3.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 	p.On("Register").Return(ch).Once()
 	p.On("Unregister", ch).Return().Once()
 
@@ -53,9 +54,9 @@ func TestManager_Run(t *testing.T) {
 
 func TestController_Rules(t *testing.T) {
 	api := mocks.NewAPI(t)
-	bot := slackbot.NewSlackBot(t)
+	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
-	p := mocks3.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
@@ -93,7 +94,7 @@ func TestController_Rules(t *testing.T) {
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZoneInfoSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
 			Type:        "MANUAL",
-			Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
+			Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
 			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 		}}},
 	}
@@ -114,11 +115,11 @@ func TestController_Rules(t *testing.T) {
 func TestManager_SetRoom(t *testing.T) {
 	api := mocks.NewAPI(t)
 
-	bot := slackbot.NewSlackBot(t)
+	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 
 	ch := make(chan *poller.Update)
-	p := mocks3.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 	p.On("Register").Return(ch).Once()
 	p.On("Unregister", ch).Return().Once()
 
@@ -138,7 +139,7 @@ func TestManager_SetRoom(t *testing.T) {
 			SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 22}},
 			Overlay: tado.ZoneInfoOverlay{
 				Type:        "MANUAL",
-				Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
+				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
 				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 			},
 		}},
@@ -211,7 +212,7 @@ func TestManager_SetRoom(t *testing.T) {
 				if testCase.Delete {
 					api.On("DeleteZoneOverlay", mock.Anything, 1).Return(nil).Once()
 				} else {
-					api.On("SetZoneOverlayWithDuration", mock.Anything, 1, 25.0, testCase.Duration).Return(nil).Once()
+					api.On("SetZoneTemporaryOverlay", mock.Anything, 1, 25.0, testCase.Duration).Return(nil).Once()
 				}
 				p.On("Refresh").Return(nil).Once()
 			}
@@ -231,9 +232,9 @@ func TestManager_SetRoom(t *testing.T) {
 
 func TestManager_DoRefresh(t *testing.T) {
 	api := mocks.NewAPI(t)
-	bot := slackbot.NewSlackBot(t)
+	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
-	p := mocks3.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 	p.On("Refresh").Return(nil)
 	c := New(api, bot, p, nil)
 
@@ -242,7 +243,7 @@ func TestManager_DoRefresh(t *testing.T) {
 
 func TestManager_ReportRooms(t *testing.T) {
 	api := mocks.NewAPI(t)
-	bot := slackbot.NewSlackBot(t)
+	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	c := New(api, bot, nil, nil)
 
@@ -252,7 +253,7 @@ func TestManager_ReportRooms(t *testing.T) {
 			SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 22}},
 			Overlay: tado.ZoneInfoOverlay{
 				Type: "MANUAL",
-				Setting: tado.ZoneInfoOverlaySetting{
+				Setting: tado.ZonePowerSetting{
 					Type:        "HEATING",
 					Power:       "ON",
 					Temperature: tado.Temperature{Celsius: 18.0},
@@ -270,7 +271,7 @@ func TestManager_ReportRooms(t *testing.T) {
 
 func TestManager_ReportUsers(t *testing.T) {
 	api := mocks.NewAPI(t)
-	bot := slackbot.NewSlackBot(t)
+	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	c := New(api, bot, nil, nil)
 

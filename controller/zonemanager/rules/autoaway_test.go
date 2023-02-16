@@ -26,7 +26,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: {Overlay: tado.ZoneInfoOverlay{
 					Type:        "MANUAL",
-					Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 5.0}},
+					Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 5.0}},
 					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
@@ -48,7 +48,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: {Overlay: tado.ZoneInfoOverlay{
 					Type:        "MANUAL",
-					Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 5.0}},
+					Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 5.0}},
 					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: false}}},
@@ -103,7 +103,7 @@ func TestAutoAwayRule_Evaluate_MultipleUsers(t *testing.T) {
 				Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: {Overlay: tado.ZoneInfoOverlay{
 					Type:        "MANUAL",
-					Setting:     tado.ZoneInfoOverlaySetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 5.0}},
+					Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 5.0}},
 					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 				}}},
 				UserInfo: map[int]tado.MobileDevice{

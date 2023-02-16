@@ -3,16 +3,34 @@
     "1": {
       "id": 1,
       "name": "foo",
-      "devices": null
+      "type": "",
+      "dateCreated": "0001-01-01T00:00:00Z",
+      "deviceTypes": null,
+      "devices": null,
+      "reportAvailable": false,
+      "showScheduleSetup": false,
+      "supportsDazzle": false,
+      "dazzleEnabled": false,
+      "dazzleMode": {
+        "supported": false,
+        "enabled": false
+      },
+      "openWindowDetection": {
+        "supported": false,
+        "enabled": false,
+        "timeoutInSeconds": 0
+      }
     }
   },
   "ZoneInfo": {
     "1": {
+      "tadoMode": "",
+      "geolocationOverride": false,
+      "geolocationOverrideDisableTime": null,
+      "preparation": null,
       "setting": {
         "power": "",
-        "temperature": {
-          "celsius": 0
-        }
+        "temperature": null
       },
       "activityDataPoints": {
         "heatingPower": {
@@ -21,10 +39,22 @@
       },
       "sensorDataPoints": {
         "insideTemperature": {
-          "celsius": 22
+          "celsius": 22.0
         },
         "humidity": {
           "percentage": 0
+        }
+      },
+      "overlayType": null,
+      "overlay": {
+        "type": "",
+        "setting": {
+          "type": "",
+          "power": "",
+          "temperature": null
+        },
+        "termination": {
+          "type": ""
         }
       },
       "openwindow": {
@@ -33,26 +63,25 @@
         "expiry": "0001-01-01T00:00:00Z",
         "remainingTimeInSeconds": 0
       },
-      "overlay": {
-        "type": "",
+      "nextScheduleChange": {
+        "start": "0001-01-01T00:00:00Z",
         "setting": {
           "type": "",
           "power": "",
-          "temperature": {
-            "celsius": 0
-          }
-        },
-        "termination": {
-          "type": ""
+          "temperature": null
         }
+      },
+      "nextTimeBlock": {
+        "start": "0001-01-01T00:00:00Z"
+      },
+      "link": {
+        "state": ""
       }
     }
   },
   "UserInfo": null,
   "WeatherInfo": {
-    "outsideTemperature": {
-      "celsius": 0
-    },
+    "outsideTemperature": null,
     "solarIntensity": {
       "percentage": 0
     },

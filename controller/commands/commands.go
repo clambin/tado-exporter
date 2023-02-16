@@ -7,6 +7,7 @@ import (
 	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/poller"
+	tadoAPI "github.com/clambin/tado-exporter/tado"
 	"github.com/slack-go/slack"
 	"golang.org/x/exp/slog"
 	"sort"
@@ -17,14 +18,14 @@ import (
 )
 
 type Manager struct {
-	tado.API
+	API    tadoAPI.API
 	poller poller.Poller
 	update *poller.Update
 	mgrs   zonemanager.Managers
 	lock   sync.RWMutex
 }
 
-func New(api tado.API, tadoBot slackbot.SlackBot, p poller.Poller, mgrs zonemanager.Managers) *Manager {
+func New(api tadoAPI.API, tadoBot slackbot.SlackBot, p poller.Poller, mgrs zonemanager.Managers) *Manager {
 	m := &Manager{
 		API:    api,
 		poller: p,
@@ -147,7 +148,7 @@ func (m *Manager) SetRoom(ctx context.Context, args ...string) []slack.Attachmen
 				err = fmt.Errorf("unable to move room to auto mode: %w", err)
 			}
 		} else {
-			err = m.API.SetZoneOverlayWithDuration(ctx, zoneID, temperature, duration)
+			err = m.API.SetZoneTemporaryOverlay(ctx, zoneID, temperature, duration)
 			if err != nil {
 				err = fmt.Errorf("unable to set temperature for %s: %w", zoneName, err)
 			}

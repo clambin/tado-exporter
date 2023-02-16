@@ -179,7 +179,7 @@ func (c *Collector) collectZones(ch chan<- prometheus.Metric) {
 			if device.ConnectionState.Value {
 				value = 1.0
 			}
-			ch <- prometheus.MustNewConstMetric(c.tadoZoneDeviceConnectionStatus, prometheus.GaugeValue, value, zone.Name, id, device.DeviceType, device.Firmware)
+			ch <- prometheus.MustNewConstMetric(c.tadoZoneDeviceConnectionStatus, prometheus.GaugeValue, value, zone.Name, id, device.DeviceType, device.CurrentFwVersion)
 
 			value = 0.0
 			if device.BatteryState == "NORMAL" {

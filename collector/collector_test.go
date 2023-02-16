@@ -113,10 +113,10 @@ var Update = poller.Update{
 			Name: "foo",
 			Devices: []tado.Device{
 				{
-					DeviceType:      "RU02",
-					Firmware:        "67.2",
-					ConnectionState: tado.ConnectionState{Value: true},
-					BatteryState:    "NORMAL",
+					DeviceType:       "RU02",
+					CurrentFwVersion: "67.2",
+					ConnectionState:  tado.ConnectionState{Value: true},
+					BatteryState:     "NORMAL",
 				},
 			},
 		},
@@ -125,10 +125,10 @@ var Update = poller.Update{
 			Name: "bar",
 			Devices: []tado.Device{
 				{
-					DeviceType:      "VA02",
-					Firmware:        "57.2",
-					ConnectionState: tado.ConnectionState{Value: false},
-					BatteryState:    "LOW",
+					DeviceType:       "VA02",
+					CurrentFwVersion: "57.2",
+					ConnectionState:  tado.ConnectionState{Value: false},
+					BatteryState:     "LOW",
 				},
 			},
 		},
@@ -161,7 +161,7 @@ var Update = poller.Update{
 			},
 			Overlay: tado.ZoneInfoOverlay{
 				Type: "MANUAL",
-				Setting: tado.ZoneInfoOverlaySetting{
+				Setting: tado.ZonePowerSetting{
 					Type:        "HEATING",
 					Power:       "???",
 					Temperature: tado.Temperature{Celsius: 19.0},
