@@ -52,14 +52,8 @@ github.com/clambin/go-common/set v0.2.0 h1:s4wXxKns3sb2VPCtAmmLEDs4KiHNIiot+LcKg
 github.com/clambin/go-common/set v0.2.0/go.mod h1:GFjAZynNo4BNjlx2hzDMHIU4ays7QjpJUSHXB/3b1ZE=
 github.com/clambin/go-common/slackbot v0.2.1 h1:G7d82wp9d5PdyWzcvpNzKp798Fc5PQvnI/KqaJSN2nE=
 github.com/clambin/go-common/slackbot v0.2.1/go.mod h1:3qrvvhFM98PW3WiAuqxwvmYJ0mwO0RahWRAF5JaosIw=
-github.com/clambin/tado v0.9.0 h1:135tNnC1NFymEzrR+8JoaLURzSxlBIw8vfV1CCR+8p4=
-github.com/clambin/tado v0.9.0/go.mod h1:kfZRs0wBwILxXtwNytLn8g5SZWoq1EXS3GLN1yr6eS8=
-github.com/clambin/tado v0.9.1-0.20230215233357-2ad71859dbad h1:HZoFNbUuXDOsMAC3BGRq9y3u2ao2K9gNBwkmmf5per4=
-github.com/clambin/tado v0.9.1-0.20230215233357-2ad71859dbad/go.mod h1:H6b7uJbEE+4rN7vO9zlM6e4Np6Hs/XV7AK4NRTLyw2A=
-github.com/clambin/tado v0.9.1-0.20230216205349-1458a2e86a56 h1:xhoYDE+tfxqBdp4bw9dmjAMkpJ76Pyqib56ovq/hef4=
-github.com/clambin/tado v0.9.1-0.20230216205349-1458a2e86a56/go.mod h1:H6b7uJbEE+4rN7vO9zlM6e4Np6Hs/XV7AK4NRTLyw2A=
-github.com/clambin/tado v0.10.0 h1:oZsF/YpR+2+uYZEQeKX8SlXSZNH27aEQEMahWyLgmlo=
-github.com/clambin/tado v0.10.0/go.mod h1:H6b7uJbEE+4rN7vO9zlM6e4Np6Hs/XV7AK4NRTLyw2A=
+github.com/clambin/tado v0.11.0 h1:S1UUg/WNqKnik58PichpMDbeZVNVU8Q7jd1rQFAtYl8=
+github.com/clambin/tado v0.11.0/go.mod h1:mpA/QThUer6aeXoor9e9RWrftYvlij0s+GYzrAUtMI8=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
