@@ -1,8 +1,8 @@
 package rules
 
 import (
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
+	"github.com/clambin/tado-exporter/tado"
 	"time"
 )
 
@@ -16,7 +16,7 @@ var _ Rule = &LimitOverlayRule{}
 
 func (l *LimitOverlayRule) Evaluate(update *poller.Update) (NextState, error) {
 	var next NextState
-	if state := update.ZoneInfo[l.zoneID].GetState(); state == tado.ZoneStateManual {
+	if state := tado.GetZoneState(update.ZoneInfo[l.zoneID]); state == tado.ZoneStateManual {
 		next = NextState{
 			ZoneID:       l.zoneID,
 			ZoneName:     l.zoneName,

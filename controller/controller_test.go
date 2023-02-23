@@ -87,7 +87,7 @@ func prepareMockAPI(api *mocks.API) {
 	api.
 		On("GetZoneInfo", mock.Anything, 1).
 		Return(tado.ZoneInfo{
-			Setting: tado.ZoneInfoSetting{
+			Setting: tado.ZonePowerSetting{
 				Power:       "ON",
 				Temperature: tado.Temperature{Celsius: 18.5},
 			},
@@ -95,7 +95,7 @@ func prepareMockAPI(api *mocks.API) {
 	api.
 		On("GetZoneInfo", mock.Anything, 2).
 		Return(tado.ZoneInfo{
-			Setting: tado.ZoneInfoSetting{
+			Setting: tado.ZonePowerSetting{
 				Power:       "ON",
 				Temperature: tado.Temperature{Celsius: 15.0},
 			},
@@ -109,4 +109,7 @@ func prepareMockAPI(api *mocks.API) {
 				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 			},
 		}, nil)
+	api.
+		On("GetHomeState", mock.Anything).
+		Return(tado.HomeState{Presence: "HOME"}, nil)
 }

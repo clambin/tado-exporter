@@ -1,10 +1,10 @@
 package logger_test
 
 import (
-	"github.com/clambin/tado"
 	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/controller/zonemanager/logger"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
+	"github.com/clambin/tado-exporter/tado"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

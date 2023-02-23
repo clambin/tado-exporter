@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
+	tado2 "github.com/clambin/tado-exporter/tado"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -23,14 +24,14 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
 				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 			}}}},
-			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: time.Hour, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado2.ZoneStateAuto, Delay: time.Hour, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
 		},
 		{
 			name: "manual control w/ expiration",
 			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {Overlay: tado.ZoneInfoOverlay{
 				Type:        "MANUAL",
 				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
-				Termination: tado.ZoneInfoOverlayTermination{Type: "AUTO", RemainingTime: 300},
+				Termination: tado.ZoneInfoOverlayTermination{Type: "AUTO", RemainingTimeInSeconds: 300},
 			}}}},
 			//action: nil,
 		},

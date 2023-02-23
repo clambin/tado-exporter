@@ -3,15 +3,14 @@ package zonemanager
 import (
 	"context"
 	"fmt"
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
-	tadoAPI "github.com/clambin/tado-exporter/tado"
+	"github.com/clambin/tado-exporter/tado"
 	"time"
 )
 
 type Task struct {
-	api       tadoAPI.API
+	api       tado.API
 	nextState rules.NextState
 	when      time.Time
 	job       *scheduler.Job
@@ -19,7 +18,7 @@ type Task struct {
 
 var _ scheduler.Task = &Task{}
 
-func newTask(api tadoAPI.API, next rules.NextState) *Task {
+func newTask(api tado.API, next rules.NextState) *Task {
 	return &Task{
 		api:       api,
 		nextState: next,

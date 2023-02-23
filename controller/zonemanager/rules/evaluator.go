@@ -2,8 +2,8 @@ package rules
 
 import (
 	"fmt"
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
+	"github.com/clambin/tado-exporter/tado"
 	"time"
 )
 

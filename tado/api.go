@@ -17,4 +17,5 @@ type API interface {
 	DeleteZoneOverlay(context.Context, int) error
 	SetZoneOverlay(context.Context, int, float64) error
 	SetZoneTemporaryOverlay(context.Context, int, float64, time.Duration) error
+	GetHomeState(ctx context.Context) (homeState tado.HomeState, err error)
 }

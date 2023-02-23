@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
+	tado2 "github.com/clambin/tado-exporter/tado"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -21,16 +22,16 @@ func TestEvaluator_Evaluate(t *testing.T) {
 			name: "user away - auto control",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZoneInfoSetting{Power: "ON"}}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Power: "ON"}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 			},
-			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado2.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
 		},
 		{
 			name: "user home - auto control",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZoneInfoSetting{Power: "ON"}}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Power: "ON"}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			//action: nil,
@@ -46,7 +47,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: 15 * time.Minute, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado2.ZoneStateAuto, Delay: 15 * time.Minute, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
 		},
 		{
 			name: "user away - manual control",
@@ -59,7 +60,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 			},
-			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado2.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
 		},
 	}
 
@@ -101,7 +102,7 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 			name: "user home - auto control",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZoneInfoSetting{Power: "ON"}}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Power: "ON"}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			//action: nil,
@@ -117,7 +118,7 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado.ZoneStateAuto, Delay: 30 * time.Minute, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
+			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado2.ZoneStateAuto, Delay: 30 * time.Minute, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
 		},
 	}
 
@@ -195,7 +196,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 
 	var update = &poller.Update{
 		Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-		ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZoneInfoSetting{Power: "ON"}}},
+		ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Power: "ON"}}},
 		UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 	}
 

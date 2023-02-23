@@ -9,6 +9,7 @@ import (
 	promGo "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -42,7 +43,8 @@ func TestCollector(t *testing.T) {
 
 	for _, metric := range metrics {
 		t.Run(metric.GetName(), func(t *testing.T) {
-			expected, ok := CollectResult[metric.GetName()]
+			name := filepath.Base(t.Name())
+			expected, ok := CollectResult[name]
 			if !ok {
 				t.Logf("unexpected metric '%s'. ignoring ...", metric.GetName())
 				return
@@ -56,8 +58,8 @@ func TestCollector(t *testing.T) {
 							break
 						}
 					}
-					testMetricResult(t, expect, m, metric.GetType())
 				}
+				testMetricResult(t, expect, m, metric.GetType())
 			}
 		})
 	}
@@ -88,6 +90,7 @@ func testMetricResult(t *testing.T, expected MetricResult, metric *promGo.Metric
 }
 
 var Update = poller.Update{
+	Home: true,
 	UserInfo: map[int]tado.MobileDevice{
 		1: {
 			ID:       1,
@@ -115,7 +118,7 @@ var Update = poller.Update{
 				{
 					DeviceType:       "RU02",
 					CurrentFwVersion: "67.2",
-					ConnectionState:  tado.ConnectionState{Value: true},
+					ConnectionState:  tado.State{Value: true},
 					BatteryState:     "NORMAL",
 				},
 			},
@@ -127,7 +130,7 @@ var Update = poller.Update{
 				{
 					DeviceType:       "VA02",
 					CurrentFwVersion: "57.2",
-					ConnectionState:  tado.ConnectionState{Value: false},
+					ConnectionState:  tado.State{Value: false},
 					BatteryState:     "LOW",
 				},
 			},
@@ -135,7 +138,7 @@ var Update = poller.Update{
 	},
 	ZoneInfo: map[int]tado.ZoneInfo{
 		1: {
-			Setting: tado.ZoneInfoSetting{
+			Setting: tado.ZonePowerSetting{
 				Power:       "ON",
 				Temperature: tado.Temperature{Celsius: 22.0},
 			},
@@ -143,12 +146,12 @@ var Update = poller.Update{
 				HeatingPower: tado.Percentage{Percentage: 85.0},
 			},
 			SensorDataPoints: tado.ZoneInfoSensorDataPoints{
-				Temperature: tado.Temperature{Celsius: 21.0},
-				Humidity:    tado.Percentage{Percentage: 65.0},
+				InsideTemperature: tado.Temperature{Celsius: 21.0},
+				Humidity:          tado.Percentage{Percentage: 65.0},
 			},
 		},
 		2: {
-			Setting: tado.ZoneInfoSetting{
+			Setting: tado.ZonePowerSetting{
 				Power:       "OFF",
 				Temperature: tado.Temperature{Celsius: 25.0},
 			},
@@ -156,8 +159,8 @@ var Update = poller.Update{
 				HeatingPower: tado.Percentage{Percentage: 50.0},
 			},
 			SensorDataPoints: tado.ZoneInfoSensorDataPoints{
-				Temperature: tado.Temperature{Celsius: 18.0},
-				Humidity:    tado.Percentage{Percentage: 45.0},
+				InsideTemperature: tado.Temperature{Celsius: 18.0},
+				Humidity:          tado.Percentage{Percentage: 45.0},
 			},
 			Overlay: tado.ZoneInfoOverlay{
 				Type: "MANUAL",
@@ -226,4 +229,5 @@ var CollectResult = map[string]MetricResult{
 	"tado_zone_temperature_celsius": {
 		multiKey: "zone_name", multiValues: map[string]MetricResult{"foo": {value: 21.0}, "bar": {value: 18.0}},
 	},
+	"tado_home_state": {value: 1.0, labels: map[string]string{"home_state": "HOME"}},
 }

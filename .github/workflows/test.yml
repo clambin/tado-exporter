@@ -4,7 +4,7 @@ on:
   push:
     branches-ignore:
       - master
-      - viper
+      - tado
   pull_request_target:
 
 jobs:

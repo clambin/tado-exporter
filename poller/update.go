@@ -7,6 +7,7 @@ type Update struct {
 	ZoneInfo    map[int]tado.ZoneInfo
 	UserInfo    map[int]tado.MobileDevice
 	WeatherInfo tado.WeatherInfo
+	Home        bool
 }
 
 func (update Update) GetZoneID(name string) (int, bool) {

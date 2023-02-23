@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
+	tado2 "github.com/clambin/tado-exporter/tado"
 	"github.com/clambin/tado-exporter/tado/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -46,7 +47,7 @@ func prepareMockAPI(api *mocks.API) {
 	api.
 		On("GetZoneInfo", mock.Anything, 1).
 		Return(tado.ZoneInfo{
-			Setting: tado.ZoneInfoSetting{
+			Setting: tado.ZonePowerSetting{
 				Power:       "ON",
 				Temperature: tado.Temperature{Celsius: 18.5},
 			},
@@ -55,20 +56,18 @@ func prepareMockAPI(api *mocks.API) {
 	api.
 		On("GetZoneInfo", mock.Anything, 2).
 		Return(tado.ZoneInfo{
-			Setting: tado.ZoneInfoSetting{
-				Power:       "ON",
-				Temperature: tado.Temperature{Celsius: 15.0},
+			Setting: tado.ZonePowerSetting{
+				Power: "OFF",
 			},
 			Overlay: tado.ZoneInfoOverlay{
-				Type: "MANUAL",
-				Setting: tado.ZonePowerSetting{
-					Type:        "HEATING",
-					Power:       "OFF",
-					Temperature: tado.Temperature{Celsius: 5.0},
-				},
+				Type:        "MANUAL",
 				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 			},
 		}, nil).
+		Once()
+	api.
+		On("GetHomeState", mock.Anything).
+		Return(tado.HomeState{Presence: "HOME"}, nil).
 		Once()
 }
 
@@ -103,9 +102,11 @@ func TestPoller_Run(t *testing.T) {
 
 	require.Len(t, update.ZoneInfo, 2)
 	info := update.ZoneInfo[1]
-	assert.Equal(t, tado.ZoneStateAuto, (&info).GetState())
+	assert.Equal(t, tado2.ZoneStateAuto, tado2.GetZoneState(info))
 	info = update.ZoneInfo[2]
-	assert.Equal(t, tado.ZoneStateOff, (&info).GetState())
+	assert.Equal(t, tado2.ZoneStateOff, tado2.GetZoneState(info))
+
+	assert.True(t, update.Home)
 
 	p.Unregister(ch)
 }

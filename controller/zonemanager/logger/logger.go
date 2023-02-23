@@ -1,8 +1,8 @@
 package logger
 
 import (
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
+	"github.com/clambin/tado-exporter/tado"
 	"time"
 )
 

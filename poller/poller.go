@@ -108,6 +108,9 @@ func (poller *Server) update(ctx context.Context) (update Update, err error) {
 	if err == nil {
 		update.ZoneInfo, err = poller.getZoneInfos(ctx, update.Zones)
 	}
+	if err == nil {
+		update.Home, err = poller.getHomeState(ctx)
+	}
 	return
 }
 
@@ -121,7 +124,6 @@ func (poller *Server) getMobileDevices(ctx context.Context) (deviceMap map[int]t
 			}
 		}
 	}
-
 	return
 }
 
@@ -139,7 +141,6 @@ func (poller *Server) getZones(ctx context.Context) (zoneMap map[int]tado.Zone, 
 
 func (poller *Server) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) (map[int]tado.ZoneInfo, error) {
 	zoneInfoMap := make(map[int]tado.ZoneInfo)
-
 	for zoneID := range zones {
 		zoneInfo, err := poller.API.GetZoneInfo(ctx, zoneID)
 		if err != nil {
@@ -148,6 +149,13 @@ func (poller *Server) getZoneInfos(ctx context.Context, zones map[int]tado.Zone)
 
 		zoneInfoMap[zoneID] = zoneInfo
 	}
-
 	return zoneInfoMap, nil
+}
+
+func (poller *Server) getHomeState(ctx context.Context) (bool, error) {
+	homeState, err := poller.API.GetHomeState(ctx)
+	if err != nil {
+		return false, err
+	}
+	return homeState.Presence == "HOME", nil
 }

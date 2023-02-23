@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
+	tado2 "github.com/clambin/tado-exporter/tado"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/exp/slog"
 	"strconv"
@@ -29,6 +30,7 @@ type Collector struct {
 	tadoZoneTargetManualMode       *prometheus.Desc
 	tadoZoneTargetTempCelsius      *prometheus.Desc
 	tadoZoneTemperatureCelsius     *prometheus.Desc
+	tadoHomeState                  *prometheus.Desc
 }
 
 func New(p poller.Poller) *Collector {
@@ -121,6 +123,12 @@ func New(p poller.Poller) *Collector {
 			[]string{"zone_name"},
 			nil,
 		),
+		tadoHomeState: prometheus.NewDesc(
+			prometheus.BuildFQName("tado", "home", "state"),
+			"State of the home. Always 1. Label home_state specifies the stace",
+			[]string{"home_state"},
+			nil,
+		),
 	}
 }
 
@@ -139,6 +147,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.tadoZoneTargetManualMode
 	ch <- c.tadoZoneTargetTempCelsius
 	ch <- c.tadoZoneTemperatureCelsius
+	ch <- c.tadoHomeState
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
@@ -150,6 +159,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		c.collectWeather(ch)
 		c.collectZones(ch)
 		c.collectZoneInfos(ch)
+		c.collectHomeState(ch)
 	}
 }
 
@@ -212,23 +222,33 @@ func (c *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 		}
 		ch <- prometheus.MustNewConstMetric(c.tadoZonePowerState, prometheus.GaugeValue, value, zone.Name)
 
-		if zoneInfo.GetState() == tado.ZoneStateAuto {
+		if tado2.GetZoneState(zoneInfo) == tado2.ZoneStateAuto {
 			value = 0.0
 		} else {
 			value = 1.0
 		}
 		ch <- prometheus.MustNewConstMetric(c.tadoZoneTargetManualMode, prometheus.GaugeValue, value, zone.Name)
 
-		if zoneInfo.GetState() == tado.ZoneStateAuto {
+		if tado2.GetZoneState(zoneInfo) == tado2.ZoneStateAuto {
 			value = zoneInfo.Setting.Temperature.Celsius
 		} else {
 			value = zoneInfo.Overlay.Setting.Temperature.Celsius
 		}
 		ch <- prometheus.MustNewConstMetric(c.tadoZoneTargetTempCelsius, prometheus.GaugeValue, value, zone.Name)
 
-		ch <- prometheus.MustNewConstMetric(c.tadoZoneTemperatureCelsius, prometheus.GaugeValue, zoneInfo.SensorDataPoints.Temperature.Celsius, zone.Name)
+		ch <- prometheus.MustNewConstMetric(c.tadoZoneTemperatureCelsius, prometheus.GaugeValue, zoneInfo.SensorDataPoints.InsideTemperature.Celsius, zone.Name)
 	}
 
+}
+
+func (c *Collector) collectHomeState(ch chan<- prometheus.Metric) {
+	var label string
+	if c.lastUpdate.Home {
+		label = "HOME"
+	} else {
+		label = "AWAY"
+	}
+	ch <- prometheus.MustNewConstMetric(c.tadoHomeState, prometheus.GaugeValue, 1, label)
 }
 
 func (c *Collector) Run(ctx context.Context) {

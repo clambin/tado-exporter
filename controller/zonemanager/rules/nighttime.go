@@ -1,8 +1,8 @@
 package rules
 
 import (
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
+	"github.com/clambin/tado-exporter/tado"
 	"time"
 )
 
@@ -18,7 +18,7 @@ var testForceTime time.Time
 
 func (n *NightTimeRule) Evaluate(update *poller.Update) (NextState, error) {
 	var next NextState
-	if state := update.ZoneInfo[n.zoneID].GetState(); state == tado.ZoneStateManual {
+	if state := tado.GetZoneState(update.ZoneInfo[n.zoneID]); state == tado.ZoneStateManual {
 
 		now := time.Now()
 		if !testForceTime.IsZero() {

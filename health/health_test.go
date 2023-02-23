@@ -46,7 +46,7 @@ func TestHandler_Handle(t *testing.T) {
 			Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 			ZoneInfo: map[int]tado.ZoneInfo{
 				1: {
-					SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 22.0}},
+					SensorDataPoints: tado.ZoneInfoSensorDataPoints{InsideTemperature: tado.Temperature{Celsius: 22.0}},
 				},
 			},
 		}
@@ -99,7 +99,7 @@ func BenchmarkHealth_Handle(b *testing.B) {
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{
 			1: {
-				SensorDataPoints: tado.ZoneInfoSensorDataPoints{Temperature: tado.Temperature{Celsius: 22.0}},
+				SensorDataPoints: tado.ZoneInfoSensorDataPoints{InsideTemperature: tado.Temperature{Celsius: 22.0}},
 			},
 		},
 	}

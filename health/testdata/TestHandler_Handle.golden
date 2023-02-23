@@ -29,23 +29,11 @@
       "geolocationOverrideDisableTime": null,
       "preparation": null,
       "setting": {
+        "type": "",
         "power": "",
         "temperature": null
       },
-      "activityDataPoints": {
-        "heatingPower": {
-          "percentage": 0
-        }
-      },
-      "sensorDataPoints": {
-        "insideTemperature": {
-          "celsius": 22.0
-        },
-        "humidity": {
-          "percentage": 0
-        }
-      },
-      "overlayType": null,
+      "overlayType": "",
       "overlay": {
         "type": "",
         "setting": {
@@ -54,7 +42,12 @@
           "temperature": null
         },
         "termination": {
-          "type": ""
+          "type": "",
+          "typeSkillBasedApp": "",
+          "durationInSeconds": 0,
+          "expiry": "0001-01-01T00:00:00Z",
+          "remainingTimeInSeconds": 0,
+          "projectedExpiry": "0001-01-01T00:00:00Z"
         }
       },
       "openwindow": {
@@ -76,6 +69,19 @@
       },
       "link": {
         "state": ""
+      },
+      "activityDataPoints": {
+        "heatingPower": {
+          "percentage": 0
+        }
+      },
+      "sensorDataPoints": {
+        "insideTemperature": {
+          "celsius": 22.0
+        },
+        "humidity": {
+          "percentage": 0
+        }
       }
     }
   },
@@ -88,5 +94,6 @@
     "weatherState": {
       "value": ""
     }
-  }
+  },
+  "Home": false
 }
