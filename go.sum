@@ -64,6 +64,8 @@ github.com/clambin/tado v0.10.1-0.20230221220057-c226727fc478 h1:29N+PWnVG/UmlDN
 github.com/clambin/tado v0.10.1-0.20230221220057-c226727fc478/go.mod h1:H6b7uJbEE+4rN7vO9zlM6e4Np6Hs/XV7AK4NRTLyw2A=
 github.com/clambin/tado v0.11.0 h1:S1UUg/WNqKnik58PichpMDbeZVNVU8Q7jd1rQFAtYl8=
 github.com/clambin/tado v0.11.0/go.mod h1:mpA/QThUer6aeXoor9e9RWrftYvlij0s+GYzrAUtMI8=
+github.com/clambin/tado v0.11.1 h1:zk+f+QqX5PW5ielI379kIMmMX3whEIsv0RHc2lv9QFA=
+github.com/clambin/tado v0.11.1/go.mod h1:mpA/QThUer6aeXoor9e9RWrftYvlij0s+GYzrAUtMI8=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
