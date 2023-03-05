@@ -20,10 +20,10 @@ func TestCollector(t *testing.T) {
 	p := mocks.NewPoller(t)
 	p.On("Register").Return(ch).Once()
 	p.On("Unregister", ch).Return().Once()
-	c := New(p)
+	c := Collector{Poller: p}
 
 	r := prometheus.NewRegistry()
-	r.MustRegister(c)
+	r.MustRegister(&c)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup

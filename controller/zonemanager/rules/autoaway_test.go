@@ -22,6 +22,19 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado2.ZoneStateOff, Delay: time.Hour, ActionReason: "foo is away", CancelReason: "foo is home"},
 		},
 		{
+			name: "user is away",
+			update: &poller.Update{
+				Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: {
+					Setting: tado.ZonePowerSetting{Power: "OFF"},
+					Overlay: tado.ZoneInfoOverlay{
+						Type:        "MANUAL",
+						Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+					}}},
+				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
+			},
+		},
+		{
 			name: "user comes home",
 			update: &poller.Update{
 				Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
