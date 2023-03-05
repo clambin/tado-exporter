@@ -144,8 +144,11 @@ This highly depends on your particular Prometheus configuration. In its simplest
 scrape_configs:
 - job_name: tado
   static_configs:
-  - targets: [ '<tado host>:8080' ]
+  - targets: [ '<tado host>:<port>' ]
 ```
+
+where <port> is the Prometheus listener port configured in exporter.addr in the configuration file (the default being 9090).
+
 ### Metrics
 
 tado-exporter exposes the following metrics:
