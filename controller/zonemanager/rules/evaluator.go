@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/tado"
+	"golang.org/x/exp/slog"
 	"time"
 )
 
@@ -12,11 +13,13 @@ type Evaluator struct {
 	rules  []Rule
 }
 
+var _ Rule = &Evaluator{}
+
 type Rule interface {
 	Evaluate(*poller.Update) (NextState, error)
 }
 
-var _ Rule = &Evaluator{}
+var _ slog.LogValuer = &NextState{}
 
 type NextState struct {
 	ZoneID       int
@@ -29,6 +32,15 @@ type NextState struct {
 
 func (s NextState) IsZero() bool {
 	return s.ZoneID == 0 || s.ZoneName == ""
+}
+
+func (s NextState) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Int("id", s.ZoneID),
+		slog.String("name", s.ZoneName),
+		slog.String("state", s.State.String()),
+		slog.Duration("delay", s.Delay),
+	)
 }
 
 func (e *Evaluator) Evaluate(update *poller.Update) (NextState, error) {

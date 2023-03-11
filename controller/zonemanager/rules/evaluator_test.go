@@ -6,6 +6,7 @@ import (
 	tado2 "github.com/clambin/tado-exporter/tado"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"strings"
 	"testing"
 	"time"
 )
@@ -244,5 +245,36 @@ func BenchmarkEvaluator(b *testing.B) {
 		if _, err := e.Evaluate(update); err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+func TestNextState_LogValue(t *testing.T) {
+	tests := []struct {
+		name  string
+		state tado2.ZoneState
+		delay time.Duration
+		want  string
+	}{
+		{
+			name:  "no overlay",
+			state: tado2.ZoneStateAuto,
+			want:  "id=1, name=foo, state=auto, delay=0s",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NextState{
+				ZoneID:   1,
+				ZoneName: "foo",
+				State:    tt.state,
+				Delay:    tt.delay,
+			}
+
+			var output []string
+			for _, a := range s.LogValue().Group() {
+				output = append(output, a.String())
+			}
+			assert.Equal(t, tt.want, strings.Join(output, ", "))
+		})
 	}
 }

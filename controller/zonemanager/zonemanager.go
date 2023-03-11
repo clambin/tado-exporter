@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager/logger"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
@@ -49,11 +50,11 @@ func (m *Manager) Run(ctx context.Context) {
 			return
 		case update := <-ch:
 			if err := m.processUpdate(ctx, update); err != nil {
-				slog.Error("failed to process tado update", err, "zone", m.evaluator.Config.Zone)
+				slog.Error("failed to process tado update", "err", err, "zone", m.evaluator.Config.Zone)
 			}
 		case <-m.notifier:
 			if err := m.processResult(); err != nil {
-				slog.Error("failed to set next state", err, "zone", m.evaluator.Config.Zone)
+				slog.Error("failed to set next state", "err", err, "zone", m.evaluator.Config.Zone)
 			}
 		}
 	}
@@ -66,12 +67,28 @@ func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) erro
 	}
 
 	if !next.IsZero() {
+		slogJob(next, update)
 		m.scheduleJob(ctx, next)
 	} else {
 		m.cancelJob()
 	}
 
 	return nil
+}
+
+func slogJob(next rules.NextState, update *poller.Update) {
+	zoneGroup := []slog.Attr{slog.Group("settings",
+		slog.String("power", update.ZoneInfo[next.ZoneID].Setting.Power),
+		slog.Float64("temperature", update.ZoneInfo[next.ZoneID].Setting.Temperature.Celsius),
+	)}
+	if update.ZoneInfo[next.ZoneID].Overlay.GetMode() != tado.NoOverlay {
+		zoneGroup = append(zoneGroup, slog.Group("overlay",
+			slog.String("power", update.ZoneInfo[next.ZoneID].Overlay.Setting.Power),
+			slog.Float64("temperature", update.ZoneInfo[next.ZoneID].Overlay.Setting.Temperature.Celsius),
+		))
+	}
+
+	slog.Debug("scheduling job", "next", next, slog.Group("zoneState", zoneGroup...))
 }
 
 func (m *Manager) scheduleJob(ctx context.Context, next rules.NextState) {

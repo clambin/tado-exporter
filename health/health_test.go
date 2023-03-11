@@ -6,7 +6,6 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/poller/mocks"
-	"github.com/go-http-utils/headers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -59,7 +58,7 @@ func TestHandler_Handle(t *testing.T) {
 		resp = httptest.NewRecorder()
 		h.Handle(resp, &http.Request{})
 		require.Equal(t, http.StatusOK, resp.Code)
-		assert.Equal(t, "application/json", resp.Header().Get(headers.ContentType))
+		assert.Equal(t, "application/json", resp.Header().Get("Content-Type"))
 
 		response := resp.Body.Bytes()
 

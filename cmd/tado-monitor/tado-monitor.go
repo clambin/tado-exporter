@@ -41,7 +41,7 @@ var (
 
 func main() {
 	if err := cmd.Execute(); err != nil {
-		slog.Error("failed to start", err)
+		slog.Error("failed to start", "err", err)
 		os.Exit(1)
 	}
 }
@@ -82,7 +82,7 @@ func Main(_ *cobra.Command, _ []string) {
 	// Do we have zone rules?
 	r, err := GetZoneRules()
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		slog.Error("failed to read zone rules", err)
+		slog.Error("failed to read zone rules", "err", err)
 		os.Exit(1)
 	}
 
@@ -106,7 +106,7 @@ func Main(_ *cobra.Command, _ []string) {
 func runPrometheusServer() {
 	http.Handle("/metrics", promhttp.Handler())
 	if err := http.ListenAndServe(viper.GetString("exporter.addr"), nil); !errors.Is(err, http.ErrServerClosed) {
-		slog.Error("failed to start prometheus metrics server", err)
+		slog.Error("failed to start prometheus metrics server", "err", err)
 	}
 }
 
@@ -118,7 +118,7 @@ func runHealthEndpoint(ctx context.Context, p poller.Poller, wg *sync.WaitGroup)
 	handler := http.NewServeMux()
 	handler.Handle("/health", http.HandlerFunc(h.Handle))
 	if err := http.ListenAndServe(viper.GetString("health.addr"), handler); !errors.Is(err, http.ErrServerClosed) {
-		slog.Error("failed to start health server", err)
+		slog.Error("failed to start health server", "err", err)
 	}
 }
 
@@ -196,7 +196,7 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
-		slog.Error("failed to read config file", err)
+		slog.Error("failed to read config file", "err", err)
 		os.Exit(1)
 	}
 }

@@ -56,7 +56,7 @@ func (poller *Server) Run(ctx context.Context, interval time.Duration) {
 		if shouldPoll {
 			// poll for new data
 			if err := poller.poll(ctx); err != nil {
-				slog.Error("failed to get Tado metrics", err)
+				slog.Error("failed to get tado metrics", "err", err)
 			}
 		}
 	}

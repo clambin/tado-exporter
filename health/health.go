@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"github.com/clambin/go-common/cache"
 	"github.com/clambin/tado-exporter/poller"
-	"github.com/go-http-utils/headers"
 	"golang.org/x/exp/slog"
 	"net/http"
 	"time"
@@ -64,7 +63,7 @@ func (h *Health) Handle(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set(headers.ContentType, "application/json")
+	w.Header().Set("Content-Type", "application/json")
 
 	_, _ = w.Write(b.Bytes())
 }

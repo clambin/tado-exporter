@@ -6,14 +6,13 @@ require (
 	github.com/clambin/go-common/cache v0.1.1
 	github.com/clambin/go-common/slackbot v0.2.1
 	github.com/clambin/tado v1.0.1
-	github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
 	github.com/slack-go/slack v0.12.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
-	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb
+	golang.org/x/exp v0.0.0-20230310171629-522b1b587ee0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
