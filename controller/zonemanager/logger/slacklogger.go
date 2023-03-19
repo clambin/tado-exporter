@@ -15,7 +15,7 @@ var _ Logger = &SlackLogger{}
 func (s SlackLogger) Log(action Action, state rules.TargetState) {
 	_ = s.Bot.Send("", []slack.Attachment{{
 		Color: "good",
-		Title: state.ZoneName + ": " + state.Reason,
-		Text:  buildMessage(action, state),
+		Title: state.ZoneName + ": " + buildMessage(action, state),
+		Text:  state.Reason,
 	}})
 }

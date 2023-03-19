@@ -42,7 +42,8 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (TargetState, error) {
 	currentState := tado2.GetZoneState(update.ZoneInfo[a.ZoneID])
 
 	if allAway {
-		if next.Action = currentState != tado2.ZoneStateOff; next.Action {
+		if currentState != tado2.ZoneStateOff && update.ZoneInfo[a.ZoneID].Setting.Power != "OFF" {
+			next.Action = true
 			next.State = tado2.ZoneStateOff
 			next.Delay = a.Delay
 			next.Reason = makeReason(away, "away")
@@ -50,7 +51,8 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (TargetState, error) {
 			next.Reason = makeReason(away, "away")
 		}
 	} else if someoneHome {
-		if next.Action = currentState == tado2.ZoneStateOff; next.Action {
+		if currentState == tado2.ZoneStateOff && update.ZoneInfo[a.ZoneID].Setting.Power != "ON" {
+			next.Action = true
 			next.State = tado2.ZoneStateAuto
 			next.Delay = 0
 			next.Reason = makeReason(home, "home")

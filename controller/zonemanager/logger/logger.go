@@ -33,7 +33,7 @@ func buildMessage(action Action, state rules.TargetState) string {
 	case Done:
 		return getAction(state)
 	case Canceled:
-		return "cancel " + getAction(state)
+		return "canceling " + getAction(state)
 	}
 	return ""
 }

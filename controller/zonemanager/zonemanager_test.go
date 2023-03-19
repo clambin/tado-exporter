@@ -113,7 +113,7 @@ var (
 				ZoneName: "foo",
 				State:    tado2.ZoneStateAuto,
 			},
-			notification: "cancel moving to auto mode",
+			notification: "canceling moving to auto mode",
 		},
 		{
 			name: "user away",
@@ -191,7 +191,7 @@ func TestManager_Run(t *testing.T) {
 					attachments, ok := args[1].([]slack.Attachment)
 					require.True(t, ok)
 					require.Len(t, attachments, 1)
-					assert.Equal(t, tt.notification, attachments[0].Text)
+					assert.Contains(t, attachments[0].Title, tt.notification)
 				}).Return(nil).Once()
 			}
 			ch <- tt.update
