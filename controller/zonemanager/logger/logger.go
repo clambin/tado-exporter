@@ -7,7 +7,7 @@ import (
 )
 
 type Logger interface {
-	Log(action Action, state rules.NextState)
+	Log(action Action, state rules.TargetState)
 }
 
 type Action int
@@ -20,13 +20,13 @@ const (
 
 type Loggers []Logger
 
-func (ls Loggers) Log(action Action, state rules.NextState) {
+func (ls Loggers) Log(action Action, state rules.TargetState) {
 	for _, l := range ls {
 		l.Log(action, state)
 	}
 }
 
-func buildMessage(action Action, state rules.NextState) string {
+func buildMessage(action Action, state rules.TargetState) string {
 	switch action {
 	case Queued:
 		return getAction(state) + " in " + state.Delay.Round(time.Second).String()
@@ -38,20 +38,12 @@ func buildMessage(action Action, state rules.NextState) string {
 	return ""
 }
 
-func getAction(state rules.NextState) (text string) {
+func getAction(state rules.TargetState) string {
 	switch state.State {
 	case tado.ZoneStateAuto:
-		text = "moving to auto mode"
+		return "moving to auto mode"
 	case tado.ZoneStateOff:
-		text = "switching off heating"
+		return "switching off heating"
 	}
-
-	return
-}
-
-func getReason(action Action, state rules.NextState) string {
-	if action == Canceled {
-		return state.CancelReason
-	}
-	return state.ActionReason
+	return "unknown"
 }

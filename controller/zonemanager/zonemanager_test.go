@@ -38,7 +38,7 @@ var (
 		name         string
 		update       *poller.Update
 		current      tado2.ZoneState
-		next         rules.NextState
+		next         rules.TargetState
 		call         string
 		args         []interface{}
 		notification string
@@ -51,7 +51,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado2.ZoneStateAuto,
-			next: rules.NextState{
+			next: rules.TargetState{
 				ZoneID:   1,
 				ZoneName: "foo",
 				State:    tado2.ZoneStateAuto,
@@ -70,13 +70,12 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado2.ZoneStateManual,
-			next: rules.NextState{
-				ZoneID:       1,
-				ZoneName:     "foo",
-				State:        tado2.ZoneStateAuto,
-				Delay:        time.Hour,
-				ActionReason: "manual temperature setting detected",
-				CancelReason: "room is now in auto mode",
+			next: rules.TargetState{
+				ZoneID:   1,
+				ZoneName: "foo",
+				State:    tado2.ZoneStateAuto,
+				Delay:    time.Hour,
+				Reason:   "manual temperature setting detected",
 			},
 			notification: "moving to auto mode in 1h0m0s",
 		},
@@ -93,13 +92,12 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado2.ZoneStateManual,
-			next: rules.NextState{
-				ZoneID:       1,
-				ZoneName:     "foo",
-				State:        tado2.ZoneStateAuto,
-				Delay:        time.Hour,
-				ActionReason: "manual temperature setting detected",
-				CancelReason: "room is now in auto mode",
+			next: rules.TargetState{
+				ZoneID:   1,
+				ZoneName: "foo",
+				State:    tado2.ZoneStateAuto,
+				Delay:    time.Hour,
+				Reason:   "manual temperature setting detected",
 			},
 		},
 		{
@@ -110,7 +108,7 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado2.ZoneStateAuto,
-			next: rules.NextState{
+			next: rules.TargetState{
 				ZoneID:   1,
 				ZoneName: "foo",
 				State:    tado2.ZoneStateAuto,
@@ -125,13 +123,12 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 			},
 			current: tado2.ZoneStateAuto,
-			next: rules.NextState{
-				ZoneID:       1,
-				ZoneName:     "foo",
-				State:        tado2.ZoneStateOff,
-				Delay:        2 * time.Hour,
-				ActionReason: "foo is away",
-				CancelReason: "foo is home",
+			next: rules.TargetState{
+				ZoneID:   1,
+				ZoneName: "foo",
+				State:    tado2.ZoneStateOff,
+				Delay:    2 * time.Hour,
+				Reason:   "foo is away",
 			},
 			notification: "switching off heating in 2h0m0s",
 		},
@@ -148,13 +145,12 @@ var (
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: tado2.ZoneStateOff,
-			next: rules.NextState{
-				ZoneID:       1,
-				ZoneName:     "foo",
-				State:        tado2.ZoneStateAuto,
-				Delay:        0,
-				ActionReason: "foo is home",
-				CancelReason: "foo is away",
+			next: rules.TargetState{
+				ZoneID:   1,
+				ZoneName: "foo",
+				State:    tado2.ZoneStateAuto,
+				Delay:    0,
+				Reason:   "foo is home",
 			},
 			call:         "DeleteZoneOverlay",
 			args:         []interface{}{mock.AnythingOfType("*context.cancelCtx"), 1},
@@ -233,11 +229,11 @@ func TestManager_Scheduled(t *testing.T) {
 	}
 
 	assert.Eventually(t, func() bool {
-		_, scheduled := m.Scheduled()
+		_, scheduled := m.GetScheduled()
 		return scheduled
 	}, time.Second, 10*time.Millisecond)
 
-	state, scheduled := m.Scheduled()
+	state, scheduled := m.GetScheduled()
 	require.True(t, scheduled)
 	assert.Equal(t, tado2.ZoneStateAuto, state.State)
 
@@ -280,7 +276,7 @@ func TestManagers_ReportTasks(t *testing.T) {
 	}
 
 	assert.Eventually(t, func() bool {
-		_, scheduled := m.Scheduled()
+		_, scheduled := m.GetScheduled()
 		return scheduled
 	}, time.Second, 10*time.Millisecond)
 

@@ -14,17 +14,17 @@ type LimitOverlayRule struct {
 
 var _ Rule = &LimitOverlayRule{}
 
-func (l *LimitOverlayRule) Evaluate(update *poller.Update) (NextState, error) {
-	var next NextState
+func (l *LimitOverlayRule) Evaluate(update *poller.Update) (TargetState, error) {
+	next := TargetState{
+		ZoneID:   l.zoneID,
+		ZoneName: l.zoneName,
+		Reason:   "no manual settings detected",
+	}
 	if state := tado.GetZoneState(update.ZoneInfo[l.zoneID]); state == tado.ZoneStateManual {
-		next = NextState{
-			ZoneID:       l.zoneID,
-			ZoneName:     l.zoneName,
-			State:        tado.ZoneStateAuto,
-			Delay:        l.delay,
-			ActionReason: "manual temp setting detected",
-			CancelReason: "room no longer in manual temp setting",
-		}
+		next.Action = true
+		next.State = tado.ZoneStateAuto
+		next.Delay = l.delay
+		next.Reason = "manual temp setting detected"
 	}
 	return next, nil
 }

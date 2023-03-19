@@ -100,7 +100,7 @@ func TestController_Rules(t *testing.T) {
 	}
 
 	require.Eventually(t, func() bool {
-		_, found := mgrs[0].Scheduled()
+		_, found := mgrs[0].GetScheduled()
 		return found
 	}, time.Second, 10*time.Millisecond)
 

@@ -66,17 +66,20 @@ func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) erro
 		return fmt.Errorf("failed to evaluate rules: %w", err)
 	}
 
-	if !next.IsZero() {
+	if next.Action {
 		slogJob(next, update)
 		m.scheduleJob(ctx, next)
 	} else {
-		m.cancelJob()
+		m.cancelJob(next)
 	}
 
 	return nil
 }
 
-func slogJob(next rules.NextState, update *poller.Update) {
+func slogJob(next rules.TargetState, update *poller.Update) {
+	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		return
+	}
 	zoneGroup := []slog.Attr{slog.Group("settings",
 		slog.String("power", update.ZoneInfo[next.ZoneID].Setting.Power),
 		slog.Float64("temperature", update.ZoneInfo[next.ZoneID].Setting.Temperature.Celsius),
@@ -87,11 +90,10 @@ func slogJob(next rules.NextState, update *poller.Update) {
 			slog.Float64("temperature", update.ZoneInfo[next.ZoneID].Overlay.Setting.Temperature.Celsius),
 		))
 	}
-
 	slog.Debug("scheduling job", "next", next, slog.Group("zoneState", zoneGroup...))
 }
 
-func (m *Manager) scheduleJob(ctx context.Context, next rules.NextState) {
+func (m *Manager) scheduleJob(ctx context.Context, next rules.TargetState) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -108,18 +110,20 @@ func (m *Manager) scheduleJob(ctx context.Context, next rules.NextState) {
 
 	m.task = newTask(m.api, next)
 	m.task.job = scheduler.ScheduleWithNotification(ctx, m.task, next.Delay, m.notifier)
-
 	if next.Delay > 0 {
 		m.loggers.Log(logger.Queued, next)
 	}
 }
 
-func (m *Manager) cancelJob() {
+func (m *Manager) cancelJob(next rules.TargetState) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	if m.task != nil {
+		nextState := m.task.nextState
+		nextState.Reason = next.Reason
 		m.task.job.Cancel()
+		m.loggers.Log(logger.Canceled, nextState)
 	}
 }
 
@@ -139,47 +143,44 @@ func (m *Manager) processResult() error {
 	if err == nil {
 		m.loggers.Log(logger.Done, m.task.nextState)
 	} else if errors.Is(err, scheduler.ErrCanceled) {
-		m.loggers.Log(logger.Canceled, m.task.nextState)
 		err = nil
 	}
 	// TODO: reschedule task if it failed?
 
 	m.task = nil
-
 	return err
 }
 
-func (m *Manager) Scheduled() (next rules.NextState, scheduled bool) {
+func (m *Manager) GetScheduled() (rules.TargetState, bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	if m.task != nil {
-		next = m.task.nextState
-		scheduled = true
+		return m.task.nextState, true
 	}
-	return
+	return rules.TargetState{}, false
 }
 
-func (m *Manager) ReportTask() (report string, scheduled bool) {
+func (m *Manager) ReportTask() (string, bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	if m.task != nil {
-		report = m.task.Report()
-		scheduled = true
+		return m.task.Report(), true
 	}
-	return
+	return "", false
 }
 
 type Managers []*Manager
 
-func (m Managers) GetScheduled() (states []rules.NextState) {
+func (m Managers) GetScheduled() []rules.TargetState {
+	var states []rules.TargetState
 	for _, mgr := range m {
-		if state, scheduled := mgr.Scheduled(); scheduled {
+		if state, scheduled := mgr.GetScheduled(); scheduled {
 			states = append(states, state)
 		}
 	}
-	return
+	return states
 }
 
 func (m Managers) ReportTasks() ([]string, bool) {

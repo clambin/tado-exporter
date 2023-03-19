@@ -86,13 +86,12 @@ func (poller *Server) poll(ctx context.Context) error {
 	start := time.Now()
 	update, err := poller.update(ctx)
 	if err == nil {
-		slog.Debug("update received", "duration", time.Since(start))
 		poller.lock.RLock()
 		defer poller.lock.RUnlock()
 		for ch := range poller.registry {
 			ch <- &update
 		}
-		slog.Debug("update sent", "clients", len(poller.registry))
+		slog.Debug("poll completed", "duration", time.Since(start))
 	}
 	return err
 }

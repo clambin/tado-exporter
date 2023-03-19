@@ -16,23 +16,22 @@ var _ Rule = &NightTimeRule{}
 
 var testForceTime time.Time
 
-func (n *NightTimeRule) Evaluate(update *poller.Update) (NextState, error) {
-	var next NextState
-	if state := tado.GetZoneState(update.ZoneInfo[n.zoneID]); state == tado.ZoneStateManual {
+func (n *NightTimeRule) Evaluate(update *poller.Update) (TargetState, error) {
+	next := TargetState{
+		ZoneID:   n.zoneID,
+		ZoneName: n.zoneName,
+		Reason:   "no manual settings detected",
+	}
 
+	if state := tado.GetZoneState(update.ZoneInfo[n.zoneID]); state == tado.ZoneStateManual {
 		now := time.Now()
 		if !testForceTime.IsZero() {
 			now = testForceTime
 		}
-
-		next = NextState{
-			ZoneID:       n.zoneID,
-			ZoneName:     n.zoneName,
-			State:        tado.ZoneStateAuto,
-			Delay:        getNextNightTimeDelay(now, n.timestamp),
-			ActionReason: "manual temp setting detected",
-			CancelReason: "room no longer in manual temp setting",
-		}
+		next.Action = true
+		next.State = tado.ZoneStateAuto
+		next.Delay = getNextNightTimeDelay(now, n.timestamp)
+		next.Reason = "manual temp setting detected"
 	}
 	return next, nil
 }

@@ -10,6 +10,6 @@ type StdOutLogger struct {
 
 var _ Logger = &StdOutLogger{}
 
-func (l *StdOutLogger) Log(action Action, next rules.NextState) {
-	slog.Info(next.ZoneName+": "+buildMessage(action, next), "reason", getReason(action, next))
+func (l *StdOutLogger) Log(action Action, next rules.TargetState) {
+	slog.Info(next.ZoneName+": "+buildMessage(action, next), "reason", next.Reason)
 }
