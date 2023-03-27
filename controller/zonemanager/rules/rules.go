@@ -1,8 +1,10 @@
 package rules
 
 import (
+	"context"
 	"fmt"
 	"github.com/clambin/tado-exporter/poller"
+	"golang.org/x/exp/slog"
 )
 
 type Evaluator struct {
@@ -31,7 +33,10 @@ func (e *Evaluator) Evaluate(update *poller.Update) (TargetState, error) {
 		targetStates = append(targetStates, next)
 	}
 
-	return targetStates.GetNextState(), nil
+	next := targetStates.GetNextState()
+	e.slog(next, update)
+
+	return next, nil
 }
 
 func (e *Evaluator) load(update *poller.Update) error {
@@ -69,4 +74,47 @@ func (e *Evaluator) load(update *poller.Update) error {
 	}
 
 	return nil
+}
+
+func (e *Evaluator) slog(next TargetState, update *poller.Update) {
+	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		return
+	}
+	zoneInfo := update.ZoneInfo[next.ZoneID]
+
+	groups := []any{
+		slog.Group("zone",
+			slog.Int("id", next.ZoneID),
+			slog.String("name", next.ZoneName),
+		),
+		slog.Group("state",
+			slog.String("state", next.State.String()),
+			slog.Bool("action", next.Action),
+			slog.Duration("delay", next.Delay),
+		),
+		slog.Group("zoneInfo",
+			slog.String("power", zoneInfo.Setting.Power),
+			slog.Group("overlay",
+				slog.String("type", zoneInfo.Overlay.Type),
+				slog.String("type", zoneInfo.Overlay.Setting.Type),
+				slog.String("power", zoneInfo.Overlay.Setting.Power),
+				slog.Group("termination",
+					slog.String("type", zoneInfo.Overlay.Termination.Type),
+					slog.String("subtype", zoneInfo.Overlay.Termination.TypeSkillBasedApp),
+				),
+			),
+		),
+	}
+	for id, device := range update.UserInfo {
+		groups = append(groups,
+			slog.Group("device",
+				slog.Int("id", id),
+				slog.String("name", device.Name),
+				slog.Bool("home", device.Location.AtHome),
+				slog.Bool("geotracked", device.Settings.GeoTrackingEnabled),
+			),
+		)
+	}
+
+	slog.Debug("next state evaluated", groups...)
 }

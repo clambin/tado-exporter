@@ -50,7 +50,7 @@ func Main(_ *cobra.Command, _ []string) {
 
 	if viper.GetBool("debug") {
 		opts := slog.HandlerOptions{Level: slog.LevelDebug}
-		slog.SetDefault(slog.New(opts.NewTextHandler(os.Stderr)))
+		slog.SetDefault(slog.New(opts.NewJSONHandler(os.Stderr)))
 	}
 
 	// context to terminate the created go routines
