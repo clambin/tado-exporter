@@ -2,7 +2,6 @@ package rules
 
 import (
 	"github.com/clambin/tado-exporter/poller"
-	"github.com/clambin/tado-exporter/tado"
 	"time"
 )
 
@@ -23,13 +22,13 @@ func (n *NightTimeRule) Evaluate(update *poller.Update) (TargetState, error) {
 		Reason:   "no manual settings detected",
 	}
 
-	if state := tado.GetZoneState(update.ZoneInfo[n.zoneID]); state == tado.ZoneStateManual {
+	if state := poller.GetZoneState(update.ZoneInfo[n.zoneID]); state == poller.ZoneStateManual {
 		now := time.Now()
 		if !testForceTime.IsZero() {
 			now = testForceTime
 		}
 		next.Action = true
-		next.State = tado.ZoneStateAuto
+		next.State = poller.ZoneStateAuto
 		next.Delay = getNextNightTimeDelay(now, n.timestamp)
 		next.Reason = "manual temp setting detected"
 	}

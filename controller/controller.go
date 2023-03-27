@@ -7,7 +7,6 @@ import (
 	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
-	tadoAPI "github.com/clambin/tado-exporter/tado"
 	"golang.org/x/exp/slog"
 	"sync"
 )
@@ -18,8 +17,14 @@ type Controller struct {
 	cmds         *commands.Manager
 }
 
+//go:generate mockery --name TadoSetter
+type TadoSetter interface {
+	zonemanager.TadoSetter
+	commands.TadoSetter
+}
+
 // New creates a new Controller object
-func New(api tadoAPI.API, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p poller.Poller) *Controller {
+func New(api TadoSetter, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p poller.Poller) *Controller {
 	var c Controller
 
 	for _, zoneCfg := range cfg {

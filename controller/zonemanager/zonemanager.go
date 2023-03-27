@@ -10,7 +10,6 @@ import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/clambin/tado-exporter/poller"
-	tadoAPI "github.com/clambin/tado-exporter/tado"
 	"golang.org/x/exp/slog"
 	"sync"
 )
@@ -18,14 +17,14 @@ import (
 type Manager struct {
 	evaluator rules.Evaluator
 	task      *Task
-	api       tadoAPI.API
+	api       TadoSetter
 	loggers   logger.Loggers
 	poller    poller.Poller
 	notifier  chan struct{}
 	lock      sync.RWMutex
 }
 
-func New(api tadoAPI.API, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneConfig) *Manager {
+func New(api TadoSetter, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneConfig) *Manager {
 	loggers := logger.Loggers{&logger.StdOutLogger{}}
 	if bot != nil {
 		loggers = append(loggers, &logger.SlackLogger{Bot: bot})

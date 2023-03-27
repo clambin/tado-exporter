@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
-	tado2 "github.com/clambin/tado-exporter/tado"
 	"strings"
 	"time"
 )
@@ -39,21 +38,21 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (TargetState, error) {
 
 	allAway := len(home) == 0 && len(away) > 0
 	someoneHome := len(home) > 0
-	currentState := tado2.GetZoneState(update.ZoneInfo[a.ZoneID])
+	currentState := poller.GetZoneState(update.ZoneInfo[a.ZoneID])
 
 	if allAway {
-		if currentState != tado2.ZoneStateOff && update.ZoneInfo[a.ZoneID].Setting.Power != "OFF" {
+		if currentState != poller.ZoneStateOff && update.ZoneInfo[a.ZoneID].Setting.Power != "OFF" {
 			next.Action = true
-			next.State = tado2.ZoneStateOff
+			next.State = poller.ZoneStateOff
 			next.Delay = a.Delay
 			next.Reason = makeReason(away, "away")
 		} else {
 			next.Reason = makeReason(away, "away")
 		}
 	} else if someoneHome {
-		if currentState == tado2.ZoneStateOff && update.ZoneInfo[a.ZoneID].Setting.Power != "ON" {
+		if currentState == poller.ZoneStateOff && update.ZoneInfo[a.ZoneID].Setting.Power != "ON" {
 			next.Action = true
-			next.State = tado2.ZoneStateAuto
+			next.State = poller.ZoneStateAuto
 			next.Delay = 0
 			next.Reason = makeReason(home, "home")
 		} else {

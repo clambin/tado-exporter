@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado"
-	tadoAPI "github.com/clambin/tado-exporter/tado"
 	"golang.org/x/exp/slog"
 	"sync"
 	"time"
@@ -18,16 +17,25 @@ type Poller interface {
 	Refresh()
 }
 
+//go:generate mockery --name TadoGetter
+type TadoGetter interface {
+	GetWeatherInfo(context.Context) (tado.WeatherInfo, error)
+	GetMobileDevices(context.Context) ([]tado.MobileDevice, error)
+	GetZones(context.Context) (tado.Zones, error)
+	GetZoneInfo(context.Context, int) (tado.ZoneInfo, error)
+	GetHomeState(ctx context.Context) (homeState tado.HomeState, err error)
+}
+
 var _ Poller = &Server{}
 
 type Server struct {
-	API      tadoAPI.API
+	API      TadoGetter
 	refresh  chan struct{}
 	registry map[chan *Update]struct{}
 	lock     sync.RWMutex
 }
 
-func New(API tadoAPI.API) *Server {
+func New(API TadoGetter) *Server {
 	return &Server{
 		API:      API,
 		refresh:  make(chan struct{}),

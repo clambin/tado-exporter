@@ -1,4 +1,4 @@
-package tado
+package poller
 
 import (
 	"github.com/clambin/tado"

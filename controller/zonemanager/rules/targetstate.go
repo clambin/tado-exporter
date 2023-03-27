@@ -1,7 +1,7 @@
 package rules
 
 import (
-	"github.com/clambin/tado-exporter/tado"
+	"github.com/clambin/tado-exporter/poller"
 	"golang.org/x/exp/slog"
 	"sort"
 	"strings"
@@ -14,7 +14,7 @@ type TargetState struct {
 	ZoneID   int
 	ZoneName string
 	Action   bool
-	State    tado.ZoneState
+	State    poller.ZoneState
 	Delay    time.Duration
 	Reason   string
 }
@@ -61,7 +61,7 @@ func (t TargetStates) getFirstAction() TargetState {
 			if a.Delay < targetState.Delay {
 				targetState = a
 			}
-		} else if a.State == tado.ZoneStateOff {
+		} else if a.State == poller.ZoneStateOff {
 			// we give preference to rules that switch off the zone (i.e. currently the AutoAway rule)
 			targetState = a
 		}
@@ -74,7 +74,7 @@ func (t TargetStates) getNoAction() TargetState {
 		ZoneID:   t[0].ZoneID,
 		ZoneName: t[0].ZoneName,
 		Action:   false,
-		State:    tado.ZoneStateUnknown,
+		State:    poller.ZoneStateUnknown,
 		Delay:    0,
 		Reason:   t.getCombinedReason(),
 	}

@@ -3,7 +3,6 @@ package rules
 import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
-	tado2 "github.com/clambin/tado-exporter/tado"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"strings"
@@ -26,7 +25,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Power: "ON"}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 			},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: tado2.ZoneStateOff, Delay: time.Hour, Reason: "foo is away"},
+			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: poller.ZoneStateOff, Delay: time.Hour, Reason: "foo is away"},
 		},
 		{
 			name: "user home - auto control",
@@ -35,7 +34,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Power: "ON"}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: false, State: tado2.ZoneStateUnknown, Delay: 0, Reason: "foo is home, no manual settings detected"},
+			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: false, State: poller.ZoneStateUnknown, Delay: 0, Reason: "foo is home, no manual settings detected"},
 		},
 		{
 			name: "user home - manual control",
@@ -48,7 +47,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: tado2.ZoneStateAuto, Delay: 15 * time.Minute, Reason: "manual temp setting detected"},
+			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: poller.ZoneStateAuto, Delay: 15 * time.Minute, Reason: "manual temp setting detected"},
 		},
 		{
 			name: "user away - manual control",
@@ -61,7 +60,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 			},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: tado2.ZoneStateOff, Delay: time.Hour, Reason: "foo is away"},
+			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: poller.ZoneStateOff, Delay: time.Hour, Reason: "foo is away"},
 		},
 	}
 
@@ -96,7 +95,7 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Power: "ON"}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: false, State: tado2.ZoneStateUnknown, Delay: 0, Reason: "no manual settings detected"},
+			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: false, State: poller.ZoneStateUnknown, Delay: 0, Reason: "no manual settings detected"},
 		},
 		{
 			name: "user home - manual control",
@@ -109,7 +108,7 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 				}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: tado2.ZoneStateAuto, Delay: 30 * time.Minute, Reason: "manual temp setting detected"},
+			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: poller.ZoneStateAuto, Delay: 30 * time.Minute, Reason: "manual temp setting detected"},
 		},
 	}
 
@@ -235,13 +234,13 @@ func BenchmarkEvaluator(b *testing.B) {
 func TestNextState_LogValue(t *testing.T) {
 	tests := []struct {
 		name  string
-		state tado2.ZoneState
+		state poller.ZoneState
 		delay time.Duration
 		want  string
 	}{
 		{
 			name:  "no overlay",
-			state: tado2.ZoneStateAuto,
+			state: poller.ZoneStateAuto,
 			want:  "id=1, name=foo, state=auto, delay=0s, reason=",
 		},
 	}

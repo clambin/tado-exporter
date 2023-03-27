@@ -2,11 +2,11 @@ package controller
 
 import (
 	"context"
-	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/controller/mocks"
 	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
-	"github.com/clambin/tado-exporter/tado/mocks"
+	mocks2 "github.com/clambin/tado-exporter/poller/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"sync"
@@ -19,30 +19,23 @@ var (
 )
 
 func TestController_Run(t *testing.T) {
-	a := mocks.NewAPI(t)
-	prepareMockAPI(a)
-
+	a := mocks.NewTadoSetter(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 
-	p := poller.New(a)
-	wg.Add(1)
-	go func() {
-		p.Run(ctx, time.Minute)
-		wg.Done()
-	}()
+	ch := make(chan *poller.Update, 1)
+	p := mocks2.NewPoller(t)
+	p.On("Refresh").Return(nil)
+	p.On("Register").Return(ch)
+	p.On("Unregister", ch)
 
 	b := slackbot.NewSlackBot(t)
 	b.On("Register", mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc")).Return(nil)
 
 	c := New(a, zoneCfg, b, p)
-	assert.NotNil(t, c)
 
 	wg.Add(1)
-	go func() {
-		c.Run(ctx)
-		wg.Done()
-	}()
+	go func() { defer wg.Done(); c.Run(ctx) }()
 
 	response := c.cmds.DoRefresh(context.Background())
 	assert.Len(t, response, 1)
@@ -56,6 +49,7 @@ func TestController_Run(t *testing.T) {
 	wg.Wait()
 }
 
+/*
 func prepareMockAPI(api *mocks.API) {
 	api.
 		On("GetMobileDevices", mock.Anything).
@@ -113,3 +107,6 @@ func prepareMockAPI(api *mocks.API) {
 		On("GetHomeState", mock.Anything).
 		Return(tado.HomeState{Presence: "HOME"}, nil)
 }
+
+
+*/

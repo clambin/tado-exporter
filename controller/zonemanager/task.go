@@ -5,20 +5,26 @@ import (
 	"fmt"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
-	"github.com/clambin/tado-exporter/tado"
+	"github.com/clambin/tado-exporter/poller"
 	"time"
 )
 
 type Task struct {
-	api       tado.API
+	api       TadoSetter
 	nextState rules.TargetState
 	when      time.Time
 	job       *scheduler.Job
 }
 
+//go:generate mockery --name TadoSetter
+type TadoSetter interface {
+	DeleteZoneOverlay(context.Context, int) error
+	SetZoneOverlay(context.Context, int, float64) error
+}
+
 var _ scheduler.Task = &Task{}
 
-func newTask(api tado.API, next rules.TargetState) *Task {
+func newTask(api TadoSetter, next rules.TargetState) *Task {
 	return &Task{
 		api:       api,
 		nextState: next,
@@ -28,9 +34,9 @@ func newTask(api tado.API, next rules.TargetState) *Task {
 
 func (j *Task) Run(ctx context.Context) (err error) {
 	switch j.nextState.State {
-	case tado.ZoneStateAuto:
+	case poller.ZoneStateAuto:
 		err = j.api.DeleteZoneOverlay(ctx, j.nextState.ZoneID)
-	case tado.ZoneStateOff:
+	case poller.ZoneStateOff:
 		err = j.api.SetZoneOverlay(ctx, j.nextState.ZoneID, 5.0)
 	default:
 		err = fmt.Errorf("invalid queued state for zone '%s': %d", j.nextState.ZoneName, j.nextState.State)
@@ -47,9 +53,9 @@ func (j *Task) firesNoLaterThan(delay time.Duration) bool {
 func (j *Task) Report() string {
 	var action string
 	switch j.nextState.State {
-	case tado.ZoneStateOff:
+	case poller.ZoneStateOff:
 		action = "switching off heating"
-	case tado.ZoneStateAuto:
+	case poller.ZoneStateAuto:
 		action = "moving to auto mode"
 	}
 

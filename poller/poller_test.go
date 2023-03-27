@@ -4,8 +4,7 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
-	tado2 "github.com/clambin/tado-exporter/tado"
-	"github.com/clambin/tado-exporter/tado/mocks"
+	"github.com/clambin/tado-exporter/poller/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -13,7 +12,7 @@ import (
 	"time"
 )
 
-func prepareMockAPI(api *mocks.API) {
+func prepareMockAPI(api *mocks.TadoGetter) {
 	api.
 		On("GetMobileDevices", mock.Anything).
 		Return([]tado.MobileDevice{
@@ -72,7 +71,7 @@ func prepareMockAPI(api *mocks.API) {
 }
 
 func TestPoller_Run(t *testing.T) {
-	api := mocks.NewAPI(t)
+	api := mocks.NewTadoGetter(t)
 
 	p := poller.New(api)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -102,9 +101,9 @@ func TestPoller_Run(t *testing.T) {
 
 	require.Len(t, update.ZoneInfo, 2)
 	info := update.ZoneInfo[1]
-	assert.Equal(t, tado2.ZoneStateAuto, tado2.GetZoneState(info))
+	assert.Equal(t, poller.ZoneStateAuto, poller.GetZoneState(info))
 	info = update.ZoneInfo[2]
-	assert.Equal(t, tado2.ZoneStateOff, tado2.GetZoneState(info))
+	assert.Equal(t, poller.ZoneStateOff, poller.GetZoneState(info))
 
 	assert.True(t, update.Home)
 
@@ -112,7 +111,7 @@ func TestPoller_Run(t *testing.T) {
 }
 
 func TestServer_Poll(t *testing.T) {
-	api := mocks.NewAPI(t)
+	api := mocks.NewTadoGetter(t)
 	prepareMockAPI(api)
 
 	p := poller.New(api)
@@ -131,7 +130,7 @@ func TestServer_Poll(t *testing.T) {
 }
 
 func TestServer_Refresh(t *testing.T) {
-	api := mocks.NewAPI(t)
+	api := mocks.NewTadoGetter(t)
 	prepareMockAPI(api)
 
 	p := poller.New(api)

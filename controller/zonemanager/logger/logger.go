@@ -2,7 +2,7 @@ package logger
 
 import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
-	"github.com/clambin/tado-exporter/tado"
+	"github.com/clambin/tado-exporter/poller"
 	"time"
 )
 
@@ -40,9 +40,9 @@ func buildMessage(action Action, state rules.TargetState) string {
 
 func getAction(state rules.TargetState) string {
 	switch state.State {
-	case tado.ZoneStateAuto:
+	case poller.ZoneStateAuto:
 		return "moving to auto mode"
-	case tado.ZoneStateOff:
+	case poller.ZoneStateOff:
 		return "switching off heating"
 	}
 	return "unknown"

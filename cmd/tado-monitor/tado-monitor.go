@@ -11,7 +11,6 @@ import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/health"
 	"github.com/clambin/tado-exporter/poller"
-	tado2 "github.com/clambin/tado-exporter/tado"
 	"github.com/clambin/tado-exporter/version"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -122,7 +121,7 @@ func runHealthEndpoint(ctx context.Context, p poller.Poller, wg *sync.WaitGroup)
 	}
 }
 
-func runController(ctx context.Context, p poller.Poller, api tado2.API, r []rules.ZoneConfig, wg *sync.WaitGroup) {
+func runController(ctx context.Context, p poller.Poller, tadoClient *tado.APIClient, r []rules.ZoneConfig, wg *sync.WaitGroup) {
 	// slack bot
 	var tadoBot slackbot.SlackBot
 	if viper.GetBool("controller.tadoBot.enabled") {
@@ -132,7 +131,7 @@ func runController(ctx context.Context, p poller.Poller, api tado2.API, r []rule
 	}
 
 	// controller
-	c := controller.New(api, r, tadoBot, p)
+	c := controller.New(tadoClient, r, tadoBot, p)
 	wg.Add(1)
 	c.Run(ctx)
 	wg.Done()
