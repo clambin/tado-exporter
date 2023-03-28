@@ -3,6 +3,7 @@ package rules
 import (
 	"context"
 	"fmt"
+	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
 	"golang.org/x/exp/slog"
 )
@@ -86,25 +87,8 @@ func (e *Evaluator) slog(next TargetState, update *poller.Update) {
 			slog.Int("id", next.ZoneID),
 			slog.String("name", next.ZoneName),
 		),
-		slog.Group("state",
-			slog.String("state", next.State.String()),
-			slog.Bool("action", next.Action),
-			slog.Duration("delay", next.Delay),
-		),
-		slog.Group("zoneInfo",
-			slog.String("power", zoneInfo.Setting.Power),
-			slog.Group("overlay",
-				slog.String("type", zoneInfo.Overlay.Type),
-				slog.Group("setting",
-					slog.String("type", zoneInfo.Overlay.Termination.Type),
-					slog.String("subtype", zoneInfo.Overlay.Termination.TypeSkillBasedApp),
-				),
-				slog.Group("termination",
-					slog.String("type", zoneInfo.Overlay.Setting.Type),
-					slog.String("power", zoneInfo.Overlay.Setting.Power),
-				),
-			),
-		),
+		"next", next,
+		slogZoneInfo("zoneInfo", zoneInfo),
 	}
 	for id, device := range update.UserInfo {
 		groups = append(groups,
@@ -117,4 +101,24 @@ func (e *Evaluator) slog(next TargetState, update *poller.Update) {
 		)
 	}
 	slog.Debug("next state evaluated", groups...)
+}
+
+func slogZoneInfo(name string, zoneInfo tado.ZoneInfo) slog.Attr {
+	attribs := []slog.Attr{
+		slog.String("power", zoneInfo.Setting.Power),
+	}
+	if zoneInfo.Overlay.Type != "" {
+		attribs = append(attribs, slog.Group("overlay",
+			slog.String("type", zoneInfo.Overlay.Type),
+			slog.Group("setting",
+				slog.String("type", zoneInfo.Overlay.Termination.Type),
+				slog.String("subtype", zoneInfo.Overlay.Termination.TypeSkillBasedApp),
+			),
+			slog.Group("termination",
+				slog.String("type", zoneInfo.Overlay.Setting.Type),
+				slog.String("power", zoneInfo.Overlay.Setting.Power),
+			),
+		))
+	}
+	return slog.Group(name, attribs...)
 }

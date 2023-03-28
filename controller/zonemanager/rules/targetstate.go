@@ -20,13 +20,19 @@ type TargetState struct {
 }
 
 func (s TargetState) LogValue() slog.Value {
-	return slog.GroupValue(
+	values := []slog.Attr{
 		slog.Int("id", s.ZoneID),
 		slog.String("name", s.ZoneName),
-		slog.String("state", s.State.String()),
-		slog.Duration("delay", s.Delay),
-		slog.String("reason", s.Reason),
-	)
+		slog.Bool("action", s.Action),
+	}
+	if s.Action {
+		values = append(values,
+			slog.String("state", s.State.String()),
+			slog.Duration("delay", s.Delay),
+		)
+	}
+	values = append(values, slog.String("reason", s.Reason))
+	return slog.GroupValue(values...)
 }
 
 type TargetStates []TargetState
