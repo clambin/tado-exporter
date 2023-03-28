@@ -33,7 +33,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 			name: "user comes home",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Power: "OFF"}}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Power: "OFF"}, Overlay: tado.ZoneInfoOverlay{Setting: tado.ZonePowerSetting{Power: "OFF"}}}},
 				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: poller.ZoneStateAuto, Delay: 0, Reason: "foo is home"},
@@ -105,10 +105,7 @@ func TestAutoAwayRule_Evaluate_MultipleUsers(t *testing.T) {
 				Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: {
 					Setting: tado.ZonePowerSetting{Power: "OFF"},
-					Overlay: tado.ZoneInfoOverlay{
-						Type:        "MANUAL",
-						Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-					}}},
+					Overlay: tado.ZoneInfoOverlay{Setting: tado.ZonePowerSetting{Power: "OFF"}}}},
 				UserInfo: map[int]tado.MobileDevice{
 					100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}},
 					110: {ID: 100, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}},

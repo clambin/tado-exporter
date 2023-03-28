@@ -137,10 +137,7 @@ var (
 				Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: {
 					Setting: tado.ZonePowerSetting{Power: "OFF"},
-					Overlay: tado.ZoneInfoOverlay{
-						Type:        "MANUAL",
-						Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-					}}},
+					Overlay: tado.ZoneInfoOverlay{Setting: tado.ZonePowerSetting{Power: "OFF"}}}},
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
 			current: poller.ZoneStateOff,

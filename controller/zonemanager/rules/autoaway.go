@@ -39,7 +39,7 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (TargetState, error) {
 	allAway := len(home) == 0 && len(away) > 0
 	someoneHome := len(home) > 0
 	currentState := poller.GetZoneState(update.ZoneInfo[a.ZoneID])
-	//overlay := update.ZoneInfo[a.ZoneID].Overlay
+	overlay := update.ZoneInfo[a.ZoneID].Overlay
 
 	if allAway {
 		if currentState != poller.ZoneStateOff {
@@ -51,7 +51,7 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (TargetState, error) {
 			next.Reason = makeReason(away, "away")
 		}
 	} else if someoneHome {
-		if currentState == poller.ZoneStateOff && update.ZoneInfo[a.ZoneID].Setting.Power != "ON" {
+		if currentState != poller.ZoneStateAuto && overlay.Setting.Power == "OFF" {
 			next.Action = true
 			next.State = poller.ZoneStateAuto
 			next.Delay = 0

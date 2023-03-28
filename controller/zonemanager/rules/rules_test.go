@@ -258,7 +258,6 @@ func TestNextState_LogValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			s := TargetState{
 				ZoneID:   1,
 				ZoneName: "foo",
