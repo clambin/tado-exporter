@@ -233,24 +233,39 @@ func BenchmarkEvaluator(b *testing.B) {
 
 func TestNextState_LogValue(t *testing.T) {
 	tests := []struct {
-		name  string
-		state poller.ZoneState
-		delay time.Duration
-		want  string
+		name   string
+		action bool
+		state  poller.ZoneState
+		delay  time.Duration
+		reason string
+		want   string
 	}{
 		{
-			name:  "no overlay",
-			state: poller.ZoneStateAuto,
-			want:  "id=1, name=foo, state=auto, delay=0s, reason=",
+			name:   "no action",
+			action: false,
+			state:  poller.ZoneStateUnknown,
+			reason: "foo bar",
+			want:   `id=1, name=foo, action=false, reason=foo bar`,
+		},
+		{
+			name:   "action",
+			action: true,
+			state:  poller.ZoneStateAuto,
+			delay:  time.Hour,
+			reason: "foo bar",
+			want:   `id=1, name=foo, action=true, state=auto, delay=1h0m0s, reason=foo bar`,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			s := TargetState{
 				ZoneID:   1,
 				ZoneName: "foo",
+				Action:   tt.action,
 				State:    tt.state,
 				Delay:    tt.delay,
+				Reason:   tt.reason,
 			}
 
 			var output []string
