@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/slackbot"
-	"github.com/clambin/tado-exporter/controller/zonemanager/logger"
+	"github.com/clambin/tado-exporter/controller/zonemanager/notifier"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/clambin/tado-exporter/poller"
@@ -15,27 +15,27 @@ import (
 )
 
 type Manager struct {
-	evaluator rules.Evaluator
-	task      *Task
-	api       TadoSetter
-	loggers   logger.Loggers
-	poller    poller.Poller
-	notifier  chan struct{}
-	lock      sync.RWMutex
+	evaluator    rules.Evaluator
+	task         *Task
+	api          TadoSetter
+	notifiers    notifier.Notifiers
+	poller       poller.Poller
+	notification chan struct{}
+	lock         sync.RWMutex
 }
 
 func New(api TadoSetter, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneConfig) *Manager {
-	loggers := logger.Loggers{&logger.StdOutLogger{}}
+	loggers := notifier.Notifiers{&notifier.SLogNotifier{}}
 	if bot != nil {
-		loggers = append(loggers, &logger.SlackLogger{Bot: bot})
+		loggers = append(loggers, &notifier.SlackNotifier{Bot: bot})
 	}
 
 	return &Manager{
-		evaluator: rules.Evaluator{Config: &cfg},
-		api:       api,
-		loggers:   loggers,
-		poller:    p,
-		notifier:  make(chan struct{}, 1),
+		evaluator:    rules.Evaluator{Config: &cfg},
+		api:          api,
+		notifiers:    loggers,
+		poller:       p,
+		notification: make(chan struct{}, 1),
 	}
 }
 
@@ -51,7 +51,7 @@ func (m *Manager) Run(ctx context.Context) {
 			if err := m.processUpdate(ctx, update); err != nil {
 				slog.Error("failed to process tado update", "err", err, "zone", m.evaluator.Config.Zone)
 			}
-		case <-m.notifier:
+		case <-m.notification:
 			if err := m.processResult(); err != nil {
 				slog.Error("failed to set next state", "err", err, "zone", m.evaluator.Config.Zone)
 			}
@@ -108,9 +108,9 @@ func (m *Manager) scheduleJob(ctx context.Context, next rules.TargetState) {
 	}
 
 	m.task = newTask(m.api, next)
-	m.task.job = scheduler.ScheduleWithNotification(ctx, m.task, next.Delay, m.notifier)
+	m.task.job = scheduler.ScheduleWithNotification(ctx, m.task, next.Delay, m.notification)
 	if next.Delay > 0 {
-		m.loggers.Log(logger.Queued, next)
+		m.notifiers.Notify(notifier.Queued, next)
 	}
 }
 
@@ -122,7 +122,7 @@ func (m *Manager) cancelJob(next rules.TargetState) {
 		nextState := m.task.nextState
 		nextState.Reason = next.Reason
 		m.task.job.Cancel()
-		m.loggers.Log(logger.Canceled, nextState)
+		m.notifiers.Notify(notifier.Canceled, nextState)
 	}
 }
 
@@ -140,7 +140,7 @@ func (m *Manager) processResult() error {
 	}
 
 	if err == nil {
-		m.loggers.Log(logger.Done, m.task.nextState)
+		m.notifiers.Notify(notifier.Done, m.task.nextState)
 	} else if errors.Is(err, scheduler.ErrCanceled) {
 		err = nil
 	}

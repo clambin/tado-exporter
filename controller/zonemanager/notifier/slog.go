@@ -1,15 +1,15 @@
-package logger
+package notifier
 
 import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"golang.org/x/exp/slog"
 )
 
-type StdOutLogger struct {
+type SLogNotifier struct {
 }
 
-var _ Logger = &StdOutLogger{}
+var _ Notifier = &SLogNotifier{}
 
-func (l *StdOutLogger) Log(action Action, next rules.TargetState) {
+func (s SLogNotifier) Notify(action Action, next rules.TargetState) {
 	slog.Info(next.ZoneName+": "+buildMessage(action, next), "reason", next.Reason)
 }

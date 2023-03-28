@@ -1,4 +1,4 @@
-package logger
+package notifier
 
 import (
 	"github.com/clambin/tado-exporter/controller/slackbot"
@@ -6,13 +6,13 @@ import (
 	"github.com/slack-go/slack"
 )
 
-type SlackLogger struct {
+type SlackNotifier struct {
 	Bot slackbot.SlackBot
 }
 
-var _ Logger = &SlackLogger{}
+var _ Notifier = &SlackNotifier{}
 
-func (s SlackLogger) Log(action Action, state rules.TargetState) {
+func (s SlackNotifier) Notify(action Action, state rules.TargetState) {
 	_ = s.Bot.Send("", []slack.Attachment{{
 		Color: "good",
 		Title: state.ZoneName + ": " + buildMessage(action, state),

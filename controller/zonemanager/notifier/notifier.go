@@ -1,4 +1,4 @@
-package logger
+package notifier
 
 import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-type Logger interface {
-	Log(action Action, state rules.TargetState)
+type Notifier interface {
+	Notify(action Action, state rules.TargetState)
 }
 
 type Action int
@@ -18,11 +18,11 @@ const (
 	Canceled
 )
 
-type Loggers []Logger
+type Notifiers []Notifier
 
-func (ls Loggers) Log(action Action, state rules.TargetState) {
-	for _, l := range ls {
-		l.Log(action, state)
+func (n Notifiers) Notify(action Action, state rules.TargetState) {
+	for _, l := range n {
+		l.Notify(action, state)
 	}
 }
 
