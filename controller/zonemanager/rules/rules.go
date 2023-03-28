@@ -81,7 +81,6 @@ func (e *Evaluator) slog(next TargetState, update *poller.Update) {
 		return
 	}
 	zoneInfo := update.ZoneInfo[next.ZoneID]
-
 	groups := []any{
 		slog.Group("zone",
 			slog.Int("id", next.ZoneID),
@@ -115,6 +114,5 @@ func (e *Evaluator) slog(next TargetState, update *poller.Update) {
 			),
 		)
 	}
-
 	slog.Debug("next state evaluated", groups...)
 }

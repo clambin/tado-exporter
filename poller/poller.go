@@ -99,7 +99,7 @@ func (poller *Server) poll(ctx context.Context) error {
 		for ch := range poller.registry {
 			ch <- &update
 		}
-		slog.Debug("poll completed", "duration", time.Since(start))
+		slog.Debug("poll completed", slog.Duration("duration", time.Since(start)))
 	}
 	return err
 }
