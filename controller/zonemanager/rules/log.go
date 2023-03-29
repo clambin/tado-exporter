@@ -38,12 +38,12 @@ func slogZoneInfo(name string, zoneInfo tado.ZoneInfo) slog.Attr {
 		attribs = append(attribs, slog.Group("overlay",
 			slog.String("type", zoneInfo.Overlay.Type),
 			slog.Group("setting",
-				slog.String("type", zoneInfo.Overlay.Termination.Type),
-				slog.String("subtype", zoneInfo.Overlay.Termination.TypeSkillBasedApp),
-			),
-			slog.Group("termination",
 				slog.String("type", zoneInfo.Overlay.Setting.Type),
 				slog.String("power", zoneInfo.Overlay.Setting.Power),
+			),
+			slog.Group("termination",
+				slog.String("type", zoneInfo.Overlay.Termination.Type),
+				slog.String("subtype", zoneInfo.Overlay.Termination.TypeSkillBasedApp),
 			),
 		))
 	}
