@@ -20,22 +20,12 @@ var _ Rule = &AutoAwayRule{}
 
 func (a *AutoAwayRule) Evaluate(update *poller.Update) (TargetState, error) {
 	next := TargetState{ZoneID: a.ZoneID, ZoneName: a.ZoneName}
+
 	if err := a.load(update); err != nil {
 		return next, err
 	}
 
-	var home, away []string
-	for _, id := range a.MobileDeviceIDs {
-		if entry, exists := update.UserInfo[id]; exists {
-			switch entry.IsHome() {
-			case tado.DeviceAway:
-				away = append(away, entry.Name)
-			case tado.DeviceHome:
-				home = append(home, entry.Name)
-			}
-		}
-	}
-
+	home, away := a.getDeviceStates(update)
 	allAway := len(home) == 0 && len(away) > 0
 	someoneHome := len(home) > 0
 	currentState := poller.GetZoneState(update.ZoneInfo[a.ZoneID])
@@ -61,6 +51,21 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (TargetState, error) {
 		}
 	}
 	return next, nil
+}
+
+func (a *AutoAwayRule) getDeviceStates(update *poller.Update) ([]string, []string) {
+	var home, away []string
+	for _, id := range a.MobileDeviceIDs {
+		if entry, exists := update.UserInfo[id]; exists {
+			switch entry.IsHome() {
+			case tado.DeviceAway:
+				away = append(away, entry.Name)
+			case tado.DeviceHome:
+				home = append(home, entry.Name)
+			}
+		}
+	}
+	return home, away
 }
 
 func makeReason(users []string, state string) string {

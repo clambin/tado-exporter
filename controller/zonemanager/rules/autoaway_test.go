@@ -113,6 +113,20 @@ func TestAutoAwayRule_Evaluate_MultipleUsers(t *testing.T) {
 			},
 			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: poller.ZoneStateAuto, Delay: 0, Reason: "bar is home"},
 		},
+		{
+			name: "user is home, schedule for room is off",
+			update: &poller.Update{
+				Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: {
+					Setting: tado.ZonePowerSetting{Power: "OFF"}},
+				},
+				UserInfo: map[int]tado.MobileDevice{
+					100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}},
+					110: {ID: 100, Name: "bar", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}},
+				},
+			},
+			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: false, State: poller.ZoneStateUnknown, Delay: 0, Reason: "bar is home"},
+		},
 	}
 
 	r := &AutoAwayRule{
