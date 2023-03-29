@@ -1,11 +1,8 @@
 package rules
 
 import (
-	"context"
 	"fmt"
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
-	"golang.org/x/exp/slog"
 )
 
 type Evaluator struct {
@@ -25,17 +22,17 @@ func (e *Evaluator) Evaluate(update *poller.Update) (TargetState, error) {
 		return targetState, err
 	}
 
-	var targetStates TargetStates
-	for _, rule := range e.rules {
+	targetStates := make(TargetStates, len(e.rules))
+	for i, rule := range e.rules {
 		next, err := rule.Evaluate(update)
 		if err != nil {
 			return targetState, err
 		}
-		targetStates = append(targetStates, next)
+		targetStates[i] = next
 	}
 
 	next := targetStates.GetNextState()
-	e.slog(next, update)
+	log(next, update)
 
 	return next, nil
 }
@@ -75,50 +72,4 @@ func (e *Evaluator) load(update *poller.Update) error {
 	}
 
 	return nil
-}
-
-func (e *Evaluator) slog(next TargetState, update *poller.Update) {
-	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-		return
-	}
-	zoneInfo := update.ZoneInfo[next.ZoneID]
-	groups := []any{
-		slog.Group("zone",
-			slog.Int("id", next.ZoneID),
-			slog.String("name", next.ZoneName),
-		),
-		"next", next,
-		slogZoneInfo("zoneInfo", zoneInfo),
-	}
-	for id, device := range update.UserInfo {
-		groups = append(groups,
-			slog.Group("device",
-				slog.Int("id", id),
-				slog.String("name", device.Name),
-				slog.Bool("home", device.Location.AtHome),
-				slog.Bool("geotracked", device.Settings.GeoTrackingEnabled),
-			),
-		)
-	}
-	slog.Debug("next state evaluated", groups...)
-}
-
-func slogZoneInfo(name string, zoneInfo tado.ZoneInfo) slog.Attr {
-	attribs := []slog.Attr{
-		slog.String("power", zoneInfo.Setting.Power),
-	}
-	if zoneInfo.Overlay.Type != "" {
-		attribs = append(attribs, slog.Group("overlay",
-			slog.String("type", zoneInfo.Overlay.Type),
-			slog.Group("setting",
-				slog.String("type", zoneInfo.Overlay.Termination.Type),
-				slog.String("subtype", zoneInfo.Overlay.Termination.TypeSkillBasedApp),
-			),
-			slog.Group("termination",
-				slog.String("type", zoneInfo.Overlay.Setting.Type),
-				slog.String("power", zoneInfo.Overlay.Setting.Power),
-			),
-		))
-	}
-	return slog.Group(name, attribs...)
 }

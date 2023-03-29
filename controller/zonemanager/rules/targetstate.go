@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/poller"
 	"golang.org/x/exp/slog"
 	"sort"
@@ -45,12 +46,11 @@ func (t TargetStates) GetNextState() TargetState {
 	if len(targetStates) == 0 {
 		panic("no rules defined?")
 	}
-
 	return targetStates.getNoAction()
 }
 
 func (t TargetStates) filterTargetStates(action bool) TargetStates {
-	var targetStates TargetStates
+	targetStates := make(TargetStates, 0, len(t))
 	for _, targetState := range t {
 		if targetState.Action == action {
 			targetStates = append(targetStates, targetState)
@@ -87,16 +87,13 @@ func (t TargetStates) getNoAction() TargetState {
 }
 
 func (t TargetStates) getCombinedReason() string {
-	reasons := make(map[string]struct{})
+	r := set.Create[string]()
 	for _, targetState := range t {
 		if targetState.Reason != "" {
-			reasons[targetState.Reason] = struct{}{}
+			r.Add(targetState.Reason)
 		}
 	}
-	var uniqueReasons []string
-	for reason := range reasons {
-		uniqueReasons = append(uniqueReasons, reason)
-	}
+	uniqueReasons := r.List()
 	sort.Strings(uniqueReasons)
 	return strings.Join(uniqueReasons, ", ")
 }
