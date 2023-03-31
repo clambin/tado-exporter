@@ -10,11 +10,10 @@ import (
 )
 
 func TestGetNextNightTimeDelay(t *testing.T) {
-	type tts struct {
+	tests := []struct {
 		now      time.Time
 		expected time.Duration
-	}
-	var testCases = []tts{
+	}{
 		{
 			now:      time.Date(2022, 10, 10, 12, 0, 0, 0, time.Local),
 			expected: 11*time.Hour + 30*time.Minute,
@@ -31,7 +30,7 @@ func TestGetNextNightTimeDelay(t *testing.T) {
 		Seconds: 0,
 	}
 
-	for _, tt := range testCases {
+	for _, tt := range tests {
 		t.Run(tt.now.String(), func(t *testing.T) {
 			delay := getNextNightTimeDelay(tt.now, limit)
 			assert.Equal(t, tt.expected, delay)
@@ -40,11 +39,11 @@ func TestGetNextNightTimeDelay(t *testing.T) {
 }
 
 func TestNightTimeRule_Evaluate(t *testing.T) {
-	var testCases = []testCase{
+	testCases := []testCase{
 		{
 			name:        "auto mode",
 			update:      &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {}}},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: false, State: poller.ZoneStateUnknown, Delay: 0, Reason: "no manual settings detected"},
+			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
 		{
 			name: "manual control",
@@ -53,7 +52,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
 				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 			}}}},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: poller.ZoneStateAuto, Delay: time.Hour, Reason: "manual temp setting detected"},
+			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Delay: time.Hour, Reason: "manual temp setting detected"},
 		},
 		{
 			name: "manual control w/ expiration",
@@ -62,7 +61,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
 				Termination: tado.ZoneInfoOverlayTermination{Type: "AUTO", RemainingTimeInSeconds: 300},
 			}}}},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: false, State: poller.ZoneStateUnknown, Delay: 0, Reason: "no manual settings detected"},
+			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
 	}
 

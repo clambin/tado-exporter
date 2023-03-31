@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/exp/slog"
@@ -204,14 +205,16 @@ func (c *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 		}
 		ch <- prometheus.MustNewConstMetric(tadoZonePowerState, prometheus.GaugeValue, value, zone.Name)
 
-		if poller.GetZoneState(zoneInfo) == poller.ZoneStateAuto {
+		zoneState := rules.GetZoneState(zoneInfo)
+		if zoneState.Overlay == tado.NoOverlay {
 			value = 0.0
 		} else {
 			value = 1.0
 		}
 		ch <- prometheus.MustNewConstMetric(tadoZoneTargetManualMode, prometheus.GaugeValue, value, zone.Name)
 
-		if poller.GetZoneState(zoneInfo) == poller.ZoneStateAuto {
+		// TODO: don't think this is necessary: Setting.Temperature always has the active temp setting, even when in overlay.
+		if zoneState.Overlay == tado.NoOverlay {
 			value = zoneInfo.Setting.Temperature.Celsius
 		} else {
 			value = zoneInfo.Overlay.Setting.Temperature.Celsius

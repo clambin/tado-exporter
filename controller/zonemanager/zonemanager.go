@@ -17,14 +17,14 @@ import (
 type Manager struct {
 	evaluator    rules.Evaluator
 	task         *Task
-	api          TadoSetter
+	api          rules.TadoSetter
 	notifiers    notifier.Notifiers
 	poller       poller.Poller
 	notification chan struct{}
 	lock         sync.RWMutex
 }
 
-func New(api TadoSetter, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneConfig) *Manager {
+func New(api rules.TadoSetter, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneConfig) *Manager {
 	loggers := notifier.Notifiers{&notifier.SLogNotifier{}}
 	if bot != nil {
 		loggers = append(loggers, &notifier.SlackNotifier{Bot: bot})

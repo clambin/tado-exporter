@@ -6,6 +6,7 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/slack-go/slack"
 	"golang.org/x/exp/slog"
@@ -103,16 +104,19 @@ func (m *Manager) ReportRooms(_ context.Context, _ ...string) []slack.Attachment
 		}
 
 		var stateStr string
-		switch poller.GetZoneState(zoneInfo) {
-		case poller.ZoneStateOff:
+		zoneState := rules.GetZoneState(zoneInfo)
+		if !zoneState.Heating {
 			stateStr = "off"
-		case poller.ZoneStateAuto:
-			stateStr = fmt.Sprintf("target: %.1f", zoneInfo.Setting.Temperature.Celsius)
-		case poller.ZoneStateTemporaryManual:
-			stateStr = fmt.Sprintf("target: %.1f, MANUAL for %s", zoneInfo.Overlay.Setting.Temperature.Celsius,
-				(time.Duration(zoneInfo.Overlay.Termination.RemainingTimeInSeconds) * time.Second).String())
-		case poller.ZoneStateManual:
-			stateStr = fmt.Sprintf("target: %.1f, MANUAL", zoneInfo.Overlay.Setting.Temperature.Celsius)
+		} else {
+			switch zoneState.Overlay {
+			case tado.NoOverlay:
+				stateStr = fmt.Sprintf("target: %.1f", zoneState.TargetTemperature.Celsius)
+			case tado.PermanentOverlay:
+				stateStr = fmt.Sprintf("target: %.1f, MANUAL", zoneInfo.Overlay.Setting.Temperature.Celsius)
+			case tado.TimerOverlay, tado.NextBlockOverlay:
+				stateStr = fmt.Sprintf("target: %.1f, MANUAL for %s", zoneInfo.Overlay.Setting.Temperature.Celsius,
+					(time.Duration(zoneInfo.Overlay.Termination.RemainingTimeInSeconds) * time.Second).String())
+			}
 		}
 
 		text = append(text, fmt.Sprintf("%s: %.1fºC (%s)", zone.Name, zoneInfo.SensorDataPoints.InsideTemperature.Celsius, stateStr))

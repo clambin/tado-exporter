@@ -247,6 +247,7 @@ func TestManager_ReportRooms(t *testing.T) {
 	c.update = &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: {
+			Setting:          tado.ZonePowerSetting{Power: "ON"},
 			SensorDataPoints: tado.ZoneInfoSensorDataPoints{InsideTemperature: tado.Temperature{Celsius: 22}},
 			Overlay: tado.ZoneInfoOverlay{
 				Type: "MANUAL",

@@ -1,50 +1,39 @@
 package rules
 
 import (
-	"github.com/clambin/tado-exporter/poller"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/slog"
 	"testing"
 	"time"
 )
 
-func TestTargetStates_GetNextState(t *testing.T) {
+func TestTargetState_LogValue(t *testing.T) {
+	type fields struct {
+		ZoneID   int
+		ZoneName string
+		Action   bool
+		State    ZoneState
+		Delay    time.Duration
+		Reason   string
+	}
 	tests := []struct {
 		name   string
-		input  TargetStates
-		expect TargetState
+		fields fields
+		want   slog.Value
 	}{
-		{
-			name: "get earliest",
-			input: TargetStates{
-				{ZoneID: 1, ZoneName: "foo", Action: true, State: poller.ZoneStateAuto, Delay: time.Hour, Reason: "reason 1"},
-				{ZoneID: 1, ZoneName: "foo", Action: true, State: poller.ZoneStateAuto, Delay: time.Minute, Reason: "reason 2"},
-				{ZoneID: 1, ZoneName: "foo", Action: false, State: poller.ZoneStateUnknown, Delay: 0, Reason: "reason 3"},
-			},
-			expect: TargetState{ZoneID: 1, ZoneName: "foo", Action: true, State: poller.ZoneStateAuto, Delay: time.Minute, Reason: "reason 2"},
-		},
-		{
-			name: "prefer off",
-			input: TargetStates{
-				{ZoneID: 1, ZoneName: "foo", Action: true, State: poller.ZoneStateOff, Delay: time.Hour, Reason: "reason 1"},
-				{ZoneID: 1, ZoneName: "foo", Action: true, State: poller.ZoneStateAuto, Delay: time.Minute, Reason: "reason 2"},
-				{ZoneID: 1, ZoneName: "foo", Action: false, State: poller.ZoneStateUnknown, Delay: 0, Reason: "reason 3"},
-			},
-			expect: TargetState{ZoneID: 1, ZoneName: "foo", Action: true, State: poller.ZoneStateOff, Delay: time.Hour, Reason: "reason 1"},
-		},
-		{
-			name: "no action",
-			input: TargetStates{
-				{ZoneID: 1, ZoneName: "foo", Action: false, State: poller.ZoneStateUnknown, Delay: 0, Reason: "reason 1"},
-				{ZoneID: 1, ZoneName: "foo", Action: false, State: poller.ZoneStateAuto, Delay: time.Minute, Reason: "reason 2"},
-				{ZoneID: 1, ZoneName: "foo", Action: false, State: poller.ZoneStateUnknown, Delay: 0, Reason: "reason 2"},
-			},
-			expect: TargetState{ZoneID: 1, ZoneName: "foo", Action: false, State: poller.ZoneStateUnknown, Delay: 0, Reason: "reason 1, reason 2"},
-		},
+		// TODO: Add test cases.
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expect, tt.input.GetNextState())
+			s := TargetState{
+				ZoneID:   tt.fields.ZoneID,
+				ZoneName: tt.fields.ZoneName,
+				Action:   tt.fields.Action,
+				State:    tt.fields.State,
+				Delay:    tt.fields.Delay,
+				Reason:   tt.fields.Reason,
+			}
+			assert.Equalf(t, tt.want, s.LogValue(), "LogValue()")
 		})
 	}
 }

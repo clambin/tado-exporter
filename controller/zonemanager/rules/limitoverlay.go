@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
 	"time"
 )
@@ -19,9 +20,9 @@ func (l *LimitOverlayRule) Evaluate(update *poller.Update) (TargetState, error) 
 		ZoneName: l.zoneName,
 		Reason:   "no manual settings detected",
 	}
-	if state := poller.GetZoneState(update.ZoneInfo[l.zoneID]); state == poller.ZoneStateManual {
+	if state := GetZoneState(update.ZoneInfo[l.zoneID]); state.Overlay == tado.PermanentOverlay {
 		next.Action = true
-		next.State = poller.ZoneStateAuto
+		next.State = ZoneState{Overlay: tado.NoOverlay}
 		next.Delay = l.delay
 		next.Reason = "manual temp setting detected"
 	}

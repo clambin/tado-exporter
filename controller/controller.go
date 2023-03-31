@@ -19,7 +19,7 @@ type Controller struct {
 
 //go:generate mockery --name TadoSetter
 type TadoSetter interface {
-	zonemanager.TadoSetter
+	rules.TadoSetter
 	commands.TadoSetter
 }
 

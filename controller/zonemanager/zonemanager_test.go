@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
-	"github.com/clambin/tado-exporter/controller/zonemanager/mocks"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules/mocks"
 	"github.com/clambin/tado-exporter/poller"
 	mockPoller "github.com/clambin/tado-exporter/poller/mocks"
 	"github.com/slack-go/slack"
@@ -32,12 +32,12 @@ var (
 			},
 		},
 	}
+)
 
-	testCases = []struct {
+func TestManager_Run(t *testing.T) {
+	tests := []struct {
 		name         string
 		update       *poller.Update
-		current      poller.ZoneState
-		next         rules.TargetState
 		call         string
 		args         []interface{}
 		notification string
@@ -48,12 +48,6 @@ var (
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}}},
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
-			},
-			current: poller.ZoneStateAuto,
-			next: rules.TargetState{
-				ZoneID:   1,
-				ZoneName: "foo",
-				State:    poller.ZoneStateAuto,
 			},
 		},
 		{
@@ -67,14 +61,6 @@ var (
 						Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 					}}},
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
-			},
-			current: poller.ZoneStateManual,
-			next: rules.TargetState{
-				ZoneID:   1,
-				ZoneName: "foo",
-				State:    poller.ZoneStateAuto,
-				Delay:    time.Hour,
-				Reason:   "manual temperature setting detected",
 			},
 			notification: "moving to auto mode in 1h0m0s",
 		},
@@ -90,14 +76,6 @@ var (
 					}}},
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			current: poller.ZoneStateManual,
-			next: rules.TargetState{
-				ZoneID:   1,
-				ZoneName: "foo",
-				State:    poller.ZoneStateAuto,
-				Delay:    time.Hour,
-				Reason:   "manual temperature setting detected",
-			},
 		},
 		{
 			name: "no action #2",
@@ -105,12 +83,6 @@ var (
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}}},
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
-			},
-			current: poller.ZoneStateAuto,
-			next: rules.TargetState{
-				ZoneID:   1,
-				ZoneName: "foo",
-				State:    poller.ZoneStateAuto,
 			},
 			notification: "canceling moving to auto mode",
 		},
@@ -121,14 +93,6 @@ var (
 				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}}},
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
 			},
-			current: poller.ZoneStateAuto,
-			next: rules.TargetState{
-				ZoneID:   1,
-				ZoneName: "foo",
-				State:    poller.ZoneStateOff,
-				Delay:    2 * time.Hour,
-				Reason:   "foo is away",
-			},
 			notification: "switching off heating in 2h0m0s",
 		},
 		{
@@ -137,42 +101,28 @@ var (
 				Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: {
 					Setting: tado.ZonePowerSetting{Power: "OFF"},
-					Overlay: tado.ZoneInfoOverlay{Setting: tado.ZonePowerSetting{Power: "OFF"}}}},
+					Overlay: tado.ZoneInfoOverlay{Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"}}}},
 				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 			},
-			current: poller.ZoneStateOff,
-			next: rules.TargetState{
-				ZoneID:   1,
-				ZoneName: "foo",
-				State:    poller.ZoneStateAuto,
-				Delay:    0,
-				Reason:   "foo is home",
-			},
-			call:         "DeleteZoneOverlay",
-			args:         []interface{}{mock.AnythingOfType("*context.cancelCtx"), 1},
-			notification: "moving to auto mode",
+			notification: "canceling switching off heating",
 		},
 	}
-)
 
-func TestManager_Run(t *testing.T) {
 	a := mocks.NewTadoSetter(t)
 	b := slackbot.NewSlackBot(t)
 	p := mockPoller.NewPoller(t)
+
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
-	m := New(a, p, b, config)
 
+	m := New(a, p, b, config)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go func() {
-		m.Run(ctx)
-		wg.Done()
-	}()
+	go func() { defer wg.Done(); m.Run(ctx) }()
 
-	for _, tt := range testCases {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.call != "" {
 				a.On(tt.call, tt.args...).Return(nil).Once()
@@ -231,12 +181,12 @@ func TestManager_Scheduled(t *testing.T) {
 
 	state, scheduled := m.GetScheduled()
 	require.True(t, scheduled)
-	assert.Equal(t, poller.ZoneStateAuto, state.State)
+	assert.Equal(t, rules.ZoneState{Overlay: tado.NoOverlay}, state.State)
 
 	var mgrs Managers = []*Manager{m}
 	states := mgrs.GetScheduled()
 	require.Len(t, states, 1)
-	assert.Equal(t, poller.ZoneStateAuto, states[0].State)
+	assert.Equal(t, rules.ZoneState{Overlay: tado.NoOverlay}, states[0].State)
 
 	cancel()
 	wg.Wait()

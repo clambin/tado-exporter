@@ -28,22 +28,19 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (TargetState, error) {
 	home, away := a.getDeviceStates(update)
 	allAway := len(home) == 0 && len(away) > 0
 	someoneHome := len(home) > 0
-	currentState := poller.GetZoneState(update.ZoneInfo[a.ZoneID])
-	overlay := update.ZoneInfo[a.ZoneID].Overlay
+	currentState := GetZoneState(update.ZoneInfo[a.ZoneID])
 
 	if allAway {
-		if currentState != poller.ZoneStateOff {
+		next.Reason = makeReason(away, "away")
+		if currentState.Heating {
 			next.Action = true
-			next.State = poller.ZoneStateOff
+			next.State = ZoneState{Heating: false, Overlay: tado.PermanentOverlay}
 			next.Delay = a.Delay
-			next.Reason = makeReason(away, "away")
-		} else {
-			next.Reason = makeReason(away, "away")
 		}
 	} else if someoneHome {
-		if currentState != poller.ZoneStateAuto && overlay.Setting.Power == "OFF" {
+		if !currentState.Heating && currentState.Overlay != tado.NoOverlay { // TODO: only if permanentoverlay?
 			next.Action = true
-			next.State = poller.ZoneStateAuto
+			next.State = ZoneState{Overlay: tado.NoOverlay}
 			next.Delay = 0
 			next.Reason = makeReason(home, "home")
 		} else {

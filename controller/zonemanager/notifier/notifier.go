@@ -2,7 +2,6 @@ package notifier
 
 import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
-	"github.com/clambin/tado-exporter/poller"
 	"time"
 )
 
@@ -27,23 +26,14 @@ func (n Notifiers) Notify(action Action, state rules.TargetState) {
 }
 
 func buildMessage(action Action, state rules.TargetState) string {
+	a := state.State.String()
 	switch action {
 	case Queued:
-		return getAction(state) + " in " + state.Delay.Round(time.Second).String()
+		return a + " in " + state.Delay.Round(time.Second).String()
 	case Done:
-		return getAction(state)
+		return a
 	case Canceled:
-		return "canceling " + getAction(state)
+		return "canceling " + a
 	}
 	return ""
-}
-
-func getAction(state rules.TargetState) string {
-	switch state.State {
-	case poller.ZoneStateAuto:
-		return "moving to auto mode"
-	case poller.ZoneStateOff:
-		return "switching off heating"
-	}
-	return "unknown"
 }
