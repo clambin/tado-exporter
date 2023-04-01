@@ -5,6 +5,7 @@ import (
 	"github.com/clambin/tado"
 	"sort"
 	"strings"
+	"time"
 )
 
 type TargetStates []TargetState
@@ -31,30 +32,35 @@ func (t TargetStates) filterTargetStates(action bool) TargetStates {
 }
 
 func (t TargetStates) getAction() TargetState {
-	targetStates := t.getHeatingActions(false)
-	if len(targetStates) == 0 {
-		targetStates = t.getHeatingActions(true)
+	// First, try to find the earliest action that switches heating off
+	if targetState, ok := t.getFirstAction(func(targetState TargetState) bool {
+		return targetState.State.Overlay == tado.PermanentOverlay && !targetState.State.Heating()
+	}); ok {
+		return targetState
 	}
-	return targetStates[0]
+
+	// Failing that, try to find the earliest action that switches the zone to auto mode
+	if targetState, ok := t.getFirstAction(func(targetState TargetState) bool {
+		return targetState.State.Overlay == tado.NoOverlay
+	}); ok {
+		return targetState
+	}
+
+	// only called if len(t)>0 and the above are the only implemented states. So this should never happen
+	panic("unexpected state found in TargetStates")
 }
 
-func (t TargetStates) getHeatingActions(heating bool) TargetStates {
-	targetStates := make(TargetStates, 0, len(t))
+func (t TargetStates) getFirstAction(eval func(s TargetState) bool) (TargetState, bool) {
+	var minDelay time.Duration = -1
+	var firstTargetState TargetState
+
 	for _, targetState := range t {
-		if !heating {
-			if targetState.State.Overlay == tado.PermanentOverlay && !targetState.State.Heating() {
-				targetStates = append(targetStates, targetState)
-			}
-		} else {
-			if targetState.State.Overlay == tado.NoOverlay {
-				targetStates = append(targetStates, targetState)
-			}
+		if eval(targetState) && (minDelay == -1 || targetState.Delay < minDelay) {
+			firstTargetState = targetState
+			minDelay = targetState.Delay
 		}
 	}
-	sort.Slice(targetStates, func(i, j int) bool {
-		return targetStates[i].Delay < targetStates[j].Delay
-	})
-	return targetStates
+	return firstTargetState, minDelay != time.Duration(-1)
 }
 
 func (t TargetStates) getNoAction() TargetState {

@@ -45,10 +45,7 @@ func (c *Controller) Run(ctx context.Context) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(c.zoneManagers))
 	for _, mgr := range c.zoneManagers {
-		go func(m *zonemanager.Manager) {
-			m.Run(ctx)
-			wg.Done()
-		}(mgr)
+		go func(m *zonemanager.Manager) { defer wg.Done(); m.Run(ctx) }(mgr)
 	}
 
 	if c.cmds != nil {

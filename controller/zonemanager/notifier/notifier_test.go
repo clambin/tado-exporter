@@ -43,6 +43,13 @@ func TestLoggers_Log(t *testing.T) {
 			title:  "foo: switching off heating in 1h0m0s",
 			text:   "foo is away",
 		},
+		{
+			action: notifier.Done,
+			state:  rules.TargetState{ZoneID: 10, ZoneName: "foo", State: rules.ZoneState{Overlay: tado.PermanentOverlay}, Delay: time.Hour, Reason: "foo is away"},
+			color:  "good",
+			title:  "foo: switching off heating",
+			text:   "foo is away",
+		},
 	}
 
 	for _, tt := range testCases {

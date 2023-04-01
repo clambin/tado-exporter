@@ -100,12 +100,6 @@ func TestPoller_Run(t *testing.T) {
 	assert.Equal(t, "bar", update.Zones[2].Name)
 
 	require.Len(t, update.ZoneInfo, 2)
-	//TODO
-	//info := update.ZoneInfo[1]
-	//assert.Equal(t, poller.ZoneStateAuto, poller.GetZoneState(info))
-	//info = update.ZoneInfo[2]
-	//assert.Equal(t, poller.ZoneStateOff, poller.GetZoneState(info))
-
 	assert.True(t, update.Home)
 
 	p.Unregister(ch)

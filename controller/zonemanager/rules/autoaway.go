@@ -38,7 +38,7 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (TargetState, error) {
 			next.Delay = a.Delay
 		}
 	} else if someoneHome {
-		if !currentState.Heating() && currentState.Overlay != tado.NoOverlay { // TODO: only if permanentoverlay?
+		if !currentState.Heating() && currentState.Overlay == tado.PermanentOverlay {
 			next.Action = true
 			next.State = ZoneState{Overlay: tado.NoOverlay}
 			next.Delay = 0
