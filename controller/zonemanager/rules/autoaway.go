@@ -32,13 +32,13 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (TargetState, error) {
 
 	if allAway {
 		next.Reason = makeReason(away, "away")
-		if currentState.Heating {
+		if currentState.Heating() {
 			next.Action = true
-			next.State = ZoneState{Heating: false, Overlay: tado.PermanentOverlay}
+			next.State = ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5.0}}
 			next.Delay = a.Delay
 		}
 	} else if someoneHome {
-		if !currentState.Heating && currentState.Overlay != tado.NoOverlay { // TODO: only if permanentoverlay?
+		if !currentState.Heating() && currentState.Overlay != tado.NoOverlay { // TODO: only if permanentoverlay?
 			next.Action = true
 			next.State = ZoneState{Overlay: tado.NoOverlay}
 			next.Delay = 0

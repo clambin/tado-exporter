@@ -105,7 +105,7 @@ func (m *Manager) ReportRooms(_ context.Context, _ ...string) []slack.Attachment
 
 		var stateStr string
 		zoneState := rules.GetZoneState(zoneInfo)
-		if !zoneState.Heating {
+		if !zoneState.Heating() {
 			stateStr = "off"
 		} else {
 			switch zoneState.Overlay {

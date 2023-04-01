@@ -66,7 +66,9 @@ func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) erro
 	}
 
 	if next.Action {
-		slogJob(next, update)
+		if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+			slogJob(next, update)
+		}
 		m.scheduleJob(ctx, next)
 	} else {
 		m.cancelJob(next)
@@ -76,9 +78,6 @@ func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) erro
 }
 
 func slogJob(next rules.TargetState, update *poller.Update) {
-	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-		return
-	}
 	zoneGroup := []slog.Attr{slog.Group("settings",
 		slog.String("power", update.ZoneInfo[next.ZoneID].Setting.Power),
 		slog.Float64("temperature", update.ZoneInfo[next.ZoneID].Setting.Temperature.Celsius),

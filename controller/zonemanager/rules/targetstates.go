@@ -42,7 +42,7 @@ func (t TargetStates) getHeatingActions(heating bool) TargetStates {
 	targetStates := make(TargetStates, 0, len(t))
 	for _, targetState := range t {
 		if !heating {
-			if targetState.State.Overlay == tado.PermanentOverlay && (!targetState.State.Heating || targetState.State.TargetTemperature.Celsius <= 5.0) {
+			if targetState.State.Overlay == tado.PermanentOverlay && !targetState.State.Heating() {
 				targetStates = append(targetStates, targetState)
 			}
 		} else {

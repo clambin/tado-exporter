@@ -16,20 +16,20 @@ func TestTargetStates_GetNextState(t *testing.T) {
 		{
 			name: "get earliest",
 			input: TargetStates{
-				{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Heating: true, Overlay: tado.PermanentOverlay}, Delay: time.Hour, Reason: "reason 1"},
-				{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Heating: true, Overlay: tado.PermanentOverlay}, Delay: time.Minute, Reason: "reason 2"},
+				{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5.0}}, Delay: time.Hour, Reason: "reason 1"},
+				{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5.0}}, Delay: time.Minute, Reason: "reason 2"},
 				{ZoneID: 1, ZoneName: "foo", Action: false, Reason: "reason 3"},
 			},
-			expect: TargetState{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Heating: true, Overlay: tado.PermanentOverlay}, Delay: time.Minute, Reason: "reason 2"},
+			expect: TargetState{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5.0}}, Delay: time.Minute, Reason: "reason 2"},
 		},
 		{
 			name: "prefer off",
 			input: TargetStates{
-				{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Heating: true, Overlay: tado.NoOverlay}, Delay: time.Minute, Reason: "reason 1"},
-				{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Heating: false, Overlay: tado.PermanentOverlay}, Delay: time.Hour, Reason: "reason 2"},
+				{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Delay: time.Minute, Reason: "reason 1"},
+				{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay}, Delay: time.Hour, Reason: "reason 2"},
 				{ZoneID: 1, ZoneName: "foo", Action: false, Reason: "reason 3"},
 			},
-			expect: TargetState{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Heating: false, Overlay: tado.PermanentOverlay}, Delay: time.Hour, Reason: "reason 2"},
+			expect: TargetState{ZoneID: 1, ZoneName: "foo", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay}, Delay: time.Hour, Reason: "reason 2"},
 		},
 		{
 			name: "no action",

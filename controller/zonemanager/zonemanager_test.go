@@ -166,11 +166,14 @@ func TestManager_Scheduled(t *testing.T) {
 
 	ch <- &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-		ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
-			Type:        "MANUAL",
-			Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
-			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-		}}},
+		ZoneInfo: map[int]tado.ZoneInfo{1: {
+			Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}},
+			Overlay: tado.ZoneInfoOverlay{
+				Type:        "MANUAL",
+				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
+				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+			},
+		}},
 		UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 	}
 
@@ -213,11 +216,14 @@ func TestManagers_ReportTasks(t *testing.T) {
 
 	ch <- &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-		ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
-			Type:        "MANUAL",
-			Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
-			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-		}}},
+		ZoneInfo: map[int]tado.ZoneInfo{1: {
+			Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}},
+			Overlay: tado.ZoneInfoOverlay{
+				Type:        "MANUAL",
+				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
+				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
+			},
+		}},
 		UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
 	}
 

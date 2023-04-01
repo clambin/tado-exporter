@@ -1,12 +1,14 @@
 package rules_test
 
 import (
+	"bytes"
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"golang.org/x/exp/slog"
 	"testing"
 )
 
@@ -19,10 +21,7 @@ func TestGetZoneState(t *testing.T) {
 		{
 			name:     "off (auto)",
 			zoneInfo: tado.ZoneInfo{Setting: tado.ZonePowerSetting{Power: "OFF"}},
-			want: rules.ZoneState{
-				Heating: false,
-				Overlay: tado.NoOverlay,
-			},
+			want:     rules.ZoneState{Overlay: tado.NoOverlay},
 		},
 		{
 			name: "off (manual)",
@@ -34,18 +33,14 @@ func TestGetZoneState(t *testing.T) {
 					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 				},
 			},
-			want: rules.ZoneState{
-				Heating: false,
-				Overlay: tado.PermanentOverlay,
-			},
+			want: rules.ZoneState{Overlay: tado.PermanentOverlay},
 		},
 		{
 			name:     "on (auto)",
 			zoneInfo: tado.ZoneInfo{Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}}},
 			want: rules.ZoneState{
-				Heating:           true,
-				TargetTemperature: tado.Temperature{Celsius: 20.0},
 				Overlay:           tado.NoOverlay,
+				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
 		},
 		{
@@ -59,9 +54,8 @@ func TestGetZoneState(t *testing.T) {
 				},
 			},
 			want: rules.ZoneState{
-				Heating:           true,
-				TargetTemperature: tado.Temperature{Celsius: 20.0},
 				Overlay:           tado.PermanentOverlay,
+				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
 		},
 		{
@@ -75,9 +69,8 @@ func TestGetZoneState(t *testing.T) {
 				},
 			},
 			want: rules.ZoneState{
-				Heating:           true,
-				TargetTemperature: tado.Temperature{Celsius: 20.0},
 				Overlay:           tado.TimerOverlay,
+				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
 		},
 		{
@@ -91,9 +84,8 @@ func TestGetZoneState(t *testing.T) {
 				},
 			},
 			want: rules.ZoneState{
-				Heating:           true,
-				TargetTemperature: tado.Temperature{Celsius: 20.0},
 				Overlay:           tado.NextBlockOverlay,
+				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
 		},
 	}
@@ -108,9 +100,8 @@ func TestGetZoneState(t *testing.T) {
 
 func TestZoneState_Do(t *testing.T) {
 	type fields struct {
-		Heating           bool
-		TargetTemperature tado.Temperature
 		Overlay           tado.OverlayTerminationMode
+		TargetTemperature tado.Temperature
 	}
 	type mockArgs struct {
 		on      string
@@ -138,7 +129,6 @@ func TestZoneState_Do(t *testing.T) {
 		{
 			name: "set overlay",
 			fields: fields{
-				Heating:           true,
 				Overlay:           tado.PermanentOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
@@ -152,9 +142,8 @@ func TestZoneState_Do(t *testing.T) {
 		{
 			name: "off",
 			fields: fields{
-				Heating:           false,
 				Overlay:           tado.PermanentOverlay,
-				TargetTemperature: tado.Temperature{Celsius: 20.0},
+				TargetTemperature: tado.Temperature{Celsius: 5.0},
 			},
 			args: mockArgs{
 				on:      "SetZoneOverlay",
@@ -166,7 +155,6 @@ func TestZoneState_Do(t *testing.T) {
 		{
 			name: "off",
 			fields: fields{
-				Heating:           true,
 				Overlay:           tado.PermanentOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 5.0},
 			},
@@ -180,7 +168,6 @@ func TestZoneState_Do(t *testing.T) {
 		{
 			name: "invalid overlay",
 			fields: fields{
-				Heating:           true,
 				Overlay:           tado.NextBlockOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
@@ -196,9 +183,8 @@ func TestZoneState_Do(t *testing.T) {
 				api.On(tt.args.on, tt.args.args...).Return(tt.args.returns...).Once()
 			}
 			s := rules.ZoneState{
-				Heating:           tt.fields.Heating,
-				TargetTemperature: tt.fields.TargetTemperature,
 				Overlay:           tt.fields.Overlay,
+				TargetTemperature: tt.fields.TargetTemperature,
 			}
 			tt.wantErr(t, s.Do(ctx, api, 10))
 		})
@@ -207,7 +193,6 @@ func TestZoneState_Do(t *testing.T) {
 
 func TestZoneState_String(t *testing.T) {
 	type fields struct {
-		Heating           bool
 		TargetTemperature tado.Temperature
 		Overlay           tado.OverlayTerminationMode
 	}
@@ -220,7 +205,6 @@ func TestZoneState_String(t *testing.T) {
 			name: "off",
 			fields: fields{
 				Overlay: tado.PermanentOverlay,
-				Heating: false,
 			},
 			want: "switching off heating",
 		},
@@ -228,7 +212,6 @@ func TestZoneState_String(t *testing.T) {
 			name: "off",
 			fields: fields{
 				Overlay:           tado.PermanentOverlay,
-				Heating:           true,
 				TargetTemperature: tado.Temperature{Celsius: 5.0},
 			},
 			want: "switching off heating",
@@ -244,7 +227,6 @@ func TestZoneState_String(t *testing.T) {
 			name: "unknown",
 			fields: fields{
 				Overlay:           tado.TimerOverlay,
-				Heating:           true,
 				TargetTemperature: tado.Temperature{Celsius: 10.0},
 			},
 			want: "unknown action",
@@ -253,11 +235,52 @@ func TestZoneState_String(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := rules.ZoneState{
-				Heating:           tt.fields.Heating,
-				TargetTemperature: tt.fields.TargetTemperature,
 				Overlay:           tt.fields.Overlay,
+				TargetTemperature: tt.fields.TargetTemperature,
 			}
 			assert.Equal(t, tt.want, s.String())
+		})
+	}
+}
+
+func TestZoneState_LogValue(t *testing.T) {
+	type fields struct {
+		Overlay           tado.OverlayTerminationMode
+		TargetTemperature tado.Temperature
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name:   "no overlay",
+			fields: fields{Overlay: tado.NoOverlay},
+			want:   `s.overlay="no overlay"`,
+		},
+		{
+			name:   "off",
+			fields: fields{Overlay: tado.PermanentOverlay},
+			want:   `s.overlay="permanent overlay" s.heating=false`,
+		},
+		{
+			name:   "on",
+			fields: fields{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 22.5}},
+			want:   `s.overlay="permanent overlay" s.heating=true s.target=22.5`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := rules.ZoneState{
+				Overlay:           tt.fields.Overlay,
+				TargetTemperature: tt.fields.TargetTemperature,
+			}
+
+			out := bytes.NewBufferString("")
+			l := slog.New(slog.NewTextHandler(out))
+			l.Log(context.Background(), slog.LevelInfo, "state", "s", s)
+
+			assert.Contains(t, out.String(), tt.want)
 		})
 	}
 }
