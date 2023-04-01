@@ -11,43 +11,33 @@ import (
 type TargetStates []TargetState
 
 func (t TargetStates) GetNextState() TargetState {
-	if targetStates := t.filterTargetStates(true); len(targetStates) > 0 {
-		return targetStates.getAction()
+	if targetState, ok := t.getAction(); ok {
+		return targetState
 	}
-	targetStates := t.filterTargetStates(false)
+	targetStates := t.getNoActionTargetStates()
 	if len(targetStates) == 0 {
 		panic("no rules defined?")
 	}
 	return targetStates.getNoAction()
 }
 
-func (t TargetStates) filterTargetStates(action bool) TargetStates {
-	targetStates := make(TargetStates, 0, len(t))
-	for _, targetState := range t {
-		if targetState.Action == action {
-			targetStates = append(targetStates, targetState)
-		}
-	}
-	return targetStates
-}
-
-func (t TargetStates) getAction() TargetState {
+func (t TargetStates) getAction() (TargetState, bool) {
 	// First, try to find the earliest action that switches heating off
 	if targetState, ok := t.getFirstAction(func(targetState TargetState) bool {
-		return targetState.State.Overlay == tado.PermanentOverlay && !targetState.State.Heating()
+		return targetState.Action && targetState.State.Overlay == tado.PermanentOverlay && !targetState.State.Heating()
 	}); ok {
-		return targetState
+		return targetState, true
 	}
 
 	// Failing that, try to find the earliest action that switches the zone to auto mode
 	if targetState, ok := t.getFirstAction(func(targetState TargetState) bool {
-		return targetState.State.Overlay == tado.NoOverlay
+		return targetState.Action && targetState.State.Overlay == tado.NoOverlay
 	}); ok {
-		return targetState
+		return targetState, true
 	}
 
 	// only called if len(t)>0 and the above are the only implemented states. So this should never happen
-	panic("unexpected state found in TargetStates")
+	return TargetState{}, false
 }
 
 func (t TargetStates) getFirstAction(eval func(s TargetState) bool) (TargetState, bool) {
@@ -61,6 +51,16 @@ func (t TargetStates) getFirstAction(eval func(s TargetState) bool) (TargetState
 		}
 	}
 	return firstTargetState, minDelay != time.Duration(-1)
+}
+
+func (t TargetStates) getNoActionTargetStates() TargetStates {
+	targetStates := make(TargetStates, 0, len(t))
+	for _, targetState := range t {
+		if !targetState.Action {
+			targetStates = append(targetStates, targetState)
+		}
+	}
+	return targetStates
 }
 
 func (t TargetStates) getNoAction() TargetState {
