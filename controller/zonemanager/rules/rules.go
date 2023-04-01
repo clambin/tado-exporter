@@ -3,6 +3,7 @@ package rules
 import (
 	"fmt"
 	"github.com/clambin/tado-exporter/poller"
+	"golang.org/x/exp/slog"
 )
 
 type Evaluator struct {
@@ -32,7 +33,12 @@ func (e *Evaluator) Evaluate(update *poller.Update) (TargetState, error) {
 	}
 
 	next := targetStates.GetNextState()
-	log(next, update)
+
+	slog.Debug("next state evaluated",
+		"next", next,
+		slogZoneInfo("zoneInfo", update.ZoneInfo[next.ZoneID]),
+		"devices", update.UserInfo,
+	)
 
 	return next, nil
 }
