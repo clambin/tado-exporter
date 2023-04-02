@@ -66,29 +66,13 @@ func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) erro
 	}
 
 	if next.Action {
-		if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-			slogJob(next, update)
-		}
+		slog.Debug("scheduling job", "next", next, "zoneConfig", zoneLogger(update.ZoneInfo[next.ZoneID]))
 		m.scheduleJob(ctx, next)
 	} else {
 		m.cancelJob(next)
 	}
 
 	return nil
-}
-
-func slogJob(next rules.Action, update *poller.Update) {
-	zoneGroup := []slog.Attr{slog.Group("settings",
-		slog.String("power", update.ZoneInfo[next.ZoneID].Setting.Power),
-		slog.Float64("temperature", update.ZoneInfo[next.ZoneID].Setting.Temperature.Celsius),
-	)}
-	if update.ZoneInfo[next.ZoneID].Overlay.GetMode() != tado.NoOverlay {
-		zoneGroup = append(zoneGroup, slog.Group("overlay",
-			slog.String("power", update.ZoneInfo[next.ZoneID].Overlay.Setting.Power),
-			slog.Float64("temperature", update.ZoneInfo[next.ZoneID].Overlay.Setting.Temperature.Celsius),
-		))
-	}
-	slog.Debug("scheduling job", "next", next, slog.Group("zoneState", zoneGroup...))
 }
 
 func (m *Manager) scheduleJob(ctx context.Context, next rules.Action) {
@@ -189,4 +173,30 @@ func (m Managers) ReportTasks() ([]string, bool) {
 		}
 	}
 	return tasks, len(tasks) > 0
+}
+
+var _ slog.LogValuer = zoneLogger{}
+
+type zoneLogger tado.ZoneInfo
+
+func (z zoneLogger) LogValue() slog.Value {
+	zoneGroup := make([]slog.Attr, 1, 2)
+
+	attribs := make([]slog.Attr, 1, 2)
+	attribs[0] = slog.String("power", z.Setting.Power)
+	if z.Setting.Power == "ON" {
+		attribs = append(attribs, slog.Float64("temperature", z.Setting.Temperature.Celsius))
+	}
+	zoneGroup[0] = slog.Group("settings", attribs...)
+
+	if z.Overlay.GetMode() != tado.NoOverlay {
+		zoneGroup = append(zoneGroup,
+			slog.Group("overlay",
+				slog.Group("termination",
+					slog.String("type", z.Overlay.Termination.Type),
+					slog.String("subtype", z.Overlay.Termination.TypeSkillBasedApp),
+				),
+			))
+	}
+	return slog.GroupValue(zoneGroup...)
 }

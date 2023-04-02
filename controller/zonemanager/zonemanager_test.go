@@ -1,6 +1,7 @@
 package zonemanager
 
 import (
+	"bytes"
 	"context"
 	"github.com/clambin/tado"
 	slackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slog"
 	"sync"
 	"testing"
 	"time"
@@ -239,4 +241,52 @@ func TestManagers_ReportTasks(t *testing.T) {
 
 	cancel()
 	wg.Wait()
+}
+
+func Test_zoneLogger_LogValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		zoneInfo tado.ZoneInfo
+		want     string
+	}{
+		{
+			name:     "auto mode (on)",
+			zoneInfo: tado.ZoneInfo{Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}}},
+			want:     `level=INFO msg=zone z.settings.power=ON z.settings.temperature=20`,
+		},
+		{
+			name:     "auto mode (off)",
+			zoneInfo: tado.ZoneInfo{Setting: tado.ZonePowerSetting{Power: "OFF"}},
+			want:     `level=INFO msg=zone z.settings.power=OFF`,
+		},
+		{
+			name: "manual (on)",
+			zoneInfo: tado.ZoneInfo{
+				Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}},
+				Overlay: tado.ZoneInfoOverlay{
+					Type:        "MANUAL",
+					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL", TypeSkillBasedApp: "MANUAL"},
+				},
+			},
+			want: `level=INFO msg=zone z.settings.power=ON z.settings.temperature=20 z.overlay.termination.type=MANUAL z.overlay.termination.subtype=MANUAL`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			z := zoneLogger(tt.zoneInfo)
+
+			out := bytes.NewBufferString("")
+			opt := slog.HandlerOptions{ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
+				// Remove time from the output for predictable test output.
+				if a.Key == slog.TimeKey {
+					return slog.Attr{}
+				}
+				return a
+			}}
+			l := slog.New(opt.NewTextHandler(out))
+
+			l.Log(context.Background(), slog.LevelInfo, "zone", "z", z)
+			assert.Equal(t, tt.want+"\n", out.String())
+		})
+	}
 }
