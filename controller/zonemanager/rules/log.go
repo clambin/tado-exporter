@@ -5,24 +5,28 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func slogZoneInfo(name string, zoneInfo tado.ZoneInfo) slog.Attr {
-	attribs := make([]slog.Attr, 1, 3)
-	attribs[0] = slog.String("power", zoneInfo.Setting.Power)
-	if zoneInfo.Setting.Power == "ON" {
-		attribs = append(attribs, slog.Float64("temperature", zoneInfo.Setting.Temperature.Celsius))
+var _ slog.LogValuer = zoneInfo{}
+
+type zoneInfo tado.ZoneInfo
+
+func (z zoneInfo) LogValue() slog.Value {
+	attribs := make([]slog.Attr, 1, 2)
+
+	settings := make([]slog.Attr, 1, 2)
+	settings[0] = slog.String("power", z.Setting.Power)
+	if z.Setting.Power == "ON" {
+		settings = append(settings, slog.Float64("temperature", z.Setting.Temperature.Celsius))
 	}
-	if zoneInfo.Overlay.Type != "" {
+	attribs[0] = slog.Group("settings", settings...)
+
+	if z.Overlay.Type != "" {
 		attribs = append(attribs, slog.Group("overlay",
-			slog.String("type", zoneInfo.Overlay.Type),
-			slog.Group("setting",
-				slog.String("type", zoneInfo.Overlay.Setting.Type),
-				slog.String("power", zoneInfo.Overlay.Setting.Power),
-			),
+			slog.String("type", z.Overlay.Type),
 			slog.Group("termination",
-				slog.String("type", zoneInfo.Overlay.Termination.Type),
-				slog.String("subtype", zoneInfo.Overlay.Termination.TypeSkillBasedApp),
+				slog.String("type", z.Overlay.Termination.Type),
+				slog.String("subtype", z.Overlay.Termination.TypeSkillBasedApp),
 			),
 		))
 	}
-	return slog.Group(name, attribs...)
+	return slog.GroupValue(attribs...)
 }

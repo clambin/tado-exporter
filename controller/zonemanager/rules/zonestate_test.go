@@ -256,17 +256,17 @@ func TestZoneState_LogValue(t *testing.T) {
 		{
 			name:   "no overlay",
 			fields: fields{Overlay: tado.NoOverlay},
-			want:   `s.overlay="no overlay"`,
+			want:   `level=INFO msg=state s.overlay="no overlay"`,
 		},
 		{
 			name:   "off",
 			fields: fields{Overlay: tado.PermanentOverlay},
-			want:   `s.overlay="permanent overlay" s.heating=false`,
+			want:   `level=INFO msg=state s.overlay="permanent overlay" s.heating=false`,
 		},
 		{
 			name:   "on",
 			fields: fields{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 22.5}},
-			want:   `s.overlay="permanent overlay" s.heating=true s.target=22.5`,
+			want:   `level=INFO msg=state s.overlay="permanent overlay" s.heating=true s.target=22.5`,
 		},
 	}
 	for _, tt := range tests {
@@ -277,10 +277,17 @@ func TestZoneState_LogValue(t *testing.T) {
 			}
 
 			out := bytes.NewBufferString("")
-			l := slog.New(slog.NewTextHandler(out))
-			l.Log(context.Background(), slog.LevelInfo, "state", "s", s)
+			opt := slog.HandlerOptions{ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
+				// Remove time from the output for predictable test output.
+				if a.Key == slog.TimeKey {
+					return slog.Attr{}
+				}
+				return a
+			}}
+			l := slog.New(opt.NewTextHandler(out))
 
-			assert.Contains(t, out.String(), tt.want)
+			l.Log(context.Background(), slog.LevelInfo, "state", "s", s)
+			assert.Equal(t, tt.want+"\n", out.String())
 		})
 	}
 }

@@ -36,7 +36,7 @@ func (e *Evaluator) Evaluate(update *poller.Update) (TargetState, error) {
 
 	slog.Debug("next state evaluated",
 		"next", next,
-		slogZoneInfo("zoneInfo", update.ZoneInfo[next.ZoneID]),
+		"zoneInfo", zoneInfo(update.ZoneInfo[next.ZoneID]),
 		"devices", update.UserInfo,
 	)
 

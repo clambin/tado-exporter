@@ -115,10 +115,8 @@ func TestMobileDevices_LogValue(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&out))
 	logger.Info("devices", "devices", devices)
 
-	assert.Contains(t, out.String(),
-		`devices.device_10.id=10 devices.device_10.name=home devices.device_10.geotracked=true devices.device_10.location.home=true devices.device_10.location.stale=false `+
-			`devices.device_11.id=11 devices.device_11.name=away devices.device_11.geotracked=true devices.device_11.location.home=false devices.device_11.location.stale=false `+
-			`devices.device_12.id=12 devices.device_12.name=stale devices.device_12.geotracked=true devices.device_12.location.home=false devices.device_12.location.stale=true `+
-			`devices.device_13.id=13 devices.device_13.name="not geotagged" devices.device_13.geotracked=false devices.device_13.location.home=false devices.device_13.location.stale=false`,
-	)
+	assert.Contains(t, out.String(), `devices.device_10.id=10 devices.device_10.name=home devices.device_10.geotracked=true devices.device_10.location.home=true devices.device_10.location.stale=false`)
+	assert.Contains(t, out.String(), `devices.device_11.id=11 devices.device_11.name=away devices.device_11.geotracked=true devices.device_11.location.home=false devices.device_11.location.stale=false `)
+	assert.Contains(t, out.String(), `devices.device_12.id=12 devices.device_12.name=stale devices.device_12.geotracked=true devices.device_12.location.home=false devices.device_12.location.stale=true`)
+	assert.Contains(t, out.String(), `devices.device_13.id=13 devices.device_13.name="not geotagged" devices.device_13.geotracked=false devices.device_13.location.home=false devices.device_13.location.stale=false`)
 }
