@@ -48,3 +48,10 @@ func TestActions_GetNextState(t *testing.T) {
 		})
 	}
 }
+
+func TestGetZoneState_Panic(t *testing.T) {
+	assert.Panics(t, func() {
+		a := Actions{}
+		_ = a.GetNext()
+	})
+}
