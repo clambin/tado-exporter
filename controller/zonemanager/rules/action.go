@@ -5,18 +5,18 @@ import (
 	"time"
 )
 
-var _ slog.LogValuer = &TargetState{}
+var _ slog.LogValuer = &Action{}
 
-type TargetState struct {
+type Action struct {
 	ZoneID   int
 	ZoneName string
 	Action   bool
+	Reason   string
 	State    ZoneState
 	Delay    time.Duration
-	Reason   string
 }
 
-func (s TargetState) LogValue() slog.Value {
+func (s Action) LogValue() slog.Value {
 	values := make([]slog.Attr, 3, 6)
 	values[0] = slog.Int("id", s.ZoneID)
 	values[1] = slog.String("name", s.ZoneName)

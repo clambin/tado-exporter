@@ -14,25 +14,25 @@ type Evaluator struct {
 var _ Rule = &Evaluator{}
 
 type Rule interface {
-	Evaluate(*poller.Update) (TargetState, error)
+	Evaluate(*poller.Update) (Action, error)
 }
 
-func (e *Evaluator) Evaluate(update *poller.Update) (TargetState, error) {
-	var targetState TargetState
+func (e *Evaluator) Evaluate(update *poller.Update) (Action, error) {
+	var action Action
 	if err := e.load(update); err != nil {
-		return targetState, err
+		return action, err
 	}
 
-	targetStates := make(TargetStates, len(e.rules))
+	actions := make(Actions, len(e.rules))
 	for i, rule := range e.rules {
 		next, err := rule.Evaluate(update)
 		if err != nil {
-			return targetState, err
+			return action, err
 		}
-		targetStates[i] = next
+		actions[i] = next
 	}
 
-	next := targetStates.GetNextState()
+	next := actions.GetNext()
 
 	slog.Debug("next state evaluated",
 		"next", next,

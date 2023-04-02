@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestTargetState_LogValue(t *testing.T) {
+func TestAction_LogValue(t *testing.T) {
 	type fields struct {
 		Action bool
 		State  ZoneState
@@ -40,7 +40,7 @@ func TestTargetState_LogValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := TargetState{
+			s := Action{
 				ZoneID:   10,
 				ZoneName: "foo",
 				Action:   tt.fields.Action,

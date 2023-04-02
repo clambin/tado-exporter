@@ -77,7 +77,7 @@ func (m *Manager) processUpdate(ctx context.Context, update *poller.Update) erro
 	return nil
 }
 
-func slogJob(next rules.TargetState, update *poller.Update) {
+func slogJob(next rules.Action, update *poller.Update) {
 	zoneGroup := []slog.Attr{slog.Group("settings",
 		slog.String("power", update.ZoneInfo[next.ZoneID].Setting.Power),
 		slog.Float64("temperature", update.ZoneInfo[next.ZoneID].Setting.Temperature.Celsius),
@@ -91,7 +91,7 @@ func slogJob(next rules.TargetState, update *poller.Update) {
 	slog.Debug("scheduling job", "next", next, slog.Group("zoneState", zoneGroup...))
 }
 
-func (m *Manager) scheduleJob(ctx context.Context, next rules.TargetState) {
+func (m *Manager) scheduleJob(ctx context.Context, next rules.Action) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -113,7 +113,7 @@ func (m *Manager) scheduleJob(ctx context.Context, next rules.TargetState) {
 	}
 }
 
-func (m *Manager) cancelJob(next rules.TargetState) {
+func (m *Manager) cancelJob(next rules.Action) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -149,14 +149,14 @@ func (m *Manager) processResult() error {
 	return err
 }
 
-func (m *Manager) GetScheduled() (rules.TargetState, bool) {
+func (m *Manager) GetScheduled() (rules.Action, bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	if m.task != nil {
 		return m.task.nextState, true
 	}
-	return rules.TargetState{}, false
+	return rules.Action{}, false
 }
 
 func (m *Manager) ReportTask() (string, bool) {
@@ -171,8 +171,8 @@ func (m *Manager) ReportTask() (string, bool) {
 
 type Managers []*Manager
 
-func (m Managers) GetScheduled() []rules.TargetState {
-	var states []rules.TargetState
+func (m Managers) GetScheduled() []rules.Action {
+	var states []rules.Action
 	for _, mgr := range m {
 		if state, scheduled := mgr.GetScheduled(); scheduled {
 			states = append(states, state)

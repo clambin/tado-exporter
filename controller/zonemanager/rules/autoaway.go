@@ -18,8 +18,8 @@ type AutoAwayRule struct {
 
 var _ Rule = &AutoAwayRule{}
 
-func (a *AutoAwayRule) Evaluate(update *poller.Update) (TargetState, error) {
-	next := TargetState{ZoneID: a.ZoneID, ZoneName: a.ZoneName}
+func (a *AutoAwayRule) Evaluate(update *poller.Update) (Action, error) {
+	next := Action{ZoneID: a.ZoneID, ZoneName: a.ZoneName}
 
 	if err := a.load(update); err != nil {
 		return next, err

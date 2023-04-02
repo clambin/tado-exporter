@@ -16,8 +16,8 @@ var _ Rule = &NightTimeRule{}
 
 var testForceTime time.Time
 
-func (n *NightTimeRule) Evaluate(update *poller.Update) (TargetState, error) {
-	next := TargetState{
+func (n *NightTimeRule) Evaluate(update *poller.Update) (Action, error) {
+	next := Action{
 		ZoneID:   n.zoneID,
 		ZoneName: n.zoneName,
 		Reason:   "no manual settings detected",

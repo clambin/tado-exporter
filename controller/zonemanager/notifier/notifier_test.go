@@ -17,35 +17,35 @@ import (
 func TestLoggers_Log(t *testing.T) {
 	var testCases = []struct {
 		action notifier.Action
-		state  rules.TargetState
+		state  rules.Action
 		color  string
 		title  string
 		text   string
 	}{
 		{
 			action: notifier.Queued,
-			state:  rules.TargetState{ZoneID: 10, ZoneName: "foo", State: rules.ZoneState{Overlay: tado.NoOverlay}, Delay: time.Hour, Reason: "manual temp detected"},
+			state:  rules.Action{ZoneID: 10, ZoneName: "foo", State: rules.ZoneState{Overlay: tado.NoOverlay}, Delay: time.Hour, Reason: "manual temp detected"},
 			color:  "good",
 			title:  "foo: moving to auto mode in 1h0m0s",
 			text:   "manual temp detected",
 		},
 		{
 			action: notifier.Canceled,
-			state:  rules.TargetState{ZoneID: 10, ZoneName: "foo", State: rules.ZoneState{Overlay: tado.NoOverlay}, Delay: time.Hour, Reason: "room is in auto mode"},
+			state:  rules.Action{ZoneID: 10, ZoneName: "foo", State: rules.ZoneState{Overlay: tado.NoOverlay}, Delay: time.Hour, Reason: "room is in auto mode"},
 			color:  "good",
 			title:  "foo: canceling moving to auto mode",
 			text:   "room is in auto mode",
 		},
 		{
 			action: notifier.Queued,
-			state:  rules.TargetState{ZoneID: 10, ZoneName: "foo", State: rules.ZoneState{Overlay: tado.PermanentOverlay}, Delay: time.Hour, Reason: "foo is away"},
+			state:  rules.Action{ZoneID: 10, ZoneName: "foo", State: rules.ZoneState{Overlay: tado.PermanentOverlay}, Delay: time.Hour, Reason: "foo is away"},
 			color:  "good",
 			title:  "foo: switching off heating in 1h0m0s",
 			text:   "foo is away",
 		},
 		{
 			action: notifier.Done,
-			state:  rules.TargetState{ZoneID: 10, ZoneName: "foo", State: rules.ZoneState{Overlay: tado.PermanentOverlay}, Delay: time.Hour, Reason: "foo is away"},
+			state:  rules.Action{ZoneID: 10, ZoneName: "foo", State: rules.ZoneState{Overlay: tado.PermanentOverlay}, Delay: time.Hour, Reason: "foo is away"},
 			color:  "good",
 			title:  "foo: switching off heating",
 			text:   "foo is away",

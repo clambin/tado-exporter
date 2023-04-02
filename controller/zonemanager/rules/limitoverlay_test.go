@@ -12,9 +12,9 @@ import (
 func TestLimitOverlayRule_Evaluate(t *testing.T) {
 	tests := []testCase{
 		{
-			name:        "auto mode",
-			update:      &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {}}},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
+			name:   "auto mode",
+			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {}}},
+			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
 		{
 			name: "manual control",
@@ -23,7 +23,7 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
 				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
 			}}}},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Delay: time.Hour, Reason: "manual temp setting detected"},
+			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Delay: time.Hour, Reason: "manual temp setting detected"},
 		},
 		{
 			name: "manual control w/ expiration",
@@ -32,7 +32,7 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
 				Termination: tado.ZoneInfoOverlayTermination{Type: "AUTO", RemainingTimeInSeconds: 300},
 			}}}},
-			targetState: TargetState{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
+			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
 	}
 	r := &LimitOverlayRule{
@@ -44,7 +44,7 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			a, err := r.Evaluate(tt.update)
 			require.NoError(t, err)
-			assert.Equal(t, tt.targetState, a)
+			assert.Equal(t, tt.action, a)
 		})
 	}
 }

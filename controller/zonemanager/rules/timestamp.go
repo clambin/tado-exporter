@@ -13,9 +13,9 @@ type Timestamp struct {
 }
 
 func (t *Timestamp) UnmarshalYAML(value *yaml.Node) error {
-	if value.Value == "" {
-		return fmt.Errorf("empty timestamp")
-	}
+	//if value.Value == `` {
+	//	return fmt.Errorf("empty timestamp")
+	//}
 	timestamp, err := time.Parse("15:04:05", value.Value)
 	if err != nil {
 		timestamp, err = time.Parse("15:04", value.Value)

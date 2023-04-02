@@ -12,7 +12,7 @@ type SlackNotifier struct {
 
 var _ Notifier = &SlackNotifier{}
 
-func (s SlackNotifier) Notify(action Action, state rules.TargetState) {
+func (s SlackNotifier) Notify(action Action, state rules.Action) {
 	_ = s.Bot.Send("", []slack.Attachment{{
 		Color: "good",
 		Title: state.ZoneName + ": " + buildMessage(action, state),

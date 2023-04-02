@@ -6,7 +6,7 @@ import (
 )
 
 type Notifier interface {
-	Notify(action Action, state rules.TargetState)
+	Notify(action Action, state rules.Action)
 }
 
 type Action int
@@ -19,13 +19,13 @@ const (
 
 type Notifiers []Notifier
 
-func (n Notifiers) Notify(action Action, state rules.TargetState) {
+func (n Notifiers) Notify(action Action, state rules.Action) {
 	for _, l := range n {
 		l.Notify(action, state)
 	}
 }
 
-func buildMessage(action Action, state rules.TargetState) string {
+func buildMessage(action Action, state rules.Action) string {
 	a := state.State.String()
 	switch action {
 	case Queued:
