@@ -47,20 +47,17 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 		},
 		{
 			name: "manual control",
-			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {Overlay: tado.ZoneInfoOverlay{
-				Type:        "MANUAL",
-				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
-				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-			}}}},
+			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {
+				Setting: tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
+				Overlay: tado.ZoneInfoOverlay{Type: "MANUAL", Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"}}}}},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Delay: time.Hour, Reason: "manual temp setting detected"},
 		},
 		{
 			name: "manual control w/ expiration",
-			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {Overlay: tado.ZoneInfoOverlay{
-				Type:        "MANUAL",
-				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
-				Termination: tado.ZoneInfoOverlayTermination{Type: "AUTO", RemainingTimeInSeconds: 300},
-			}}}},
+			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {
+				Setting: tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
+				Overlay: tado.ZoneInfoOverlay{Type: "MANUAL", Termination: tado.ZoneInfoOverlayTermination{Type: "AUTO", RemainingTimeInSeconds: 300}},
+			}}},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
 	}
