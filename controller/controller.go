@@ -50,10 +50,7 @@ func (c *Controller) Run(ctx context.Context) {
 
 	if c.cmds != nil {
 		wg.Add(1)
-		go func() {
-			c.cmds.Run(ctx)
-			wg.Done()
-		}()
+		go func() { defer wg.Done(); c.cmds.Run(ctx) }()
 	}
 
 	wg.Wait()
