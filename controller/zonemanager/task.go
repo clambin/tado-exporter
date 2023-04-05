@@ -2,23 +2,21 @@ package zonemanager
 
 import (
 	"context"
-	"fmt"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
-	"github.com/clambin/tado-exporter/tado"
 	"time"
 )
 
 type Task struct {
-	api       tado.API
-	nextState rules.NextState
+	api       rules.TadoSetter
+	nextState rules.Action
 	when      time.Time
 	job       *scheduler.Job
 }
 
 var _ scheduler.Task = &Task{}
 
-func newTask(api tado.API, next rules.NextState) *Task {
+func newTask(api rules.TadoSetter, next rules.Action) *Task {
 	return &Task{
 		api:       api,
 		nextState: next,
@@ -27,15 +25,7 @@ func newTask(api tado.API, next rules.NextState) *Task {
 }
 
 func (j *Task) Run(ctx context.Context) (err error) {
-	switch j.nextState.State {
-	case tado.ZoneStateAuto:
-		err = j.api.DeleteZoneOverlay(ctx, j.nextState.ZoneID)
-	case tado.ZoneStateOff:
-		err = j.api.SetZoneOverlay(ctx, j.nextState.ZoneID, 5.0)
-	default:
-		err = fmt.Errorf("invalid queued state for zone '%s': %d", j.nextState.ZoneName, j.nextState.State)
-	}
-	return
+	return j.nextState.State.Do(ctx, j.api, j.nextState.ZoneID)
 }
 
 func (j *Task) firesNoLaterThan(delay time.Duration) bool {
@@ -45,13 +35,5 @@ func (j *Task) firesNoLaterThan(delay time.Duration) bool {
 }
 
 func (j *Task) Report() string {
-	var action string
-	switch j.nextState.State {
-	case tado.ZoneStateOff:
-		action = "switching off heating"
-	case tado.ZoneStateAuto:
-		action = "moving to auto mode"
-	}
-
-	return j.nextState.ZoneName + ": " + action + " in " + time.Until(j.when).Round(time.Second).String()
+	return j.nextState.ZoneName + ": " + j.nextState.State.String() + " in " + time.Until(j.when).Round(time.Second).String()
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado"
-	tadoAPI "github.com/clambin/tado-exporter/tado"
 	"golang.org/x/exp/slog"
 	"sync"
 	"time"
@@ -18,16 +17,25 @@ type Poller interface {
 	Refresh()
 }
 
+//go:generate mockery --name TadoGetter
+type TadoGetter interface {
+	GetWeatherInfo(context.Context) (tado.WeatherInfo, error)
+	GetMobileDevices(context.Context) ([]tado.MobileDevice, error)
+	GetZones(context.Context) (tado.Zones, error)
+	GetZoneInfo(context.Context, int) (tado.ZoneInfo, error)
+	GetHomeState(ctx context.Context) (homeState tado.HomeState, err error)
+}
+
 var _ Poller = &Server{}
 
 type Server struct {
-	API      tadoAPI.API
+	API      TadoGetter
 	refresh  chan struct{}
 	registry map[chan *Update]struct{}
 	lock     sync.RWMutex
 }
 
-func New(API tadoAPI.API) *Server {
+func New(API TadoGetter) *Server {
 	return &Server{
 		API:      API,
 		refresh:  make(chan struct{}),
@@ -86,13 +94,12 @@ func (poller *Server) poll(ctx context.Context) error {
 	start := time.Now()
 	update, err := poller.update(ctx)
 	if err == nil {
-		slog.Debug("update received", "duration", time.Since(start))
 		poller.lock.RLock()
 		defer poller.lock.RUnlock()
 		for ch := range poller.registry {
 			ch <- &update
 		}
-		slog.Debug("update sent", "clients", len(poller.registry))
+		slog.Debug("poll completed", slog.Duration("duration", time.Since(start)))
 	}
 	return err
 }
@@ -127,16 +134,16 @@ func (poller *Server) getMobileDevices(ctx context.Context) (deviceMap map[int]t
 	return
 }
 
-func (poller *Server) getZones(ctx context.Context) (zoneMap map[int]tado.Zone, err error) {
-	var zones tado.Zones
-	if zones, err = poller.API.GetZones(ctx); err == nil {
+func (poller *Server) getZones(ctx context.Context) (map[int]tado.Zone, error) {
+	var zoneMap map[int]tado.Zone
+	zones, err := poller.API.GetZones(ctx)
+	if err == nil {
 		zoneMap = make(map[int]tado.Zone)
 		for _, zone := range zones {
 			zoneMap[zone.ID] = zone
 		}
-
 	}
-	return
+	return zoneMap, err
 }
 
 func (poller *Server) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) (map[int]tado.ZoneInfo, error) {
@@ -153,9 +160,10 @@ func (poller *Server) getZoneInfos(ctx context.Context, zones map[int]tado.Zone)
 }
 
 func (poller *Server) getHomeState(ctx context.Context) (bool, error) {
+	var home bool
 	homeState, err := poller.API.GetHomeState(ctx)
-	if err != nil {
-		return false, err
+	if err == nil {
+		home = homeState.Presence == "HOME"
 	}
-	return homeState.Presence == "HOME", nil
+	return home, err
 }

@@ -6,8 +6,8 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
+	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
-	tado2 "github.com/clambin/tado-exporter/tado"
 	"github.com/slack-go/slack"
 	"golang.org/x/exp/slog"
 	"sort"
@@ -18,14 +18,20 @@ import (
 )
 
 type Manager struct {
-	API    tado2.API
+	API    TadoSetter
 	poller poller.Poller
 	update *poller.Update
 	mgrs   zonemanager.Managers
 	lock   sync.RWMutex
 }
 
-func New(api tado2.API, tadoBot slackbot.SlackBot, p poller.Poller, mgrs zonemanager.Managers) *Manager {
+//go:generate mockery --name TadoSetter
+type TadoSetter interface {
+	DeleteZoneOverlay(context.Context, int) error
+	SetZoneTemporaryOverlay(context.Context, int, float64, time.Duration) error
+}
+
+func New(api TadoSetter, tadoBot slackbot.SlackBot, p poller.Poller, mgrs zonemanager.Managers) *Manager {
 	m := &Manager{
 		API:    api,
 		poller: p,
@@ -98,16 +104,19 @@ func (m *Manager) ReportRooms(_ context.Context, _ ...string) []slack.Attachment
 		}
 
 		var stateStr string
-		switch tado2.GetZoneState(zoneInfo) {
-		case tado2.ZoneStateOff:
+		zoneState := rules.GetZoneState(zoneInfo)
+		if !zoneState.Heating() {
 			stateStr = "off"
-		case tado2.ZoneStateAuto:
-			stateStr = fmt.Sprintf("target: %.1f", zoneInfo.Setting.Temperature.Celsius)
-		case tado2.ZoneStateTemporaryManual:
-			stateStr = fmt.Sprintf("target: %.1f, MANUAL for %s", zoneInfo.Overlay.Setting.Temperature.Celsius,
-				(time.Duration(zoneInfo.Overlay.Termination.RemainingTimeInSeconds) * time.Second).String())
-		case tado2.ZoneStateManual:
-			stateStr = fmt.Sprintf("target: %.1f, MANUAL", zoneInfo.Overlay.Setting.Temperature.Celsius)
+		} else {
+			switch zoneState.Overlay {
+			case tado.NoOverlay:
+				stateStr = fmt.Sprintf("target: %.1f", zoneState.TargetTemperature.Celsius)
+			case tado.PermanentOverlay:
+				stateStr = fmt.Sprintf("target: %.1f, MANUAL", zoneInfo.Overlay.Setting.Temperature.Celsius)
+			case tado.TimerOverlay, tado.NextBlockOverlay:
+				stateStr = fmt.Sprintf("target: %.1f, MANUAL for %s", zoneInfo.Overlay.Setting.Temperature.Celsius,
+					(time.Duration(zoneInfo.Overlay.Termination.RemainingTimeInSeconds) * time.Second).String())
+			}
 		}
 
 		text = append(text, fmt.Sprintf("%s: %.1fºC (%s)", zone.Name, zoneInfo.SensorDataPoints.InsideTemperature.Celsius, stateStr))

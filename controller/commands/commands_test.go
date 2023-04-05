@@ -3,13 +3,12 @@ package commands
 import (
 	"context"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/controller/commands/mocks"
 	mockSlackbot "github.com/clambin/tado-exporter/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
 	mockPoller "github.com/clambin/tado-exporter/poller/mocks"
-	"github.com/clambin/tado-exporter/tado/mocks"
-	mockTado "github.com/clambin/tado-exporter/tado/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -20,8 +19,7 @@ import (
 )
 
 func TestManager_Run(t *testing.T) {
-	api := mockTado.NewAPI(t)
-
+	api := mocks.NewTadoSetter(t)
 	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 
@@ -53,7 +51,7 @@ func TestManager_Run(t *testing.T) {
 }
 
 func TestController_Rules(t *testing.T) {
-	api := mocks.NewAPI(t)
+	api := mocks.NewTadoSetter(t)
 	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	p := mockPoller.NewPoller(t)
@@ -72,7 +70,7 @@ func TestController_Rules(t *testing.T) {
 	}
 
 	mgrs := zonemanager.Managers{
-		zonemanager.New(api, p, nil, cfg),
+		zonemanager.New(nil, p, nil, cfg),
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
@@ -100,7 +98,7 @@ func TestController_Rules(t *testing.T) {
 	}
 
 	require.Eventually(t, func() bool {
-		_, found := mgrs[0].Scheduled()
+		_, found := mgrs[0].GetScheduled()
 		return found
 	}, time.Second, 10*time.Millisecond)
 
@@ -113,8 +111,7 @@ func TestController_Rules(t *testing.T) {
 }
 
 func TestManager_SetRoom(t *testing.T) {
-	api := mocks.NewAPI(t)
-
+	api := mocks.NewTadoSetter(t)
 	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 
@@ -231,7 +228,7 @@ func TestManager_SetRoom(t *testing.T) {
 }
 
 func TestManager_DoRefresh(t *testing.T) {
-	api := mocks.NewAPI(t)
+	api := mocks.NewTadoSetter(t)
 	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	p := mockPoller.NewPoller(t)
@@ -242,7 +239,7 @@ func TestManager_DoRefresh(t *testing.T) {
 }
 
 func TestManager_ReportRooms(t *testing.T) {
-	api := mocks.NewAPI(t)
+	api := mocks.NewTadoSetter(t)
 	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	c := New(api, bot, nil, nil)
@@ -250,6 +247,7 @@ func TestManager_ReportRooms(t *testing.T) {
 	c.update = &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: {
+			Setting:          tado.ZonePowerSetting{Temperature: tado.Temperature{Celsius: 18.0}},
 			SensorDataPoints: tado.ZoneInfoSensorDataPoints{InsideTemperature: tado.Temperature{Celsius: 22}},
 			Overlay: tado.ZoneInfoOverlay{
 				Type: "MANUAL",
@@ -270,7 +268,7 @@ func TestManager_ReportRooms(t *testing.T) {
 }
 
 func TestManager_ReportUsers(t *testing.T) {
-	api := mocks.NewAPI(t)
+	api := mocks.NewTadoSetter(t)
 	bot := mockSlackbot.NewSlackBot(t)
 	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
 	c := New(api, bot, nil, nil)

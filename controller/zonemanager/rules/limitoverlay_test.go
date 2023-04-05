@@ -3,7 +3,6 @@ package rules
 import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
-	tado2 "github.com/clambin/tado-exporter/tado"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -11,20 +10,19 @@ import (
 )
 
 func TestLimitOverlayRule_Evaluate(t *testing.T) {
-	var testCases = []testCase{
+	tests := []testCase{
 		{
 			name:   "auto mode",
 			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {}}},
-			//action: nil,
+			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
 		{
 			name: "manual control",
-			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {Overlay: tado.ZoneInfoOverlay{
-				Type:        "MANUAL",
-				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
-				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-			}}}},
-			action: NextState{ZoneID: 10, ZoneName: "living room", State: tado2.ZoneStateAuto, Delay: time.Hour, ActionReason: "manual temp setting detected", CancelReason: "room no longer in manual temp setting"},
+			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: {
+				Setting: tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
+				Overlay: tado.ZoneInfoOverlay{Type: "MANUAL", Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"}},
+			}}},
+			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Delay: time.Hour, Reason: "manual temp setting detected"},
 		},
 		{
 			name: "manual control w/ expiration",
@@ -33,7 +31,7 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
 				Termination: tado.ZoneInfoOverlayTermination{Type: "AUTO", RemainingTimeInSeconds: 300},
 			}}}},
-			//action: nil,
+			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
 	}
 	r := &LimitOverlayRule{
@@ -41,7 +39,7 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 		zoneName: "living room",
 		delay:    time.Hour,
 	}
-	for _, tt := range testCases {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a, err := r.Evaluate(tt.update)
 			require.NoError(t, err)

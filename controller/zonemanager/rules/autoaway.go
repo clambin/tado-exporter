@@ -4,30 +4,55 @@ import (
 	"fmt"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
-	tado2 "github.com/clambin/tado-exporter/tado"
 	"strings"
 	"time"
 )
 
 type AutoAwayRule struct {
-	zoneID          int
-	zoneName        string
-	delay           time.Duration
-	users           []string
-	mobileDeviceIDs []int
+	ZoneID          int
+	ZoneName        string
+	Delay           time.Duration
+	Users           []string
+	MobileDeviceIDs []int
 }
 
 var _ Rule = &AutoAwayRule{}
 
-func (a *AutoAwayRule) Evaluate(update *poller.Update) (NextState, error) {
-	var next NextState
+func (a *AutoAwayRule) Evaluate(update *poller.Update) (Action, error) {
+	next := Action{ZoneID: a.ZoneID, ZoneName: a.ZoneName}
+
 	if err := a.load(update); err != nil {
 		return next, err
 	}
 
-	var home []string
-	var away []string
-	for _, id := range a.mobileDeviceIDs {
+	home, away := a.getDeviceStates(update)
+	allAway := len(home) == 0 && len(away) > 0
+	someoneHome := len(home) > 0
+	currentState := GetZoneState(update.ZoneInfo[a.ZoneID])
+
+	if allAway {
+		next.Reason = makeReason(away, "away")
+		if currentState.Heating() {
+			next.Action = true
+			next.State = ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5.0}}
+			next.Delay = a.Delay
+		}
+	} else if someoneHome {
+		if !currentState.Heating() && currentState.Overlay == tado.PermanentOverlay {
+			next.Action = true
+			next.State = ZoneState{Overlay: tado.NoOverlay}
+			next.Delay = 0
+			next.Reason = makeReason(home, "home")
+		} else {
+			next.Reason = makeReason(home, "home")
+		}
+	}
+	return next, nil
+}
+
+func (a *AutoAwayRule) getDeviceStates(update *poller.Update) ([]string, []string) {
+	var home, away []string
+	for _, id := range a.MobileDeviceIDs {
 		if entry, exists := update.UserInfo[id]; exists {
 			switch entry.IsHome() {
 			case tado.DeviceAway:
@@ -37,32 +62,7 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (NextState, error) {
 			}
 		}
 	}
-
-	state := tado2.GetZoneState(update.ZoneInfo[a.zoneID])
-	if state == tado2.ZoneStateOff {
-		if len(home) != 0 {
-			next = NextState{
-				ZoneID:       a.zoneID,
-				ZoneName:     a.zoneName,
-				State:        tado2.ZoneStateAuto,
-				Delay:        0,
-				ActionReason: makeReason(home, "home"),
-				CancelReason: makeReason(home, "away"),
-			}
-		}
-	} else {
-		if len(home) == 0 && len(away) > 0 {
-			next = NextState{
-				ZoneID:       a.zoneID,
-				ZoneName:     a.zoneName,
-				State:        tado2.ZoneStateOff,
-				Delay:        a.delay,
-				ActionReason: makeReason(away, "away"),
-				CancelReason: makeReason(away, "home"),
-			}
-		}
-	}
-	return next, nil
+	return home, away
 }
 
 func makeReason(users []string, state string) string {
@@ -72,17 +72,17 @@ func makeReason(users []string, state string) string {
 	} else {
 		verb = "are"
 	}
-	return fmt.Sprintf("%s %s %s", strings.Join(users, ", "), verb, state)
+	return strings.Join(users, ", ") + " " + verb + " " + state
 }
 
 func (a *AutoAwayRule) load(update *poller.Update) error {
-	if len(a.mobileDeviceIDs) > 0 {
+	if len(a.MobileDeviceIDs) > 0 {
 		return nil
 	}
 
-	for _, user := range a.users {
+	for _, user := range a.Users {
 		if userID, ok := update.GetUserID(user); ok {
-			a.mobileDeviceIDs = append(a.mobileDeviceIDs, userID)
+			a.MobileDeviceIDs = append(a.MobileDeviceIDs, userID)
 		} else {
 			return fmt.Errorf("invalid user: %s", user)
 		}

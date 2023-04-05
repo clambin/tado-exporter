@@ -7,7 +7,6 @@ import (
 	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
-	tadoAPI "github.com/clambin/tado-exporter/tado"
 	"golang.org/x/exp/slog"
 	"sync"
 )
@@ -18,8 +17,14 @@ type Controller struct {
 	cmds         *commands.Manager
 }
 
+//go:generate mockery --name TadoSetter
+type TadoSetter interface {
+	rules.TadoSetter
+	commands.TadoSetter
+}
+
 // New creates a new Controller object
-func New(api tadoAPI.API, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p poller.Poller) *Controller {
+func New(api TadoSetter, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p poller.Poller) *Controller {
 	var c Controller
 
 	for _, zoneCfg := range cfg {
@@ -40,18 +45,12 @@ func (c *Controller) Run(ctx context.Context) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(c.zoneManagers))
 	for _, mgr := range c.zoneManagers {
-		go func(m *zonemanager.Manager) {
-			m.Run(ctx)
-			wg.Done()
-		}(mgr)
+		go func(m *zonemanager.Manager) { defer wg.Done(); m.Run(ctx) }(mgr)
 	}
 
 	if c.cmds != nil {
 		wg.Add(1)
-		go func() {
-			c.cmds.Run(ctx)
-			wg.Done()
-		}()
+		go func() { defer wg.Done(); c.cmds.Run(ctx) }()
 	}
 
 	wg.Wait()
