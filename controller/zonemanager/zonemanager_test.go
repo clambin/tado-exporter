@@ -9,6 +9,7 @@ import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules/mocks"
 	"github.com/clambin/tado-exporter/poller"
 	mockPoller "github.com/clambin/tado-exporter/poller/mocks"
+	"github.com/clambin/tado/testutil"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -48,43 +49,33 @@ func TestManager_Run(t *testing.T) {
 			name: "no action",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}}},
-				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
+				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
 			},
 		},
 		{
 			name: "manual temp setting",
 			update: &poller.Update{
-				Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-				ZoneInfo: map[int]tado.ZoneInfo{1: {
-					Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}},
-					Overlay: tado.ZoneInfoOverlay{
-						Type:        "MANUAL",
-						Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-					}}},
-				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
+				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
 			},
 			notification: "moving to auto mode in 1h0m0s",
 		},
 		{
 			name: "manual temp setting #2",
 			update: &poller.Update{
-				Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-				ZoneInfo: map[int]tado.ZoneInfo{1: {
-					Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}},
-					Overlay: tado.ZoneInfoOverlay{
-						Type:        "MANUAL",
-						Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-					}}},
-				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
+				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
 			},
 		},
 		{
 			name: "no action #2",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}}},
-				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
+				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
 			},
 			notification: "canceling moving to auto mode",
 		},
@@ -92,19 +83,17 @@ func TestManager_Run(t *testing.T) {
 			name: "user away",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-				ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}}},
-				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
+				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
+				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(false))},
 			},
 			notification: "switching off heating in 2h0m0s",
 		},
 		{
 			name: "user comes home",
 			update: &poller.Update{
-				Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-				ZoneInfo: map[int]tado.ZoneInfo{1: {
-					Setting: tado.ZonePowerSetting{Power: "OFF"},
-					Overlay: tado.ZoneInfoOverlay{Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"}}}},
-				UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
+				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
 			},
 			notification: "canceling switching off heating",
 		},
@@ -167,16 +156,9 @@ func TestManager_Scheduled(t *testing.T) {
 	}()
 
 	ch <- &poller.Update{
-		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-		ZoneInfo: map[int]tado.ZoneInfo{1: {
-			Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}},
-			Overlay: tado.ZoneInfoOverlay{
-				Type:        "MANUAL",
-				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
-				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-			},
-		}},
-		UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(15, 18.5), testutil.ZoneInfoPermanentOverlay())},
+		UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
 	}
 
 	assert.Eventually(t, func() bool {
@@ -217,16 +199,9 @@ func TestManagers_ReportTasks(t *testing.T) {
 	assert.False(t, ok)
 
 	ch <- &poller.Update{
-		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-		ZoneInfo: map[int]tado.ZoneInfo{1: {
-			Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}},
-			Overlay: tado.ZoneInfoOverlay{
-				Type:        "MANUAL",
-				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
-				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-			},
-		}},
-		UserInfo: map[int]tado.MobileDevice{10: {ID: 10, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(15, 18.5), testutil.ZoneInfoPermanentOverlay())},
+		UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
 	}
 
 	assert.Eventually(t, func() bool {
@@ -251,24 +226,18 @@ func Test_zoneLogger_LogValue(t *testing.T) {
 	}{
 		{
 			name:     "auto mode (on)",
-			zoneInfo: tado.ZoneInfo{Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}}},
+			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(19, 20)),
 			want:     `level=INFO msg=zone z.settings.power=ON z.settings.temperature=20`,
 		},
 		{
 			name:     "auto mode (off)",
-			zoneInfo: tado.ZoneInfo{Setting: tado.ZonePowerSetting{Power: "OFF"}},
+			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(19, 5)),
 			want:     `level=INFO msg=zone z.settings.power=OFF`,
 		},
 		{
-			name: "manual (on)",
-			zoneInfo: tado.ZoneInfo{
-				Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}},
-				Overlay: tado.ZoneInfoOverlay{
-					Type:        "MANUAL",
-					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL", TypeSkillBasedApp: "MANUAL"},
-				},
-			},
-			want: `level=INFO msg=zone z.settings.power=ON z.settings.temperature=20 z.overlay.termination.type=MANUAL z.overlay.termination.subtype=MANUAL`,
+			name:     "manual (on)",
+			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(19, 20), testutil.ZoneInfoPermanentOverlay()),
+			want:     `level=INFO msg=zone z.settings.power=ON z.settings.temperature=20 z.overlay.termination.type=MANUAL z.overlay.termination.subtype=MANUAL`,
 		},
 	}
 	for _, tt := range tests {

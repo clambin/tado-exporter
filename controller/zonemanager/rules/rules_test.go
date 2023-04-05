@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
+	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -21,8 +22,8 @@ func TestEvaluator_Evaluate(t *testing.T) {
 			name: "user away - auto control",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Temperature: tado.Temperature{Celsius: 18.0}}}},
-				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
+				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false))},
 			},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5.0}}, Delay: time.Hour, Reason: "foo is away"},
 		},
@@ -30,40 +31,26 @@ func TestEvaluator_Evaluate(t *testing.T) {
 			name: "user home - auto control",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Temperature: tado.Temperature{Celsius: 18.0}}}},
-				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
+				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
 			},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "foo is home, no manual settings detected"},
 		},
 		{
 			name: "user home - manual control",
 			update: &poller.Update{
-				Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: {
-					Setting: tado.ZonePowerSetting{Temperature: tado.Temperature{Celsius: 18.0}},
-					Overlay: tado.ZoneInfoOverlay{
-						Type:        "MANUAL",
-						Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
-						Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-					}},
-				},
-				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
+				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
 			},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Delay: 15 * time.Minute, Reason: "manual temp setting detected"},
 		},
 		{
 			name: "user away - manual control",
 			update: &poller.Update{
-				Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: {
-					Setting: tado.ZonePowerSetting{Temperature: tado.Temperature{Celsius: 18.0}},
-					Overlay: tado.ZoneInfoOverlay{
-						Type:        "MANUAL",
-						Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
-						Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-					}},
-				},
-				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: false}}},
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
+				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false))},
 			},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5.0}}, Delay: time.Hour, Reason: "foo is away"},
 		},
@@ -97,24 +84,17 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 			name: "user home - auto control",
 			update: &poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Temperature: tado.Temperature{Celsius: 18.0}}}},
-				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
+				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
 			},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
 		{
 			name: "user home - manual control",
 			update: &poller.Update{
-				Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: {
-					Setting: tado.ZonePowerSetting{Temperature: tado.Temperature{Celsius: 18.0}},
-					Overlay: tado.ZoneInfoOverlay{
-						Type:        "MANUAL",
-						Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
-						Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-					}},
-				},
-				UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
+				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
 			},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Delay: 30 * time.Minute, Reason: "manual temp setting detected"},
 		},
@@ -188,8 +168,8 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 
 	var update = &poller.Update{
 		Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-		ZoneInfo: map[int]tado.ZoneInfo{10: {Setting: tado.ZonePowerSetting{Power: "ON"}}},
-		UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+		ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
+		UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
 	}
 
 	for _, tt := range testCases {
@@ -203,13 +183,9 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 
 func BenchmarkEvaluator(b *testing.B) {
 	update := &poller.Update{
-		Zones: map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-		ZoneInfo: map[int]tado.ZoneInfo{10: {Overlay: tado.ZoneInfoOverlay{
-			Type:        "MANUAL",
-			Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
-			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-		}}},
-		UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "foo", Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true}, Location: tado.MobileDeviceLocation{AtHome: true}}},
+		Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
+		ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
+		UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
 	}
 
 	e := Evaluator{

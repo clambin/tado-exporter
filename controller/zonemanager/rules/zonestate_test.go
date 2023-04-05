@@ -6,6 +6,7 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules/mocks"
+	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/exp/slog"
@@ -20,69 +21,41 @@ func TestGetZoneState(t *testing.T) {
 	}{
 		{
 			name:     "off (auto)",
-			zoneInfo: tado.ZoneInfo{Setting: tado.ZonePowerSetting{Power: "OFF"}},
+			zoneInfo: testutil.MakeZoneInfo(),
 			want:     rules.ZoneState{Overlay: tado.NoOverlay},
 		},
 		{
-			name: "off (manual)",
-			zoneInfo: tado.ZoneInfo{
-				Setting: tado.ZonePowerSetting{Power: "OFF"},
-				Overlay: tado.ZoneInfoOverlay{
-					Type:        "HEATING",
-					Setting:     tado.ZonePowerSetting{Power: "OFF"},
-					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-				},
-			},
-			want: rules.ZoneState{Overlay: tado.PermanentOverlay},
+			name:     "off (manual)",
+			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay()),
+			want:     rules.ZoneState{Overlay: tado.PermanentOverlay},
 		},
 		{
 			name:     "on (auto)",
-			zoneInfo: tado.ZoneInfo{Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}}},
+			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(20, 20)),
 			want: rules.ZoneState{
 				Overlay:           tado.NoOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
 		},
 		{
-			name: "on (manual)",
-			zoneInfo: tado.ZoneInfo{
-				Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}},
-				Overlay: tado.ZoneInfoOverlay{
-					Type:        "HEATING",
-					Setting:     tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}},
-					Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-				},
-			},
+			name:     "on (manual)",
+			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(20, 20), testutil.ZoneInfoPermanentOverlay()),
 			want: rules.ZoneState{
 				Overlay:           tado.PermanentOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
 		},
 		{
-			name: "on (timer)",
-			zoneInfo: tado.ZoneInfo{
-				Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}},
-				Overlay: tado.ZoneInfoOverlay{
-					Type:        "HEATING",
-					Setting:     tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}},
-					Termination: tado.ZoneInfoOverlayTermination{Type: "TIMER", TypeSkillBasedApp: "TIMER"},
-				},
-			},
+			name:     "on (timer)",
+			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(20, 20), testutil.ZoneInfoTimerOverlay()),
 			want: rules.ZoneState{
 				Overlay:           tado.TimerOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
 		},
 		{
-			name: "on (next block)",
-			zoneInfo: tado.ZoneInfo{
-				Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}},
-				Overlay: tado.ZoneInfoOverlay{
-					Type:        "HEATING",
-					Setting:     tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 20.0}},
-					Termination: tado.ZoneInfoOverlayTermination{Type: "TIMER", TypeSkillBasedApp: "NEXT_TIME_BLOCK"},
-				},
-			},
+			name:     "on (next block)",
+			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(20, 20), testutil.ZoneInfoNextTimeBlockOverlay()),
 			want: rules.ZoneState{
 				Overlay:           tado.NextBlockOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 20.0},

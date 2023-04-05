@@ -9,6 +9,7 @@ import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
 	mockPoller "github.com/clambin/tado-exporter/poller/mocks"
+	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -89,12 +90,8 @@ func TestController_Rules(t *testing.T) {
 	assert.Equal(t, "no rules have been triggered", attachments[0].Text)
 
 	ch <- &poller.Update{
-		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-		ZoneInfo: map[int]tado.ZoneInfo{1: {Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.5}}, Overlay: tado.ZoneInfoOverlay{
-			Type:        "MANUAL",
-			Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 15.0}},
-			Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-		}}},
+		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 15), testutil.ZoneInfoPermanentOverlay())},
 	}
 
 	require.Eventually(t, func() bool {
@@ -131,15 +128,8 @@ func TestManager_SetRoom(t *testing.T) {
 	}()
 
 	ch <- &poller.Update{
-		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-		ZoneInfo: map[int]tado.ZoneInfo{1: {
-			SensorDataPoints: tado.ZoneInfoSensorDataPoints{InsideTemperature: tado.Temperature{Celsius: 22}},
-			Overlay: tado.ZoneInfoOverlay{
-				Type:        "MANUAL",
-				Setting:     tado.ZonePowerSetting{Type: "HEATING", Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
-				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-			},
-		}},
+		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22), testutil.ZoneInfoPermanentOverlay())},
 	}
 
 	assert.Eventually(t, func() bool {
@@ -245,20 +235,8 @@ func TestManager_ReportRooms(t *testing.T) {
 	c := New(api, bot, nil, nil)
 
 	c.update = &poller.Update{
-		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-		ZoneInfo: map[int]tado.ZoneInfo{1: {
-			Setting:          tado.ZonePowerSetting{Temperature: tado.Temperature{Celsius: 18.0}},
-			SensorDataPoints: tado.ZoneInfoSensorDataPoints{InsideTemperature: tado.Temperature{Celsius: 22}},
-			Overlay: tado.ZoneInfoOverlay{
-				Type: "MANUAL",
-				Setting: tado.ZonePowerSetting{
-					Type:        "HEATING",
-					Power:       "ON",
-					Temperature: tado.Temperature{Celsius: 18.0},
-				},
-				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-			},
-		}},
+		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(22.0, 18.0), testutil.ZoneInfoPermanentOverlay())},
 	}
 
 	attachments := c.ReportRooms(context.Background())
@@ -279,40 +257,19 @@ func TestManager_ReportUsers(t *testing.T) {
 	}{
 		{
 			update: &poller.Update{
-				UserInfo: map[int]tado.MobileDevice{
-					10: {
-						ID:       10,
-						Name:     "foo",
-						Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
-						Location: tado.MobileDeviceLocation{AtHome: true},
-					},
-				},
+				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
 			},
 			expected: "foo: home",
 		},
 		{
 			update: &poller.Update{
-				UserInfo: map[int]tado.MobileDevice{
-					10: {
-						ID:       10,
-						Name:     "foo",
-						Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
-						Location: tado.MobileDeviceLocation{AtHome: false},
-					},
-				},
+				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(false))},
 			},
 			expected: "foo: away",
 		},
 		{
 			update: &poller.Update{
-				UserInfo: map[int]tado.MobileDevice{
-					10: {
-						ID:       10,
-						Name:     "foo",
-						Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: false},
-						Location: tado.MobileDeviceLocation{AtHome: false},
-					},
-				},
+				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo")},
 			},
 			expected: "foo: unknown",
 		},

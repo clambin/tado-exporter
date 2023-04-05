@@ -5,6 +5,7 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado-exporter/poller/mocks"
+	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -16,18 +17,9 @@ func prepareMockAPI(api *mocks.TadoGetter) {
 	api.
 		On("GetMobileDevices", mock.Anything).
 		Return([]tado.MobileDevice{
-			{
-				ID:       1,
-				Name:     "foo",
-				Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
-				Location: tado.MobileDeviceLocation{AtHome: true},
-			},
-			{
-				ID:       2,
-				Name:     "bar",
-				Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
-				Location: tado.MobileDeviceLocation{AtHome: false},
-			}}, nil).
+			testutil.MakeMobileDevice(1, "foo", testutil.Home(true)),
+			testutil.MakeMobileDevice(2, "bar", testutil.Home(false)),
+		}, nil).
 		Once()
 	api.
 		On("GetWeatherInfo", mock.Anything).
@@ -45,24 +37,11 @@ func prepareMockAPI(api *mocks.TadoGetter) {
 		Once()
 	api.
 		On("GetZoneInfo", mock.Anything, 1).
-		Return(tado.ZoneInfo{
-			Setting: tado.ZonePowerSetting{
-				Power:       "ON",
-				Temperature: tado.Temperature{Celsius: 18.5},
-			},
-		}, nil).
+		Return(testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18.5)), nil).
 		Once()
 	api.
 		On("GetZoneInfo", mock.Anything, 2).
-		Return(tado.ZoneInfo{
-			Setting: tado.ZonePowerSetting{
-				Power: "OFF",
-			},
-			Overlay: tado.ZoneInfoOverlay{
-				Type:        "MANUAL",
-				Termination: tado.ZoneInfoOverlayTermination{Type: "MANUAL"},
-			},
-		}, nil).
+		Return(testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 5), testutil.ZoneInfoPermanentOverlay()), nil).
 		Once()
 	api.
 		On("GetHomeState", mock.Anything).

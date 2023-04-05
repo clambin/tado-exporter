@@ -112,9 +112,9 @@ func (m *Manager) ReportRooms(_ context.Context, _ ...string) []slack.Attachment
 			case tado.NoOverlay:
 				stateStr = fmt.Sprintf("target: %.1f", zoneState.TargetTemperature.Celsius)
 			case tado.PermanentOverlay:
-				stateStr = fmt.Sprintf("target: %.1f, MANUAL", zoneInfo.Overlay.Setting.Temperature.Celsius)
+				stateStr = fmt.Sprintf("target: %.1f, MANUAL", zoneInfo.Setting.Temperature.Celsius)
 			case tado.TimerOverlay, tado.NextBlockOverlay:
-				stateStr = fmt.Sprintf("target: %.1f, MANUAL for %s", zoneInfo.Overlay.Setting.Temperature.Celsius,
+				stateStr = fmt.Sprintf("target: %.1f, MANUAL for %s", zoneInfo.Setting.Temperature.Celsius,
 					(time.Duration(zoneInfo.Overlay.Termination.RemainingTimeInSeconds) * time.Second).String())
 			}
 		}
