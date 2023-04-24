@@ -11,7 +11,6 @@ import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/health"
 	"github.com/clambin/tado-exporter/poller"
-	"github.com/clambin/tado-exporter/version"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
@@ -19,24 +18,29 @@ import (
 	"golang.org/x/exp/slog"
 	"gopkg.in/yaml.v3"
 	"net/http"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
+	"syscall"
 
 	//_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
 )
 
 var (
 	configFilename string
 	cmd            = cobra.Command{
-		Use:   "tado-monitor",
-		Short: "exporter / controller for Tadoº thermostats",
-		Run:   Main,
+		Use:     "tado-monitor",
+		Short:   "exporter / controller for Tadoº thermostats",
+		Run:     Main,
+		Version: version,
 	}
 )
+
+// overridden during build
+var version = "change-me"
 
 func main() {
 	if err := cmd.Execute(); err != nil {
@@ -45,13 +49,13 @@ func main() {
 	}
 }
 
-func Main(_ *cobra.Command, _ []string) {
-	slog.Info("tado-monitor starting", "version", version.BuildVersion)
-
+func Main(cmd *cobra.Command, _ []string) {
 	if viper.GetBool("debug") {
 		opts := slog.HandlerOptions{Level: slog.LevelDebug}
 		slog.SetDefault(slog.New(opts.NewJSONHandler(os.Stderr)))
 	}
+
+	slog.Info("tado-monitor starting", "version", cmd.Version)
 
 	// context to terminate the created go routines
 	ctx, cancel := context.WithCancel(context.Background())
@@ -91,10 +95,9 @@ func Main(_ *cobra.Command, _ []string) {
 		slog.Warn("no rules found. controller will not run")
 	}
 
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
-
-	<-interrupt
+	ctx2, done := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	defer done()
+	<-ctx2.Done()
 
 	slog.Info("tado-monitor shutting down")
 	cancel()
@@ -125,7 +128,7 @@ func runController(ctx context.Context, p poller.Poller, tadoClient *tado.APICli
 	// slack bot
 	var tadoBot slackbot.SlackBot
 	if viper.GetBool("controller.tadoBot.enabled") {
-		tadoBot = slackbot2.New("tado "+version.BuildVersion, viper.GetString("controller.tadoBot.token"), nil)
+		tadoBot = slackbot2.New("tado "+version, viper.GetString("controller.tadoBot.token"), nil)
 		wg.Add(1)
 		go func() { defer wg.Done(); _ = tadoBot.Run(ctx) }()
 	}
@@ -165,7 +168,6 @@ func GetZoneRules() ([]rules.ZoneConfig, error) {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	cmd.Version = version.BuildVersion
 	cmd.Flags().StringVar(&configFilename, "config", "", "Configuration file")
 	cmd.Flags().Bool("debug", false, "Log debug messages")
 	_ = viper.BindPFlag("debug", cmd.Flags().Lookup("debug"))
