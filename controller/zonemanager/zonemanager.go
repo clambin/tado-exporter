@@ -182,7 +182,7 @@ type zoneLogger tado.ZoneInfo
 func (z zoneLogger) LogValue() slog.Value {
 	zoneGroup := make([]slog.Attr, 1, 2)
 
-	attribs := make([]slog.Attr, 1, 2)
+	attribs := make([]any, 1, 2)
 	attribs[0] = slog.String("power", z.Setting.Power)
 	if z.Setting.Power == "ON" {
 		attribs = append(attribs, slog.Float64("temperature", z.Setting.Temperature.Celsius))

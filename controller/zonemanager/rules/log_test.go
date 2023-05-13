@@ -50,7 +50,7 @@ func Test_zoneInfo_LogValue(t *testing.T) {
 				}
 				return a
 			}}
-			l := slog.New(opt.NewTextHandler(out))
+			l := slog.New(slog.NewTextHandler(out, &opt))
 
 			l.Log(context.Background(), slog.LevelInfo, "state", "s", tt.z)
 			assert.Equal(t, tt.want+"\n", out.String())

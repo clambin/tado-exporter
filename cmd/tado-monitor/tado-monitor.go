@@ -50,10 +50,11 @@ func main() {
 }
 
 func Main(cmd *cobra.Command, _ []string) {
+	var opts slog.HandlerOptions
 	if viper.GetBool("debug") {
-		opts := slog.HandlerOptions{Level: slog.LevelDebug}
-		slog.SetDefault(slog.New(opts.NewJSONHandler(os.Stderr)))
+		opts.Level = slog.LevelDebug
 	}
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &opts)))
 
 	slog.Info("tado-monitor starting", "version", cmd.Version)
 

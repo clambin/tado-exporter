@@ -95,7 +95,7 @@ func TestMobileDevices_LogValue(t *testing.T) {
 	}
 
 	out := bytes.Buffer{}
-	logger := slog.New(slog.NewTextHandler(&out))
+	logger := slog.New(slog.NewTextHandler(&out, &slog.HandlerOptions{}))
 	logger.Info("devices", "devices", devices)
 
 	logEntry := out.String()

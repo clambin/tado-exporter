@@ -23,7 +23,7 @@ func (s Action) LogValue() slog.Value {
 	values[2] = slog.Bool("action", s.Action)
 
 	if s.Action {
-		values = append(values, slog.Group("state", s.State.LogValue().Group()...))
+		values = append(values, slog.Any("state", s.State.LogValue().Any()))
 		values = append(values, slog.Duration("delay", s.Delay))
 	}
 	values = append(values, slog.String("reason", s.Reason))

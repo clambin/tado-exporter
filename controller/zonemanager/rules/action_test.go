@@ -50,7 +50,7 @@ func TestAction_LogValue(t *testing.T) {
 			}
 
 			out := bytes.NewBufferString("")
-			l := slog.New(slog.NewTextHandler(out))
+			l := slog.New(slog.NewTextHandler(out, &slog.HandlerOptions{}))
 			l.Log(context.Background(), slog.LevelInfo, "state", "s", s)
 
 			assert.Contains(t, out.String(), tt.want)
