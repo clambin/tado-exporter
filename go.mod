@@ -12,7 +12,7 @@ require (
 	github.com/slack-go/slack v0.12.2
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
 	gopkg.in/yaml.v3 v3.0.1
 )
