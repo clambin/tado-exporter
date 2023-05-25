@@ -129,9 +129,9 @@ func runController(ctx context.Context, p poller.Poller, tadoClient *tado.APICli
 	// slack bot
 	var tadoBot slackbot.SlackBot
 	if viper.GetBool("controller.tadoBot.enabled") {
-		tadoBot = slackbot2.New("tado "+version, viper.GetString("controller.tadoBot.token"), nil)
+		tadoBot = slackbot2.New("tado "+version, viper.GetString("controller.tadoBot.token"), nil, nil)
 		wg.Add(1)
-		go func() { defer wg.Done(); _ = tadoBot.Run(ctx) }()
+		go func() { defer wg.Done(); tadoBot.Run(ctx) }()
 	}
 
 	// controller

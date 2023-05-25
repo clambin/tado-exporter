@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/clambin/go-common/cache v0.2.2
 	github.com/clambin/go-common/set v0.2.0
-	github.com/clambin/go-common/slackbot v0.2.1
+	github.com/clambin/go-common/slackbot v0.3.0
 	github.com/clambin/tado v1.1.0
 	github.com/prometheus/client_golang v1.15.1
 	github.com/prometheus/client_model v0.4.0
@@ -13,7 +13,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.3
-	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
+	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
