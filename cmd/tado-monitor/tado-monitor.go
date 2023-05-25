@@ -18,8 +18,6 @@ import (
 	"golang.org/x/exp/slog"
 	"gopkg.in/yaml.v3"
 	"net/http"
-	"syscall"
-
 	//_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -59,7 +57,9 @@ func Main(cmd *cobra.Command, _ []string) {
 	slog.Info("tado-monitor starting", "version", cmd.Version)
 
 	// context to terminate the created go routines
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
 	var wg sync.WaitGroup
 
 	// Poller
@@ -96,12 +96,9 @@ func Main(cmd *cobra.Command, _ []string) {
 		slog.Warn("no rules found. controller will not run")
 	}
 
-	ctx2, done := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
-	defer done()
-	<-ctx2.Done()
+	<-ctx.Done()
 
 	slog.Info("tado-monitor shutting down")
-	cancel()
 	wg.Wait()
 	slog.Info("tado-monitor stopped")
 }
@@ -129,7 +126,7 @@ func runController(ctx context.Context, p poller.Poller, tadoClient *tado.APICli
 	// slack bot
 	var tadoBot slackbot.SlackBot
 	if viper.GetBool("controller.tadoBot.enabled") {
-		tadoBot = slackbot2.New("tado "+version, viper.GetString("controller.tadoBot.token"), nil, nil)
+		tadoBot = slackbot2.New(viper.GetString("controller.tadoBot.token"), slackbot2.WithName("tado "+version))
 		wg.Add(1)
 		go func() { defer wg.Done(); tadoBot.Run(ctx) }()
 	}

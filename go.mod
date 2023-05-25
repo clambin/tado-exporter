@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/clambin/go-common/cache v0.2.2
 	github.com/clambin/go-common/set v0.2.0
-	github.com/clambin/go-common/slackbot v0.3.0
+	github.com/clambin/go-common/slackbot v0.4.0
 	github.com/clambin/tado v1.1.0
 	github.com/prometheus/client_golang v1.15.1
 	github.com/prometheus/client_model v0.4.0
