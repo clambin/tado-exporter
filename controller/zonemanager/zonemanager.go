@@ -39,14 +39,14 @@ func New(api rules.TadoSetter, p poller.Poller, bot slackbot.SlackBot, cfg rules
 	}
 }
 
-func (m *Manager) Run(ctx context.Context) {
+func (m *Manager) Run(ctx context.Context) error {
 	ch := m.poller.Register()
 	defer m.poller.Unregister(ch)
 
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case update := <-ch:
 			if err := m.processUpdate(ctx, update); err != nil {
 				slog.Error("failed to process tado update", "err", err, "zone", m.evaluator.Config.Zone)

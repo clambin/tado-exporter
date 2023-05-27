@@ -3,6 +3,7 @@ package poller
 import (
 	"context"
 	"fmt"
+	"github.com/clambin/go-common/taskmanager"
 	"github.com/clambin/tado"
 	"golang.org/x/exp/slog"
 	"sync"
@@ -11,7 +12,8 @@ import (
 
 //go:generate mockery --name Poller
 type Poller interface {
-	Run(ctx context.Context, interval time.Duration)
+	taskmanager.Task
+	//Run(ctx context.Context) error
 	Register() chan *Update
 	Unregister(ch chan *Update)
 	Refresh()
@@ -30,40 +32,42 @@ var _ Poller = &Server{}
 
 type Server struct {
 	API      TadoGetter
+	interval time.Duration
 	refresh  chan struct{}
 	registry map[chan *Update]struct{}
 	lock     sync.RWMutex
 }
 
-func New(API TadoGetter) *Server {
+func New(API TadoGetter, interval time.Duration) *Server {
 	return &Server{
 		API:      API,
+		interval: interval,
 		refresh:  make(chan struct{}),
 		registry: make(map[chan *Update]struct{}),
 	}
 }
 
-func (poller *Server) Run(ctx context.Context, interval time.Duration) {
-	timer := time.NewTicker(interval)
+func (p *Server) Run(ctx context.Context) error {
+	timer := time.NewTicker(p.interval)
 	defer timer.Stop()
 
-	slog.Info("poller started", "interval", interval)
+	slog.Info("poller started", "interval", p.interval)
 
 	for {
 		shouldPoll := false
 		select {
 		case <-ctx.Done():
 			slog.Info("poller stopped")
-			return
+			return nil
 		case <-timer.C:
 			shouldPoll = true
-		case <-poller.refresh:
+		case <-p.refresh:
 			shouldPoll = true
 		}
 
 		if shouldPoll {
 			// poll for new data
-			if err := poller.poll(ctx); err != nil {
+			if err := p.poll(ctx); err != nil {
 				slog.Error("failed to get tado metrics", "err", err)
 			}
 		}

@@ -52,13 +52,15 @@ func prepareMockAPI(api *mocks.TadoGetter) {
 func TestPoller_Run(t *testing.T) {
 	api := mocks.NewTadoGetter(t)
 
-	p := poller.New(api)
+	p := poller.New(api, 10*time.Millisecond)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	prepareMockAPI(api)
 
-	go p.Run(ctx, 10*time.Millisecond)
+	go func() {
+		_ = p.Run(ctx)
+	}()
 	ch := p.Register()
 	update := <-ch
 
@@ -88,11 +90,13 @@ func TestServer_Poll(t *testing.T) {
 	api := mocks.NewTadoGetter(t)
 	prepareMockAPI(api)
 
-	p := poller.New(api)
+	p := poller.New(api, time.Minute)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go p.Run(ctx, time.Minute)
+	go func() {
+		_ = p.Run(ctx)
+	}()
 
 	ch := p.Register()
 	p.Refresh()
@@ -107,12 +111,14 @@ func TestServer_Refresh(t *testing.T) {
 	api := mocks.NewTadoGetter(t)
 	prepareMockAPI(api)
 
-	p := poller.New(api)
+	p := poller.New(api, 10*time.Millisecond)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	ch := p.Register()
-	go p.Run(ctx, 10*time.Millisecond)
+	go func() {
+		_ = p.Run(ctx)
+	}()
 
 	update := <-ch
 	require.Len(t, update.UserInfo, 2)

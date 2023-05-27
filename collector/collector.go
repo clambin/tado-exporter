@@ -236,7 +236,7 @@ func (c *Collector) collectHomeState(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(tadoHomeState, prometheus.GaugeValue, 1, label)
 }
 
-func (c *Collector) Run(ctx context.Context) {
+func (c *Collector) Run(ctx context.Context) error {
 	slog.Info("exporter started")
 
 	ch := c.Poller.Register()
@@ -246,7 +246,7 @@ func (c *Collector) Run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			slog.Info("exporter stopped")
-			return
+			return nil
 		case update := <-ch:
 			c.lock.Lock()
 			c.lastUpdate = update

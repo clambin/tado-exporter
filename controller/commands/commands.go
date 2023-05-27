@@ -48,15 +48,16 @@ func New(api TadoSetter, tadoBot slackbot.SlackBot, p poller.Poller, mgrs zonema
 }
 
 // Run the controller
-func (m *Manager) Run(ctx context.Context) {
+func (m *Manager) Run(ctx context.Context) error {
 	slog.Info("commands manager started")
+	defer slog.Info("commands manager stopped")
+
 	ch := m.poller.Register()
 	defer m.poller.Unregister(ch)
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("commands manager stopped")
-			return
+			return nil
 		case update := <-ch:
 			m.lock.Lock()
 			m.update = update

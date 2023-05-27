@@ -11,6 +11,6 @@ import (
 //go:generate mockery --name SlackBot
 type SlackBot interface {
 	Register(name string, command slackbot.CommandFunc)
-	Run(ctx context.Context)
+	Run(ctx context.Context) error
 	Send(channel string, attachments []slack.Attachment) error
 }

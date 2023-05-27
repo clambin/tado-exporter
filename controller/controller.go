@@ -2,13 +2,13 @@ package controller
 
 import (
 	"context"
+	"github.com/clambin/go-common/taskmanager"
 	"github.com/clambin/tado-exporter/controller/commands"
 	"github.com/clambin/tado-exporter/controller/slackbot"
 	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
 	"golang.org/x/exp/slog"
-	"sync"
 )
 
 // Controller object for tado-controller
@@ -39,20 +39,18 @@ func New(api TadoSetter, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p po
 }
 
 // Run the controller
-func (c *Controller) Run(ctx context.Context) {
+func (c *Controller) Run(ctx context.Context) error {
 	slog.Info("controller started")
+	defer slog.Info("controller stopped")
 
-	wg := sync.WaitGroup{}
-	wg.Add(len(c.zoneManagers))
-	for _, mgr := range c.zoneManagers {
-		go func(m *zonemanager.Manager) { defer wg.Done(); m.Run(ctx) }(mgr)
+	var mgrs []taskmanager.Task
+	for _, zoneManager := range c.zoneManagers {
+		mgrs = append(mgrs, zoneManager)
 	}
-
+	tm := taskmanager.New(mgrs...)
 	if c.cmds != nil {
-		wg.Add(1)
-		go func() { defer wg.Done(); c.cmds.Run(ctx) }()
+		_ = tm.Add(c.cmds)
 	}
 
-	wg.Wait()
-	slog.Info("controller stopped")
+	return tm.Run(ctx)
 }

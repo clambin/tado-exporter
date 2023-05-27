@@ -50,10 +50,10 @@ github.com/clambin/go-common/cache v0.2.2 h1:Tjb+71+/2ckrZlSbLDYgCEpkS2HwkTRkQ/1
 github.com/clambin/go-common/cache v0.2.2/go.mod h1:6DMcBIPTGckXMNQTGfdEMiLAbKqIOWzgk5KNyiJK54M=
 github.com/clambin/go-common/set v0.2.0 h1:s4wXxKns3sb2VPCtAmmLEDs4KiHNIiot+LcKgKcdPdw=
 github.com/clambin/go-common/set v0.2.0/go.mod h1:GFjAZynNo4BNjlx2hzDMHIU4ays7QjpJUSHXB/3b1ZE=
-github.com/clambin/go-common/slackbot v0.3.0 h1:wFzKSfiHMPnrmnIJ1cwOYxdAJHS9I2ZMQmr2CnPhhKA=
-github.com/clambin/go-common/slackbot v0.3.0/go.mod h1:AV1JXE9Wgz3SDDxDZF4cxfBHI4Bjwbx4NrfG0t4GdAg=
-github.com/clambin/go-common/slackbot v0.4.0 h1:8MsqE+jmzzZ0hqoq/YXzZjaS855Q+Z5l/bEAs1N2S8I=
-github.com/clambin/go-common/slackbot v0.4.0/go.mod h1:AV1JXE9Wgz3SDDxDZF4cxfBHI4Bjwbx4NrfG0t4GdAg=
+github.com/clambin/go-common/slackbot v0.5.0 h1:BR7D7Lj2wr07zJSRxRzwPfWDFnfKFtzuWI7A0B2Nf3I=
+github.com/clambin/go-common/slackbot v0.5.0/go.mod h1:AV1JXE9Wgz3SDDxDZF4cxfBHI4Bjwbx4NrfG0t4GdAg=
+github.com/clambin/go-common/taskmanager v0.1.0 h1:pbkNrI/QWfKcdK1hb4ozrUKXYcuoy6mnDmuYErc6H7E=
+github.com/clambin/go-common/taskmanager v0.1.0/go.mod h1:CkY5JjhU4bv6gpIxxWHKWI982euHpkQDCnqjzraPo0E=
 github.com/clambin/tado v1.1.0 h1:NxmTxpGeTEEd1kCn5dQqaPUCLp/ujrHUl9rY+ikxYDM=
 github.com/clambin/tado v1.1.0/go.mod h1:h71za9HjbihGxGStMDYtsiPCT3o5qYaQGEtKS3iCxzI=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=

@@ -23,7 +23,7 @@ func New(p poller.Poller) *Health {
 	}
 }
 
-func (h *Health) Run(ctx context.Context) {
+func (h *Health) Run(ctx context.Context) error {
 	slog.Info("health monitor started")
 	ch := h.Poller.Register()
 	defer h.Poller.Unregister(ch)
@@ -32,7 +32,7 @@ func (h *Health) Run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			slog.Info("health monitor stopped")
-			return
+			return nil
 		case update := <-ch:
 			h.store(update)
 		}
