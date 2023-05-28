@@ -6,6 +6,7 @@ import (
 	slackbot2 "github.com/clambin/go-common/slackbot"
 	"github.com/clambin/go-common/taskmanager"
 	"github.com/clambin/go-common/taskmanager/httpserver"
+	promserver "github.com/clambin/go-common/taskmanager/prometheus"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/collector"
 	"github.com/clambin/tado-exporter/controller"
@@ -14,7 +15,6 @@ import (
 	"github.com/clambin/tado-exporter/health"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slog"
@@ -96,14 +96,12 @@ func makeTasks(rules []rules.ZoneConfig) []taskmanager.Task {
 	tasks = append(tasks, p)
 
 	// Prometheus Server
-	r := http.NewServeMux()
-	r.Handle("/metrics", promhttp.Handler())
-	tasks = append(tasks, httpserver.New(viper.GetString("exporter.addr"), r))
+	tasks = append(tasks, promserver.New(promserver.WithAddr(viper.GetString("exporter.addr"))))
 
 	// Health Endpoint
 	h := health.New(p)
 	tasks = append(tasks, h)
-	r = http.NewServeMux()
+	r := http.NewServeMux()
 	r.Handle("/health", http.HandlerFunc(h.Handle))
 	tasks = append(tasks, httpserver.New(viper.GetString("health.addr"), r))
 
