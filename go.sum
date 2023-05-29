@@ -52,10 +52,8 @@ github.com/clambin/go-common/set v0.2.0 h1:s4wXxKns3sb2VPCtAmmLEDs4KiHNIiot+LcKg
 github.com/clambin/go-common/set v0.2.0/go.mod h1:GFjAZynNo4BNjlx2hzDMHIU4ays7QjpJUSHXB/3b1ZE=
 github.com/clambin/go-common/slackbot v0.5.0 h1:BR7D7Lj2wr07zJSRxRzwPfWDFnfKFtzuWI7A0B2Nf3I=
 github.com/clambin/go-common/slackbot v0.5.0/go.mod h1:AV1JXE9Wgz3SDDxDZF4cxfBHI4Bjwbx4NrfG0t4GdAg=
-github.com/clambin/go-common/taskmanager v0.1.0 h1:pbkNrI/QWfKcdK1hb4ozrUKXYcuoy6mnDmuYErc6H7E=
-github.com/clambin/go-common/taskmanager v0.1.0/go.mod h1:CkY5JjhU4bv6gpIxxWHKWI982euHpkQDCnqjzraPo0E=
-github.com/clambin/go-common/taskmanager v0.2.0 h1:kI2sXqunGV3zx1bEqqB3fl31CvzUam6YhnRVlml4Io0=
-github.com/clambin/go-common/taskmanager v0.2.0/go.mod h1:BLq8MGQZVpj16USB4pHtikOVh4cDgnSjPIhTZyosAgM=
+github.com/clambin/go-common/taskmanager v0.2.1 h1:zkh6hr4RqRHrJHIeBTRClAw7788IMHd//YbbbxCpUes=
+github.com/clambin/go-common/taskmanager v0.2.1/go.mod h1:BLq8MGQZVpj16USB4pHtikOVh4cDgnSjPIhTZyosAgM=
 github.com/clambin/tado v1.1.0 h1:NxmTxpGeTEEd1kCn5dQqaPUCLp/ujrHUl9rY+ikxYDM=
 github.com/clambin/tado v1.1.0/go.mod h1:h71za9HjbihGxGStMDYtsiPCT3o5qYaQGEtKS3iCxzI=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
@@ -182,7 +180,7 @@ github.com/prometheus/common v0.42.0/go.mod h1:xBwqVerjNdUDjgODMpudtOMwlOwf2SaTr
 github.com/prometheus/procfs v0.9.0 h1:wzCHvIvM5SxWqYvwgVL7yJY8Lz3PKn49KQtpgMYJfhI=
 github.com/prometheus/procfs v0.9.0/go.mod h1:+pB4zwohETzFnmlpe6yd2lSc+0/46IYZRB/chUwxUZY=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
-github.com/rogpeppe/go-internal v1.6.1 h1:/FiVV8dS/e+YqF2JvO3yXRFbBLTIuSDkuC7aBOAvL+k=
+github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/slack-go/slack v0.12.2 h1:x3OppyMyGIbbiyFhsBmpf9pwkUzMhthJMRNmNlA4LaQ=
 github.com/slack-go/slack v0.12.2/go.mod h1:hlGi5oXA+Gt+yWTPP0plCdRKmjsDxecdHxYQdlMQKOw=
