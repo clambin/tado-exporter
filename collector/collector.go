@@ -237,7 +237,7 @@ func (c *Collector) collectHomeState(ch chan<- prometheus.Metric) {
 }
 
 func (c *Collector) Run(ctx context.Context) error {
-	slog.Info("exporter started")
+	slog.Info("collector started")
 
 	ch := c.Poller.Register()
 	defer c.Poller.Unregister(ch)
@@ -245,7 +245,7 @@ func (c *Collector) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("exporter stopped")
+			slog.Info("collector stopped")
 			return nil
 		case update := <-ch:
 			c.lock.Lock()

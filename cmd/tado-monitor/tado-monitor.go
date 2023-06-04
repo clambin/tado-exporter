@@ -91,9 +91,9 @@ func makeTasks(rules []rules.ZoneConfig) []taskmanager.Task {
 	tasks = append(tasks, p)
 
 	// Collector
-	coll := collector.Collector{Poller: p}
-	prometheus.DefaultRegisterer.MustRegister(&coll)
-	tasks = append(tasks, p)
+	coll := &collector.Collector{Poller: p}
+	prometheus.MustRegister(coll)
+	tasks = append(tasks, coll)
 
 	// Prometheus Server
 	tasks = append(tasks, promserver.New(promserver.WithAddr(viper.GetString("exporter.addr"))))
