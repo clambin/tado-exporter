@@ -8,7 +8,7 @@ require (
 	github.com/clambin/go-common/slackbot v0.5.0
 	github.com/clambin/go-common/taskmanager v0.2.1
 	github.com/clambin/tado v1.1.0
-	github.com/prometheus/client_golang v1.15.1
+	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/client_model v0.4.0
 	github.com/slack-go/slack v0.12.2
 	github.com/spf13/cobra v1.7.0
@@ -33,7 +33,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
-	github.com/prometheus/procfs v0.9.0 // indirect
+	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
