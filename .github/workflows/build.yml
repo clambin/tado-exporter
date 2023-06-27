@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - build
+      - oauth2
   pull_request_target:
     branches-ignore:
       - master
