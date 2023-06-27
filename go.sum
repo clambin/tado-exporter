@@ -54,10 +54,14 @@ github.com/clambin/go-common/slackbot v0.5.0 h1:BR7D7Lj2wr07zJSRxRzwPfWDFnfKFtzu
 github.com/clambin/go-common/slackbot v0.5.0/go.mod h1:AV1JXE9Wgz3SDDxDZF4cxfBHI4Bjwbx4NrfG0t4GdAg=
 github.com/clambin/go-common/taskmanager v0.2.1 h1:zkh6hr4RqRHrJHIeBTRClAw7788IMHd//YbbbxCpUes=
 github.com/clambin/go-common/taskmanager v0.2.1/go.mod h1:BLq8MGQZVpj16USB4pHtikOVh4cDgnSjPIhTZyosAgM=
+github.com/clambin/tado v1.1.1-0.20230605210908-b726d9089c47 h1:JyhYXL8W3Nj7WswBkE1dovVAY2iObREIPkXFFA7qymE=
+github.com/clambin/tado v1.1.1-0.20230605210908-b726d9089c47/go.mod h1:RQM7YQ8t2lT+tUl2NMxYmRyfZSrAsPjYmNwGRKgge2E=
 github.com/clambin/tado v1.1.1-0.20230627092508-f716e5d67998 h1:VNk4oA7aQNih/ofURYjVn6SXKIt5H1PB6DgduPv7Zyo=
 github.com/clambin/tado v1.1.1-0.20230627092508-f716e5d67998/go.mod h1:GL0IgBjZz/y3QE6FlkClfiYxXJ5Sw6rCQBqrO1g2Srg=
 github.com/clambin/tado v1.1.1-0.20230627132856-eede73f66ef9 h1:s9iWO51qrMTUs2lBC1hrvYAcWSOiKvxAK8PcV0ysdUM=
 github.com/clambin/tado v1.1.1-0.20230627132856-eede73f66ef9/go.mod h1:GL0IgBjZz/y3QE6FlkClfiYxXJ5Sw6rCQBqrO1g2Srg=
+github.com/clambin/tado v1.2.0 h1:gF9kEACZIGqTtZz52DXwOCR1uF+R6WU9D+U69QdXjGg=
+github.com/clambin/tado v1.2.0/go.mod h1:GL0IgBjZz/y3QE6FlkClfiYxXJ5Sw6rCQBqrO1g2Srg=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
