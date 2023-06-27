@@ -4,7 +4,7 @@ on:
   push:
     branches-ignore:
       - master
-      - reason
+      - oauth2
   pull_request_target:
 
 jobs:

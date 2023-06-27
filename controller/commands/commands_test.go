@@ -34,10 +34,7 @@ func TestManager_Run(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go func() {
-		c.Run(ctx)
-		wg.Done()
-	}()
+	go func() { defer wg.Done(); _ = c.Run(ctx) }()
 
 	ch <- &poller.Update{}
 
@@ -77,10 +74,7 @@ func TestController_Rules(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(len(mgrs))
 	for _, mgr := range mgrs {
-		go func(m *zonemanager.Manager) {
-			m.Run(ctx)
-			wg.Done()
-		}(mgr)
+		go func(m *zonemanager.Manager) { defer wg.Done(); _ = m.Run(ctx) }(mgr)
 	}
 
 	c := New(api, bot, p, mgrs)
@@ -122,10 +116,7 @@ func TestManager_SetRoom(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go func() {
-		c.Run(ctx)
-		wg.Done()
-	}()
+	go func() { defer wg.Done(); _ = c.Run(ctx) }()
 
 	ch <- &poller.Update{
 		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},

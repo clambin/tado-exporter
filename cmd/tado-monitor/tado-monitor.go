@@ -64,7 +64,17 @@ func Main(cmd *cobra.Command, _ []string) {
 		os.Exit(1)
 	}
 
-	mgr := taskmanager.New(makeTasks(r)...)
+	api, err := tado.New(
+		viper.GetString("tado.username"),
+		viper.GetString("tado.password"),
+		viper.GetString("tado.clientSecret"),
+	)
+	if err != nil {
+		slog.Error("failed to connect to Tado", "err", err)
+		os.Exit(1)
+	}
+
+	mgr := taskmanager.New(makeTasks(api, r)...)
 
 	// context to terminate the created go routines
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -77,14 +87,8 @@ func Main(cmd *cobra.Command, _ []string) {
 	slog.Info("tado-monitor stopped")
 }
 
-func makeTasks(rules []rules.ZoneConfig) []taskmanager.Task {
+func makeTasks(api *tado.APIClient, rules []rules.ZoneConfig) []taskmanager.Task {
 	var tasks []taskmanager.Task
-
-	api := tado.New(
-		viper.GetString("tado.username"),
-		viper.GetString("tado.password"),
-		viper.GetString("tado.clientSecret"),
-	)
 
 	// Poller
 	p := poller.New(api, viper.GetDuration("poller.interval"))

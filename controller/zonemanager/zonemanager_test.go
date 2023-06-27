@@ -111,7 +111,7 @@ func TestManager_Run(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go func() { defer wg.Done(); m.Run(ctx) }()
+	go func() { defer wg.Done(); _ = m.Run(ctx) }()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -150,10 +150,7 @@ func TestManager_Scheduled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go func() {
-		m.Run(ctx)
-		wg.Done()
-	}()
+	go func() { defer wg.Done(); _ = m.Run(ctx) }()
 
 	ch <- &poller.Update{
 		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
@@ -189,10 +186,7 @@ func TestManagers_ReportTasks(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go func() {
-		m.Run(ctx)
-		wg.Done()
-	}()
+	go func() { defer wg.Done(); _ = m.Run(ctx) }()
 
 	mgrs := Managers{m}
 	_, ok := mgrs.ReportTasks()

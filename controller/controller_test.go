@@ -35,7 +35,7 @@ func TestController_Run(t *testing.T) {
 	c := New(a, zoneCfg, b, p)
 
 	wg.Add(1)
-	go func() { defer wg.Done(); c.Run(ctx) }()
+	go func() { defer wg.Done(); _ = c.Run(ctx) }()
 
 	response := c.cmds.DoRefresh(context.Background())
 	assert.Len(t, response, 1)
