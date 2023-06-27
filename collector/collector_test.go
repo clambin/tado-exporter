@@ -28,7 +28,7 @@ func TestCollector(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go func() { defer wg.Done(); c.Run(ctx) }()
+	go func() { defer wg.Done(); _ = c.Run(ctx) }()
 
 	ch <- &Update
 

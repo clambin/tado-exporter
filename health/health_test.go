@@ -29,10 +29,7 @@ func TestHandler_Handle(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go func() {
-		h.Run(ctx)
-		wg.Done()
-	}()
+	go func() { defer wg.Done(); _ = h.Run(ctx) }()
 
 	p.On("Refresh").Return().Once()
 
@@ -89,10 +86,7 @@ func BenchmarkHealth_Handle(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go func() {
-		h.Run(ctx)
-		wg.Done()
-	}()
+	go func() { defer wg.Done(); _ = h.Run(ctx) }()
 
 	ch <- &poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
