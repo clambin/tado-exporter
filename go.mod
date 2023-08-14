@@ -6,7 +6,7 @@ require (
 	github.com/clambin/go-common/cache v0.2.2
 	github.com/clambin/go-common/set v0.2.0
 	github.com/clambin/go-common/slackbot v0.5.0
-	github.com/clambin/go-common/taskmanager v0.2.1
+	github.com/clambin/go-common/taskmanager v0.3.0
 	github.com/clambin/tado v1.2.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/client_model v0.4.0
