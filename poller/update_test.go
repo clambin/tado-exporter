@@ -6,7 +6,7 @@ import (
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/slog"
+	"log/slog"
 	"testing"
 )
 

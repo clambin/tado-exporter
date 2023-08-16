@@ -2,7 +2,7 @@ package notifier
 
 import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 type SLogNotifier struct {

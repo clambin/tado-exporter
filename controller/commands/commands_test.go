@@ -22,12 +22,12 @@ import (
 func TestManager_Run(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
 	bot := mockSlackbot.NewSlackBot(t)
-	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	ch := make(chan *poller.Update)
 	p := mockPoller.NewPoller(t)
-	p.On("Register").Return(ch).Once()
-	p.On("Unregister", ch).Return().Once()
+	p.EXPECT().Register().Return(ch).Once()
+	p.EXPECT().Unregister(ch).Return().Once()
 
 	c := New(api, bot, p, nil)
 
@@ -51,11 +51,12 @@ func TestManager_Run(t *testing.T) {
 func TestController_Rules(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
 	bot := mockSlackbot.NewSlackBot(t)
-	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
+
 	p := mockPoller.NewPoller(t)
 	ch := make(chan *poller.Update)
-	p.On("Register").Return(ch)
-	p.On("Unregister", ch).Return()
+	p.EXPECT().Register().Return(ch)
+	p.EXPECT().Unregister(ch)
 
 	cfg := rules.ZoneConfig{
 		Zone: "foo",
@@ -104,12 +105,12 @@ func TestController_Rules(t *testing.T) {
 func TestManager_SetRoom(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
 	bot := mockSlackbot.NewSlackBot(t)
-	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	ch := make(chan *poller.Update)
 	p := mockPoller.NewPoller(t)
-	p.On("Register").Return(ch).Once()
-	p.On("Unregister", ch).Return().Once()
+	p.EXPECT().Register().Return(ch).Once()
+	p.EXPECT().Unregister(ch).Return().Once()
 
 	c := New(api, bot, p, nil)
 
@@ -188,11 +189,11 @@ func TestManager_SetRoom(t *testing.T) {
 		t.Run(strconv.Itoa(index), func(t *testing.T) {
 			if testCase.Action {
 				if testCase.Delete {
-					api.On("DeleteZoneOverlay", mock.Anything, 1).Return(nil).Once()
+					api.EXPECT().DeleteZoneOverlay(mock.Anything, 1).Return(nil).Once()
 				} else {
-					api.On("SetZoneTemporaryOverlay", mock.Anything, 1, 25.0, testCase.Duration).Return(nil).Once()
+					api.EXPECT().SetZoneTemporaryOverlay(mock.Anything, 1, 25.0, testCase.Duration).Return(nil).Once()
 				}
-				p.On("Refresh").Return(nil).Once()
+				p.EXPECT().Refresh().Once()
 			}
 
 			attachments := c.SetRoom(context.Background(), testCase.Args...)
@@ -211,20 +212,21 @@ func TestManager_SetRoom(t *testing.T) {
 func TestManager_DoRefresh(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
 	bot := mockSlackbot.NewSlackBot(t)
-	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
-	p := mockPoller.NewPoller(t)
-	p.On("Refresh").Return(nil)
-	c := New(api, bot, p, nil)
+	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
+	p := mockPoller.NewPoller(t)
+	p.EXPECT().Refresh()
+
+	c := New(api, bot, p, nil)
 	c.DoRefresh(context.Background())
 }
 
 func TestManager_ReportRooms(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
 	bot := mockSlackbot.NewSlackBot(t)
-	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
-	c := New(api, bot, nil, nil)
+	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
+	c := New(api, bot, nil, nil)
 	c.update = &poller.Update{
 		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(22.0, 18.0), testutil.ZoneInfoPermanentOverlay())},
@@ -238,8 +240,10 @@ func TestManager_ReportRooms(t *testing.T) {
 
 func TestManager_ReportUsers(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
+
 	bot := mockSlackbot.NewSlackBot(t)
-	bot.On("Register", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
+
 	c := New(api, bot, nil, nil)
 
 	testCases := []struct {

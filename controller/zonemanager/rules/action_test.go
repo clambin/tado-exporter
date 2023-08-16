@@ -5,7 +5,7 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/slog"
+	"log/slog"
 	"testing"
 	"time"
 )

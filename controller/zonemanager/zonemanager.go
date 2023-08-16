@@ -10,7 +10,7 @@ import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/clambin/tado-exporter/poller"
-	"golang.org/x/exp/slog"
+	"log/slog"
 	"sync"
 )
 

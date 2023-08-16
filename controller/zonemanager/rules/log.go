@@ -2,7 +2,7 @@ package rules
 
 import (
 	"github.com/clambin/tado"
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 var _ slog.LogValuer = zoneInfo{}

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"github.com/clambin/go-common/cache"
 	"github.com/clambin/tado-exporter/poller"
-	"golang.org/x/exp/slog"
+	"log/slog"
 	"net/http"
 	"time"
 )

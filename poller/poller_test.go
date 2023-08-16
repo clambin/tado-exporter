@@ -14,37 +14,38 @@ import (
 )
 
 func prepareMockAPI(api *mocks.TadoGetter) {
-	api.
-		On("GetMobileDevices", mock.Anything).
+	api.EXPECT().
+		GetMobileDevices(mock.Anything).
 		Return([]tado.MobileDevice{
 			testutil.MakeMobileDevice(1, "foo", testutil.Home(true)),
 			testutil.MakeMobileDevice(2, "bar", testutil.Home(false)),
 		}, nil).
 		Once()
-	api.
-		On("GetWeatherInfo", mock.Anything).
+	api.EXPECT().
+		GetWeatherInfo(mock.Anything).
 		Return(tado.WeatherInfo{
 			OutsideTemperature: tado.Temperature{Celsius: 3.4},
 			SolarIntensity:     tado.Percentage{Percentage: 13.3},
 			WeatherState:       tado.Value{Value: "CLOUDY_MOSTLY"},
 		}, nil).
 		Once()
-	api.On("GetZones", mock.Anything).
+	api.EXPECT().
+		GetZones(mock.Anything).
 		Return(tado.Zones{
 			{ID: 1, Name: "foo"},
 			{ID: 2, Name: "bar"},
 		}, nil).
 		Once()
-	api.
-		On("GetZoneInfo", mock.Anything, 1).
+	api.EXPECT().
+		GetZoneInfo(mock.Anything, 1).
 		Return(testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18.5)), nil).
 		Once()
-	api.
-		On("GetZoneInfo", mock.Anything, 2).
+	api.EXPECT().
+		GetZoneInfo(mock.Anything, 2).
 		Return(testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 5), testutil.ZoneInfoPermanentOverlay()), nil).
 		Once()
-	api.
-		On("GetHomeState", mock.Anything).
+	api.EXPECT().
+		GetHomeState(mock.Anything).
 		Return(tado.HomeState{Presence: "HOME"}, nil).
 		Once()
 }

@@ -1,12 +1,12 @@
 module github.com/clambin/tado-exporter
 
-go 1.19
+go 1.21
 
 require (
 	github.com/clambin/go-common/cache v0.2.2
 	github.com/clambin/go-common/set v0.2.0
-	github.com/clambin/go-common/slackbot v0.5.0
-	github.com/clambin/go-common/taskmanager v0.2.1
+	github.com/clambin/go-common/slackbot v0.6.0
+	github.com/clambin/go-common/taskmanager v0.3.0
 	github.com/clambin/tado v1.2.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/client_model v0.4.0
@@ -14,7 +14,6 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	gopkg.in/yaml.v3 v3.0.1
 )
 

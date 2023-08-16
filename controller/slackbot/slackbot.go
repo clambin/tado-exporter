@@ -8,7 +8,7 @@ import (
 
 // SlackBot interface mimics github.com/go-tools/slackbot
 //
-//go:generate mockery --name SlackBot
+//go:generate mockery --name SlackBot --with-expecter=true
 type SlackBot interface {
 	Register(name string, command slackbot.CommandFunc)
 	Run(ctx context.Context) error

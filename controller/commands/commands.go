@@ -9,7 +9,7 @@ import (
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
 	"github.com/slack-go/slack"
-	"golang.org/x/exp/slog"
+	"log/slog"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,7 +25,7 @@ type Manager struct {
 	lock   sync.RWMutex
 }
 
-//go:generate mockery --name TadoSetter
+//go:generate mockery --name TadoSetter --with-expecter=true
 type TadoSetter interface {
 	DeleteZoneOverlay(context.Context, int) error
 	SetZoneTemporaryOverlay(context.Context, int, float64, time.Duration) error

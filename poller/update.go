@@ -3,7 +3,7 @@ package poller
 import (
 	"fmt"
 	"github.com/clambin/tado"
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 type Update struct {

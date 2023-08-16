@@ -8,7 +8,7 @@ import (
 	"github.com/clambin/tado-exporter/controller/zonemanager"
 	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
 	"github.com/clambin/tado-exporter/poller"
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 // Controller object for tado-controller
@@ -17,7 +17,7 @@ type Controller struct {
 	cmds         *commands.Manager
 }
 
-//go:generate mockery --name TadoSetter
+//go:generate mockery --name TadoSetter --with-expecter=true
 type TadoSetter interface {
 	rules.TadoSetter
 	commands.TadoSetter

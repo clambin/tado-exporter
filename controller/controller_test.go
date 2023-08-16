@@ -25,12 +25,12 @@ func TestController_Run(t *testing.T) {
 
 	ch := make(chan *poller.Update, 1)
 	p := mocks2.NewPoller(t)
-	p.On("Refresh").Return(nil)
-	p.On("Register").Return(ch)
-	p.On("Unregister", ch)
+	p.EXPECT().Refresh()
+	p.EXPECT().Register().Return(ch)
+	p.EXPECT().Unregister(ch)
 
 	b := slackbot.NewSlackBot(t)
-	b.On("Register", mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc")).Return(nil)
+	b.EXPECT().Register(mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc"))
 
 	c := New(a, zoneCfg, b, p)
 

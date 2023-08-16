@@ -5,21 +5,20 @@ import (
 	"fmt"
 	"github.com/clambin/go-common/taskmanager"
 	"github.com/clambin/tado"
-	"golang.org/x/exp/slog"
+	"log/slog"
 	"sync"
 	"time"
 )
 
-//go:generate mockery --name Poller
+//go:generate mockery --name Poller --with-expecter=true
 type Poller interface {
 	taskmanager.Task
-	//Run(ctx context.Context) error
 	Register() chan *Update
 	Unregister(ch chan *Update)
 	Refresh()
 }
 
-//go:generate mockery --name TadoGetter
+//go:generate mockery --name TadoGetter  --with-expecter=true
 type TadoGetter interface {
 	GetWeatherInfo(context.Context) (tado.WeatherInfo, error)
 	GetMobileDevices(context.Context) ([]tado.MobileDevice, error)

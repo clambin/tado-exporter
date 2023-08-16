@@ -9,7 +9,7 @@ import (
 	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"golang.org/x/exp/slog"
+	"log/slog"
 	"testing"
 )
 
@@ -76,15 +76,11 @@ func TestZoneState_Do(t *testing.T) {
 		Overlay           tado.OverlayTerminationMode
 		TargetTemperature tado.Temperature
 	}
-	type mockArgs struct {
-		on      string
-		args    []any
-		returns []any
-	}
+	type mockSetup func(m *mocks.TadoSetter)
 	tests := []struct {
 		name    string
 		fields  fields
-		args    mockArgs
+		setup   mockSetup
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
@@ -92,10 +88,8 @@ func TestZoneState_Do(t *testing.T) {
 			fields: fields{
 				Overlay: tado.NoOverlay,
 			},
-			args: mockArgs{
-				on:      "DeleteZoneOverlay",
-				args:    []any{mock.AnythingOfType("*context.emptyCtx"), 10},
-				returns: []any{nil},
+			setup: func(m *mocks.TadoSetter) {
+				m.EXPECT().DeleteZoneOverlay(mock.Anything, 10).Return(nil)
 			},
 			wantErr: assert.NoError,
 		},
@@ -105,10 +99,8 @@ func TestZoneState_Do(t *testing.T) {
 				Overlay:           tado.PermanentOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
-			args: mockArgs{
-				on:      "SetZoneOverlay",
-				args:    []any{mock.AnythingOfType("*context.emptyCtx"), 10, 20.0},
-				returns: []any{nil},
+			setup: func(m *mocks.TadoSetter) {
+				m.EXPECT().SetZoneOverlay(mock.Anything, 10, 20.0).Return(nil)
 			},
 			wantErr: assert.NoError,
 		},
@@ -118,10 +110,8 @@ func TestZoneState_Do(t *testing.T) {
 				Overlay:           tado.PermanentOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 5.0},
 			},
-			args: mockArgs{
-				on:      "SetZoneOverlay",
-				args:    []any{mock.AnythingOfType("*context.emptyCtx"), 10, 5.0},
-				returns: []any{nil},
+			setup: func(m *mocks.TadoSetter) {
+				m.EXPECT().SetZoneOverlay(mock.Anything, 10, 5.0).Return(nil)
 			},
 			wantErr: assert.NoError,
 		},
@@ -131,10 +121,8 @@ func TestZoneState_Do(t *testing.T) {
 				Overlay:           tado.PermanentOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 5.0},
 			},
-			args: mockArgs{
-				on:      "SetZoneOverlay",
-				args:    []any{mock.AnythingOfType("*context.emptyCtx"), 10, 5.0},
-				returns: []any{nil},
+			setup: func(m *mocks.TadoSetter) {
+				m.EXPECT().SetZoneOverlay(mock.Anything, 10, 5.0).Return(nil)
 			},
 			wantErr: assert.NoError,
 		},
@@ -152,8 +140,8 @@ func TestZoneState_Do(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.args.on != "" {
-				api.On(tt.args.on, tt.args.args...).Return(tt.args.returns...).Once()
+			if tt.setup != nil {
+				tt.setup(api)
 			}
 			s := rules.ZoneState{
 				Overlay:           tt.fields.Overlay,

@@ -3,7 +3,7 @@ package rules
 import (
 	"fmt"
 	"github.com/clambin/tado-exporter/poller"
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 type Evaluator struct {
