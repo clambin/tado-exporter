@@ -17,7 +17,6 @@ type Controller struct {
 	cmds         *commands.Manager
 }
 
-//go:generate mockery --name TadoSetter --with-expecter=true
 type TadoSetter interface {
 	rules.TadoSetter
 	commands.TadoSetter

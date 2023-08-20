@@ -1,0 +1,22 @@
+with-expecter: true
+filename: "{{.InterfaceName}}.go"
+dir: "{{.InterfaceDir}}/mocks"
+mockname: "{{.InterfaceName}}"
+outpkg: "mocks"
+packages:
+  github.com/clambin/tado-exporter/controller:
+    interfaces:
+      TadoSetter:
+  github.com/clambin/tado-exporter/controller/commands:
+    interfaces:
+      TadoSetter:
+  github.com/clambin/tado-exporter/controller/slackbot:
+    interfaces:
+      SlackBot:
+  github.com/clambin/tado-exporter/controller/zonemanager/rules:
+    interfaces:
+      TadoSetter:
+  github.com/clambin/tado-exporter/poller:
+    interfaces:
+      Poller:
+      TadoGetter:

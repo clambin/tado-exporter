@@ -29,7 +29,6 @@ func (s ZoneState) String() string {
 	return "unknown action"
 }
 
-//go:generate mockery --name TadoSetter --with-expecter=true
 type TadoSetter interface {
 	DeleteZoneOverlay(context.Context, int) error
 	SetZoneOverlay(context.Context, int, float64) error

@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-//go:generate mockery --name Poller --with-expecter=true
 type Poller interface {
 	taskmanager.Task
 	Register() chan *Update
@@ -18,7 +17,6 @@ type Poller interface {
 	Refresh()
 }
 
-//go:generate mockery --name TadoGetter  --with-expecter=true
 type TadoGetter interface {
 	GetWeatherInfo(context.Context) (tado.WeatherInfo, error)
 	GetMobileDevices(context.Context) ([]tado.MobileDevice, error)

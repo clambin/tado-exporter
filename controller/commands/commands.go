@@ -25,7 +25,6 @@ type Manager struct {
 	lock   sync.RWMutex
 }
 
-//go:generate mockery --name TadoSetter --with-expecter=true
 type TadoSetter interface {
 	DeleteZoneOverlay(context.Context, int) error
 	SetZoneTemporaryOverlay(context.Context, int, float64, time.Duration) error
