@@ -49,7 +49,7 @@ func TestController_Run(t *testing.T) {
 	assert.Len(t, response, 1)
 
 	assert.Eventually(t, func() bool {
-		response := c.Commands.ReportUsers(context.Background())
+		response = c.Commands.ReportUsers(context.Background())
 		return len(response) > 0
 	}, time.Minute, 100*time.Millisecond)
 

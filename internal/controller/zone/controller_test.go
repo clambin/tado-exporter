@@ -133,15 +133,16 @@ func TestController_Run(t *testing.T) {
 }
 
 func TestController_Scheduled(t *testing.T) {
-	a := mocks.NewTadoSetter(t)
-	p := mockPoller.NewPoller(t)
+	tadoSetter := mocks.NewTadoSetter(t)
+	newPoller := mockPoller.NewPoller(t)
 	ch := make(chan *poller.Update)
-	p.On("Register").Return(ch)
-	p.On("Unregister", ch).Return()
-	m := zone.New(a, p, nil, config, slog.Default())
+	newPoller.On("Register").Return(ch)
+	newPoller.On("Unregister", ch).Return()
+
+	controller := zone.New(tadoSetter, newPoller, nil, config, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
-	go func() { errCh <- m.Run(ctx) }()
+	go func() { errCh <- controller.Run(ctx) }()
 
 	ch <- &poller.Update{
 		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
@@ -150,15 +151,15 @@ func TestController_Scheduled(t *testing.T) {
 	}
 
 	assert.Eventually(t, func() bool {
-		_, scheduled := m.GetScheduled()
+		_, scheduled := controller.GetScheduled()
 		return scheduled
 	}, time.Second, 10*time.Millisecond)
 
-	state, scheduled := m.GetScheduled()
+	state, scheduled := controller.GetScheduled()
 	require.True(t, scheduled)
 	assert.Equal(t, rules.ZoneState{Overlay: tado.NoOverlay}, state.State)
 
-	controllers := zone.Controllers([]*zone.Controller{m})
+	controllers := zone.Controllers([]*zone.Controller{controller})
 	states := controllers.GetScheduled()
 	require.Len(t, states, 1)
 	assert.Equal(t, rules.ZoneState{Overlay: tado.NoOverlay}, states[0].State)
@@ -168,18 +169,19 @@ func TestController_Scheduled(t *testing.T) {
 }
 
 func TestController_ReportTasks(t *testing.T) {
-	a := mocks.NewTadoSetter(t)
-	p := mockPoller.NewPoller(t)
+	tadoSetter := mocks.NewTadoSetter(t)
+	newPoller := mockPoller.NewPoller(t)
 	ch := make(chan *poller.Update)
-	p.On("Register").Return(ch)
-	p.On("Unregister", ch).Return()
-	m := zone.New(a, p, nil, config, slog.Default())
+	newPoller.On("Register").Return(ch)
+	newPoller.On("Unregister", ch).Return()
+
+	controller := zone.New(tadoSetter, newPoller, nil, config, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
-	go func() { errCh <- m.Run(ctx) }()
+	go func() { errCh <- controller.Run(ctx) }()
 
-	mgrs := zone.Controllers{m}
-	_, ok := mgrs.ReportTasks()
+	controllers := zone.Controllers{controller}
+	_, ok := controllers.ReportTasks()
 	assert.False(t, ok)
 
 	ch <- &poller.Update{
@@ -189,11 +191,11 @@ func TestController_ReportTasks(t *testing.T) {
 	}
 
 	assert.Eventually(t, func() bool {
-		_, scheduled := m.GetScheduled()
+		_, scheduled := controller.GetScheduled()
 		return scheduled
 	}, time.Second, 10*time.Millisecond)
 
-	tasks, ok := mgrs.ReportTasks()
+	tasks, ok := controllers.ReportTasks()
 	assert.True(t, ok)
 	require.NotEmpty(t, tasks)
 	assert.Contains(t, tasks[0], "foo: moving to auto mode in")

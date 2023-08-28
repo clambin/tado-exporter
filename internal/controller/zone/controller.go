@@ -130,7 +130,6 @@ func (c *Controller) processResult() error {
 	} else if errors.Is(err, scheduler.ErrCanceled) {
 		err = nil
 	}
-	// TODO: reschedule task if it failed?
 
 	c.task = nil
 	return err
