@@ -8,6 +8,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -28,7 +29,7 @@ func TestHealth_Handle(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 
-	h := New(p)
+	h := New(p, slog.Default())
 	go func() { errCh <- h.Run(ctx) }()
 
 	resp := httptest.NewRecorder()
@@ -83,7 +84,7 @@ func BenchmarkHealth_Handle(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 
-	h := New(&p)
+	h := New(&p, slog.Default())
 	go func() { errCh <- h.Run(ctx) }()
 
 	ch <- &poller.Update{

@@ -26,19 +26,21 @@ type TadoGetter interface {
 var _ Poller = &TadoPoller{}
 
 type TadoPoller struct {
-	API      TadoGetter
-	interval time.Duration
-	refresh  chan struct{}
-	registry map[chan *Update]struct{}
-	lock     sync.RWMutex
+	TadoClient TadoGetter
+	interval   time.Duration
+	logger     *slog.Logger
+	refresh    chan struct{}
+	registry   map[chan *Update]struct{}
+	lock       sync.RWMutex
 }
 
-func New(API TadoGetter, interval time.Duration) *TadoPoller {
+func New(tadoClient TadoGetter, interval time.Duration, logger *slog.Logger) *TadoPoller {
 	return &TadoPoller{
-		API:      API,
-		interval: interval,
-		refresh:  make(chan struct{}),
-		registry: make(map[chan *Update]struct{}),
+		TadoClient: tadoClient,
+		interval:   interval,
+		logger:     logger,
+		refresh:    make(chan struct{}),
+		registry:   make(map[chan *Update]struct{}),
 	}
 }
 
@@ -46,13 +48,13 @@ func (p *TadoPoller) Run(ctx context.Context) error {
 	timer := time.NewTicker(p.interval)
 	defer timer.Stop()
 
-	slog.Info("poller started", "interval", p.interval)
+	p.logger.Debug("started", "interval", p.interval)
+	defer p.logger.Debug("stopped")
 
 	for {
 		shouldPoll := false
 		select {
 		case <-ctx.Done():
-			slog.Info("poller stopped")
 			return nil
 		case <-timer.C:
 			shouldPoll = true
@@ -63,7 +65,7 @@ func (p *TadoPoller) Run(ctx context.Context) error {
 		if shouldPoll {
 			// poll for new data
 			if err := p.poll(ctx); err != nil {
-				slog.Error("failed to get tado metrics", "err", err)
+				p.logger.Error("failed to get tado metrics", "err", err)
 			}
 		}
 	}
@@ -78,7 +80,7 @@ func (p *TadoPoller) Register() chan *Update {
 	defer p.lock.Unlock()
 	ch := make(chan *Update, 1)
 	p.registry[ch] = struct{}{}
-	slog.Debug(fmt.Sprintf("poller has %d clients", len(p.registry)))
+	p.logger.Debug(fmt.Sprintf("poller has %d clients", len(p.registry)))
 	return ch
 }
 
@@ -86,7 +88,7 @@ func (p *TadoPoller) Unregister(ch chan *Update) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	delete(p.registry, ch)
-	slog.Debug(fmt.Sprintf("poller has %d clients", len(p.registry)))
+	p.logger.Debug(fmt.Sprintf("poller has %d clients", len(p.registry)))
 }
 
 func (p *TadoPoller) poll(ctx context.Context) error {
@@ -98,7 +100,7 @@ func (p *TadoPoller) poll(ctx context.Context) error {
 		for ch := range p.registry {
 			ch <- &update
 		}
-		slog.Debug("poll completed", slog.Duration("duration", time.Since(start)))
+		p.logger.Debug("poll completed", slog.Duration("duration", time.Since(start)))
 	}
 	return err
 }
@@ -106,7 +108,7 @@ func (p *TadoPoller) poll(ctx context.Context) error {
 func (p *TadoPoller) update(ctx context.Context) (update Update, err error) {
 	update.UserInfo, err = p.getMobileDevices(ctx)
 	if err == nil {
-		update.WeatherInfo, err = p.API.GetWeatherInfo(ctx)
+		update.WeatherInfo, err = p.TadoClient.GetWeatherInfo(ctx)
 	}
 	if err == nil {
 		update.Zones, err = p.getZones(ctx)
@@ -122,7 +124,7 @@ func (p *TadoPoller) update(ctx context.Context) (update Update, err error) {
 
 func (p *TadoPoller) getMobileDevices(ctx context.Context) (deviceMap map[int]tado.MobileDevice, err error) {
 	var devices []tado.MobileDevice
-	if devices, err = p.API.GetMobileDevices(ctx); err == nil {
+	if devices, err = p.TadoClient.GetMobileDevices(ctx); err == nil {
 		deviceMap = make(map[int]tado.MobileDevice)
 		for _, device := range devices {
 			if device.Settings.GeoTrackingEnabled {
@@ -135,7 +137,7 @@ func (p *TadoPoller) getMobileDevices(ctx context.Context) (deviceMap map[int]ta
 
 func (p *TadoPoller) getZones(ctx context.Context) (map[int]tado.Zone, error) {
 	var zoneMap map[int]tado.Zone
-	zones, err := p.API.GetZones(ctx)
+	zones, err := p.TadoClient.GetZones(ctx)
 	if err == nil {
 		zoneMap = make(map[int]tado.Zone)
 		for _, zone := range zones {
@@ -148,7 +150,7 @@ func (p *TadoPoller) getZones(ctx context.Context) (map[int]tado.Zone, error) {
 func (p *TadoPoller) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) (map[int]tado.ZoneInfo, error) {
 	zoneInfoMap := make(map[int]tado.ZoneInfo)
 	for zoneID := range zones {
-		zoneInfo, err := p.API.GetZoneInfo(ctx, zoneID)
+		zoneInfo, err := p.TadoClient.GetZoneInfo(ctx, zoneID)
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +162,7 @@ func (p *TadoPoller) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) 
 
 func (p *TadoPoller) getHomeState(ctx context.Context) (bool, error) {
 	var home bool
-	homeState, err := p.API.GetHomeState(ctx)
+	homeState, err := p.TadoClient.GetHomeState(ctx)
 	if err == nil {
 		home = homeState.Presence == "HOME"
 	}

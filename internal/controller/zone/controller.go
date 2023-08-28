@@ -16,20 +16,22 @@ import (
 type Controller struct {
 	evaluator    rules.Evaluator
 	task         *Task
-	api          rules.TadoSetter
+	tadoClient   rules.TadoSetter
 	notifiers    notifier.Notifiers
 	poller       poller.Poller
+	logger       *slog.Logger
 	notification chan struct{}
 	lock         sync.RWMutex
 }
 
-func New(api rules.TadoSetter, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneConfig) *Controller {
+func New(tadoClient rules.TadoSetter, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneConfig, logger *slog.Logger) *Controller {
 	controller := Controller{
 		evaluator:    rules.Evaluator{Config: &cfg},
-		api:          api,
-		notifiers:    notifier.Notifiers{&notifier.SLogNotifier{}},
+		tadoClient:   tadoClient,
+		notifiers:    notifier.Notifiers{&notifier.SLogNotifier{Logger: logger}},
 		poller:       p,
 		notification: make(chan struct{}, 1),
+		logger:       logger,
 	}
 
 	if bot != nil {
@@ -39,6 +41,8 @@ func New(api rules.TadoSetter, p poller.Poller, bot slackbot.SlackBot, cfg rules
 }
 
 func (c *Controller) Run(ctx context.Context) error {
+	c.logger.Debug("started")
+	defer c.logger.Debug("stopped")
 	ch := c.poller.Register()
 	defer c.poller.Unregister(ch)
 
@@ -48,11 +52,11 @@ func (c *Controller) Run(ctx context.Context) error {
 			return nil
 		case update := <-ch:
 			if err := c.processUpdate(ctx, update); err != nil {
-				slog.Error("failed to process tado update", "err", err, "zone", c.evaluator.Config.Zone)
+				c.logger.Error("failed to process tado update", "err", err, "zone", c.evaluator.Config.Zone)
 			}
 		case <-c.notification:
 			if err := c.processResult(); err != nil {
-				slog.Error("failed to set next state", "err", err, "zone", c.evaluator.Config.Zone)
+				c.logger.Error("failed to set next state", "err", err, "zone", c.evaluator.Config.Zone)
 			}
 		}
 	}
@@ -65,7 +69,7 @@ func (c *Controller) processUpdate(ctx context.Context, update *poller.Update) e
 	}
 
 	if next.Action {
-		slog.Debug("scheduling job", "next", next, "zoneConfig", zoneLogger(update.ZoneInfo[next.ZoneID]))
+		c.logger.Debug("scheduling job", "next", next, "zoneConfig", zoneLogger(update.ZoneInfo[next.ZoneID]))
 		c.scheduleJob(ctx, next)
 	} else {
 		c.cancelJob(next)
@@ -89,7 +93,7 @@ func (c *Controller) scheduleJob(ctx context.Context, next rules.Action) {
 		c.task.job.Cancel()
 	}
 
-	c.task = newTask(c.api, next)
+	c.task = newTask(c.tadoClient, next)
 	c.task.job = scheduler.ScheduleWithNotification(ctx, c.task, next.Delay, c.notification)
 	if next.Delay > 0 {
 		c.notifiers.Notify(notifier.Queued, next)

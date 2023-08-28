@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"log/slog"
 	"strconv"
 	"testing"
 	"time"
@@ -56,7 +57,7 @@ func TestNotifiers_Notify(t *testing.T) {
 		t.Run(strconv.Itoa(int(tt.action)), func(t *testing.T) {
 			b := slackbot.NewSlackBot(t)
 			l := notifier.Notifiers{
-				&notifier.SLogNotifier{},
+				&notifier.SLogNotifier{Logger: slog.Default()},
 				&notifier.SlackNotifier{Bot: b},
 			}
 
@@ -68,7 +69,6 @@ func TestNotifiers_Notify(t *testing.T) {
 				return nil
 			})
 			l.Notify(tt.action, tt.state)
-
 		})
 	}
 }

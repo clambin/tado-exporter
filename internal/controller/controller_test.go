@@ -10,6 +10,7 @@ import (
 	pollerMocks "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"log/slog"
 	"testing"
 	"time"
 )
@@ -28,7 +29,7 @@ func TestController_Run(t *testing.T) {
 	b := slackbot.NewSlackBot(t)
 	b.EXPECT().Register(mock.AnythingOfType("string"), mock.AnythingOfType("slackbot.CommandFunc"))
 
-	c := controller.New(a, zoneCfg, b, p)
+	c := controller.New(a, zoneCfg, b, p, slog.Default())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)

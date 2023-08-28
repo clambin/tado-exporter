@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"log/slog"
 	"testing"
 	"time"
 )
@@ -23,7 +24,7 @@ func TestCollector(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 
-	c := Collector{Poller: p}
+	c := Collector{Poller: p, Logger: slog.Default()}
 	r := prometheus.NewRegistry()
 	r.MustRegister(&c)
 	go func() { errCh <- c.Run(ctx) }()

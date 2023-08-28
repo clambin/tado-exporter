@@ -90,11 +90,11 @@ func makeTasks(api *tado.APIClient, rules []rules.ZoneConfig) []taskmanager.Task
 	var tasks []taskmanager.Task
 
 	// Poller
-	p := poller.New(api, viper.GetDuration("poller.interval"))
+	p := poller.New(api, viper.GetDuration("poller.interval"), slog.Default().With("component", "poller"))
 	tasks = append(tasks, p)
 
 	// Collector
-	coll := &collector.Collector{Poller: p}
+	coll := &collector.Collector{Poller: p, Logger: slog.Default().With("component", "collector")}
 	prometheus.MustRegister(coll)
 	tasks = append(tasks, coll)
 
@@ -102,7 +102,7 @@ func makeTasks(api *tado.APIClient, rules []rules.ZoneConfig) []taskmanager.Task
 	tasks = append(tasks, promserver.New(promserver.WithAddr(viper.GetString("exporter.addr"))))
 
 	// Health Endpoint
-	h := health.New(p)
+	h := health.New(p, slog.Default().With("component", "health"))
 	tasks = append(tasks, h)
 	r := http.NewServeMux()
 	r.Handle("/health", http.HandlerFunc(h.Handle))
@@ -117,7 +117,7 @@ func makeTasks(api *tado.APIClient, rules []rules.ZoneConfig) []taskmanager.Task
 
 	// Controller
 	if len(rules) > 0 {
-		tasks = append(tasks, controller.New(api, rules, bot, p))
+		tasks = append(tasks, controller.New(api, rules, bot, p, slog.Default().With("component", "controller")))
 	} else {
 		slog.Warn("no rules found. controller will not run")
 	}

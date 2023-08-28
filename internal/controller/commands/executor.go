@@ -21,6 +21,7 @@ type Executor struct {
 	poller      poller.Poller
 	update      *poller.Update
 	controllers Controllers
+	logger      *slog.Logger
 	lock        sync.RWMutex
 }
 
@@ -33,11 +34,12 @@ type TadoSetter interface {
 	SetZoneTemporaryOverlay(context.Context, int, float64, time.Duration) error
 }
 
-func New(tado TadoSetter, tadoBot slackbot.SlackBot, p poller.Poller, controllers Controllers) *Executor {
+func New(tado TadoSetter, tadoBot slackbot.SlackBot, p poller.Poller, controllers Controllers, logger *slog.Logger) *Executor {
 	executor := Executor{
 		Tado:        tado,
 		poller:      p,
 		controllers: controllers,
+		logger:      logger,
 	}
 
 	tadoBot.Register("rules", executor.ReportRules)
@@ -51,8 +53,8 @@ func New(tado TadoSetter, tadoBot slackbot.SlackBot, p poller.Poller, controller
 
 // Run the controller
 func (e *Executor) Run(ctx context.Context) error {
-	slog.Info("commands manager started")
-	defer slog.Info("commands manager stopped")
+	e.logger.Debug("started")
+	defer e.logger.Debug("stopped")
 
 	ch := e.poller.Register()
 	defer e.poller.Unregister(ch)

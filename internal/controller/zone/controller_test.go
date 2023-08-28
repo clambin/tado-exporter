@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"log/slog"
 	"testing"
 	"time"
 )
@@ -104,7 +105,7 @@ func TestController_Run(t *testing.T) {
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
 
-	m := zone.New(a, p, b, config)
+	m := zone.New(a, p, b, config, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() { errCh <- m.Run(ctx) }()
@@ -137,7 +138,7 @@ func TestController_Scheduled(t *testing.T) {
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
-	m := zone.New(a, p, nil, config)
+	m := zone.New(a, p, nil, config, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() { errCh <- m.Run(ctx) }()
@@ -172,7 +173,7 @@ func TestController_ReportTasks(t *testing.T) {
 	ch := make(chan *poller.Update)
 	p.On("Register").Return(ch)
 	p.On("Unregister", ch).Return()
-	m := zone.New(a, p, nil, config)
+	m := zone.New(a, p, nil, config, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() { errCh <- m.Run(ctx) }()

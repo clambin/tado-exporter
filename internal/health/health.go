@@ -13,19 +13,21 @@ import (
 
 type Health struct {
 	poller.Poller
-	cache *cache.Cache[string, *bytes.Buffer]
+	logger *slog.Logger
+	cache  *cache.Cache[string, *bytes.Buffer]
 }
 
-func New(p poller.Poller) *Health {
+func New(p poller.Poller, logger *slog.Logger) *Health {
 	return &Health{
 		Poller: p,
+		logger: logger,
 		cache:  cache.New[string, *bytes.Buffer](15*time.Minute, time.Hour),
 	}
 }
 
 func (h *Health) Run(ctx context.Context) error {
-	slog.Info("health monitor started")
-	defer slog.Info("health monitor stopped")
+	h.logger.Debug("started")
+	defer h.logger.Debug("stopped")
 
 	ch := h.Poller.Register()
 	defer h.Poller.Unregister(ch)

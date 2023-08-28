@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"log/slog"
 	"strconv"
 	"testing"
 	"time"
@@ -26,7 +27,7 @@ func TestExecutor_Run(t *testing.T) {
 	p.EXPECT().Register().Return(ch).Once()
 	p.EXPECT().Unregister(ch).Return().Once()
 
-	c := New(api, bot, p, nil)
+	c := New(api, bot, p, nil, slog.Default())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -53,7 +54,7 @@ func TestExecutor_ReportRules(t *testing.T) {
 	controllers := mocks.NewControllers(t)
 	controllers.EXPECT().ReportTasks().Return(nil, false).Once()
 
-	c := New(api, bot, nil, controllers)
+	c := New(api, bot, nil, controllers, slog.Default())
 
 	ctx := context.Background()
 	attachments := c.ReportRules(ctx)
@@ -74,7 +75,7 @@ func TestExecutor_SetRoom(t *testing.T) {
 
 	p := mockPoller.NewPoller(t)
 
-	executor := New(api, bot, p, nil)
+	executor := New(api, bot, p, nil, slog.Default())
 	executor.update = &poller.Update{
 		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22), testutil.ZoneInfoPermanentOverlay())},
@@ -164,7 +165,7 @@ func TestExecutor_DoRefresh(t *testing.T) {
 	p := mockPoller.NewPoller(t)
 	p.EXPECT().Refresh()
 
-	c := New(api, bot, p, nil)
+	c := New(api, bot, p, nil, slog.Default())
 	c.DoRefresh(context.Background())
 }
 
@@ -173,7 +174,7 @@ func TestExecutor_ReportRooms(t *testing.T) {
 	bot := mockSlackbot.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
-	c := New(api, bot, nil, nil)
+	c := New(api, bot, nil, nil, slog.Default())
 
 	attachments := c.ReportRooms(context.Background())
 	require.Len(t, attachments, 1)
@@ -198,7 +199,7 @@ func TestExecutor_ReportUsers(t *testing.T) {
 	bot := mockSlackbot.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
-	c := New(api, bot, nil, nil)
+	c := New(api, bot, nil, nil, slog.Default())
 
 	testCases := []struct {
 		update   *poller.Update

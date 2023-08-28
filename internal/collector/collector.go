@@ -111,13 +111,14 @@ var (
 
 type Collector struct {
 	Poller     poller.Poller
+	Logger     *slog.Logger
 	lock       sync.RWMutex
 	lastUpdate *poller.Update
 }
 
 func (c *Collector) Run(ctx context.Context) error {
-	slog.Info("collector started")
-	defer slog.Info("collector stopped")
+	c.Logger.Debug("started")
+	defer c.Logger.Debug("stopped")
 
 	ch := c.Poller.Register()
 	defer c.Poller.Unregister(ch)
@@ -208,7 +209,7 @@ func (c *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 		zone, found := c.lastUpdate.Zones[zoneID]
 
 		if !found {
-			slog.Warn("invalid zoneID in collected tado metrics. skipping collection", "id", zoneID)
+			c.Logger.Warn("invalid zoneID in collected tado metrics. skipping collection", "id", zoneID)
 			continue
 		}
 

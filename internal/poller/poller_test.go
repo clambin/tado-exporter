@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"log/slog"
 	"testing"
 	"time"
 )
@@ -16,7 +17,7 @@ import (
 func TestTadoPoller_Run(t *testing.T) {
 	api := mocks.NewTadoGetter(t)
 
-	p := poller.New(api, time.Minute)
+	p := poller.New(api, time.Minute, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
 
 	prepareMockAPI(api)

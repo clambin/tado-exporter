@@ -15,6 +15,8 @@ import (
 type Controller struct {
 	zoneManagers zone.Controllers
 	Commands     *commands.Executor
+	tasks        taskmanager.Manager
+	logger       *slog.Logger
 }
 
 type TadoSetter interface {
@@ -23,15 +25,18 @@ type TadoSetter interface {
 }
 
 // New creates a new Controller object
-func New(api TadoSetter, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p poller.Poller) *Controller {
-	var c Controller
+func New(api TadoSetter, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p poller.Poller, logger *slog.Logger) *Controller {
+	c := Controller{logger: logger}
 
 	for _, zoneCfg := range cfg {
-		c.zoneManagers = append(c.zoneManagers, zone.New(api, p, tadoBot, zoneCfg))
+		z := zone.New(api, p, tadoBot, zoneCfg, logger.With("zone", zoneCfg.Zone))
+		c.zoneManagers = append(c.zoneManagers, z)
+		_ = c.tasks.Add(z)
 	}
 
 	if tadoBot != nil {
-		c.Commands = commands.New(api, tadoBot, p, c.zoneManagers)
+		c.Commands = commands.New(api, tadoBot, p, c.zoneManagers, logger.With("component", "commands"))
+		_ = c.tasks.Add(c.Commands)
 	}
 
 	return &c
@@ -39,17 +44,7 @@ func New(api TadoSetter, cfg []rules.ZoneConfig, tadoBot slackbot.SlackBot, p po
 
 // Run the controller
 func (c *Controller) Run(ctx context.Context) error {
-	slog.Info("controller started")
-	defer slog.Info("controller stopped")
-
-	var mgrs []taskmanager.Task
-	for _, zoneManager := range c.zoneManagers {
-		mgrs = append(mgrs, zoneManager)
-	}
-	tm := taskmanager.New(mgrs...)
-	if c.Commands != nil {
-		_ = tm.Add(c.Commands)
-	}
-
-	return tm.Run(ctx)
+	c.logger.Debug("started")
+	defer c.logger.Debug("stopped")
+	return c.tasks.Run(ctx)
 }
