@@ -8,6 +8,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/poller"
 	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado/testutil"
+	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -202,35 +203,47 @@ func TestExecutor_ReportUsers(t *testing.T) {
 	c := New(api, bot, nil, nil, slog.Default())
 
 	testCases := []struct {
-		update   *poller.Update
-		expected string
+		name   string
+		update *poller.Update
+		want   slack.Attachment
 	}{
 		{
+			name:   "no update yet",
+			update: nil,
+			want:   slack.Attachment{Color: "bad", Text: "no update yet. please check back later"},
+		},
+		{
+			name: "home",
 			update: &poller.Update{
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
 			},
-			expected: "foo: home",
+			want: slack.Attachment{Title: "users:", Text: "foo: home"},
 		},
 		{
+			name: "away",
 			update: &poller.Update{
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(false))},
 			},
-			expected: "foo: away",
+			want: slack.Attachment{Title: "users:", Text: "foo: away"},
 		},
 		{
+			name: "unknown",
 			update: &poller.Update{
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo")},
 			},
-			expected: "foo: unknown",
+			want: slack.Attachment{Title: "users:", Text: "foo: unknown"},
 		},
 	}
 
 	for _, tt := range testCases {
-		c.update = tt.update
+		t.Run(tt.name, func(t *testing.T) {
+			c.update = tt.update
 
-		attachments := c.ReportUsers(context.Background())
-		require.Len(t, attachments, 1)
-		assert.Equal(t, "users:", attachments[0].Title)
-		assert.Equal(t, tt.expected, attachments[0].Text)
+			attachments := c.ReportUsers(context.Background())
+			require.Len(t, attachments, 1)
+			assert.Equal(t, tt.want, attachments[0])
+			//assert.Equal(t, "users:", attachments[0].Title)
+			//assert.Equal(t, tt.expected, attachments[0].Text)
+		})
 	}
 }
