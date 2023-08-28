@@ -4,7 +4,7 @@ on:
   push:
     branches-ignore:
       - master
-      - oauth2
+      - refactor
   pull_request_target:
 
 jobs:
