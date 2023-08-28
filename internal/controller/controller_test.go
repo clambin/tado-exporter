@@ -14,9 +14,7 @@ import (
 	"time"
 )
 
-var (
-	zoneCfg []rules.ZoneConfig
-)
+var zoneCfg []rules.ZoneConfig
 
 func TestController_Run(t *testing.T) {
 	a := mocks.NewTadoSetter(t)
