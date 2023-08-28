@@ -3,17 +3,16 @@ package main
 import (
 	"context"
 	"errors"
-	slackbot2 "github.com/clambin/go-common/slackbot"
+	"github.com/clambin/go-common/slackbot"
 	"github.com/clambin/go-common/taskmanager"
 	"github.com/clambin/go-common/taskmanager/httpserver"
 	promserver "github.com/clambin/go-common/taskmanager/prometheus"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/collector"
-	"github.com/clambin/tado-exporter/controller"
-	"github.com/clambin/tado-exporter/controller/slackbot"
-	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
-	"github.com/clambin/tado-exporter/health"
-	"github.com/clambin/tado-exporter/poller"
+	"github.com/clambin/tado-exporter/internal/collector"
+	"github.com/clambin/tado-exporter/internal/controller"
+	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
+	"github.com/clambin/tado-exporter/internal/health"
+	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -91,11 +90,11 @@ func makeTasks(api *tado.APIClient, rules []rules.ZoneConfig) []taskmanager.Task
 	var tasks []taskmanager.Task
 
 	// Poller
-	p := poller.New(api, viper.GetDuration("poller.interval"))
+	p := poller.New(api, viper.GetDuration("poller.interval"), slog.Default().With("component", "poller"))
 	tasks = append(tasks, p)
 
 	// Collector
-	coll := &collector.Collector{Poller: p}
+	coll := &collector.Collector{Poller: p, Logger: slog.Default().With("component", "collector")}
 	prometheus.MustRegister(coll)
 	tasks = append(tasks, coll)
 
@@ -103,22 +102,22 @@ func makeTasks(api *tado.APIClient, rules []rules.ZoneConfig) []taskmanager.Task
 	tasks = append(tasks, promserver.New(promserver.WithAddr(viper.GetString("exporter.addr"))))
 
 	// Health Endpoint
-	h := health.New(p)
+	h := health.New(p, slog.Default().With("component", "health"))
 	tasks = append(tasks, h)
 	r := http.NewServeMux()
 	r.Handle("/health", http.HandlerFunc(h.Handle))
 	tasks = append(tasks, httpserver.New(viper.GetString("health.addr"), r))
 
 	// Slackbot
-	var bot slackbot.SlackBot
+	var bot *slackbot.SlackBot
 	if viper.GetBool("controller.tadoBot.enabled") {
-		bot = slackbot2.New(viper.GetString("controller.tadoBot.token"), slackbot2.WithName("tado "+version))
+		bot = slackbot.New(viper.GetString("controller.tadoBot.token"), slackbot.WithName("tado "+version))
 		tasks = append(tasks, bot)
 	}
 
 	// Controller
 	if len(rules) > 0 {
-		tasks = append(tasks, controller.New(api, rules, bot, p))
+		tasks = append(tasks, controller.New(api, rules, bot, p, slog.Default().With("component", "controller")))
 	} else {
 		slog.Warn("no rules found. controller will not run")
 	}
