@@ -3,17 +3,16 @@ package main
 import (
 	"context"
 	"errors"
-	slackbot2 "github.com/clambin/go-common/slackbot"
+	"github.com/clambin/go-common/slackbot"
 	"github.com/clambin/go-common/taskmanager"
 	"github.com/clambin/go-common/taskmanager/httpserver"
 	promserver "github.com/clambin/go-common/taskmanager/prometheus"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/collector"
-	"github.com/clambin/tado-exporter/controller"
-	"github.com/clambin/tado-exporter/controller/slackbot"
-	"github.com/clambin/tado-exporter/controller/zonemanager/rules"
-	"github.com/clambin/tado-exporter/health"
-	"github.com/clambin/tado-exporter/poller"
+	"github.com/clambin/tado-exporter/internal/collector"
+	"github.com/clambin/tado-exporter/internal/controller"
+	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
+	"github.com/clambin/tado-exporter/internal/health"
+	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -110,9 +109,9 @@ func makeTasks(api *tado.APIClient, rules []rules.ZoneConfig) []taskmanager.Task
 	tasks = append(tasks, httpserver.New(viper.GetString("health.addr"), r))
 
 	// Slackbot
-	var bot slackbot.SlackBot
+	var bot *slackbot.SlackBot
 	if viper.GetBool("controller.tadoBot.enabled") {
-		bot = slackbot2.New(viper.GetString("controller.tadoBot.token"), slackbot2.WithName("tado "+version))
+		bot = slackbot.New(viper.GetString("controller.tadoBot.token"), slackbot.WithName("tado "+version))
 		tasks = append(tasks, bot)
 	}
 

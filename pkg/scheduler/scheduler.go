@@ -27,14 +27,14 @@ func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
 }
 
 func ScheduleWithNotification(ctx context.Context, task Task, waitTime time.Duration, ch chan struct{}) *Job {
-	ctx2, cancel := context.WithCancel(ctx)
+	subCtx, cancel := context.WithCancel(ctx)
 	j := Job{
 		task:   task,
 		state:  stateUnknown,
 		Cancel: cancel,
 		notify: ch,
 	}
-	go j.run(ctx2, waitTime)
+	go j.run(subCtx, waitTime)
 
 	return &j
 }
