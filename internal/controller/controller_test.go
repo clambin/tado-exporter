@@ -15,7 +15,17 @@ import (
 	"time"
 )
 
-var zoneCfg []rules.ZoneConfig
+var zoneCfg = []rules.ZoneConfig{
+	{
+		Zone: "foo",
+		Rules: []rules.RuleConfig{
+			{
+				Kind:  rules.LimitOverlay,
+				Delay: time.Hour,
+			},
+		},
+	},
+}
 
 func TestController_Run(t *testing.T) {
 	a := mocks.NewTadoSetter(t)

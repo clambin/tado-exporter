@@ -122,9 +122,10 @@ func (p *TadoPoller) update(ctx context.Context) (update Update, err error) {
 	return
 }
 
-func (p *TadoPoller) getMobileDevices(ctx context.Context) (deviceMap map[int]tado.MobileDevice, err error) {
-	var devices []tado.MobileDevice
-	if devices, err = p.TadoClient.GetMobileDevices(ctx); err == nil {
+func (p *TadoPoller) getMobileDevices(ctx context.Context) (map[int]tado.MobileDevice, error) {
+	var deviceMap map[int]tado.MobileDevice
+	devices, err := p.TadoClient.GetMobileDevices(ctx)
+	if err == nil {
 		deviceMap = make(map[int]tado.MobileDevice)
 		for _, device := range devices {
 			if device.Settings.GeoTrackingEnabled {
@@ -132,7 +133,7 @@ func (p *TadoPoller) getMobileDevices(ctx context.Context) (deviceMap map[int]ta
 			}
 		}
 	}
-	return
+	return deviceMap, err
 }
 
 func (p *TadoPoller) getZones(ctx context.Context) (map[int]tado.Zone, error) {
