@@ -95,8 +95,13 @@ func TestMobileDevices_LogValue(t *testing.T) {
 	}
 
 	out := bytes.Buffer{}
-	// TODO: filter out timestamp so we can do a straight comparison
-	logger := slog.New(slog.NewTextHandler(&out, &slog.HandlerOptions{}))
+	logger := slog.New(slog.NewTextHandler(&out, &slog.HandlerOptions{ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+		// Remove time from the output for predictable test output.
+		if a.Key == slog.TimeKey {
+			return slog.Attr{}
+		}
+		return a
+	}}))
 	logger.Info("devices", "devices", devices)
 
 	logEntry := out.String()

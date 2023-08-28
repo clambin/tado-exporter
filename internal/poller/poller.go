@@ -10,7 +10,6 @@ import (
 )
 
 type Poller interface {
-	//taskmanager.Task
 	Register() chan *Update
 	Unregister(ch chan *Update)
 	Refresh()
@@ -24,9 +23,9 @@ type TadoGetter interface {
 	GetHomeState(ctx context.Context) (homeState tado.HomeState, err error)
 }
 
-var _ Poller = &Server{}
+var _ Poller = &TadoPoller{}
 
-type Server struct {
+type TadoPoller struct {
 	API      TadoGetter
 	interval time.Duration
 	refresh  chan struct{}
@@ -34,8 +33,8 @@ type Server struct {
 	lock     sync.RWMutex
 }
 
-func New(API TadoGetter, interval time.Duration) *Server {
-	return &Server{
+func New(API TadoGetter, interval time.Duration) *TadoPoller {
+	return &TadoPoller{
 		API:      API,
 		interval: interval,
 		refresh:  make(chan struct{}),
@@ -43,7 +42,7 @@ func New(API TadoGetter, interval time.Duration) *Server {
 	}
 }
 
-func (p *Server) Run(ctx context.Context) error {
+func (p *TadoPoller) Run(ctx context.Context) error {
 	timer := time.NewTicker(p.interval)
 	defer timer.Stop()
 
@@ -70,11 +69,11 @@ func (p *Server) Run(ctx context.Context) error {
 	}
 }
 
-func (p *Server) Refresh() {
+func (p *TadoPoller) Refresh() {
 	p.refresh <- struct{}{}
 }
 
-func (p *Server) Register() chan *Update {
+func (p *TadoPoller) Register() chan *Update {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	ch := make(chan *Update, 1)
@@ -83,14 +82,14 @@ func (p *Server) Register() chan *Update {
 	return ch
 }
 
-func (p *Server) Unregister(ch chan *Update) {
+func (p *TadoPoller) Unregister(ch chan *Update) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	delete(p.registry, ch)
 	slog.Debug(fmt.Sprintf("poller has %d clients", len(p.registry)))
 }
 
-func (p *Server) poll(ctx context.Context) error {
+func (p *TadoPoller) poll(ctx context.Context) error {
 	start := time.Now()
 	update, err := p.update(ctx)
 	if err == nil {
@@ -104,7 +103,7 @@ func (p *Server) poll(ctx context.Context) error {
 	return err
 }
 
-func (p *Server) update(ctx context.Context) (update Update, err error) {
+func (p *TadoPoller) update(ctx context.Context) (update Update, err error) {
 	update.UserInfo, err = p.getMobileDevices(ctx)
 	if err == nil {
 		update.WeatherInfo, err = p.API.GetWeatherInfo(ctx)
@@ -121,7 +120,7 @@ func (p *Server) update(ctx context.Context) (update Update, err error) {
 	return
 }
 
-func (p *Server) getMobileDevices(ctx context.Context) (deviceMap map[int]tado.MobileDevice, err error) {
+func (p *TadoPoller) getMobileDevices(ctx context.Context) (deviceMap map[int]tado.MobileDevice, err error) {
 	var devices []tado.MobileDevice
 	if devices, err = p.API.GetMobileDevices(ctx); err == nil {
 		deviceMap = make(map[int]tado.MobileDevice)
@@ -134,7 +133,7 @@ func (p *Server) getMobileDevices(ctx context.Context) (deviceMap map[int]tado.M
 	return
 }
 
-func (p *Server) getZones(ctx context.Context) (map[int]tado.Zone, error) {
+func (p *TadoPoller) getZones(ctx context.Context) (map[int]tado.Zone, error) {
 	var zoneMap map[int]tado.Zone
 	zones, err := p.API.GetZones(ctx)
 	if err == nil {
@@ -146,7 +145,7 @@ func (p *Server) getZones(ctx context.Context) (map[int]tado.Zone, error) {
 	return zoneMap, err
 }
 
-func (p *Server) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) (map[int]tado.ZoneInfo, error) {
+func (p *TadoPoller) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) (map[int]tado.ZoneInfo, error) {
 	zoneInfoMap := make(map[int]tado.ZoneInfo)
 	for zoneID := range zones {
 		zoneInfo, err := p.API.GetZoneInfo(ctx, zoneID)
@@ -159,7 +158,7 @@ func (p *Server) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) (map
 	return zoneInfoMap, nil
 }
 
-func (p *Server) getHomeState(ctx context.Context) (bool, error) {
+func (p *TadoPoller) getHomeState(ctx context.Context) (bool, error) {
 	var home bool
 	homeState, err := p.API.GetHomeState(ctx)
 	if err == nil {

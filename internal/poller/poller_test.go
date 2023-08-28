@@ -13,10 +13,10 @@ import (
 	"time"
 )
 
-func TestPoller_Run(t *testing.T) {
+func TestTadoPoller_Run(t *testing.T) {
 	api := mocks.NewTadoGetter(t)
 
-	p := poller.New(api, 10*time.Millisecond)
+	p := poller.New(api, time.Minute)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	prepareMockAPI(api)
@@ -26,6 +26,7 @@ func TestPoller_Run(t *testing.T) {
 	go func() {
 		errCh <- p.Run(ctx)
 	}()
+	p.Refresh()
 	update := <-ch
 
 	require.Len(t, update.UserInfo, 2)
@@ -51,53 +52,6 @@ func TestPoller_Run(t *testing.T) {
 
 	cancel()
 	assert.NoError(t, <-errCh)
-}
-
-func TestServer_Poll(t *testing.T) {
-	// TODO: what does this test do vs the main one?
-	api := mocks.NewTadoGetter(t)
-	prepareMockAPI(api)
-
-	p := poller.New(api, time.Minute)
-	ctx, cancel := context.WithCancel(context.Background())
-
-	ch := p.Register()
-	errCh := make(chan error)
-	go func() {
-		errCh <- p.Run(ctx)
-	}()
-
-	p.Refresh()
-	update := <-ch
-
-	require.Len(t, update.UserInfo, 2)
-
-	p.Unregister(ch)
-
-	cancel()
-	assert.NoError(t, <-errCh)
-}
-
-func TestServer_Refresh(t *testing.T) {
-	api := mocks.NewTadoGetter(t)
-	prepareMockAPI(api)
-
-	p := poller.New(api, 10*time.Millisecond)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	ch := p.Register()
-	go func() {
-		_ = p.Run(ctx)
-	}()
-
-	update := <-ch
-	require.Len(t, update.UserInfo, 2)
-
-	prepareMockAPI(api)
-	p.Refresh()
-	update = <-ch
-	require.Len(t, update.UserInfo, 2)
 }
 
 func prepareMockAPI(api *mocks.TadoGetter) {
