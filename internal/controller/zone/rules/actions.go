@@ -3,7 +3,7 @@ package rules
 import (
 	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 )
@@ -88,6 +88,6 @@ func (a Actions) getCombinedReason() string {
 		}
 	}
 	uniqueReasons := r.List()
-	sort.Strings(uniqueReasons)
+	slices.Sort(uniqueReasons)
 	return strings.Join(uniqueReasons, ", ")
 }

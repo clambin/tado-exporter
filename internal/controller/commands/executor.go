@@ -9,7 +9,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/slack-go/slack"
 	"log/slog"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -134,7 +134,7 @@ func (e *Executor) ReportRooms(_ context.Context, _ ...string) []slack.Attachmen
 	if len(text) > 0 {
 		slackColor = "good"
 		slackTitle = "rooms:"
-		sort.Strings(text)
+		slices.Sort(text)
 		slackText = strings.Join(text, "\n")
 	}
 
