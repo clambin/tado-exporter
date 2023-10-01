@@ -76,3 +76,19 @@ func TestJob_Cancel_Chained(t *testing.T) {
 	assert.True(t, completed)
 	assert.ErrorIs(t, err, scheduler.ErrCanceled)
 }
+
+func TestJob_TimeToFire(t *testing.T) {
+	ch := make(chan struct{})
+	var task MyTask
+	ctx, cancel := context.WithCancel(context.Background())
+	job := scheduler.ScheduleWithNotification(ctx, &task, time.Hour, ch)
+
+	assert.Eventually(t, func() bool {
+		state, err := job.GetState()
+		return err == nil && state == scheduler.StateScheduled
+	}, time.Second, time.Millisecond)
+
+	assert.Equal(t, 60*time.Minute, job.TimeToFire().Round(time.Minute))
+
+	cancel()
+}

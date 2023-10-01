@@ -10,30 +10,30 @@ import (
 type Task struct {
 	api       rules.TadoSetter
 	nextState rules.Action
-	when      time.Time
 	job       *scheduler.Job
 }
 
 var _ scheduler.Task = &Task{}
 
-func newTask(api rules.TadoSetter, next rules.Action) *Task {
-	return &Task{
+func newTask(ctx context.Context, api rules.TadoSetter, next rules.Action, notification chan struct{}) *Task {
+	task := Task{
 		api:       api,
 		nextState: next,
-		when:      time.Now().Add(next.Delay),
 	}
+	task.job = scheduler.ScheduleWithNotification(ctx, &task, next.Delay, notification)
+	return &task
 }
 
-func (j *Task) Run(ctx context.Context) (err error) {
-	return j.nextState.State.Do(ctx, j.api, j.nextState.ZoneID)
+func (t *Task) Run(ctx context.Context) (err error) {
+	return t.nextState.State.Do(ctx, t.api, t.nextState.ZoneID)
 }
 
-func (j *Task) firesNoLaterThan(delay time.Duration) bool {
-	scheduled := int64(time.Until(j.when).Seconds())
-	newJob := int64(delay.Seconds())
+func (t *Task) firesNoLaterThan(next rules.Action) bool {
+	scheduled := t.job.TimeToFire().Round(time.Second)
+	newJob := next.Delay.Round(time.Second)
 	return scheduled <= newJob
 }
 
-func (j *Task) Report() string {
-	return j.nextState.ZoneName + ": " + j.nextState.State.String() + " in " + time.Until(j.when).Round(time.Second).String()
+func (t *Task) Report() string {
+	return t.nextState.ZoneName + ": " + t.nextState.State.String() + " in " + t.job.TimeToFire().Round(time.Second).String()
 }

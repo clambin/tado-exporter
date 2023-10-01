@@ -85,7 +85,7 @@ func (c *Controller) scheduleJob(ctx context.Context, next rules.Action) {
 	// if the same state is already scheduled for an earlier time, don't schedule it again.
 	if c.task != nil {
 		if c.task.nextState.State == next.State &&
-			c.task.firesNoLaterThan(next.Delay) {
+			c.task.firesNoLaterThan(next) {
 			return
 		}
 
@@ -93,8 +93,8 @@ func (c *Controller) scheduleJob(ctx context.Context, next rules.Action) {
 		c.task.job.Cancel()
 	}
 
-	c.task = newTask(c.tadoClient, next)
-	c.task.job = scheduler.ScheduleWithNotification(ctx, c.task, next.Delay, c.notification)
+	c.task = newTask(ctx, c.tadoClient, next, c.notification)
+
 	if next.Delay > 0 {
 		c.notifiers.Notify(notifier.Queued, next)
 	}
