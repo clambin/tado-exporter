@@ -84,8 +84,8 @@ func TestJob_TimeToFire(t *testing.T) {
 	job := scheduler.ScheduleWithNotification(ctx, &task, time.Hour, ch)
 
 	assert.Eventually(t, func() bool {
-		state, err := job.GetState()
-		return err == nil && state == scheduler.StateScheduled
+		state, _, _ := job.GetState()
+		return state == scheduler.StateScheduled
 	}, time.Second, time.Millisecond)
 
 	assert.Equal(t, 60*time.Minute, job.TimeToFire().Round(time.Minute))

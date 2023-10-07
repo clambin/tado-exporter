@@ -50,14 +50,12 @@ func ScheduleWithNotification(ctx context.Context, task Task, waitTime time.Dura
 }
 
 func (j *Job) run(ctx context.Context, waitTime time.Duration) {
-	j.setState(StateScheduled, nil)
-	j.when = time.Now().Add(waitTime)
+	j.setScheduled(waitTime)
 	select {
 	case <-ctx.Done():
-		j.setState(StateCanceled, ErrCanceled)
+		j.setCanceled()
 	case <-time.After(waitTime):
-		err := j.task.Run(ctx)
-		j.setState(StateCompleted, err)
+		j.setCompleted(j.task.Run(ctx))
 	}
 	j.Cancel()
 	if j.notify != nil {
@@ -66,28 +64,42 @@ func (j *Job) run(ctx context.Context, waitTime time.Duration) {
 }
 
 func (j *Job) Result() (bool, error) {
-	result, err := j.GetState()
+	result, err, _ := j.GetState()
 	completed := result == StateCompleted || result == StateCanceled
 	return completed, err
 }
 
-func (j *Job) setState(state State, err error) {
+func (j *Job) setScheduled(waitTime time.Duration) {
 	j.lock.Lock()
 	defer j.lock.Unlock()
-	j.state = state
+	j.state = StateScheduled
+	j.when = time.Now().Add(waitTime)
+}
+
+func (j *Job) setCompleted(err error) {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+	j.state = StateCompleted
 	j.err = err
 }
 
-func (j *Job) GetState() (State, error) {
+func (j *Job) setCanceled() {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+	j.state = StateCanceled
+	j.err = ErrCanceled
+}
+
+func (j *Job) GetState() (State, error, time.Duration) {
 	j.lock.RLock()
 	defer j.lock.RUnlock()
-	return j.state, j.err
+	return j.state, j.err, time.Until(j.when)
 }
 
 func (j *Job) TimeToFire() time.Duration {
-	s, err := j.GetState()
-	if err != nil || s != StateScheduled {
+	s, _, when := j.GetState()
+	if s != StateScheduled {
 		return 0
 	}
-	return time.Until(j.when)
+	return when
 }
