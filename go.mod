@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/clambin/go-common/cache v0.2.2
-	github.com/clambin/go-common/set v0.2.0
+	github.com/clambin/go-common/set v0.3.0
 	github.com/clambin/go-common/slackbot v0.6.0
 	github.com/clambin/go-common/taskmanager v0.3.0
 	github.com/clambin/tado v1.2.0

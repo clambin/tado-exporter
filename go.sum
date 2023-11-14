@@ -48,8 +48,8 @@ github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5P
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/clambin/go-common/cache v0.2.2 h1:Tjb+71+/2ckrZlSbLDYgCEpkS2HwkTRkQ/18oYG+EbE=
 github.com/clambin/go-common/cache v0.2.2/go.mod h1:6DMcBIPTGckXMNQTGfdEMiLAbKqIOWzgk5KNyiJK54M=
-github.com/clambin/go-common/set v0.2.0 h1:s4wXxKns3sb2VPCtAmmLEDs4KiHNIiot+LcKgKcdPdw=
-github.com/clambin/go-common/set v0.2.0/go.mod h1:GFjAZynNo4BNjlx2hzDMHIU4ays7QjpJUSHXB/3b1ZE=
+github.com/clambin/go-common/set v0.3.0 h1:JvLbPbmFEjhqk4wsgqa/swxD0wGOEDXLOjTrsgZLR3o=
+github.com/clambin/go-common/set v0.3.0/go.mod h1:45ZNvBGpHWw2vtfgG6pzqEJpTUUNfgUluJ1/jmM0uWI=
 github.com/clambin/go-common/slackbot v0.6.0 h1:+qOsGKG1dV9bh8/AFjHZFgMxGUnB4Fh/GSVDwa6hGvE=
 github.com/clambin/go-common/slackbot v0.6.0/go.mod h1:VgOA/NMbgzMqwjuGks3IxVUpICvPvl+NqWPN0MZRRik=
 github.com/clambin/go-common/taskmanager v0.3.0 h1:ASA0axYdGBOukljpdfJxgDE2BwneA1iSgvA/7tLxKw4=
