@@ -23,13 +23,13 @@ type Task interface {
 }
 
 type Job struct {
-	Cancel context.CancelFunc
-	task   Task
-	state  State
-	err    error
 	when   time.Time
-	lock   sync.RWMutex
+	task   Task
+	err    error
+	Cancel context.CancelFunc
+	state  State
 	notify chan struct{}
+	lock   sync.RWMutex
 }
 
 func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {

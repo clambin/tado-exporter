@@ -18,8 +18,8 @@ import (
 func TestCollector(t *testing.T) {
 	ch := make(chan *poller.Update, 1)
 	p := mocks.NewPoller(t)
-	p.EXPECT().Register().Return(ch).Once()
-	p.EXPECT().Unregister(ch).Once()
+	p.EXPECT().Subscribe().Return(ch).Once()
+	p.EXPECT().Unsubscribe(ch).Once()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)

@@ -102,8 +102,8 @@ func TestController_Run(t *testing.T) {
 	p := mockPoller.NewPoller(t)
 
 	ch := make(chan *poller.Update)
-	p.EXPECT().Register().Return(ch)
-	p.EXPECT().Unregister(ch).Return()
+	p.EXPECT().Subscribe().Return(ch)
+	p.EXPECT().Unsubscribe(ch).Return()
 
 	m := zone.New(a, p, b, config, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
@@ -136,8 +136,8 @@ func TestController_Scheduled(t *testing.T) {
 	tadoSetter := mocks.NewTadoSetter(t)
 	newPoller := mockPoller.NewPoller(t)
 	ch := make(chan *poller.Update)
-	newPoller.EXPECT().Register().Return(ch)
-	newPoller.EXPECT().Unregister(ch).Return()
+	newPoller.EXPECT().Subscribe().Return(ch)
+	newPoller.EXPECT().Unsubscribe(ch).Return()
 
 	controller := zone.New(tadoSetter, newPoller, nil, config, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
@@ -172,8 +172,8 @@ func TestController_ReportTasks(t *testing.T) {
 	tadoSetter := mocks.NewTadoSetter(t)
 	newPoller := mockPoller.NewPoller(t)
 	ch := make(chan *poller.Update)
-	newPoller.EXPECT().Register().Return(ch)
-	newPoller.EXPECT().Unregister(ch).Return()
+	newPoller.EXPECT().Subscribe().Return(ch)
+	newPoller.EXPECT().Unsubscribe(ch).Return()
 
 	controller := zone.New(tadoSetter, newPoller, nil, config, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())

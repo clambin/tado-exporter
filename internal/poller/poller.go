@@ -2,16 +2,15 @@ package poller
 
 import (
 	"context"
-	"fmt"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/pkg/pubsub"
 	"log/slog"
-	"sync"
 	"time"
 )
 
 type Poller interface {
-	Register() chan *Update
-	Unregister(ch chan *Update)
+	Subscribe() chan *Update
+	Unsubscribe(ch chan *Update)
 	Refresh()
 }
 
@@ -27,29 +26,28 @@ var _ Poller = &TadoPoller{}
 
 type TadoPoller struct {
 	TadoClient TadoGetter
-	interval   time.Duration
-	logger     *slog.Logger
-	refresh    chan struct{}
-	registry   map[chan *Update]struct{}
-	lock       sync.RWMutex
+	*pubsub.Publisher[*Update]
+	interval time.Duration
+	logger   *slog.Logger
+	refresh  chan struct{}
 }
 
 func New(tadoClient TadoGetter, interval time.Duration, logger *slog.Logger) *TadoPoller {
 	return &TadoPoller{
 		TadoClient: tadoClient,
+		Publisher:  pubsub.New[*Update](logger.With(slog.String("component", "registry"))),
 		interval:   interval,
 		logger:     logger,
 		refresh:    make(chan struct{}),
-		registry:   make(map[chan *Update]struct{}),
 	}
 }
 
 func (p *TadoPoller) Run(ctx context.Context) error {
+	p.logger.Debug("started", slog.Duration("interval", p.interval))
+	defer p.logger.Debug("stopped")
+
 	timer := time.NewTicker(p.interval)
 	defer timer.Stop()
-
-	p.logger.Debug("started", "interval", p.interval)
-	defer p.logger.Debug("stopped")
 
 	for {
 		shouldPoll := false
@@ -75,39 +73,20 @@ func (p *TadoPoller) Refresh() {
 	p.refresh <- struct{}{}
 }
 
-func (p *TadoPoller) Register() chan *Update {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	ch := make(chan *Update, 1)
-	p.registry[ch] = struct{}{}
-	p.logger.Debug(fmt.Sprintf("poller has %d clients", len(p.registry)))
-	return ch
-}
-
-func (p *TadoPoller) Unregister(ch chan *Update) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	delete(p.registry, ch)
-	p.logger.Debug(fmt.Sprintf("poller has %d clients", len(p.registry)))
-}
-
 func (p *TadoPoller) poll(ctx context.Context) error {
 	start := time.Now()
 	update, err := p.update(ctx)
 	if err == nil {
-		p.lock.RLock()
-		defer p.lock.RUnlock()
-		for ch := range p.registry {
-			ch <- &update
-		}
+		p.Publisher.Publish(update)
 		p.logger.Debug("poll completed", slog.Duration("duration", time.Since(start)))
 	}
 	return err
 }
 
-func (p *TadoPoller) update(ctx context.Context) (update Update, err error) {
-	update.UserInfo, err = p.getMobileDevices(ctx)
-	if err == nil {
+func (p *TadoPoller) update(ctx context.Context) (*Update, error) {
+	var update Update
+	var err error
+	if update.UserInfo, err = p.getMobileDevices(ctx); err == nil {
 		update.WeatherInfo, err = p.TadoClient.GetWeatherInfo(ctx)
 	}
 	if err == nil {
@@ -119,7 +98,7 @@ func (p *TadoPoller) update(ctx context.Context) (update Update, err error) {
 	if err == nil {
 		update.Home, err = p.getHomeState(ctx)
 	}
-	return
+	return &update, err
 }
 
 func (p *TadoPoller) getMobileDevices(ctx context.Context) (map[int]tado.MobileDevice, error) {

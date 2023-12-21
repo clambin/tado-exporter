@@ -43,8 +43,8 @@ func New(tadoClient rules.TadoSetter, p poller.Poller, bot slackbot.SlackBot, cf
 func (c *Controller) Run(ctx context.Context) error {
 	c.logger.Debug("started")
 	defer c.logger.Debug("stopped")
-	ch := c.poller.Register()
-	defer c.poller.Unregister(ch)
+	ch := c.poller.Subscribe()
+	defer c.poller.Unsubscribe(ch)
 
 	for {
 		select {

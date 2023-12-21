@@ -120,8 +120,8 @@ func (c *Collector) Run(ctx context.Context) error {
 	c.Logger.Debug("started")
 	defer c.Logger.Debug("stopped")
 
-	ch := c.Poller.Register()
-	defer c.Poller.Unregister(ch)
+	ch := c.Poller.Subscribe()
+	defer c.Poller.Unsubscribe(ch)
 
 	for {
 		select {

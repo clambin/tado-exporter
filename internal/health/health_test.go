@@ -22,8 +22,8 @@ var update = flag.Bool("update", false, "update .golden files")
 func TestHealth_Handle(t *testing.T) {
 	p := mocks.NewPoller(t)
 	ch := make(chan *poller.Update)
-	p.EXPECT().Register().Return(ch)
-	p.EXPECT().Unregister(ch)
+	p.EXPECT().Subscribe().Return(ch)
+	p.EXPECT().Unsubscribe(ch)
 	p.EXPECT().Refresh().Once()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -78,8 +78,8 @@ func BenchmarkHealth_Handle(b *testing.B) {
 	p.EXPECT().Refresh()
 
 	ch := make(chan *poller.Update)
-	p.EXPECT().Register().Return(ch)
-	p.EXPECT().Unregister(ch)
+	p.EXPECT().Subscribe().Return(ch)
+	p.EXPECT().Unsubscribe(ch)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)

@@ -25,8 +25,8 @@ func TestExecutor_Run(t *testing.T) {
 
 	ch := make(chan *poller.Update)
 	p := mockPoller.NewPoller(t)
-	p.EXPECT().Register().Return(ch).Once()
-	p.EXPECT().Unregister(ch).Return().Once()
+	p.EXPECT().Subscribe().Return(ch).Once()
+	p.EXPECT().Unsubscribe(ch).Return().Once()
 
 	c := New(api, bot, p, nil, slog.Default())
 

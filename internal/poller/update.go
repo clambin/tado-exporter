@@ -7,10 +7,10 @@ import (
 )
 
 type Update struct {
+	WeatherInfo tado.WeatherInfo
 	Zones       map[int]tado.Zone
 	ZoneInfo    map[int]tado.ZoneInfo
 	UserInfo    MobileDevices
-	WeatherInfo tado.WeatherInfo
 	Home        bool
 }
 

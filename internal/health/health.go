@@ -29,8 +29,8 @@ func (h *Health) Run(ctx context.Context) error {
 	h.logger.Debug("started")
 	defer h.logger.Debug("stopped")
 
-	ch := h.Poller.Register()
-	defer h.Poller.Unregister(ch)
+	ch := h.Poller.Subscribe()
+	defer h.Poller.Unsubscribe(ch)
 
 	for {
 		select {

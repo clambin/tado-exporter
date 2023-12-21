@@ -32,8 +32,8 @@ func TestController_Run(t *testing.T) {
 
 	p := pollerMocks.NewPoller(t)
 	ch := make(chan *poller.Update, 1)
-	p.EXPECT().Register().Return(ch)
-	p.EXPECT().Unregister(ch)
+	p.EXPECT().Subscribe().Return(ch)
+	p.EXPECT().Unsubscribe(ch)
 	p.EXPECT().Refresh()
 
 	b := slackbot.NewSlackBot(t)

@@ -22,7 +22,7 @@ func TestTadoPoller_Run(t *testing.T) {
 
 	prepareMockAPI(api)
 
-	ch := p.Register()
+	ch := p.Subscribe()
 	errCh := make(chan error)
 	go func() {
 		errCh <- p.Run(ctx)
@@ -49,7 +49,7 @@ func TestTadoPoller_Run(t *testing.T) {
 	require.Len(t, update.ZoneInfo, 2)
 	assert.True(t, update.Home)
 
-	p.Unregister(ch)
+	p.Unsubscribe(ch)
 
 	cancel()
 	assert.NoError(t, <-errCh)

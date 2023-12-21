@@ -56,8 +56,8 @@ func (e *Executor) Run(ctx context.Context) error {
 	e.logger.Debug("started")
 	defer e.logger.Debug("stopped")
 
-	ch := e.poller.Register()
-	defer e.poller.Unregister(ch)
+	ch := e.poller.Subscribe()
+	defer e.poller.Unsubscribe(ch)
 	for {
 		select {
 		case <-ctx.Done():
