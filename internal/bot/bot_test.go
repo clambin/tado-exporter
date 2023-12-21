@@ -1,12 +1,11 @@
-package commands
+package bot
 
 import (
 	"context"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/controller/commands/mocks"
-	mockSlackbot "github.com/clambin/tado-exporter/internal/controller/slackbot/mocks"
+	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
-	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
+	mocks2 "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado/testutil"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
@@ -18,17 +17,17 @@ import (
 	"time"
 )
 
-func TestExecutor_Run(t *testing.T) {
+func TestBot_Run(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-	bot := mockSlackbot.NewSlackBot(t)
-	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
+	b := mocks.NewSlackBot(t)
+	b.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	ch := make(chan *poller.Update)
-	p := mockPoller.NewPoller(t)
+	p := mocks2.NewPoller(t)
 	p.EXPECT().Subscribe().Return(ch).Once()
 	p.EXPECT().Unsubscribe(ch).Return().Once()
 
-	c := New(api, bot, p, nil, slog.Default())
+	c := New(api, b, p, nil, slog.Default())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -48,33 +47,31 @@ func TestExecutor_Run(t *testing.T) {
 
 func TestExecutor_ReportRules(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-
-	bot := mockSlackbot.NewSlackBot(t)
+	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
-	controllers := mocks.NewControllers(t)
-	controllers.EXPECT().ReportTasks().Return(nil, false).Once()
+	controller := mocks.NewController(t)
+	controller.EXPECT().ReportTasks().Return(nil, false).Once()
 
-	c := New(api, bot, nil, controllers, slog.Default())
+	c := New(api, bot, nil, controller, slog.Default())
 
 	ctx := context.Background()
 	attachments := c.ReportRules(ctx)
 	require.Len(t, attachments, 1)
 	assert.Equal(t, "no rules have been triggered", attachments[0].Text)
 
-	controllers.EXPECT().ReportTasks().Return([]string{"foo"}, true).Once()
+	controller.EXPECT().ReportTasks().Return([]string{"foo"}, true).Once()
 	attachments = c.ReportRules(ctx)
 	require.Len(t, attachments, 1)
 	assert.Equal(t, "foo", attachments[0].Text)
-
 }
 
 func TestExecutor_SetRoom(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-	bot := mockSlackbot.NewSlackBot(t)
+	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
-	p := mockPoller.NewPoller(t)
+	p := mocks2.NewPoller(t)
 
 	executor := New(api, bot, p, nil, slog.Default())
 	executor.update = &poller.Update{
@@ -160,10 +157,10 @@ func TestExecutor_SetRoom(t *testing.T) {
 
 func TestExecutor_DoRefresh(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-	bot := mockSlackbot.NewSlackBot(t)
+	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
-	p := mockPoller.NewPoller(t)
+	p := mocks2.NewPoller(t)
 	p.EXPECT().Refresh()
 
 	c := New(api, bot, p, nil, slog.Default())
@@ -172,7 +169,7 @@ func TestExecutor_DoRefresh(t *testing.T) {
 
 func TestExecutor_ReportRooms(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-	bot := mockSlackbot.NewSlackBot(t)
+	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	c := New(api, bot, nil, nil, slog.Default())
@@ -196,8 +193,7 @@ func TestExecutor_ReportRooms(t *testing.T) {
 
 func TestExecutor_ReportUsers(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-
-	bot := mockSlackbot.NewSlackBot(t)
+	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	c := New(api, bot, nil, nil, slog.Default())

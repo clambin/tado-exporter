@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/clambin/tado-exporter/internal/controller/slackbot"
 	"github.com/clambin/tado-exporter/internal/controller/zone/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -24,7 +23,7 @@ type Controller struct {
 	lock         sync.RWMutex
 }
 
-func New(tadoClient rules.TadoSetter, p poller.Poller, bot slackbot.SlackBot, cfg rules.ZoneConfig, logger *slog.Logger) *Controller {
+func New(tadoClient rules.TadoSetter, p poller.Poller, bot notifier.SlackSender, cfg rules.ZoneConfig, logger *slog.Logger) *Controller {
 	controller := Controller{
 		evaluator:    rules.Evaluator{Config: &cfg},
 		tadoClient:   tadoClient,
@@ -35,7 +34,7 @@ func New(tadoClient rules.TadoSetter, p poller.Poller, bot slackbot.SlackBot, cf
 	}
 
 	if bot != nil {
-		controller.notifiers = append(controller.notifiers, &notifier.SlackNotifier{Bot: bot})
+		controller.notifiers = append(controller.notifiers, &notifier.SlackNotifier{Slack: bot})
 	}
 	return &controller
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/clambin/go-common/taskmanager/httpserver"
 	promserver "github.com/clambin/go-common/taskmanager/prometheus"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
@@ -52,14 +53,14 @@ func Main(cmd *cobra.Command, _ []string) {
 	if viper.GetBool("debug") {
 		opts.Level = slog.LevelDebug
 	}
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &opts)))
+	l := slog.New(slog.NewJSONHandler(os.Stderr, &opts))
 
-	slog.Info("tado-monitor starting", "version", cmd.Version)
+	l.Info("tado-monitor starting", "version", cmd.Version)
 
 	// Do we have zone rules?
 	r, err := GetZoneRules()
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		slog.Error("failed to read zone rules", "err", err)
+		l.Error("failed to read zone rules", "err", err)
 		os.Exit(1)
 	}
 
@@ -69,32 +70,32 @@ func Main(cmd *cobra.Command, _ []string) {
 		viper.GetString("tado.clientSecret"),
 	)
 	if err != nil {
-		slog.Error("failed to connect to Tado", "err", err)
+		l.Error("failed to connect to Tado", "err", err)
 		os.Exit(1)
 	}
 
-	mgr := taskmanager.New(makeTasks(api, r)...)
+	mgr := taskmanager.New(makeTasks(api, r, l)...)
 
 	// context to terminate the created go routines
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
 	if err = mgr.Run(ctx); err != nil {
-		slog.Error("failed to start tado-monitor", "err", err)
+		l.Error("failed to start tado-monitor", "err", err)
 	}
 
-	slog.Info("tado-monitor stopped")
+	l.Info("tado-monitor stopped")
 }
 
-func makeTasks(api *tado.APIClient, rules []rules.ZoneConfig) []taskmanager.Task {
+func makeTasks(api *tado.APIClient, rules []rules.ZoneConfig, l *slog.Logger) []taskmanager.Task {
 	var tasks []taskmanager.Task
 
 	// Poller
-	p := poller.New(api, viper.GetDuration("poller.interval"), slog.Default().With("component", "poller"))
+	p := poller.New(api, viper.GetDuration("poller.interval"), l.With("component", "poller"))
 	tasks = append(tasks, p)
 
 	// Collector
-	coll := &collector.Collector{Poller: p, Logger: slog.Default().With("component", "collector")}
+	coll := &collector.Collector{Poller: p, Logger: l.With("component", "collector")}
 	prometheus.MustRegister(coll)
 	tasks = append(tasks, coll)
 
@@ -102,24 +103,30 @@ func makeTasks(api *tado.APIClient, rules []rules.ZoneConfig) []taskmanager.Task
 	tasks = append(tasks, promserver.New(promserver.WithAddr(viper.GetString("exporter.addr"))))
 
 	// Health Endpoint
-	h := health.New(p, slog.Default().With("component", "health"))
+	h := health.New(p, l.With("component", "health"))
 	tasks = append(tasks, h)
 	r := http.NewServeMux()
 	r.Handle("/health", http.HandlerFunc(h.Handle))
 	tasks = append(tasks, httpserver.New(viper.GetString("health.addr"), r))
 
 	// Slackbot
-	var bot *slackbot.SlackBot
-	if viper.GetBool("controller.tadoBot.enabled") {
-		bot = slackbot.New(viper.GetString("controller.tadoBot.token"), slackbot.WithName("tado "+version))
-		tasks = append(tasks, bot)
+	var b *slackbot.SlackBot
+	if token := viper.GetString("controller.tadoBot.token"); token != "" {
+		b = slackbot.New(token, slackbot.WithName("tadoBot "+version))
 	}
 
+	var c *controller.Controller
 	// Controller
 	if len(rules) > 0 {
-		tasks = append(tasks, controller.New(api, rules, bot, p, slog.Default().With("component", "controller")))
+		c = controller.New(api, rules, b, p, l.With("component", "controller"))
+		tasks = append(tasks, c)
 	} else {
 		slog.Warn("no rules found. controller will not run")
+	}
+
+	// Slackbot
+	if viper.GetBool("controller.tadoBot.enabled") {
+		tasks = append(tasks, b, bot.New(api, b, p, c.ZoneManagers, l.With(slog.String("component", "tadobot"))))
 	}
 
 	return tasks

@@ -3,12 +3,12 @@ package zone_test
 import (
 	"context"
 	"github.com/clambin/tado"
-	slackbot "github.com/clambin/tado-exporter/internal/controller/slackbot/mocks"
+	"github.com/clambin/tado-exporter/internal/controller/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/zone"
+	mocks2 "github.com/clambin/tado-exporter/internal/controller/zone/notifier/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
-	"github.com/clambin/tado-exporter/internal/controller/zone/rules/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
-	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
+	mocks3 "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado/testutil"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
@@ -98,8 +98,8 @@ func TestController_Run(t *testing.T) {
 	}
 
 	a := mocks.NewTadoSetter(t)
-	b := slackbot.NewSlackBot(t)
-	p := mockPoller.NewPoller(t)
+	b := mocks2.NewSlackSender(t)
+	p := mocks3.NewPoller(t)
 
 	ch := make(chan *poller.Update)
 	p.EXPECT().Subscribe().Return(ch)
@@ -134,7 +134,7 @@ func TestController_Run(t *testing.T) {
 
 func TestController_Scheduled(t *testing.T) {
 	tadoSetter := mocks.NewTadoSetter(t)
-	newPoller := mockPoller.NewPoller(t)
+	newPoller := mocks3.NewPoller(t)
 	ch := make(chan *poller.Update)
 	newPoller.EXPECT().Subscribe().Return(ch)
 	newPoller.EXPECT().Unsubscribe(ch).Return()
@@ -170,7 +170,7 @@ func TestController_Scheduled(t *testing.T) {
 
 func TestController_ReportTasks(t *testing.T) {
 	tadoSetter := mocks.NewTadoSetter(t)
-	newPoller := mockPoller.NewPoller(t)
+	newPoller := mocks3.NewPoller(t)
 	ch := make(chan *poller.Update)
 	newPoller.EXPECT().Subscribe().Return(ch)
 	newPoller.EXPECT().Unsubscribe(ch).Return()

@@ -5,9 +5,8 @@ package mocks
 import (
 	context "context"
 
-	mock "github.com/stretchr/testify/mock"
-
 	slack "github.com/slack-go/slack"
+	mock "github.com/stretchr/testify/mock"
 
 	slackbot "github.com/clambin/go-common/slackbot"
 )

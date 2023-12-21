@@ -1,10 +1,10 @@
-package commands
+package bot
 
 import (
 	"context"
 	"fmt"
+	"github.com/clambin/go-common/slackbot"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/controller/slackbot"
 	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/slack-go/slack"
@@ -16,17 +16,14 @@ import (
 	"time"
 )
 
-type Executor struct {
-	Tado        TadoSetter
-	poller      poller.Poller
-	update      *poller.Update
-	controllers Controllers
-	logger      *slog.Logger
-	lock        sync.RWMutex
-}
-
-type Controllers interface {
-	ReportTasks() ([]string, bool)
+type Bot struct {
+	Tado       TadoSetter
+	slack      SlackBot
+	poller     poller.Poller
+	controller Controller
+	logger     *slog.Logger
+	lock       sync.RWMutex
+	update     *poller.Update
 }
 
 type TadoSetter interface {
@@ -34,44 +31,54 @@ type TadoSetter interface {
 	SetZoneTemporaryOverlay(context.Context, int, float64, time.Duration) error
 }
 
-func New(tado TadoSetter, tadoBot slackbot.SlackBot, p poller.Poller, controllers Controllers, logger *slog.Logger) *Executor {
-	executor := Executor{
-		Tado:        tado,
-		poller:      p,
-		controllers: controllers,
-		logger:      logger,
+type SlackBot interface {
+	Register(name string, command slackbot.CommandFunc)
+	Run(ctx context.Context) error
+	Send(channel string, attachments []slack.Attachment) error
+}
+
+type Controller interface {
+	ReportTasks() ([]string, bool)
+}
+
+func New(tado TadoSetter, tadoBot SlackBot, p poller.Poller, controller Controller, logger *slog.Logger) *Bot {
+	b := Bot{
+		Tado:       tado,
+		slack:      tadoBot,
+		poller:     p,
+		controller: controller,
+		logger:     logger.With(slog.String("component", "tadobot")),
 	}
+	tadoBot.Register("rules", b.ReportRules)
+	tadoBot.Register("rooms", b.ReportRooms)
+	tadoBot.Register("set", b.SetRoom)
+	tadoBot.Register("refresh", b.DoRefresh)
+	tadoBot.Register("users", b.ReportUsers)
 
-	tadoBot.Register("rules", executor.ReportRules)
-	tadoBot.Register("rooms", executor.ReportRooms)
-	tadoBot.Register("set", executor.SetRoom)
-	tadoBot.Register("refresh", executor.DoRefresh)
-	tadoBot.Register("users", executor.ReportUsers)
-
-	return &executor
+	return &b
 }
 
 // Run the controller
-func (e *Executor) Run(ctx context.Context) error {
-	e.logger.Debug("started")
-	defer e.logger.Debug("stopped")
+func (b *Bot) Run(ctx context.Context) error {
+	b.logger.Debug("started")
+	defer b.logger.Debug("stopped")
 
-	ch := e.poller.Subscribe()
-	defer e.poller.Unsubscribe(ch)
+	ch := b.poller.Subscribe()
+	defer b.poller.Unsubscribe(ch)
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case update := <-ch:
-			e.lock.Lock()
-			e.update = update
-			e.lock.Unlock()
+			b.lock.Lock()
+			b.update = update
+			b.lock.Unlock()
 		}
 	}
 }
 
-func (e *Executor) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
-	text, ok := e.controllers.ReportTasks()
+func (b *Bot) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
+	text, ok := b.controller.ReportTasks()
 
 	var slackText, slackTitle string
 	if ok {
@@ -89,11 +96,11 @@ func (e *Executor) ReportRules(_ context.Context, _ ...string) []slack.Attachmen
 	}}
 }
 
-func (e *Executor) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
-	e.lock.RLock()
-	defer e.lock.RUnlock()
+func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 
-	if e.update == nil {
+	if b.update == nil {
 		return []slack.Attachment{{
 			Color: "bad",
 			Text:  "no updates yet. please check back later",
@@ -102,8 +109,8 @@ func (e *Executor) ReportRooms(_ context.Context, _ ...string) []slack.Attachmen
 
 	text := make([]string, 0)
 
-	for zoneID, zone := range e.update.Zones {
-		zoneInfo, found := e.update.ZoneInfo[zoneID]
+	for zoneID, zone := range b.update.Zones {
+		zoneInfo, found := b.update.ZoneInfo[zoneID]
 		if !found {
 			continue
 		}
@@ -145,11 +152,11 @@ func (e *Executor) ReportRooms(_ context.Context, _ ...string) []slack.Attachmen
 	}}
 }
 
-func (e *Executor) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
-	e.lock.RLock()
-	defer e.lock.RUnlock()
+func (b *Bot) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 
-	zoneID, zoneName, auto, temperature, duration, err := e.parseSetCommand(args...)
+	zoneID, zoneName, auto, temperature, duration, err := b.parseSetCommand(args...)
 
 	if err != nil {
 		err = fmt.Errorf("invalid command: %w", err)
@@ -157,12 +164,12 @@ func (e *Executor) SetRoom(ctx context.Context, args ...string) []slack.Attachme
 
 	if err == nil {
 		if auto {
-			err = e.Tado.DeleteZoneOverlay(ctx, zoneID)
+			err = b.Tado.DeleteZoneOverlay(ctx, zoneID)
 			if err != nil {
 				err = fmt.Errorf("unable to move room to auto mode: %w", err)
 			}
 		} else {
-			err = e.Tado.SetZoneTemporaryOverlay(ctx, zoneID, temperature, duration)
+			err = b.Tado.SetZoneTemporaryOverlay(ctx, zoneID, temperature, duration)
 			if err != nil {
 				err = fmt.Errorf("unable to set temperature for %s: %w", zoneName, err)
 			}
@@ -177,7 +184,7 @@ func (e *Executor) SetRoom(ctx context.Context, args ...string) []slack.Attachme
 		}}
 	}
 
-	e.poller.Refresh()
+	b.poller.Refresh()
 
 	var text string
 	if auto {
@@ -195,7 +202,7 @@ func (e *Executor) SetRoom(ctx context.Context, args ...string) []slack.Attachme
 	}}
 }
 
-func (e *Executor) parseSetCommand(args ...string) (zoneID int, zoneName string, auto bool, temperature float64, duration time.Duration, err error) {
+func (b *Bot) parseSetCommand(args ...string) (zoneID int, zoneName string, auto bool, temperature float64, duration time.Duration, err error) {
 	if len(args) < 2 {
 		err = fmt.Errorf("missing parameters\nUsage: set <room> [auto|<temperature> [<duration>]")
 		return
@@ -204,7 +211,7 @@ func (e *Executor) parseSetCommand(args ...string) (zoneID int, zoneName string,
 	zoneName = args[0]
 
 	var found bool
-	for id, zone := range e.update.Zones {
+	for id, zone := range b.update.Zones {
 		if zone.Name == zoneName {
 			zoneID = id
 			found = true
@@ -240,18 +247,18 @@ func (e *Executor) parseSetCommand(args ...string) (zoneID int, zoneName string,
 	return
 }
 
-func (e *Executor) DoRefresh(_ context.Context, _ ...string) []slack.Attachment {
-	e.poller.Refresh()
+func (b *Bot) DoRefresh(_ context.Context, _ ...string) []slack.Attachment {
+	b.poller.Refresh()
 	return []slack.Attachment{{
 		Text: "refreshing Tado data",
 	}}
 }
 
-func (e *Executor) ReportUsers(_ context.Context, _ ...string) []slack.Attachment {
-	e.lock.RLock()
-	defer e.lock.RUnlock()
+func (b *Bot) ReportUsers(_ context.Context, _ ...string) []slack.Attachment {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 
-	if e.update == nil {
+	if b.update == nil {
 		return []slack.Attachment{{
 			Color: "bad",
 			Text:  "no update yet. please check back later",
@@ -260,7 +267,7 @@ func (e *Executor) ReportUsers(_ context.Context, _ ...string) []slack.Attachmen
 
 	text := make([]string, 0)
 
-	for _, device := range e.update.UserInfo {
+	for _, device := range b.update.UserInfo {
 		var stateString string
 		switch device.IsHome() {
 		case tado.DeviceHome:
