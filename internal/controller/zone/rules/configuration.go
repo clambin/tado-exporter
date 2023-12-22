@@ -3,12 +3,33 @@ package rules
 import (
 	"fmt"
 	"gopkg.in/yaml.v3"
+	"io"
+	"log/slog"
+	"strings"
 	"time"
 )
 
 type ZoneConfig struct {
 	Zone  string       `yaml:"zone"`
 	Rules []RuleConfig `yaml:"rules"`
+}
+
+func Load(in io.Reader, l *slog.Logger) ([]ZoneConfig, error) {
+	var config struct {
+		Zones []ZoneConfig `yaml:"zones"`
+	}
+
+	if err := yaml.NewDecoder(in).Decode(&config); err != nil {
+		return nil, err
+	}
+	for _, zone := range config.Zones {
+		var kinds []string
+		for _, rule := range zone.Rules {
+			kinds = append(kinds, rule.Kind.String())
+		}
+		l.Info("zone rules found", "zone", zone.Zone, "rules", strings.Join(kinds, ","))
+	}
+	return config.Zones, nil
 }
 
 type RuleConfig struct {

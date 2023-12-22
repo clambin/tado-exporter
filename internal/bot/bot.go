@@ -128,6 +128,8 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 			case tado.TimerOverlay, tado.NextBlockOverlay:
 				stateStr = fmt.Sprintf("target: %.1f, MANUAL for %s", zoneInfo.Setting.Temperature.Celsius,
 					(time.Duration(zoneInfo.Overlay.Termination.RemainingTimeInSeconds) * time.Second).String())
+			default:
+				b.logger.Warn("unhandled default case")
 			}
 		}
 
