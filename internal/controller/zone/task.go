@@ -35,5 +35,5 @@ func (t *Task) firesNoLaterThan(next rules.Action) bool {
 }
 
 func (t *Task) Report() string {
-	return t.nextState.ZoneName + ": " + t.nextState.State.String() + " in " + t.job.TimeToFire().Round(time.Second).String()
+	return t.nextState.ZoneName + ": " + t.nextState.State.Action() + " in " + t.job.TimeToFire().Round(time.Second).String()
 }

@@ -110,30 +110,13 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 	text := make([]string, 0)
 
 	for zoneID, zone := range b.update.Zones {
-		zoneInfo, found := b.update.ZoneInfo[zoneID]
-		if !found {
-			continue
+		if zoneInfo, found := b.update.ZoneInfo[zoneID]; found {
+			text = append(text, fmt.Sprintf("%s: %.1fºC (%s)",
+				zone.Name,
+				zoneInfo.SensorDataPoints.InsideTemperature.Celsius,
+				rules.GetZoneState(zoneInfo),
+			))
 		}
-
-		var stateStr string
-		zoneState := rules.GetZoneState(zoneInfo)
-		if !zoneState.Heating() {
-			stateStr = "off"
-		} else {
-			switch zoneState.Overlay {
-			case tado.NoOverlay:
-				stateStr = fmt.Sprintf("target: %.1f", zoneState.TargetTemperature.Celsius)
-			case tado.PermanentOverlay:
-				stateStr = fmt.Sprintf("target: %.1f, MANUAL", zoneInfo.Setting.Temperature.Celsius)
-			case tado.TimerOverlay, tado.NextBlockOverlay:
-				stateStr = fmt.Sprintf("target: %.1f, MANUAL for %s", zoneInfo.Setting.Temperature.Celsius,
-					(time.Duration(zoneInfo.Overlay.Termination.RemainingTimeInSeconds) * time.Second).String())
-			default:
-				b.logger.Warn("unhandled default case")
-			}
-		}
-
-		text = append(text, fmt.Sprintf("%s: %.1fºC (%s)", zone.Name, zoneInfo.SensorDataPoints.InsideTemperature.Celsius, stateStr))
 	}
 
 	slackColor := "bad"
@@ -167,14 +150,8 @@ func (b *Bot) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
 	if err == nil {
 		if auto {
 			err = b.Tado.DeleteZoneOverlay(ctx, zoneID)
-			if err != nil {
-				err = fmt.Errorf("unable to move room to auto mode: %w", err)
-			}
 		} else {
 			err = b.Tado.SetZoneTemporaryOverlay(ctx, zoneID, temperature, duration)
-			if err != nil {
-				err = fmt.Errorf("unable to set temperature for %s: %w", zoneName, err)
-			}
 		}
 	}
 
