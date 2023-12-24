@@ -80,7 +80,11 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules []rules.ZoneConfig, 
 	// Slackbot
 	var b *slackbot.SlackBot
 	if token := cfg.GetString("controller.tadoBot.token"); token != "" {
-		b = slackbot.New(token, slackbot.WithName("tadoBot "+version))
+		b = slackbot.New(
+			token,
+			slackbot.WithName("tadoBot "+version),
+			slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
+		)
 	}
 
 	var c *controller.Controller
@@ -94,7 +98,10 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules []rules.ZoneConfig, 
 
 	// Slackbot
 	if cfg.GetBool("controller.tadoBot.enabled") {
-		tasks = append(tasks, b, bot.New(api, b, p, c.ZoneManagers, l.With(slog.String("component", "tadobot"))))
+		tasks = append(tasks,
+			b,
+			bot.New(api, b, p, c.ZoneManagers, l.With(slog.String("component", "tadobot"))),
+		)
 	}
 
 	return tasks
