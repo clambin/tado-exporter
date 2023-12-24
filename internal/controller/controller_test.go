@@ -16,7 +16,7 @@ import (
 var zoneCfg = []rules.ZoneConfig{
 	{
 		Zone: "foo",
-		Rules: []rules.RuleConfig{
+		Rules: []rules.ZoneRule{
 			{
 				Kind:  rules.LimitOverlay,
 				Delay: time.Hour,

@@ -93,7 +93,7 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules []rules.ZoneConfig, 
 		c = controller.New(api, rules, b, p, l.With("component", "controller"))
 		tasks = append(tasks, c)
 	} else {
-		slog.Warn("no rules found. controller will not run")
+		l.Warn("no rules found. controller will not run")
 	}
 
 	// Slackbot

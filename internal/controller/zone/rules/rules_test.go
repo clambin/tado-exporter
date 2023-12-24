@@ -59,7 +59,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 	e := Evaluator{
 		Config: &ZoneConfig{
 			Zone: "living room",
-			Rules: []RuleConfig{
+			Rules: []ZoneRule{
 				{Kind: LimitOverlay, Delay: 15 * time.Minute},
 				{Kind: NightTime, Timestamp: Timestamp{Hour: 23, Minutes: 30}},
 				{Kind: AutoAway, Delay: time.Hour, Users: []string{"foo"}},
@@ -103,7 +103,7 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 	e := Evaluator{
 		Config: &ZoneConfig{
 			Zone: "living room",
-			Rules: []RuleConfig{
+			Rules: []ZoneRule{
 				{Kind: LimitOverlay, Delay: time.Hour},
 				{Kind: NightTime, Timestamp: Timestamp{Hour: 23, Minutes: 30}},
 			},
@@ -130,7 +130,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 			name: "limitOverlay - bad zone name",
 			config: ZoneConfig{
 				Zone: "foo",
-				Rules: []RuleConfig{
+				Rules: []ZoneRule{
 					{
 						Kind:  LimitOverlay,
 						Delay: time.Hour,
@@ -142,7 +142,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 			name: "autoAway - bad zone name",
 			config: ZoneConfig{
 				Zone: "foo",
-				Rules: []RuleConfig{
+				Rules: []ZoneRule{
 					{
 						Kind:  AutoAway,
 						Delay: time.Hour,
@@ -155,7 +155,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 			name: "autoAway - bad user name",
 			config: ZoneConfig{
 				Zone: "living room",
-				Rules: []RuleConfig{
+				Rules: []ZoneRule{
 					{
 						Kind:  AutoAway,
 						Delay: time.Hour,
@@ -191,7 +191,7 @@ func BenchmarkEvaluator(b *testing.B) {
 	e := Evaluator{
 		Config: &ZoneConfig{
 			Zone: "living room",
-			Rules: []RuleConfig{
+			Rules: []ZoneRule{
 				{
 					Kind:  AutoAway,
 					Delay: time.Hour,

@@ -57,7 +57,7 @@ func Test_maybeLoadRules(t *testing.T) {
 			want: []rules.ZoneConfig{
 				{
 					Zone: "Bathroom",
-					Rules: []rules.RuleConfig{
+					Rules: []rules.ZoneRule{
 						{
 							Kind:  rules.LimitOverlay,
 							Delay: time.Hour,

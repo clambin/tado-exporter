@@ -22,7 +22,7 @@ import (
 var (
 	config = rules.ZoneConfig{
 		Zone: "foo",
-		Rules: []rules.RuleConfig{
+		Rules: []rules.ZoneRule{
 			{
 				Kind:  rules.AutoAway,
 				Delay: 2 * time.Hour,

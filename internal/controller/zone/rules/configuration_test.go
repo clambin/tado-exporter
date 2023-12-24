@@ -63,7 +63,7 @@ func TestLoad(t *testing.T) {
 		name    string
 		config  string
 		wantErr assert.ErrorAssertionFunc
-		want    []rules.RuleConfig
+		want    []rules.ZoneRule
 	}{
 		{
 			name: "limitOverlay",
@@ -75,7 +75,7 @@ zones:
         delay: 1h
 `,
 			wantErr: assert.NoError,
-			want: []rules.RuleConfig{
+			want: []rules.ZoneRule{
 				{Kind: rules.LimitOverlay, Delay: time.Hour},
 			},
 		},
@@ -92,7 +92,7 @@ zones:
         users: [ foo ]
 `,
 			wantErr: assert.NoError,
-			want: []rules.RuleConfig{
+			want: []rules.ZoneRule{
 				{Kind: rules.LimitOverlay, Delay: time.Hour},
 				{Kind: rules.AutoAway, Delay: 30 * time.Minute, Users: []string{"foo"}},
 			},

@@ -10,8 +10,8 @@ import (
 )
 
 type ZoneConfig struct {
-	Zone  string       `yaml:"zone"`
-	Rules []RuleConfig `yaml:"rules"`
+	Zone  string     `yaml:"zone"`
+	Rules []ZoneRule `yaml:"rules"`
 }
 
 func Load(in io.Reader, l *slog.Logger) ([]ZoneConfig, error) {
@@ -32,7 +32,7 @@ func Load(in io.Reader, l *slog.Logger) ([]ZoneConfig, error) {
 	return config.Zones, nil
 }
 
-type RuleConfig struct {
+type ZoneRule struct {
 	Kind      Kind          `yaml:"kind"`
 	Users     []string      `yaml:"users"`
 	Delay     time.Duration `yaml:"delay"`
