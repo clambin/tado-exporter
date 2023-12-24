@@ -97,9 +97,8 @@ func (j *Job) GetState() (State, error, time.Duration) {
 }
 
 func (j *Job) TimeToFire() time.Duration {
-	s, _, when := j.GetState()
-	if s != StateScheduled {
-		return 0
+	if s, _, when := j.GetState(); s == StateScheduled {
+		return when
 	}
-	return when
+	return 0
 }
