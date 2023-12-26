@@ -43,17 +43,17 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:   "auto mode",
-			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()}},
+			update: poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()}},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
 		{
 			name:   "manual control",
-			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())}},
+			update: poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())}},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Delay: time.Hour, Reason: "manual temp setting detected"},
 		},
 		{
 			name:   "manual control w/ expiration",
-			update: &poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoTimerOverlay())}},
+			update: poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoTimerOverlay())}},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
 	}

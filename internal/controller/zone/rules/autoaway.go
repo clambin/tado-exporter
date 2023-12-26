@@ -18,7 +18,7 @@ type AutoAwayRule struct {
 
 var _ Rule = &AutoAwayRule{}
 
-func (a *AutoAwayRule) Evaluate(update *poller.Update) (Action, error) {
+func (a *AutoAwayRule) Evaluate(update poller.Update) (Action, error) {
 	next := Action{ZoneID: a.ZoneID, ZoneName: a.ZoneName}
 
 	if err := a.load(update); err != nil {
@@ -50,7 +50,7 @@ func (a *AutoAwayRule) Evaluate(update *poller.Update) (Action, error) {
 	return next, nil
 }
 
-func (a *AutoAwayRule) getDeviceStates(update *poller.Update) ([]string, []string) {
+func (a *AutoAwayRule) getDeviceStates(update poller.Update) ([]string, []string) {
 	var home, away []string
 	for _, id := range a.MobileDeviceIDs {
 		if entry, exists := update.UserInfo[id]; exists {
@@ -75,7 +75,7 @@ func makeReason(users []string, state string) string {
 	return strings.Join(users, ", ") + " " + verb + " " + state
 }
 
-func (a *AutoAwayRule) load(update *poller.Update) error {
+func (a *AutoAwayRule) load(update poller.Update) error {
 	if len(a.MobileDeviceIDs) > 0 {
 		return nil
 	}
@@ -84,7 +84,7 @@ func (a *AutoAwayRule) load(update *poller.Update) error {
 		if userID, ok := update.GetUserID(user); ok {
 			a.MobileDeviceIDs = append(a.MobileDeviceIDs, userID)
 		} else {
-			return fmt.Errorf("invalid user: %s", user)
+			return fmt.Errorf("invalid user: " + user)
 		}
 	}
 

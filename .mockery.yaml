@@ -10,16 +10,17 @@ packages:
   github.com/clambin/tado-exporter/internal/controller:
     interfaces:
       TadoSetter:
-  github.com/clambin/tado-exporter/internal/controller/commands:
+  github.com/clambin/tado-exporter/internal/bot:
     interfaces:
       TadoSetter:
-      Controllers:
-  github.com/clambin/tado-exporter/internal/controller/slackbot:
-    interfaces:
       SlackBot:
+      Controller:
   github.com/clambin/tado-exporter/internal/controller/zone/rules:
     interfaces:
       TadoSetter:
+  github.com/clambin/tado-exporter/internal/controller/zone/notifier:
+    interfaces:
+      SlackSender:
   github.com/clambin/tado-exporter/internal/poller:
     interfaces:
       Poller:

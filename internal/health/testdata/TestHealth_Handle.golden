@@ -1,4 +1,13 @@
 {
+  "WeatherInfo": {
+    "outsideTemperature": null,
+    "solarIntensity": {
+      "percentage": 0
+    },
+    "weatherState": {
+      "value": ""
+    }
+  },
   "Zones": {
     "1": {
       "id": 1,
@@ -86,14 +95,5 @@
     }
   },
   "UserInfo": null,
-  "WeatherInfo": {
-    "outsideTemperature": null,
-    "solarIntensity": {
-      "percentage": 0
-    },
-    "weatherState": {
-      "value": ""
-    }
-  },
   "Home": false
 }

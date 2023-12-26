@@ -2,8 +2,8 @@ package notifier_test
 
 import (
 	"github.com/clambin/tado"
-	slackbot "github.com/clambin/tado-exporter/internal/controller/slackbot/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/zone/notifier"
+	"github.com/clambin/tado-exporter/internal/controller/zone/notifier/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
@@ -55,10 +55,10 @@ func TestNotifiers_Notify(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(strconv.Itoa(int(tt.action)), func(t *testing.T) {
-			b := slackbot.NewSlackBot(t)
+			b := mocks.NewSlackSender(t)
 			l := notifier.Notifiers{
 				&notifier.SLogNotifier{Logger: slog.Default()},
-				&notifier.SlackNotifier{Bot: b},
+				&notifier.SlackNotifier{Slack: b},
 			}
 
 			b.EXPECT().Send("", mock.AnythingOfType("[]slack.Attachment")).RunAndReturn(func(_ string, attachments []slack.Attachment) error {

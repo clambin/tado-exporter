@@ -12,7 +12,7 @@ import (
 
 type testCase struct {
 	name   string
-	update *poller.Update
+	update poller.Update
 	action Action
 }
 
@@ -20,7 +20,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 	var testCases = []testCase{
 		{
 			name: "user away - auto control",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false))},
@@ -29,7 +29,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 		},
 		{
 			name: "user home - auto control",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
@@ -38,7 +38,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 		},
 		{
 			name: "user home - manual control",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
@@ -47,7 +47,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 		},
 		{
 			name: "user away - manual control",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false))},
@@ -59,7 +59,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 	e := Evaluator{
 		Config: &ZoneConfig{
 			Zone: "living room",
-			Rules: []RuleConfig{
+			Rules: []ZoneRule{
 				{Kind: LimitOverlay, Delay: 15 * time.Minute},
 				{Kind: NightTime, Timestamp: Timestamp{Hour: 23, Minutes: 30}},
 				{Kind: AutoAway, Delay: time.Hour, Users: []string{"foo"}},
@@ -82,7 +82,7 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 	var testCases = []testCase{
 		{
 			name: "user home - auto control",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
@@ -91,7 +91,7 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 		},
 		{
 			name: "user home - manual control",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
@@ -103,7 +103,7 @@ func TestEvaluator_Evaluate_LimitOverlay_Vs_NightTime(t *testing.T) {
 	e := Evaluator{
 		Config: &ZoneConfig{
 			Zone: "living room",
-			Rules: []RuleConfig{
+			Rules: []ZoneRule{
 				{Kind: LimitOverlay, Delay: time.Hour},
 				{Kind: NightTime, Timestamp: Timestamp{Hour: 23, Minutes: 30}},
 			},
@@ -130,7 +130,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 			name: "limitOverlay - bad zone name",
 			config: ZoneConfig{
 				Zone: "foo",
-				Rules: []RuleConfig{
+				Rules: []ZoneRule{
 					{
 						Kind:  LimitOverlay,
 						Delay: time.Hour,
@@ -142,7 +142,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 			name: "autoAway - bad zone name",
 			config: ZoneConfig{
 				Zone: "foo",
-				Rules: []RuleConfig{
+				Rules: []ZoneRule{
 					{
 						Kind:  AutoAway,
 						Delay: time.Hour,
@@ -155,7 +155,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 			name: "autoAway - bad user name",
 			config: ZoneConfig{
 				Zone: "living room",
-				Rules: []RuleConfig{
+				Rules: []ZoneRule{
 					{
 						Kind:  AutoAway,
 						Delay: time.Hour,
@@ -166,7 +166,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 		},
 	}
 
-	var update = &poller.Update{
+	update := poller.Update{
 		Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 		ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 		UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
@@ -182,7 +182,7 @@ func TestEvaluator_Evaluate_BadConfig(t *testing.T) {
 }
 
 func BenchmarkEvaluator(b *testing.B) {
-	update := &poller.Update{
+	update := poller.Update{
 		Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 		ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
 		UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
@@ -191,7 +191,7 @@ func BenchmarkEvaluator(b *testing.B) {
 	e := Evaluator{
 		Config: &ZoneConfig{
 			Zone: "living room",
-			Rules: []RuleConfig{
+			Rules: []ZoneRule{
 				{
 					Kind:  AutoAway,
 					Delay: time.Hour,

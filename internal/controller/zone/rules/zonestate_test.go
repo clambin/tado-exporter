@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"log/slog"
 	"testing"
+	"time"
 )
 
 func TestGetZoneState(t *testing.T) {
@@ -152,54 +153,129 @@ func TestZoneState_Do(t *testing.T) {
 	}
 }
 
-func TestZoneState_String(t *testing.T) {
-	type fields struct {
-		TargetTemperature tado.Temperature
-		Overlay           tado.OverlayTerminationMode
-	}
+func TestZoneState_Action(t *testing.T) {
 	tests := []struct {
-		name   string
-		fields fields
-		want   string
+		name  string
+		state rules.ZoneState
+		want  string
 	}{
 		{
-			name: "off",
-			fields: fields{
-				Overlay: tado.PermanentOverlay,
-			},
-			want: "switching off heating",
-		},
-		{
-			name: "off",
-			fields: fields{
-				Overlay:           tado.PermanentOverlay,
-				TargetTemperature: tado.Temperature{Celsius: 5.0},
-			},
-			want: "switching off heating",
-		},
-		{
 			name: "auto",
-			fields: fields{
+			state: rules.ZoneState{
 				Overlay: tado.NoOverlay,
 			},
 			want: "moving to auto mode",
 		},
 		{
-			name: "unknown",
-			fields: fields{
-				Overlay:           tado.TimerOverlay,
-				TargetTemperature: tado.Temperature{Celsius: 10.0},
+			name: "off",
+			state: rules.ZoneState{
+				Overlay: tado.PermanentOverlay,
 			},
+			want: "switching off heating",
+		},
+		{
+			name: "off for 1h",
+			state: rules.ZoneState{
+				Overlay:  tado.TimerOverlay,
+				Duration: time.Hour,
+			},
+			want: "switching off heating for 1h0m0s",
+		},
+		{
+			name: "off for 1h",
+			state: rules.ZoneState{
+				Overlay:  tado.NextBlockOverlay,
+				Duration: time.Hour,
+			},
+			want: "switching off heating for 1h0m0s",
+		},
+		{
+			name: "on for 1h",
+			state: rules.ZoneState{
+				Overlay:           tado.TimerOverlay,
+				TargetTemperature: tado.Temperature{Celsius: 18.5},
+				Duration:          time.Hour,
+			},
+			want: "setting temperature to 18.5 for 1h0m0s",
+		},
+		{
+			name: "on for 1h",
+			state: rules.ZoneState{
+				Overlay:           tado.NextBlockOverlay,
+				TargetTemperature: tado.Temperature{Celsius: 18.5},
+				Duration:          time.Hour,
+			},
+			want: "setting temperature to 18.5 for 1h0m0s",
+		},
+		{
+			name: "unknown",
 			want: "unknown action",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := rules.ZoneState{
-				Overlay:           tt.fields.Overlay,
-				TargetTemperature: tt.fields.TargetTemperature,
-			}
-			assert.Equal(t, tt.want, s.String())
+			assert.Equal(t, tt.want, tt.state.Action())
+		})
+	}
+}
+
+func TestZoneState_String(t *testing.T) {
+	tests := []struct {
+		name  string
+		state rules.ZoneState
+		want  string
+	}{
+		{
+			name: "auto",
+			state: rules.ZoneState{
+				Overlay:           tado.NoOverlay,
+				TargetTemperature: tado.Temperature{Celsius: 18.0},
+			},
+			want: "target: 18.0",
+		},
+		{
+			name: "off",
+			state: rules.ZoneState{
+				Overlay:           tado.PermanentOverlay,
+				TargetTemperature: tado.Temperature{Celsius: 5.0},
+			},
+			want: "off",
+		},
+		{
+			name: "permanent overlay",
+			state: rules.ZoneState{
+				Overlay:           tado.PermanentOverlay,
+				TargetTemperature: tado.Temperature{Celsius: 18.0},
+			},
+			want: "target: 18.0, MANUAL",
+		},
+		{
+			name: "timer overlay",
+			state: rules.ZoneState{
+				Overlay:           tado.TimerOverlay,
+				Duration:          time.Hour,
+				TargetTemperature: tado.Temperature{Celsius: 18.0},
+			},
+			want: "target: 18.0, MANUAL for 1h0m0s",
+		},
+		{
+			name: "next block overlay",
+			state: rules.ZoneState{
+				Overlay:           tado.NextBlockOverlay,
+				Duration:          time.Hour,
+				TargetTemperature: tado.Temperature{Celsius: 18.0},
+			},
+			want: "target: 18.0, MANUAL for 1h0m0s",
+		},
+		{
+			name:  "unknown",
+			state: rules.ZoneState{TargetTemperature: tado.Temperature{Celsius: 18.0}},
+			want:  "unknown",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.state.String())
 		})
 	}
 }

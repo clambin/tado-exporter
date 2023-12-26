@@ -21,9 +21,9 @@ var update = flag.Bool("update", false, "update .golden files")
 
 func TestHealth_Handle(t *testing.T) {
 	p := mocks.NewPoller(t)
-	ch := make(chan *poller.Update)
-	p.EXPECT().Register().Return(ch)
-	p.EXPECT().Unregister(ch)
+	ch := make(chan poller.Update)
+	p.EXPECT().Subscribe().Return(ch)
+	p.EXPECT().Unsubscribe(ch)
 	p.EXPECT().Refresh().Once()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -33,61 +33,10 @@ func TestHealth_Handle(t *testing.T) {
 	go func() { errCh <- h.Run(ctx) }()
 
 	resp := httptest.NewRecorder()
-	h.Handle(resp, &http.Request{})
+	h.ServeHTTP(resp, &http.Request{})
 	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
 
-	for i := 0; i < 2; i++ {
-		ch <- &poller.Update{
-			Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-			ZoneInfo: map[int]tado.ZoneInfo{
-				1: {
-					SensorDataPoints: tado.ZoneInfoSensorDataPoints{InsideTemperature: tado.Temperature{Celsius: 22.0}},
-				},
-			},
-		}
-
-		assert.Eventually(t, func() bool {
-			_, ok := h.cache.Get("update")
-			return ok
-		}, time.Second, 10*time.Millisecond)
-
-		resp = httptest.NewRecorder()
-		h.Handle(resp, &http.Request{})
-		require.Equal(t, http.StatusOK, resp.Code)
-		assert.Equal(t, "application/json", resp.Header().Get("Content-Type"))
-
-		response := resp.Body.Bytes()
-
-		gp := filepath.Join("testdata", t.Name()+".golden")
-		if *update {
-			err := os.WriteFile(gp, response, 0644)
-			require.NoError(t, err)
-		}
-
-		golden, err := os.ReadFile(gp)
-		require.NoError(t, err)
-		assert.Equal(t, string(golden), string(response))
-
-	}
-	cancel()
-	assert.NoError(t, <-errCh)
-}
-
-func BenchmarkHealth_Handle(b *testing.B) {
-	p := mocks.Poller{}
-	p.EXPECT().Refresh()
-
-	ch := make(chan *poller.Update)
-	p.EXPECT().Register().Return(ch)
-	p.EXPECT().Unregister(ch)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	errCh := make(chan error)
-
-	h := New(&p, slog.Default())
-	go func() { errCh <- h.Run(ctx) }()
-
-	ch <- &poller.Update{
+	ch <- poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{
 			1: {
@@ -96,12 +45,55 @@ func BenchmarkHealth_Handle(b *testing.B) {
 		},
 	}
 
+	assert.Eventually(t, func() bool {
+		h.lock.RLock()
+		defer h.lock.RUnlock()
+		return h.updated
+	}, time.Second, 10*time.Millisecond)
+
+	resp = httptest.NewRecorder()
+	h.ServeHTTP(resp, &http.Request{})
+	require.Equal(t, http.StatusOK, resp.Code)
+	assert.Equal(t, "application/json", resp.Header().Get("Content-Type"))
+
+	response := resp.Body.Bytes()
+
+	gp := filepath.Join("testdata", t.Name()+".golden")
+	if *update {
+		err := os.WriteFile(gp, response, 0644)
+		require.NoError(t, err)
+	}
+
+	golden, err := os.ReadFile(gp)
+	require.NoError(t, err)
+	assert.Equal(t, string(golden), string(response))
+
+	cancel()
+	assert.NoError(t, <-errCh)
+}
+
+func BenchmarkHealth_Handle(b *testing.B) {
+	p := mocks.Poller{}
+	p.EXPECT().Refresh()
+
+	ch := make(chan poller.Update)
+	p.EXPECT().Subscribe().Return(ch)
+	p.EXPECT().Unsubscribe(ch)
+
+	h := New(&p, slog.Default())
+	h.update = poller.Update{
+		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+		ZoneInfo: map[int]tado.ZoneInfo{
+			1: {
+				SensorDataPoints: tado.ZoneInfoSensorDataPoints{InsideTemperature: tado.Temperature{Celsius: 22.0}},
+			},
+		},
+	}
+	h.updated = true
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp := httptest.NewRecorder()
-		h.Handle(resp, &http.Request{})
+		h.ServeHTTP(resp, &http.Request{})
 	}
-
-	cancel()
-	assert.NoError(b, <-errCh)
 }

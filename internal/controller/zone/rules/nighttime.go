@@ -16,7 +16,7 @@ var _ Rule = &NightTimeRule{}
 
 var testForceTime time.Time
 
-func (n *NightTimeRule) Evaluate(update *poller.Update) (Action, error) {
+func (n *NightTimeRule) Evaluate(update poller.Update) (Action, error) {
 	next := Action{
 		ZoneID:   n.zoneID,
 		ZoneName: n.zoneName,

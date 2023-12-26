@@ -26,7 +26,7 @@ func (n Notifiers) Notify(action Action, state rules.Action) {
 }
 
 func buildMessage(action Action, state rules.Action) string {
-	a := state.State.String()
+	a := state.State.Action()
 	switch action {
 	case Queued:
 		return a + " in " + state.Delay.Round(time.Second).String()
@@ -34,6 +34,7 @@ func buildMessage(action Action, state rules.Action) string {
 		return a
 	case Canceled:
 		return "canceling " + a
+	default:
+		return ""
 	}
-	return ""
 }

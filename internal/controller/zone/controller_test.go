@@ -3,12 +3,12 @@ package zone_test
 import (
 	"context"
 	"github.com/clambin/tado"
-	slackbot "github.com/clambin/tado-exporter/internal/controller/slackbot/mocks"
+	"github.com/clambin/tado-exporter/internal/controller/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/zone"
+	mocks2 "github.com/clambin/tado-exporter/internal/controller/zone/notifier/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
-	"github.com/clambin/tado-exporter/internal/controller/zone/rules/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
-	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
+	mocks3 "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado/testutil"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +22,7 @@ import (
 var (
 	config = rules.ZoneConfig{
 		Zone: "foo",
-		Rules: []rules.RuleConfig{
+		Rules: []rules.ZoneRule{
 			{
 				Kind:  rules.AutoAway,
 				Delay: 2 * time.Hour,
@@ -39,13 +39,13 @@ var (
 func TestController_Run(t *testing.T) {
 	tests := []struct {
 		name         string
-		update       *poller.Update
+		update       poller.Update
 		args         []interface{}
 		notification string
 	}{
 		{
 			name: "no action",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
@@ -53,7 +53,7 @@ func TestController_Run(t *testing.T) {
 		},
 		{
 			name: "manual temp setting",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
@@ -62,7 +62,7 @@ func TestController_Run(t *testing.T) {
 		},
 		{
 			name: "manual temp setting #2",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
@@ -70,7 +70,7 @@ func TestController_Run(t *testing.T) {
 		},
 		{
 			name: "no action #2",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
@@ -79,7 +79,7 @@ func TestController_Run(t *testing.T) {
 		},
 		{
 			name: "user away",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(false))},
@@ -88,7 +88,7 @@ func TestController_Run(t *testing.T) {
 		},
 		{
 			name: "user comes home",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
@@ -98,12 +98,12 @@ func TestController_Run(t *testing.T) {
 	}
 
 	a := mocks.NewTadoSetter(t)
-	b := slackbot.NewSlackBot(t)
-	p := mockPoller.NewPoller(t)
+	b := mocks2.NewSlackSender(t)
+	p := mocks3.NewPoller(t)
 
-	ch := make(chan *poller.Update)
-	p.EXPECT().Register().Return(ch)
-	p.EXPECT().Unregister(ch).Return()
+	ch := make(chan poller.Update)
+	p.EXPECT().Subscribe().Return(ch)
+	p.EXPECT().Unsubscribe(ch).Return()
 
 	m := zone.New(a, p, b, config, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
@@ -134,17 +134,17 @@ func TestController_Run(t *testing.T) {
 
 func TestController_Scheduled(t *testing.T) {
 	tadoSetter := mocks.NewTadoSetter(t)
-	newPoller := mockPoller.NewPoller(t)
-	ch := make(chan *poller.Update)
-	newPoller.EXPECT().Register().Return(ch)
-	newPoller.EXPECT().Unregister(ch).Return()
+	newPoller := mocks3.NewPoller(t)
+	ch := make(chan poller.Update)
+	newPoller.EXPECT().Subscribe().Return(ch)
+	newPoller.EXPECT().Unsubscribe(ch).Return()
 
 	controller := zone.New(tadoSetter, newPoller, nil, config, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() { errCh <- controller.Run(ctx) }()
 
-	ch <- &poller.Update{
+	ch <- poller.Update{
 		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(15, 18.5), testutil.ZoneInfoPermanentOverlay())},
 		UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
@@ -170,10 +170,10 @@ func TestController_Scheduled(t *testing.T) {
 
 func TestController_ReportTasks(t *testing.T) {
 	tadoSetter := mocks.NewTadoSetter(t)
-	newPoller := mockPoller.NewPoller(t)
-	ch := make(chan *poller.Update)
-	newPoller.EXPECT().Register().Return(ch)
-	newPoller.EXPECT().Unregister(ch).Return()
+	newPoller := mocks3.NewPoller(t)
+	ch := make(chan poller.Update)
+	newPoller.EXPECT().Subscribe().Return(ch)
+	newPoller.EXPECT().Unsubscribe(ch).Return()
 
 	controller := zone.New(tadoSetter, newPoller, nil, config, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
@@ -184,7 +184,7 @@ func TestController_ReportTasks(t *testing.T) {
 	_, ok := controllers.ReportTasks()
 	assert.False(t, ok)
 
-	ch <- &poller.Update{
+	ch <- poller.Update{
 		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(15, 18.5), testutil.ZoneInfoPermanentOverlay())},
 		UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},

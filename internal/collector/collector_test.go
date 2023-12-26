@@ -16,10 +16,10 @@ import (
 )
 
 func TestCollector(t *testing.T) {
-	ch := make(chan *poller.Update, 1)
+	ch := make(chan poller.Update, 1)
 	p := mocks.NewPoller(t)
-	p.EXPECT().Register().Return(ch).Once()
-	p.EXPECT().Unregister(ch).Once()
+	p.EXPECT().Subscribe().Return(ch).Once()
+	p.EXPECT().Unsubscribe(ch).Once()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -29,12 +29,12 @@ func TestCollector(t *testing.T) {
 	r.MustRegister(&c)
 	go func() { errCh <- c.Run(ctx) }()
 
-	ch <- &Update
+	ch <- Update
 
 	require.Eventually(t, func() bool {
 		c.lock.RLock()
 		defer c.lock.RUnlock()
-		return c.lastUpdate != nil
+		return c.haveUpdate
 	}, time.Second, 10*time.Millisecond)
 
 	require.NoError(t, testutil.GatherAndCompare(r, bytes.NewBufferString(`

@@ -14,10 +14,10 @@ type Evaluator struct {
 var _ Rule = &Evaluator{}
 
 type Rule interface {
-	Evaluate(*poller.Update) (Action, error)
+	Evaluate(poller.Update) (Action, error)
 }
 
-func (e *Evaluator) Evaluate(update *poller.Update) (Action, error) {
+func (e *Evaluator) Evaluate(update poller.Update) (Action, error) {
 	var action Action
 	if err := e.load(update); err != nil {
 		return action, err
@@ -43,7 +43,7 @@ func (e *Evaluator) Evaluate(update *poller.Update) (Action, error) {
 	return next, nil
 }
 
-func (e *Evaluator) load(update *poller.Update) error {
+func (e *Evaluator) load(update poller.Update) error {
 	if len(e.rules) > 0 {
 		return nil
 	}

@@ -1,17 +1,17 @@
 package poller
 
 import (
-	"fmt"
 	"github.com/clambin/tado"
 	"log/slog"
+	"strconv"
 )
 
 type Update struct {
+	WeatherInfo tado.WeatherInfo
 	Zones       map[int]tado.Zone
 	ZoneInfo    map[int]tado.ZoneInfo
 	UserInfo    MobileDevices
-	WeatherInfo tado.WeatherInfo
-	Home        bool
+	Home        IsHome
 }
 
 func (update Update) GetZoneID(name string) (int, bool) {
@@ -32,13 +32,23 @@ func (update Update) GetUserID(name string) (int, bool) {
 	return 0, false
 }
 
+type IsHome bool
+
+func (i IsHome) String() string {
+	if i {
+		return "HOME"
+	} else {
+		return "AWAY"
+	}
+}
+
 type MobileDevices map[int]tado.MobileDevice
 
 func (m MobileDevices) LogValue() slog.Value {
 	var loggedDevices []slog.Attr
 	for idx, device := range m {
 		loggedDevices = append(loggedDevices,
-			slog.Group(fmt.Sprintf("device_%d", idx),
+			slog.Group("device_"+strconv.Itoa(idx),
 				slog.Int("id", device.ID),
 				slog.String("name", device.Name),
 				slog.Bool("geotracked", device.Settings.GeoTrackingEnabled),

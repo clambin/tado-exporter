@@ -14,7 +14,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 	tests := []testCase{
 		{
 			name: "user goes away",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false))},
@@ -23,7 +23,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 		},
 		{
 			name: "user is away",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 5), testutil.ZoneInfoPermanentOverlay())},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false))},
@@ -32,7 +32,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 		},
 		{
 			name: "user comes home",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 5), testutil.ZoneInfoPermanentOverlay())},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
@@ -41,7 +41,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 		},
 		{
 			name: "user is home",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 19))},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
@@ -50,7 +50,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 		},
 		{
 			name: "non-geolocation user",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo")},
@@ -78,7 +78,7 @@ func TestAutoAwayRule_Evaluate_MultipleUsers(t *testing.T) {
 	tests := []testCase{
 		{
 			name: "one user goes away",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{
@@ -90,7 +90,7 @@ func TestAutoAwayRule_Evaluate_MultipleUsers(t *testing.T) {
 		},
 		{
 			name: "all users are away",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{
@@ -102,7 +102,7 @@ func TestAutoAwayRule_Evaluate_MultipleUsers(t *testing.T) {
 		},
 		{
 			name: "one user is home",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 5), testutil.ZoneInfoPermanentOverlay())},
 				UserInfo: map[int]tado.MobileDevice{
@@ -114,7 +114,7 @@ func TestAutoAwayRule_Evaluate_MultipleUsers(t *testing.T) {
 		},
 		{
 			name: "user is home, schedule for room is off",
-			update: &poller.Update{
+			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
 				UserInfo: map[int]tado.MobileDevice{

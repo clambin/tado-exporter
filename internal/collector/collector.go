@@ -113,15 +113,16 @@ type Collector struct {
 	Poller     poller.Poller
 	Logger     *slog.Logger
 	lock       sync.RWMutex
-	lastUpdate *poller.Update
+	lastUpdate poller.Update
+	haveUpdate bool
 }
 
 func (c *Collector) Run(ctx context.Context) error {
 	c.Logger.Debug("started")
 	defer c.Logger.Debug("stopped")
 
-	ch := c.Poller.Register()
-	defer c.Poller.Unregister(ch)
+	ch := c.Poller.Subscribe()
+	defer c.Poller.Unsubscribe(ch)
 
 	for {
 		select {
@@ -130,6 +131,7 @@ func (c *Collector) Run(ctx context.Context) error {
 		case update := <-ch:
 			c.lock.Lock()
 			c.lastUpdate = update
+			c.haveUpdate = true
 			c.lock.Unlock()
 		}
 	}
@@ -157,7 +159,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	if c.lastUpdate != nil {
+	if c.haveUpdate {
 		c.collectUsers(ch)
 		c.collectWeather(ch)
 		c.collectZones(ch)
@@ -247,11 +249,5 @@ func (c *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 }
 
 func (c *Collector) collectHomeState(ch chan<- prometheus.Metric) {
-	var label string
-	if c.lastUpdate.Home {
-		label = "HOME"
-	} else {
-		label = "AWAY"
-	}
-	ch <- prometheus.MustNewConstMetric(tadoHomeState, prometheus.GaugeValue, 1, label)
+	ch <- prometheus.MustNewConstMetric(tadoHomeState, prometheus.GaugeValue, 1, c.lastUpdate.Home.String())
 }
