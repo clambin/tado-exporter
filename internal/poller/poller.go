@@ -63,7 +63,7 @@ func (p *TadoPoller) Run(ctx context.Context) error {
 		if shouldPoll {
 			// poll for new data
 			if err := p.poll(ctx); err != nil {
-				p.logger.Error("failed to get tado metrics", "err", err)
+				p.logger.Error("failed to get tado metrics", slog.Any("err", err))
 			}
 		}
 	}

@@ -1,9 +1,9 @@
 package poller
 
 import (
-	"fmt"
 	"github.com/clambin/tado"
 	"log/slog"
+	"strconv"
 )
 
 type Update struct {
@@ -48,7 +48,7 @@ func (m MobileDevices) LogValue() slog.Value {
 	var loggedDevices []slog.Attr
 	for idx, device := range m {
 		loggedDevices = append(loggedDevices,
-			slog.Group(fmt.Sprintf("device_%d", idx),
+			slog.Group("device_"+strconv.Itoa(idx),
 				slog.Int("id", device.ID),
 				slog.String("name", device.Name),
 				slog.Bool("geotracked", device.Settings.GeoTrackingEnabled),

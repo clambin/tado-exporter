@@ -84,7 +84,7 @@ func (a *AutoAwayRule) load(update poller.Update) error {
 		if userID, ok := update.GetUserID(user); ok {
 			a.MobileDeviceIDs = append(a.MobileDeviceIDs, userID)
 		} else {
-			return fmt.Errorf("invalid user: %s", user)
+			return fmt.Errorf("invalid user: " + user)
 		}
 	}
 

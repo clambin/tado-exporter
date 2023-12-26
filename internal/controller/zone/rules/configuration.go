@@ -27,7 +27,10 @@ func Load(in io.Reader, l *slog.Logger) ([]ZoneConfig, error) {
 		for _, rule := range zone.Rules {
 			kinds = append(kinds, rule.Kind.String())
 		}
-		l.Info("zone rules found", "zone", zone.Zone, "rules", strings.Join(kinds, ","))
+		l.Info("zone rules found",
+			slog.String("zone", zone.Zone),
+			slog.String("rules", strings.Join(kinds, ",")),
+		)
 	}
 	return config.Zones, nil
 }
