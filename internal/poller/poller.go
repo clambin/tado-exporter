@@ -83,10 +83,10 @@ func (p *TadoPoller) poll(ctx context.Context) error {
 	return err
 }
 
-func (p *TadoPoller) update(ctx context.Context) (*Update, error) {
-	var update Update
-	var err error
-	if update.UserInfo, err = p.getMobileDevices(ctx); err == nil {
+func (p *TadoPoller) update(ctx context.Context) (update *Update, err error) {
+	update = &Update{}
+	update.UserInfo, err = p.getMobileDevices(ctx)
+	if err == nil {
 		update.WeatherInfo, err = p.TadoClient.GetWeatherInfo(ctx)
 	}
 	if err == nil {
@@ -98,7 +98,7 @@ func (p *TadoPoller) update(ctx context.Context) (*Update, error) {
 	if err == nil {
 		update.Home, err = p.getHomeState(ctx)
 	}
-	return &update, err
+	return update, err
 }
 
 func (p *TadoPoller) getMobileDevices(ctx context.Context) (map[int]tado.MobileDevice, error) {
