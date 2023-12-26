@@ -1,27 +1,26 @@
 package health
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/clambin/go-common/cache"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"log/slog"
 	"net/http"
-	"time"
+	"sync"
 )
 
 type Health struct {
 	poller.Poller
-	logger *slog.Logger
-	cache  *cache.Cache[string, *bytes.Buffer]
+	logger  *slog.Logger
+	update  poller.Update
+	updated bool
+	lock    sync.RWMutex
 }
 
 func New(p poller.Poller, logger *slog.Logger) *Health {
 	return &Health{
 		Poller: p,
 		logger: logger,
-		cache:  cache.New[string, *bytes.Buffer](15*time.Minute, time.Hour),
 	}
 }
 
@@ -37,37 +36,28 @@ func (h *Health) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case update := <-ch:
-			h.store(update)
+			h.lock.Lock()
+			h.update = update
+			h.updated = true
+			h.lock.Unlock()
 		}
 	}
 }
 
-// TODO:  just store update and marshal it when we actually get called. way more efficient!
-func (h *Health) store(update poller.Update) {
-	b, ok := h.cache.Get("update")
-	if !ok {
-		b = new(bytes.Buffer)
-	} else {
-		b.Reset()
-	}
-	encoder := json.NewEncoder(b)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(update); err != nil {
-		panic(err)
-	}
-	h.cache.Add("update", b)
-}
-
-func (h *Health) Handle(w http.ResponseWriter, _ *http.Request) {
-	b, ok := h.cache.Get("update")
-	if !ok {
+func (h *Health) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+	h.lock.RLock()
+	defer h.lock.RUnlock()
+	if !h.updated {
 		http.Error(w, "no update yet", http.StatusServiceUnavailable)
 		h.Poller.Refresh()
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 
-	_, _ = w.Write(b.Bytes())
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(h.update); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

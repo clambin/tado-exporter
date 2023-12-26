@@ -74,7 +74,7 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules []rules.ZoneConfig, 
 	h := health.New(p, l.With("component", "health"))
 	tasks = append(tasks, h)
 	r := http.NewServeMux()
-	r.Handle("/health", http.HandlerFunc(h.Handle))
+	r.Handle("/health", h)
 	tasks = append(tasks, httpserver.New(cfg.GetString("health.addr"), r))
 
 	// Slackbot
