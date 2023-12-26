@@ -34,6 +34,7 @@ func buildMessage(action Action, state rules.Action) string {
 		return a
 	case Canceled:
 		return "canceling " + a
+	default:
+		return ""
 	}
-	return ""
 }

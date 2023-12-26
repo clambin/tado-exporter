@@ -28,6 +28,8 @@ func TestSchedule(t *testing.T) {
 		done, err := job.Result()
 		return done && err == nil
 	}, time.Second, 10*time.Millisecond)
+
+	assert.Zero(t, job.TimeToFire())
 }
 
 func TestScheduleWithNotification(t *testing.T) {
