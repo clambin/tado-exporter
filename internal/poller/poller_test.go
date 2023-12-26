@@ -47,7 +47,7 @@ func TestTadoPoller_Run(t *testing.T) {
 	assert.Equal(t, "bar", update.Zones[2].Name)
 
 	require.Len(t, update.ZoneInfo, 2)
-	assert.True(t, update.Home)
+	assert.True(t, bool(update.Home))
 
 	p.Unsubscribe(ch)
 

@@ -82,6 +82,13 @@ func TestUpdate_GetUserID(t *testing.T) {
 	}
 }
 
+func TestIsHome_String(t *testing.T) {
+	u := poller.Update{Home: true}
+	assert.Equal(t, "HOME", u.Home.String())
+	u.Home = false
+	assert.Equal(t, "AWAY", u.Home.String())
+}
+
 func TestMobileDevices_LogValue(t *testing.T) {
 	devices := poller.MobileDevices{
 		10: testutil.MakeMobileDevice(10, "home", testutil.Home(true)),

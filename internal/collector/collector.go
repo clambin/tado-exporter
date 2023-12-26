@@ -249,11 +249,5 @@ func (c *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 }
 
 func (c *Collector) collectHomeState(ch chan<- prometheus.Metric) {
-	var label string
-	if c.lastUpdate.Home {
-		label = "HOME"
-	} else {
-		label = "AWAY"
-	}
-	ch <- prometheus.MustNewConstMetric(tadoHomeState, prometheus.GaugeValue, 1, label)
+	ch <- prometheus.MustNewConstMetric(tadoHomeState, prometheus.GaugeValue, 1, c.lastUpdate.Home.String())
 }

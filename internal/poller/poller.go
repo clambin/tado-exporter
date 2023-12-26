@@ -139,8 +139,8 @@ func (p *TadoPoller) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) 
 	return zoneInfoMap, nil
 }
 
-func (p *TadoPoller) getHomeState(ctx context.Context) (bool, error) {
-	var home bool
+func (p *TadoPoller) getHomeState(ctx context.Context) (IsHome, error) {
+	var home IsHome
 	homeState, err := p.TadoClient.GetHomeState(ctx)
 	if err == nil {
 		home = homeState.Presence == "HOME"

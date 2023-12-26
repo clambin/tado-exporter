@@ -11,7 +11,7 @@ type Update struct {
 	Zones       map[int]tado.Zone
 	ZoneInfo    map[int]tado.ZoneInfo
 	UserInfo    MobileDevices
-	Home        bool
+	Home        IsHome
 }
 
 func (update Update) GetZoneID(name string) (int, bool) {
@@ -30,6 +30,16 @@ func (update Update) GetUserID(name string) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+type IsHome bool
+
+func (i IsHome) String() string {
+	if i {
+		return "HOME"
+	} else {
+		return "AWAY"
+	}
 }
 
 type MobileDevices map[int]tado.MobileDevice
