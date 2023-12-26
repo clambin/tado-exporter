@@ -113,7 +113,8 @@ type Collector struct {
 	Poller     poller.Poller
 	Logger     *slog.Logger
 	lock       sync.RWMutex
-	lastUpdate *poller.Update
+	lastUpdate poller.Update
+	haveUpdate bool
 }
 
 func (c *Collector) Run(ctx context.Context) error {
@@ -130,6 +131,7 @@ func (c *Collector) Run(ctx context.Context) error {
 		case update := <-ch:
 			c.lock.Lock()
 			c.lastUpdate = update
+			c.haveUpdate = true
 			c.lock.Unlock()
 		}
 	}
@@ -157,7 +159,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	if c.lastUpdate != nil {
+	if c.haveUpdate {
 		c.collectUsers(ch)
 		c.collectWeather(ch)
 		c.collectZones(ch)

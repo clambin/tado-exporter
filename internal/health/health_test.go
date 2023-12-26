@@ -21,7 +21,7 @@ var update = flag.Bool("update", false, "update .golden files")
 
 func TestHealth_Handle(t *testing.T) {
 	p := mocks.NewPoller(t)
-	ch := make(chan *poller.Update)
+	ch := make(chan poller.Update)
 	p.EXPECT().Subscribe().Return(ch)
 	p.EXPECT().Unsubscribe(ch)
 	p.EXPECT().Refresh().Once()
@@ -37,7 +37,7 @@ func TestHealth_Handle(t *testing.T) {
 	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
 
 	for i := 0; i < 2; i++ {
-		ch <- &poller.Update{
+		ch <- poller.Update{
 			Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 			ZoneInfo: map[int]tado.ZoneInfo{
 				1: {
@@ -77,7 +77,7 @@ func BenchmarkHealth_Handle(b *testing.B) {
 	p := mocks.Poller{}
 	p.EXPECT().Refresh()
 
-	ch := make(chan *poller.Update)
+	ch := make(chan poller.Update)
 	p.EXPECT().Subscribe().Return(ch)
 	p.EXPECT().Unsubscribe(ch)
 
@@ -87,7 +87,7 @@ func BenchmarkHealth_Handle(b *testing.B) {
 	h := New(&p, slog.Default())
 	go func() { errCh <- h.Run(ctx) }()
 
-	ch <- &poller.Update{
+	ch <- poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{
 			1: {

@@ -14,7 +14,7 @@ type LimitOverlayRule struct {
 
 var _ Rule = &LimitOverlayRule{}
 
-func (l *LimitOverlayRule) Evaluate(update *poller.Update) (Action, error) {
+func (l *LimitOverlayRule) Evaluate(update poller.Update) (Action, error) {
 	next := Action{
 		ZoneID:   l.zoneID,
 		ZoneName: l.zoneName,

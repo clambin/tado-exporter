@@ -61,7 +61,7 @@ func (c *Controller) Run(ctx context.Context) error {
 	}
 }
 
-func (c *Controller) processUpdate(ctx context.Context, update *poller.Update) error {
+func (c *Controller) processUpdate(ctx context.Context, update poller.Update) error {
 	next, err := c.evaluator.Evaluate(update)
 	if err != nil {
 		return fmt.Errorf("failed to evaluate rules: %w", err)

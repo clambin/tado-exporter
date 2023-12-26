@@ -22,7 +22,7 @@ func TestBot_Run(t *testing.T) {
 	b := mocks.NewSlackBot(t)
 	b.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
-	ch := make(chan *poller.Update)
+	ch := make(chan poller.Update)
 	p := mocks2.NewPoller(t)
 	p.EXPECT().Subscribe().Return(ch).Once()
 	p.EXPECT().Unsubscribe(ch).Return().Once()
@@ -33,12 +33,12 @@ func TestBot_Run(t *testing.T) {
 	errCh := make(chan error)
 	go func() { errCh <- c.Run(ctx) }()
 
-	ch <- &poller.Update{}
+	ch <- poller.Update{}
 
 	assert.Eventually(t, func() bool {
 		c.lock.RLock()
 		defer c.lock.RUnlock()
-		return c.update != nil
+		return c.updated
 	}, time.Second, 10*time.Millisecond)
 
 	cancel()
@@ -74,10 +74,11 @@ func TestExecutor_SetRoom(t *testing.T) {
 	p := mocks2.NewPoller(t)
 
 	executor := New(api, bot, p, nil, slog.Default())
-	executor.update = &poller.Update{
+	executor.update = poller.Update{
 		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22), testutil.ZoneInfoPermanentOverlay())},
 	}
+	executor.updated = true
 
 	var testCases = []struct {
 		Args     []string
@@ -179,10 +180,11 @@ func TestExecutor_ReportRooms(t *testing.T) {
 	assert.Empty(t, attachments[0].Title)
 	assert.Equal(t, "no updates yet. please check back later", attachments[0].Text)
 
-	c.update = &poller.Update{
+	c.update = poller.Update{
 		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(22.0, 18.0), testutil.ZoneInfoPermanentOverlay())},
 	}
+	c.updated = true
 
 	attachments = c.ReportRooms(context.Background())
 	require.Len(t, attachments, 1)
@@ -199,41 +201,46 @@ func TestExecutor_ReportUsers(t *testing.T) {
 	c := New(api, bot, nil, nil, slog.Default())
 
 	testCases := []struct {
-		name   string
-		update *poller.Update
-		want   slack.Attachment
+		name    string
+		update  poller.Update
+		updated bool
+		want    slack.Attachment
 	}{
 		{
-			name:   "no update yet",
-			update: nil,
-			want:   slack.Attachment{Color: "bad", Text: "no update yet. please check back later"},
+			name: "no update yet",
+			//update: nil,
+			want: slack.Attachment{Color: "bad", Text: "no update yet. please check back later"},
 		},
 		{
 			name: "home",
-			update: &poller.Update{
+			update: poller.Update{
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
 			},
-			want: slack.Attachment{Title: "users:", Text: "foo: home"},
+			updated: true,
+			want:    slack.Attachment{Title: "users:", Text: "foo: home"},
 		},
 		{
 			name: "away",
-			update: &poller.Update{
+			update: poller.Update{
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(false))},
 			},
-			want: slack.Attachment{Title: "users:", Text: "foo: away"},
+			updated: true,
+			want:    slack.Attachment{Title: "users:", Text: "foo: away"},
 		},
 		{
 			name: "unknown",
-			update: &poller.Update{
+			update: poller.Update{
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo")},
 			},
-			want: slack.Attachment{Title: "users:", Text: "foo: unknown"},
+			updated: true,
+			want:    slack.Attachment{Title: "users:", Text: "foo: unknown"},
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			c.update = tt.update
+			c.updated = tt.updated
 
 			attachments := c.ReportUsers(context.Background())
 			require.Len(t, attachments, 1)

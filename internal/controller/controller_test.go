@@ -29,7 +29,7 @@ func TestController_Run(t *testing.T) {
 	a := mocks.NewTadoSetter(t)
 
 	p := pollerMocks.NewPoller(t)
-	ch := make(chan *poller.Update, 1)
+	ch := make(chan poller.Update, 1)
 	p.EXPECT().Subscribe().Return(ch)
 	p.EXPECT().Unsubscribe(ch)
 

@@ -9,8 +9,8 @@ import (
 )
 
 type Poller interface {
-	Subscribe() chan *Update
-	Unsubscribe(ch chan *Update)
+	Subscribe() chan Update
+	Unsubscribe(ch chan Update)
 	Refresh()
 }
 
@@ -26,7 +26,7 @@ var _ Poller = &TadoPoller{}
 
 type TadoPoller struct {
 	TadoClient TadoGetter
-	*pubsub.Publisher[*Update]
+	*pubsub.Publisher[Update]
 	interval time.Duration
 	logger   *slog.Logger
 	refresh  chan struct{}
@@ -35,7 +35,7 @@ type TadoPoller struct {
 func New(tadoClient TadoGetter, interval time.Duration, logger *slog.Logger) *TadoPoller {
 	return &TadoPoller{
 		TadoClient: tadoClient,
-		Publisher:  pubsub.New[*Update](logger.With(slog.String("component", "registry"))),
+		Publisher:  pubsub.New[Update](logger.With(slog.String("component", "registry"))),
 		interval:   interval,
 		logger:     logger,
 		refresh:    make(chan struct{}),
@@ -83,8 +83,7 @@ func (p *TadoPoller) poll(ctx context.Context) error {
 	return err
 }
 
-func (p *TadoPoller) update(ctx context.Context) (update *Update, err error) {
-	update = &Update{}
+func (p *TadoPoller) update(ctx context.Context) (update Update, err error) {
 	update.UserInfo, err = p.getMobileDevices(ctx)
 	if err == nil {
 		update.WeatherInfo, err = p.TadoClient.GetWeatherInfo(ctx)

@@ -42,7 +42,8 @@ func (h *Health) Run(ctx context.Context) error {
 	}
 }
 
-func (h *Health) store(update *poller.Update) {
+// TODO:  just store update and marshal it when we actually get called. way more efficient!
+func (h *Health) store(update poller.Update) {
 	b, ok := h.cache.Get("update")
 	if !ok {
 		b = new(bytes.Buffer)

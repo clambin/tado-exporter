@@ -23,7 +23,8 @@ type Bot struct {
 	controller Controller
 	logger     *slog.Logger
 	lock       sync.RWMutex
-	update     *poller.Update
+	update     poller.Update
+	updated    bool
 }
 
 type TadoSetter interface {
@@ -72,6 +73,7 @@ func (b *Bot) Run(ctx context.Context) error {
 		case update := <-ch:
 			b.lock.Lock()
 			b.update = update
+			b.updated = true
 			b.lock.Unlock()
 		}
 	}
@@ -100,7 +102,7 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.update == nil {
+	if !b.updated {
 		return []slack.Attachment{{
 			Color: "bad",
 			Text:  "no updates yet. please check back later",
@@ -237,7 +239,7 @@ func (b *Bot) ReportUsers(_ context.Context, _ ...string) []slack.Attachment {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.update == nil {
+	if !b.updated {
 		return []slack.Attachment{{
 			Color: "bad",
 			Text:  "no update yet. please check back later",
