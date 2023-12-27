@@ -17,18 +17,19 @@ func Test_zoneInfo_LogValue(t *testing.T) {
 	}{
 		{
 			name: "no overlay (on)",
-			z:    zoneInfo{Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 21.0}}},
-			want: `level=INFO msg=state s.settings.power=ON s.settings.temperature=21`,
+			z:    zoneInfo{TadoMode: "HOME", Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 21.0}}},
+			want: `level=INFO msg=state s.settings.mode=HOME s.settings.power=ON s.settings.temperature=21`,
 		},
 		{
 			name: "no overlay (off)",
-			z:    zoneInfo{Setting: tado.ZonePowerSetting{Power: "OFF"}},
-			want: `level=INFO msg=state s.settings.power=OFF`,
+			z:    zoneInfo{TadoMode: "HOME", Setting: tado.ZonePowerSetting{Power: "OFF"}},
+			want: `level=INFO msg=state s.settings.mode=HOME s.settings.power=OFF`,
 		},
 		{
 			name: "overlay (on)",
 			z: zoneInfo{
-				Setting: tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
+				TadoMode: "HOME",
+				Setting:  tado.ZonePowerSetting{Power: "ON", Temperature: tado.Temperature{Celsius: 18.0}},
 				Overlay: tado.ZoneInfoOverlay{
 					Type: "MANUAL",
 					Termination: tado.ZoneInfoOverlayTermination{
@@ -37,7 +38,7 @@ func Test_zoneInfo_LogValue(t *testing.T) {
 					},
 				},
 			},
-			want: `level=INFO msg=state s.settings.power=ON s.settings.temperature=18 s.overlay.type=MANUAL s.overlay.termination.type=MANUAL s.overlay.termination.subtype=MANUAL`,
+			want: `level=INFO msg=state s.settings.mode=HOME s.settings.power=ON s.settings.temperature=18 s.overlay.type=MANUAL s.overlay.termination.type=MANUAL s.overlay.termination.subtype=MANUAL`,
 		},
 	}
 	for _, tt := range tests {

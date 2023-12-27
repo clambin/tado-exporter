@@ -12,8 +12,9 @@ type zoneInfo tado.ZoneInfo
 func (z zoneInfo) LogValue() slog.Value {
 	attribs := make([]slog.Attr, 1, 2)
 
-	settings := make([]any, 1, 2)
-	settings[0] = slog.String("power", z.Setting.Power)
+	settings := make([]any, 2, 3)
+	settings[0] = slog.String("mode", z.TadoMode)
+	settings[1] = slog.String("power", z.Setting.Power)
 	if z.Setting.Power == "ON" {
 		settings = append(settings, slog.Float64("temperature", z.Setting.Temperature.Celsius))
 	}
