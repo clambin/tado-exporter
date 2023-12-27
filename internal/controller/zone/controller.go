@@ -67,6 +67,12 @@ func (c *Controller) processUpdate(ctx context.Context, update poller.Update) er
 		return fmt.Errorf("failed to evaluate rules: %w", err)
 	}
 
+	c.logger.Debug("next state evaluated",
+		"next", next,
+		"zoneInfo", zoneInfo(update.ZoneInfo[next.ZoneID]),
+		"devices", update.UserInfo,
+	)
+
 	if next.Action {
 		c.logger.Debug("scheduling job", "next", next, "zoneConfig", zoneLogger(update.ZoneInfo[next.ZoneID]))
 		c.scheduleJob(ctx, next)

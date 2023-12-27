@@ -27,6 +27,11 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 			update: poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoTimerOverlay())}},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
+		{
+			name:   "away",
+			update: poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTadoMode(false))}},
+			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "device is in away mode"},
+		},
 	}
 	r := &LimitOverlayRule{
 		zoneID:   10,

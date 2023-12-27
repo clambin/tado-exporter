@@ -10,6 +10,7 @@ import (
 )
 
 type ZoneState struct {
+	Home              bool
 	Overlay           tado.OverlayTerminationMode
 	Duration          time.Duration
 	TargetTemperature tado.Temperature
@@ -17,6 +18,7 @@ type ZoneState struct {
 
 func GetZoneState(zoneInfo tado.ZoneInfo) ZoneState {
 	return ZoneState{
+		Home:              zoneInfo.TadoMode == "HOME",
 		Overlay:           zoneInfo.Overlay.GetMode(),
 		Duration:          time.Second * time.Duration(zoneInfo.Overlay.Termination.RemainingTimeInSeconds),
 		TargetTemperature: zoneInfo.Setting.Temperature,
@@ -50,6 +52,9 @@ func (s ZoneState) Action() string {
 }
 
 func (s ZoneState) String() string {
+	if !s.Home {
+		return "away"
+	}
 	if !s.Heating() {
 		return "off"
 	}

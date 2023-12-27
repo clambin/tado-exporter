@@ -23,7 +23,11 @@ func (n *NightTimeRule) Evaluate(update poller.Update) (Action, error) {
 		Reason:   "no manual settings detected",
 	}
 
-	if state := GetZoneState(update.ZoneInfo[n.zoneID]); state.Overlay == tado.PermanentOverlay && state.Heating() {
+	state := GetZoneState(update.ZoneInfo[n.zoneID])
+	if !state.Home {
+		next.Reason = "device is in away mode"
+	}
+	if state.Overlay == tado.PermanentOverlay && state.Heating() {
 		now := time.Now()
 		if !testForceTime.IsZero() {
 			now = testForceTime

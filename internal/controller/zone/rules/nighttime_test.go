@@ -56,21 +56,27 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 			update: poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoTimerOverlay())}},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
 		},
-	}
-
-	r := &NightTimeRule{
-		zoneID:   10,
-		zoneName: "living room",
-		timestamp: Timestamp{
-			Hour:    23,
-			Minutes: 30,
-			Seconds: 0,
+		{
+			name:   "away mode",
+			update: poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTadoMode(false))}},
+			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "device is in away mode"},
 		},
 	}
 
 	testForceTime = time.Date(2022, 10, 10, 22, 30, 0, 0, time.Local)
 	for _, tt := range testCases {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := &NightTimeRule{
+				zoneID:   10,
+				zoneName: "living room",
+				timestamp: Timestamp{
+					Hour:    23,
+					Minutes: 30,
+					Seconds: 0,
+				},
+			}
 			a, err := r.Evaluate(tt.update)
 			require.NoError(t, err)
 			assert.Equal(t, tt.action, a)

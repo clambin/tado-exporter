@@ -3,7 +3,6 @@ package rules
 import (
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"log/slog"
 )
 
 type Evaluator struct {
@@ -32,15 +31,7 @@ func (e *Evaluator) Evaluate(update poller.Update) (Action, error) {
 		actions[i] = next
 	}
 
-	next := actions.GetNext()
-
-	slog.Debug("next state evaluated",
-		"next", next,
-		"zoneInfo", zoneInfo(update.ZoneInfo[next.ZoneID]),
-		"devices", update.UserInfo,
-	)
-
-	return next, nil
+	return actions.GetNext(), nil
 }
 
 func (e *Evaluator) load(update poller.Update) error {

@@ -20,7 +20,10 @@ func (l *LimitOverlayRule) Evaluate(update poller.Update) (Action, error) {
 		ZoneName: l.zoneName,
 		Reason:   "no manual settings detected",
 	}
-	if state := GetZoneState(update.ZoneInfo[l.zoneID]); state.Overlay == tado.PermanentOverlay && state.Heating() {
+	state := GetZoneState(update.ZoneInfo[l.zoneID])
+	if !state.Home {
+		next.Reason = "device is in away mode"
+	} else if state.Overlay == tado.PermanentOverlay && state.Heating() {
 		next.Action = true
 		next.State = ZoneState{Overlay: tado.NoOverlay}
 		next.Delay = l.delay

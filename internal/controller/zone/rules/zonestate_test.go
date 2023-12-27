@@ -23,17 +23,18 @@ func TestGetZoneState(t *testing.T) {
 		{
 			name:     "off (auto)",
 			zoneInfo: testutil.MakeZoneInfo(),
-			want:     rules.ZoneState{Overlay: tado.NoOverlay},
+			want:     rules.ZoneState{Home: true, Overlay: tado.NoOverlay},
 		},
 		{
 			name:     "off (manual)",
 			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay()),
-			want:     rules.ZoneState{Overlay: tado.PermanentOverlay},
+			want:     rules.ZoneState{Home: true, Overlay: tado.PermanentOverlay},
 		},
 		{
 			name:     "on (auto)",
 			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(20, 20)),
 			want: rules.ZoneState{
+				Home:              true,
 				Overlay:           tado.NoOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
@@ -42,6 +43,7 @@ func TestGetZoneState(t *testing.T) {
 			name:     "on (manual)",
 			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(20, 20), testutil.ZoneInfoPermanentOverlay()),
 			want: rules.ZoneState{
+				Home:              true,
 				Overlay:           tado.PermanentOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
@@ -50,6 +52,7 @@ func TestGetZoneState(t *testing.T) {
 			name:     "on (timer)",
 			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(20, 20), testutil.ZoneInfoTimerOverlay()),
 			want: rules.ZoneState{
+				Home:              true,
 				Overlay:           tado.TimerOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 20.0},
 			},
@@ -58,8 +61,17 @@ func TestGetZoneState(t *testing.T) {
 			name:     "on (next block)",
 			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(20, 20), testutil.ZoneInfoNextTimeBlockOverlay()),
 			want: rules.ZoneState{
+				Home:              true,
 				Overlay:           tado.NextBlockOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 20.0},
+			},
+		},
+		{
+			name:     "away",
+			zoneInfo: testutil.MakeZoneInfo(testutil.ZoneInfoTadoMode(false)),
+			want: rules.ZoneState{
+				Home:    false,
+				Overlay: tado.NoOverlay,
 			},
 		},
 	}
@@ -213,7 +225,9 @@ func TestZoneState_Action(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tt.want, tt.state.Action())
 		})
 	}
@@ -228,6 +242,7 @@ func TestZoneState_String(t *testing.T) {
 		{
 			name: "auto",
 			state: rules.ZoneState{
+				Home:              true,
 				Overlay:           tado.NoOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 18.0},
 			},
@@ -236,6 +251,7 @@ func TestZoneState_String(t *testing.T) {
 		{
 			name: "off",
 			state: rules.ZoneState{
+				Home:              true,
 				Overlay:           tado.PermanentOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 5.0},
 			},
@@ -244,6 +260,7 @@ func TestZoneState_String(t *testing.T) {
 		{
 			name: "permanent overlay",
 			state: rules.ZoneState{
+				Home:              true,
 				Overlay:           tado.PermanentOverlay,
 				TargetTemperature: tado.Temperature{Celsius: 18.0},
 			},
@@ -252,6 +269,7 @@ func TestZoneState_String(t *testing.T) {
 		{
 			name: "timer overlay",
 			state: rules.ZoneState{
+				Home:              true,
 				Overlay:           tado.TimerOverlay,
 				Duration:          time.Hour,
 				TargetTemperature: tado.Temperature{Celsius: 18.0},
@@ -261,6 +279,7 @@ func TestZoneState_String(t *testing.T) {
 		{
 			name: "next block overlay",
 			state: rules.ZoneState{
+				Home:              true,
 				Overlay:           tado.NextBlockOverlay,
 				Duration:          time.Hour,
 				TargetTemperature: tado.Temperature{Celsius: 18.0},
@@ -268,13 +287,26 @@ func TestZoneState_String(t *testing.T) {
 			want: "target: 18.0, MANUAL for 1h0m0s",
 		},
 		{
-			name:  "unknown",
-			state: rules.ZoneState{TargetTemperature: tado.Temperature{Celsius: 18.0}},
-			want:  "unknown",
+			name: "away",
+			state: rules.ZoneState{
+				Home:    false,
+				Overlay: tado.NoOverlay,
+			},
+			want: "away",
+		},
+		{
+			name: "unknown",
+			state: rules.ZoneState{
+				Home:              true,
+				TargetTemperature: tado.Temperature{Celsius: 18.0},
+			},
+			want: "unknown",
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tt.want, tt.state.String())
 		})
 	}
@@ -307,7 +339,9 @@ func TestZoneState_LogValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			s := rules.ZoneState{
 				Overlay:           tt.fields.Overlay,
 				TargetTemperature: tt.fields.TargetTemperature,

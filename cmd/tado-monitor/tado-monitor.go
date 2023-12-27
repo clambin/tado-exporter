@@ -13,6 +13,8 @@ import (
 )
 
 var (
+	// overridden during build
+	version        = "change-me"
 	configFilename string
 	cmd            = cobra.Command{
 		Use:     "tado-monitor",
@@ -21,9 +23,6 @@ var (
 		Version: version,
 	}
 )
-
-// overridden during build
-var version = "change-me"
 
 func main() {
 	if err := cmd.Execute(); err != nil {

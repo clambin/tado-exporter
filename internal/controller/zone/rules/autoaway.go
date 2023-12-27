@@ -30,7 +30,9 @@ func (a *AutoAwayRule) Evaluate(update poller.Update) (Action, error) {
 	someoneHome := len(home) > 0
 	currentState := GetZoneState(update.ZoneInfo[a.ZoneID])
 
-	if allAway {
+	if !currentState.Home {
+		next.Reason = "device in away mode"
+	} else if allAway {
 		next.Reason = makeReason(away, "away")
 		if currentState.Heating() {
 			next.Action = true
@@ -55,7 +57,7 @@ func (a *AutoAwayRule) getDeviceStates(update poller.Update) ([]string, []string
 	for _, id := range a.MobileDeviceIDs {
 		if entry, exists := update.UserInfo[id]; exists {
 			switch entry.IsHome() {
-			case tado.DeviceAway:
+			case tado.DeviceAway, tado.DeviceUnknown:
 				away = append(away, entry.Name)
 			case tado.DeviceHome:
 				home = append(home, entry.Name)
