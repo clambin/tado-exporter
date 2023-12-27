@@ -8,8 +8,8 @@ github.com/clambin/go-common/slackbot v0.6.0 h1:+qOsGKG1dV9bh8/AFjHZFgMxGUnB4Fh/
 github.com/clambin/go-common/slackbot v0.6.0/go.mod h1:VgOA/NMbgzMqwjuGks3IxVUpICvPvl+NqWPN0MZRRik=
 github.com/clambin/go-common/taskmanager v0.3.0 h1:ASA0axYdGBOukljpdfJxgDE2BwneA1iSgvA/7tLxKw4=
 github.com/clambin/go-common/taskmanager v0.3.0/go.mod h1:lciRo5ME2pCRf0fi5Rx7TcDDgr3/6HuE9qxFgFamfLg=
-github.com/clambin/tado v1.2.0 h1:gF9kEACZIGqTtZz52DXwOCR1uF+R6WU9D+U69QdXjGg=
-github.com/clambin/tado v1.2.0/go.mod h1:GL0IgBjZz/y3QE6FlkClfiYxXJ5Sw6rCQBqrO1g2Srg=
+github.com/clambin/tado v1.3.0 h1:X/t86vonxJsVDD75g3WGUFrLtcUbYIxqJka4mG52T6Y=
+github.com/clambin/tado v1.3.0/go.mod h1:0Xk1e1ncOTm9+Eq62kVs2hb4PA3UPnypSjzvynCAaMw=
 github.com/cpuguy83/go-md2man/v2 v2.0.3/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
