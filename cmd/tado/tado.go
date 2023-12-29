@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/app"
-	"github.com/clambin/tado-exporter/internal/config"
+	"github.com/clambin/tado-exporter/internal/cmd/cli"
+	"github.com/clambin/tado-exporter/internal/cmd/config"
+	"github.com/clambin/tado-exporter/internal/cmd/monitor"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
@@ -13,16 +14,11 @@ import (
 	//_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"time"
 )
 
 var (
-	configFilename string
-	rootCmd        = cobra.Command{
-		Use:     "tado",
-		Short:   "Controller for Tadoº thermostats",
-		Version: version,
-	}
+	// overridden during build
+	version   = "change-me"
 	configCmd = cobra.Command{
 		Use:   "config",
 		Short: "Show Tado configuration",
@@ -31,44 +27,40 @@ var (
 	monitorCmd = cobra.Command{
 		Use:   "monitor",
 		Short: "Monitor Tado thermostats",
-		Run:   monitor,
+		RunE:  runMonitor,
 	}
 )
 
-// overridden during build
-var version = "change-me"
-
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	cli.RootCmd.Version = version
+	cli.RootCmd.AddCommand(&configCmd, &monitorCmd)
+
+	if err := cli.RootCmd.Execute(); err != nil {
 		slog.Error("failed to start", "err", err)
 		os.Exit(1)
 	}
 }
 
-func monitor(cmd *cobra.Command, _ []string) {
+func runMonitor(cmd *cobra.Command, _ []string) error {
 	var opts slog.HandlerOptions
 	if viper.GetBool("debug") {
 		opts.Level = slog.LevelDebug
 	}
 	l := slog.New(slog.NewJSONHandler(os.Stderr, &opts))
 
-	l.Info("tado monitor starting", "version", cmd.Version)
-
-	a, err := app.New(viper.GetViper(), version, l)
+	a, err := monitor.New(viper.GetViper(), version, l)
 	if err != nil {
-		l.Error("failed to start", "err", err)
-		return
+		return fmt.Errorf("init: %w", err)
 	}
 
 	// context to terminate the created go routines
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	if err = a.Run(ctx); err != nil {
-		l.Error("failed to start tado-monitor", "err", err)
-	}
+	l.Info("tado monitor starting", "version", cmd.Version)
+	defer l.Info("tado-monitor stopped")
 
-	l.Info("tado-monitor stopped")
+	return a.Run(ctx)
 }
 
 func showConfig(cmd *cobra.Command, _ []string) error {
@@ -85,42 +77,4 @@ func showConfig(cmd *cobra.Command, _ []string) error {
 	enc.SetIndent(2)
 
 	return config.ShowConfig(cmd.Context(), api, enc)
-}
-
-func init() {
-	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&configFilename, "config", "", "Configuration file")
-	rootCmd.PersistentFlags().Bool("debug", false, "Log debug messages")
-	_ = viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
-
-	rootCmd.AddCommand(&configCmd, &monitorCmd)
-}
-
-func initConfig() {
-	if configFilename != "" {
-		viper.SetConfigFile(configFilename)
-	} else {
-		viper.AddConfigPath("/etc/tado-monitor/")
-		viper.AddConfigPath("$HOME/.tado-monitor")
-		viper.AddConfigPath(".")
-		viper.SetConfigName("config")
-	}
-
-	viper.SetDefault("debug", false)
-	viper.SetDefault("tado.username", "")
-	viper.SetDefault("tado.password", "")
-	viper.SetDefault("tado.clientSecret", "")
-	viper.SetDefault("exporter.addr", ":9090")
-	viper.SetDefault("poller.interval", 30*time.Second)
-	viper.SetDefault("health.addr", ":8080")
-	viper.SetDefault("controller.tadobot.enabled", true)
-	viper.SetDefault("controller.tadobot.token", "")
-
-	viper.SetEnvPrefix("TADO_MONITOR")
-	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err != nil {
-		slog.Error("failed to read config file", "err", err)
-		os.Exit(1)
-	}
 }
