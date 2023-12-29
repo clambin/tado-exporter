@@ -15,14 +15,9 @@ type TadoGetter interface {
 	GetMobileDevices(context.Context) ([]tado.MobileDevice, error)
 }
 
-type entry struct {
-	ID   int
-	Name string
-}
-
 type report struct {
-	Zones   []entry
-	Devices []entry
+	Zones   []map[string]any `json:"zones"`
+	Devices []map[string]any `json:"devices"`
 }
 
 func ShowConfig(ctx context.Context, c TadoGetter, e Encoder) error {
@@ -33,9 +28,9 @@ func ShowConfig(ctx context.Context, c TadoGetter, e Encoder) error {
 		return fmt.Errorf("tado: zones: %w", err)
 	}
 	for _, zone := range zones {
-		r.Zones = append(r.Zones, entry{
-			ID:   zone.ID,
-			Name: zone.Name,
+		r.Zones = append(r.Zones, map[string]any{
+			"id":   zone.ID,
+			"name": zone.Name,
 		})
 	}
 
@@ -44,9 +39,10 @@ func ShowConfig(ctx context.Context, c TadoGetter, e Encoder) error {
 		return fmt.Errorf("tado: mobileDevices: %w", err)
 	}
 	for _, device := range devices {
-		r.Devices = append(r.Devices, entry{
-			ID:   device.ID,
-			Name: device.Name,
+		r.Devices = append(r.Devices, map[string]any{
+			"id":       device.ID,
+			"name":     device.Name,
+			"tracking": device.Settings.GeoTrackingEnabled,
 		})
 	}
 

@@ -36,7 +36,7 @@ func TestShowConfig(t *testing.T) {
 			zonesResult:         zonesResult{[]tado.Zone{{ID: 1, Name: "room"}}, nil},
 			mobileDevicesResult: mobileDevicesResult{[]tado.MobileDevice{{ID: 1000, Name: "user"}}, nil},
 			wantErr:             assert.NoError,
-			wantJSON: `{"Zones":[{"ID":1,"Name":"room"}],"Devices":[{"ID":1000,"Name":"user"}]}
+			wantJSON: `{"zones":[{"id":1,"name":"room"}],"devices":[{"id":1000,"name":"user","tracking":false}]}
 `,
 			wantYAML: `zones:
     - id: 1
@@ -44,6 +44,7 @@ func TestShowConfig(t *testing.T) {
 devices:
     - id: 1000
       name: user
+      tracking: false
 `,
 		},
 		{
