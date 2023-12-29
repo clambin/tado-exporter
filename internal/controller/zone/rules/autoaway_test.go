@@ -55,7 +55,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
 				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo")},
 			},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: ""},
+			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5}}, Delay: time.Hour, Reason: "foo is away"},
 		},
 	}
 

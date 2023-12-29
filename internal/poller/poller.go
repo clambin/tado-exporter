@@ -106,9 +106,9 @@ func (p *TadoPoller) getMobileDevices(ctx context.Context) (map[int]tado.MobileD
 	if err == nil {
 		deviceMap = make(map[int]tado.MobileDevice)
 		for _, device := range devices {
-			if device.Settings.GeoTrackingEnabled {
-				deviceMap[device.ID] = device
-			}
+			//if device.Settings.GeoTrackingEnabled {
+			deviceMap[device.ID] = device
+			//}
 		}
 	}
 	return deviceMap, err

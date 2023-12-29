@@ -23,6 +23,17 @@ func (e *Evaluator) Evaluate(update poller.Update) (Action, error) {
 		return action, err
 	}
 
+	id, home, err := e.zoneInHomeMode(update)
+	if err != nil {
+		return action, err
+	}
+	if !home {
+		action.ZoneID = id
+		action.ZoneName = e.Config.Zone
+		action.Reason = "device in away mode"
+		return action, nil
+	}
+
 	actions := make(Actions, len(e.rules))
 	for i, rule := range e.rules {
 		next, err := rule.Evaluate(update)
@@ -78,4 +89,18 @@ func (e *Evaluator) load(update poller.Update) error {
 	}
 
 	return nil
+}
+
+func (e *Evaluator) zoneInHomeMode(update poller.Update) (int, bool, error) {
+	zoneID, ok := update.GetZoneID(e.Config.Zone)
+	if !ok {
+		return 0, false, fmt.Errorf("invalid zone name: %s", e.Config.Zone)
+	}
+
+	info, ok := update.ZoneInfo[zoneID]
+	if !ok {
+		return 0, false, fmt.Errorf("missing zoneInfo for zone %s", e.Config.Zone)
+	}
+
+	return zoneID, info.TadoMode == "HOME", nil
 }

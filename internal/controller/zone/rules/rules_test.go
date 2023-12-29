@@ -54,23 +54,34 @@ func TestEvaluator_Evaluate(t *testing.T) {
 			},
 			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5.0}}, Delay: time.Hour, Reason: "foo is away"},
 		},
-	}
-
-	e := Evaluator{
-		Config: &ZoneConfig{
-			Zone: "living room",
-			Rules: []ZoneRule{
-				{Kind: LimitOverlay, Delay: 15 * time.Minute},
-				{Kind: NightTime, Timestamp: Timestamp{Hour: 23, Minutes: 30}},
-				{Kind: AutoAway, Delay: time.Hour, Users: []string{"foo"}},
+		{
+			name: "home in away mode",
+			update: poller.Update{
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTadoMode(false), testutil.ZoneInfoTemperature(18, 18))},
+				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false))},
 			},
+			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "device in away mode"},
 		},
 	}
 
 	testForceTime = time.Date(2022, 10, 10, 23, 0, 0, 0, time.Local)
 
 	for _, tt := range testCases {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			e := Evaluator{
+				Config: &ZoneConfig{
+					Zone: "living room",
+					Rules: []ZoneRule{
+						{Kind: LimitOverlay, Delay: 15 * time.Minute},
+						{Kind: NightTime, Timestamp: Timestamp{Hour: 23, Minutes: 30}},
+						{Kind: AutoAway, Delay: time.Hour, Users: []string{"foo"}},
+					},
+				},
+			}
+
 			a, err := e.Evaluate(tt.update)
 			require.NoError(t, err)
 			assert.Equal(t, tt.action, a)
@@ -212,5 +223,78 @@ func BenchmarkEvaluator(b *testing.B) {
 		if _, err := e.Evaluate(update); err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+func TestEvaluator_zoneInHomeMode(t *testing.T) {
+	testCases := []struct {
+		name    string
+		update  poller.Update
+		wantID  int
+		wantOK  assert.BoolAssertionFunc
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "home",
+			update: poller.Update{
+				Zones: map[int]tado.Zone{
+					1: {ID: 1, Name: "room"},
+				},
+				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo()},
+				Home:     true,
+			},
+			wantID:  1,
+			wantOK:  assert.True,
+			wantErr: assert.NoError,
+		},
+		{
+			name: "away",
+			update: poller.Update{
+				Zones: map[int]tado.Zone{
+					1: {ID: 1, Name: "room"},
+				},
+				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTadoMode(false))},
+				Home:     false,
+			},
+			wantID:  1,
+			wantOK:  assert.False,
+			wantErr: assert.NoError,
+		},
+		{
+			name: "invalid room",
+			update: poller.Update{
+				Zones: map[int]tado.Zone{
+					1: {ID: 1, Name: "other room"},
+				},
+				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo()},
+				Home:     true,
+			},
+			wantOK:  assert.False,
+			wantErr: assert.Error,
+		},
+		{
+			name: "invalid update",
+			update: poller.Update{
+				Zones: map[int]tado.Zone{
+					1: {ID: 1, Name: "room"},
+				},
+				ZoneInfo: map[int]tado.ZoneInfo{2: testutil.MakeZoneInfo()},
+				Home:     true,
+			},
+			wantOK:  assert.False,
+			wantErr: assert.Error,
+		},
+	}
+
+	for _, tt := range testCases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			e := Evaluator{Config: &ZoneConfig{Zone: "room"}}
+			id, ok, err := e.zoneInHomeMode(tt.update)
+			assert.Equal(t, tt.wantID, id)
+			tt.wantOK(t, ok)
+			tt.wantErr(t, err)
+		})
 	}
 }
