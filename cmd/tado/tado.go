@@ -91,7 +91,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&configFilename, "config", "", "Configuration file")
 	rootCmd.PersistentFlags().Bool("debug", false, "Log debug messages")
-	_ = viper.BindPFlag("debug", rootCmd.Flags().Lookup("debug"))
+	_ = viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
 
 	rootCmd.AddCommand(&configCmd, &monitorCmd)
 }
