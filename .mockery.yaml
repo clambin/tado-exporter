@@ -25,3 +25,6 @@ packages:
     interfaces:
       Poller:
       TadoGetter:
+  github.com/clambin/tado-exporter/internal/config:
+    interfaces:
+      TadoGetter:

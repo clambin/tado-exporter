@@ -13,7 +13,8 @@ jobs:
       - test
     uses: clambin/workflows/.github/workflows/build.yaml@main
     with:
-      target: tado-monitor
+      target: tado
+      image: tado-monitor
   release:
     needs:
       - build
