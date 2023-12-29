@@ -17,3 +17,4 @@ jobs:
     uses: clambin/workflows/.github/workflows/build.yaml@main
     with:
       target: tado
+      image: tado-monitor
