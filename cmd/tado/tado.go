@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/app"
+	"github.com/clambin/tado-exporter/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 	"log/slog"
 	//_ "net/http/pprof"
 	"os"
@@ -14,11 +18,20 @@ import (
 
 var (
 	configFilename string
-	cmd            = cobra.Command{
-		Use:     "tado-monitor",
-		Short:   "exporter / controller for Tadoº thermostats",
-		Run:     Main,
+	rootCmd        = cobra.Command{
+		Use:     "tado",
+		Short:   "Controller for Tadoº thermostats",
 		Version: version,
+	}
+	configCmd = cobra.Command{
+		Use:   "config",
+		Short: "Show Tado configuration",
+		RunE:  showConfig,
+	}
+	monitorCmd = cobra.Command{
+		Use:   "monitor",
+		Short: "Monitor Tado thermostats",
+		Run:   monitor,
 	}
 )
 
@@ -26,20 +39,20 @@ var (
 var version = "change-me"
 
 func main() {
-	if err := cmd.Execute(); err != nil {
+	if err := rootCmd.Execute(); err != nil {
 		slog.Error("failed to start", "err", err)
 		os.Exit(1)
 	}
 }
 
-func Main(cmd *cobra.Command, _ []string) {
+func monitor(cmd *cobra.Command, _ []string) {
 	var opts slog.HandlerOptions
 	if viper.GetBool("debug") {
 		opts.Level = slog.LevelDebug
 	}
 	l := slog.New(slog.NewJSONHandler(os.Stderr, &opts))
 
-	l.Info("tado-monitor starting", "version", cmd.Version)
+	l.Info("tado monitor starting", "version", cmd.Version)
 
 	a, err := app.New(viper.GetViper(), version, l)
 	if err != nil {
@@ -58,11 +71,29 @@ func Main(cmd *cobra.Command, _ []string) {
 	l.Info("tado-monitor stopped")
 }
 
+func showConfig(cmd *cobra.Command, _ []string) error {
+	api, err := tado.New(
+		viper.GetString("tado.username"),
+		viper.GetString("tado.password"),
+		viper.GetString("tado.clientSecret"),
+	)
+	if err != nil {
+		return fmt.Errorf("tado: %w", err)
+	}
+
+	enc := yaml.NewEncoder(os.Stdout)
+	enc.SetIndent(2)
+
+	return config.ShowConfig(cmd.Context(), api, enc)
+}
+
 func init() {
 	cobra.OnInitialize(initConfig)
-	cmd.Flags().StringVar(&configFilename, "config", "", "Configuration file")
-	cmd.Flags().Bool("debug", false, "Log debug messages")
-	_ = viper.BindPFlag("debug", cmd.Flags().Lookup("debug"))
+	rootCmd.Flags().StringVar(&configFilename, "config", "", "Configuration file")
+	rootCmd.Flags().Bool("debug", false, "Log debug messages")
+	_ = viper.BindPFlag("debug", rootCmd.Flags().Lookup("debug"))
+
+	rootCmd.AddCommand(&configCmd, &monitorCmd)
 }
 
 func initConfig() {

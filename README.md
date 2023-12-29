@@ -32,7 +32,7 @@ The following command-line arguments can be passed:
 
 ```
 Usage:
-  tado-monitor [flags]
+  tado monitor [flags]
 
 Flags:
       --config string   Configuration file
