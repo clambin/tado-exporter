@@ -89,8 +89,8 @@ func showConfig(cmd *cobra.Command, _ []string) error {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.Flags().StringVar(&configFilename, "config", "", "Configuration file")
-	rootCmd.Flags().Bool("debug", false, "Log debug messages")
+	rootCmd.PersistentFlags().StringVar(&configFilename, "config", "", "Configuration file")
+	rootCmd.PersistentFlags().Bool("debug", false, "Log debug messages")
 	_ = viper.BindPFlag("debug", rootCmd.Flags().Lookup("debug"))
 
 	rootCmd.AddCommand(&configCmd, &monitorCmd)
