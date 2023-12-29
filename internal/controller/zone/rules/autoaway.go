@@ -55,10 +55,10 @@ func (a *AutoAwayRule) getDeviceStates(update poller.Update) ([]string, []string
 	for _, id := range a.MobileDeviceIDs {
 		if entry, exists := update.UserInfo[id]; exists {
 			switch entry.IsHome() {
-			case tado.DeviceAway:
-				away = append(away, entry.Name)
 			case tado.DeviceHome:
 				home = append(home, entry.Name)
+			case tado.DeviceAway, tado.DeviceUnknown:
+				away = append(away, entry.Name)
 			}
 		}
 	}
