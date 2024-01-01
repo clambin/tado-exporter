@@ -7,6 +7,9 @@ packages:
   github.com/clambin/tado-exporter/internal/collector:
     interfaces:
       TadoSetter:
+  github.com/clambin/tado-exporter/internal/controller/rules/evaluate:
+    interfaces:
+      TadoSetter:
   github.com/clambin/tado-exporter/internal/controller:
     interfaces:
       TadoSetter:
@@ -24,7 +27,4 @@ packages:
   github.com/clambin/tado-exporter/internal/poller:
     interfaces:
       Poller:
-      TadoGetter:
-  github.com/clambin/tado-exporter/internal/config:
-    interfaces:
       TadoGetter:
