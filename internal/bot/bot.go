@@ -39,7 +39,7 @@ type SlackBot interface {
 }
 
 type Controller interface {
-	ReportTasks() ([]string, bool)
+	ReportTasks() []string
 }
 
 func New(tado TadoSetter, tadoBot SlackBot, p poller.Poller, controller Controller, logger *slog.Logger) *Bot {
@@ -80,10 +80,10 @@ func (b *Bot) Run(ctx context.Context) error {
 }
 
 func (b *Bot) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
-	text, ok := b.controller.ReportTasks()
+	text := b.controller.ReportTasks()
 
 	var slackText, slackTitle string
-	if ok {
+	if len(text) > 0 {
 		slackTitle = "rules:"
 		slackText = strings.Join(text, "\n")
 	} else {
@@ -116,7 +116,7 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 			text = append(text, fmt.Sprintf("%s: %.1fºC (%s)",
 				zone.Name,
 				zoneInfo.SensorDataPoints.InsideTemperature.Celsius,
-				rules.GetZoneState(zoneInfo),
+				rules.GetZoneState(zoneInfo).String(),
 			))
 		}
 	}

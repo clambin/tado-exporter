@@ -2,6 +2,9 @@ package rules
 
 import (
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/internal/controller/rules"
+	"github.com/clambin/tado-exporter/internal/controller/rules/action"
+	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"time"
 )
@@ -9,34 +12,45 @@ import (
 type NightTimeRule struct {
 	zoneID    int
 	zoneName  string
-	timestamp Timestamp
+	timestamp configuration.Timestamp
+
+	GetCurrentTime func() time.Time
 }
 
-var _ Rule = &NightTimeRule{}
+func LoadNightTime(id int, name string, cfg configuration.NightTimeConfiguration, _ poller.Update) (NightTimeRule, error) {
+	return NightTimeRule{
+		zoneID:    id,
+		zoneName:  name,
+		timestamp: cfg.Timestamp,
+	}, nil
+}
 
-var testForceTime time.Time
+var _ rules.Evaluator = NightTimeRule{}
 
-func (n *NightTimeRule) Evaluate(update poller.Update) (Action, error) {
-	next := Action{
-		ZoneID:   n.zoneID,
-		ZoneName: n.zoneName,
-		Reason:   "no manual settings detected",
+func (n NightTimeRule) Evaluate(update poller.Update) (action.Action, error) {
+	e := action.Action{Label: n.zoneName, Reason: "no manual temp setting detected"}
+	s := State{
+		zoneID:   n.zoneID,
+		zoneName: n.zoneName,
+		mode:     action.NoAction,
 	}
 
 	if state := GetZoneState(update.ZoneInfo[n.zoneID]); state.Overlay == tado.PermanentOverlay && state.Heating() {
-		now := time.Now()
-		if !testForceTime.IsZero() {
-			now = testForceTime
+		// allow current time to be set during testing
+		now := time.Now
+		if n.GetCurrentTime != nil {
+			now = n.GetCurrentTime
 		}
-		next.Action = true
-		next.State = ZoneState{Overlay: tado.NoOverlay}
-		next.Delay = getNextNightTimeDelay(now, n.timestamp)
-		next.Reason = "manual temp setting detected"
+
+		s.mode = action.ZoneInAutoMode
+		e.Delay = getNextNightTimeDelay(now(), n.timestamp)
+		e.Reason = "manual temp setting detected"
 	}
-	return next, nil
+	e.State = s
+	return e, nil
 }
 
-func getNextNightTimeDelay(now time.Time, limit Timestamp) time.Duration {
+func getNextNightTimeDelay(now time.Time, limit configuration.Timestamp) time.Duration {
 	next := time.Date(
 		now.Year(), now.Month(), now.Day(),
 		limit.Hour, limit.Minutes, limit.Seconds, 0, time.Local)

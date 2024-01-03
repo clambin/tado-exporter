@@ -12,13 +12,13 @@ import (
 )
 
 type AutoAwayRule struct {
-	zoneID          int
-	zoneName        string
 	delay           time.Duration
 	mobileDeviceIDs []int
 }
 
-func LoadAutoAwayRule(id int, name string, cfg configuration.AutoAwayConfiguration, update poller.Update) (AutoAwayRule, error) {
+var _ rules.Evaluator = AutoAwayRule{}
+
+func LoadAutoAwayRule(cfg configuration.AutoAwayConfiguration, update poller.Update) (AutoAwayRule, error) {
 	var deviceIDs []int
 	for _, user := range cfg.Users {
 		deviceID, ok := update.GetUserID(user)
@@ -29,42 +29,27 @@ func LoadAutoAwayRule(id int, name string, cfg configuration.AutoAwayConfigurati
 	}
 
 	return AutoAwayRule{
-		zoneID:          id,
-		zoneName:        name,
 		delay:           cfg.Delay,
 		mobileDeviceIDs: deviceIDs,
 	}, nil
 }
 
-var _ rules.Evaluator = AutoAwayRule{}
-
 func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
-	e := action.Action{Label: a.zoneName}
-	s := State{
-		zoneID:   a.zoneID,
-		zoneName: a.zoneName,
-		mode:     action.NoAction,
-	}
-
+	evaluation := action.Action{State: State{mode: action.NoAction}}
 	home, away := a.getDeviceStates(update)
-	allAway := len(home) == 0 && len(away) > 0
-	someoneHome := len(home) > 0
-	currentState := GetZoneState(update.ZoneInfo[a.zoneID])
-
-	if allAway {
-		e.Reason = a.makeReason(away, "away")
-		if currentState.Heating() {
-			e.Delay = a.delay
-			s.mode = action.ZoneInOverlayMode
+	if len(home) == 0 {
+		evaluation.Reason = makeReason(away, "away")
+		if update.Home {
+			evaluation.Delay = a.delay
+			evaluation.State = State{mode: action.HomeInAwayMode}
 		}
-	} else if someoneHome {
-		e.Reason = a.makeReason(home, "home")
-		if !currentState.Heating() && currentState.Overlay == tado.PermanentOverlay {
-			s.mode = action.ZoneInAutoMode
+	} else {
+		evaluation.Reason = makeReason(home, "home")
+		if !update.Home {
+			evaluation.State = State{mode: action.HomeInHomeMode}
 		}
 	}
-	e.State = s
-	return e, nil
+	return evaluation, nil
 }
 
 func (a AutoAwayRule) getDeviceStates(update poller.Update) ([]string, []string) {
@@ -82,7 +67,7 @@ func (a AutoAwayRule) getDeviceStates(update poller.Update) ([]string, []string)
 	return home, away
 }
 
-func (a AutoAwayRule) makeReason(users []string, state string) string {
+func makeReason(users []string, state string) string {
 	var verb string
 	if len(users) == 1 {
 		verb = "is"

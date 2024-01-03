@@ -4,24 +4,18 @@ dir: "{{.InterfaceDir}}/mocks"
 mockname: "{{.InterfaceName}}"
 outpkg: "mocks"
 packages:
-  github.com/clambin/tado-exporter/internal/collector:
-    interfaces:
-      TadoSetter:
-  github.com/clambin/tado-exporter/internal/controller/rules/evaluate:
-    interfaces:
-      TadoSetter:
-  github.com/clambin/tado-exporter/internal/controller:
-    interfaces:
-      TadoSetter:
   github.com/clambin/tado-exporter/internal/bot:
     interfaces:
       TadoSetter:
       SlackBot:
       Controller:
-  github.com/clambin/tado-exporter/internal/controller/zone/rules:
+  github.com/clambin/tado-exporter/internal/collector:
     interfaces:
       TadoSetter:
-  github.com/clambin/tado-exporter/internal/controller/zone/notifier:
+  github.com/clambin/tado-exporter/internal/controller/rules/action:
+    interfaces:
+      TadoSetter:
+  github.com/clambin/tado-exporter/internal/controller/notifier:
     interfaces:
       SlackSender:
   github.com/clambin/tado-exporter/internal/poller:

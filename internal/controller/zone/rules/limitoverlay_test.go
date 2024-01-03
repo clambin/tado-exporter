@@ -1,43 +1,104 @@
 package rules
 
 import (
+	"context"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/internal/controller/rules/action/mocks"
+	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
 func TestLimitOverlayRule_Evaluate(t *testing.T) {
-	tests := []testCase{
+	type want struct {
+		err    assert.ErrorAssertionFunc
+		action assert.BoolAssertionFunc
+		delay  time.Duration
+		reason string
+	}
+
+	testCases := []struct {
+		name   string
+		update poller.Update
+		cfg    configuration.LimitOverlayConfiguration
+		want
+	}{
 		{
-			name:   "auto mode",
-			update: poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()}},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
+			name: "zone in auto mode",
+			update: poller.Update{
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22))},
+				Home:     true,
+			},
+			cfg: configuration.LimitOverlayConfiguration{Delay: time.Hour},
+			want: want{
+				err:    assert.NoError,
+				action: assert.False,
+				reason: "no manual temp setting detected",
+			},
 		},
 		{
-			name:   "manual control",
-			update: poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())}},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Delay: time.Hour, Reason: "manual temp setting detected"},
+			name: "zone in manual mode (heating)",
+			update: poller.Update{
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay(), testutil.ZoneInfoTemperature(18, 22))},
+				Home:     true,
+			},
+			cfg: configuration.LimitOverlayConfiguration{Delay: time.Hour},
+			want: want{
+				err:    assert.NoError,
+				action: assert.True,
+				delay:  time.Hour,
+				reason: "manual temp setting detected",
+			},
 		},
 		{
-			name:   "manual control w/ expiration",
-			update: poller.Update{ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoTimerOverlay())}},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "no manual settings detected"},
+			name: "zone in manual mode (off)",
+			update: poller.Update{
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
+				Home:     true,
+			},
+			cfg: configuration.LimitOverlayConfiguration{Delay: time.Hour},
+			want: want{
+				err:    assert.NoError,
+				action: assert.True,
+				delay:  time.Hour,
+				reason: "manual temp setting detected",
+			},
 		},
 	}
-	r := &LimitOverlayRule{
-		zoneID:   10,
-		zoneName: "living room",
-		delay:    time.Hour,
-	}
-	for _, tt := range tests {
+
+	for _, tt := range testCases {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			a, err := r.Evaluate(tt.update)
-			require.NoError(t, err)
-			assert.Equal(t, tt.action, a)
+			t.Parallel()
+			r, err := LoadLimitOverlay(10, "room", tt.cfg, tt.update)
+			tt.err(t, err)
+			if err != nil {
+				return
+			}
+			e, err := r.Evaluate(tt.update)
+			tt.want.err(t, err)
+			if err != nil {
+				return
+			}
+			tt.action(t, e.IsAction())
+			assert.Equal(t, tt.want.delay, e.Delay)
+			assert.Equal(t, tt.want.reason, e.Reason)
+
+			if !e.IsAction() {
+				return
+			}
+
+			ctx := context.Background()
+			c := mocks.NewTadoSetter(t)
+			c.EXPECT().DeleteZoneOverlay(ctx, 10).Return(nil).Once()
+
+			assert.NoError(t, e.State.Do(ctx, c))
 		})
 	}
 }

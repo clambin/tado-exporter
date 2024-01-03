@@ -58,7 +58,7 @@ func runMonitor(cmd *cobra.Command, _ []string) error {
 	defer cancel()
 
 	l.Info("tado monitor starting", "version", cmd.Version)
-	defer l.Info("tado-monitor stopped")
+	defer l.Info("tado monitor stopped")
 
 	return a.Run(ctx)
 }

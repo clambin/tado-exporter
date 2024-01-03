@@ -1,17 +1,11 @@
 package rules_test
 
 import (
-	"bytes"
-	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
-	"github.com/clambin/tado-exporter/internal/controller/zone/rules/mocks"
 	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"log/slog"
 	"testing"
-	"time"
 )
 
 func TestGetZoneState(t *testing.T) {
@@ -72,6 +66,7 @@ func TestGetZoneState(t *testing.T) {
 	}
 }
 
+/*
 func TestZoneState_Do(t *testing.T) {
 	type fields struct {
 		Overlay           tado.OverlayTerminationMode
@@ -328,3 +323,6 @@ func TestZoneState_LogValue(t *testing.T) {
 		})
 	}
 }
+
+
+*/

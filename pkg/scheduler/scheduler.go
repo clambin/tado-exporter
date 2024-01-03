@@ -23,13 +23,17 @@ type Task interface {
 }
 
 type Job struct {
-	when   time.Time
-	task   Task
-	err    error
-	Cancel context.CancelFunc
-	state  State
-	notify chan struct{}
-	lock   sync.RWMutex
+	when       time.Time
+	task       Task
+	err        error
+	CancelFunc context.CancelFunc
+	state      State
+	notify     chan struct{}
+	lock       sync.RWMutex
+}
+
+func (j *Job) Cancel() {
+	j.CancelFunc()
 }
 
 func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
@@ -39,10 +43,10 @@ func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
 func ScheduleWithNotification(ctx context.Context, task Task, waitTime time.Duration, ch chan struct{}) *Job {
 	subCtx, cancel := context.WithCancel(ctx)
 	j := Job{
-		task:   task,
-		state:  StateUnknown,
-		Cancel: cancel,
-		notify: ch,
+		task:       task,
+		state:      StateUnknown,
+		CancelFunc: cancel,
+		notify:     ch,
 	}
 	go j.run(subCtx, waitTime)
 

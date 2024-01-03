@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"bytes"
-	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
+	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,13 +25,13 @@ controller:
 `)
 	require.NoError(t, cfg.ReadConfig(config))
 
-	r, err := rules.Load(bytes.NewBufferString(`
+	r, err := configuration.Load(bytes.NewBufferString(`
 zones:
-  - zone: "Bathroom"
+  - name: "Bathroom"
     rules:
-      - kind: limitOverlay
+      limitOverlay:
         delay: 1h
-`), slog.Default())
+`))
 	require.NoError(t, err)
 
 	tasks := makeTasks(cfg, nil, r, "1.0", slog.Default())
@@ -43,24 +43,23 @@ func Test_maybeLoadRules(t *testing.T) {
 		name    string
 		content string
 		wantErr assert.ErrorAssertionFunc
-		want    []rules.ZoneConfig
+		want    configuration.Configuration
 	}{
 		{
 			name: "valid",
 			content: `zones:
-  - zone: "Bathroom"
+  - name: "bathroom"
     rules:
-      - kind: limitOverlay
+      limitOverlay:
         delay: 1h
 `,
 			wantErr: assert.NoError,
-			want: []rules.ZoneConfig{
-				{
-					Zone: "Bathroom",
-					Rules: []rules.ZoneRule{
-						{
-							Kind:  rules.LimitOverlay,
-							Delay: time.Hour,
+			want: configuration.Configuration{
+				Zones: []configuration.ZoneConfiguration{
+					{
+						Name: "bathroom",
+						Rules: configuration.ZoneRuleConfiguration{
+							LimitOverlay: configuration.LimitOverlayConfiguration{Delay: time.Hour},
 						},
 					},
 				},

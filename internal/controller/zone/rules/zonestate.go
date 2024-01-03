@@ -1,11 +1,8 @@
 package rules
 
 import (
-	"context"
 	"fmt"
 	"github.com/clambin/tado"
-	"log/slog"
-	"math"
 	"time"
 )
 
@@ -27,6 +24,23 @@ func (s ZoneState) Heating() bool {
 	return s.TargetTemperature.Celsius > 5.0
 }
 
+func (s ZoneState) String() any {
+	if !s.Heating() {
+		return "off"
+	}
+	switch s.Overlay {
+	case tado.NoOverlay:
+		return fmt.Sprintf("target: %.1f", s.TargetTemperature.Celsius)
+	case tado.PermanentOverlay:
+		return fmt.Sprintf("target: %.1f, MANUAL", s.TargetTemperature.Celsius)
+	case tado.TimerOverlay, tado.NextBlockOverlay:
+		return fmt.Sprintf("target: %.1f, MANUAL for %s", s.TargetTemperature.Celsius, s.Duration)
+	default:
+		return "unknown"
+	}
+}
+
+/*
 func (s ZoneState) Action() string {
 	if s.Overlay == tado.UnknownOverlay {
 		return "unknown action"
@@ -47,22 +61,6 @@ func (s ZoneState) Action() string {
 		action += " for " + s.Duration.String()
 	}
 	return action
-}
-
-func (s ZoneState) String() string {
-	if !s.Heating() {
-		return "off"
-	}
-	switch s.Overlay {
-	case tado.NoOverlay:
-		return fmt.Sprintf("target: %.1f", s.TargetTemperature.Celsius)
-	case tado.PermanentOverlay:
-		return fmt.Sprintf("target: %.1f, MANUAL", s.TargetTemperature.Celsius)
-	case tado.TimerOverlay, tado.NextBlockOverlay:
-		return fmt.Sprintf("target: %.1f, MANUAL for %s", s.TargetTemperature.Celsius, s.Duration)
-	default:
-		return "unknown"
-	}
 }
 
 type TadoSetter interface {
@@ -93,3 +91,6 @@ func (s ZoneState) LogValue() slog.Value {
 	}
 	return slog.GroupValue(values...)
 }
+
+
+*/

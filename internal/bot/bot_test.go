@@ -5,7 +5,7 @@ import (
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
-	mocks2 "github.com/clambin/tado-exporter/internal/poller/mocks"
+	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado/testutil"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +23,7 @@ func TestBot_Run(t *testing.T) {
 	b.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	ch := make(chan poller.Update)
-	p := mocks2.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 	p.EXPECT().Subscribe().Return(ch).Once()
 	p.EXPECT().Unsubscribe(ch).Return().Once()
 
@@ -51,7 +51,7 @@ func TestExecutor_ReportRules(t *testing.T) {
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	controller := mocks.NewController(t)
-	controller.EXPECT().ReportTasks().Return(nil, false).Once()
+	controller.EXPECT().ReportTasks().Return(nil).Once()
 
 	c := New(api, bot, nil, controller, slog.Default())
 
@@ -60,7 +60,7 @@ func TestExecutor_ReportRules(t *testing.T) {
 	require.Len(t, attachments, 1)
 	assert.Equal(t, "no rules have been triggered", attachments[0].Text)
 
-	controller.EXPECT().ReportTasks().Return([]string{"foo"}, true).Once()
+	controller.EXPECT().ReportTasks().Return([]string{"foo"}).Once()
 	attachments = c.ReportRules(ctx)
 	require.Len(t, attachments, 1)
 	assert.Equal(t, "foo", attachments[0].Text)
@@ -71,7 +71,7 @@ func TestExecutor_SetRoom(t *testing.T) {
 	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
-	p := mocks2.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 
 	executor := New(api, bot, p, nil, slog.Default())
 	executor.update = poller.Update{
@@ -161,7 +161,7 @@ func TestExecutor_DoRefresh(t *testing.T) {
 	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
-	p := mocks2.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 	p.EXPECT().Refresh()
 
 	c := New(api, bot, p, nil, slog.Default())

@@ -18,7 +18,7 @@ func (_m *Controller) EXPECT() *Controller_Expecter {
 }
 
 // ReportTasks provides a mock function with given fields:
-func (_m *Controller) ReportTasks() ([]string, bool) {
+func (_m *Controller) ReportTasks() []string {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
@@ -26,10 +26,6 @@ func (_m *Controller) ReportTasks() ([]string, bool) {
 	}
 
 	var r0 []string
-	var r1 bool
-	if rf, ok := ret.Get(0).(func() ([]string, bool)); ok {
-		return rf()
-	}
 	if rf, ok := ret.Get(0).(func() []string); ok {
 		r0 = rf()
 	} else {
@@ -38,13 +34,7 @@ func (_m *Controller) ReportTasks() ([]string, bool) {
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func() bool); ok {
-		r1 = rf()
-	} else {
-		r1 = ret.Get(1).(bool)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // Controller_ReportTasks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReportTasks'
@@ -64,12 +54,12 @@ func (_c *Controller_ReportTasks_Call) Run(run func()) *Controller_ReportTasks_C
 	return _c
 }
 
-func (_c *Controller_ReportTasks_Call) Return(_a0 []string, _a1 bool) *Controller_ReportTasks_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *Controller_ReportTasks_Call) Return(_a0 []string) *Controller_ReportTasks_Call {
+	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *Controller_ReportTasks_Call) RunAndReturn(run func() ([]string, bool)) *Controller_ReportTasks_Call {
+func (_c *Controller_ReportTasks_Call) RunAndReturn(run func() []string) *Controller_ReportTasks_Call {
 	_c.Call.Return(run)
 	return _c
 }

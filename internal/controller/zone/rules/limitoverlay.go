@@ -2,6 +2,8 @@ package rules
 
 import (
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/internal/controller/rules/action"
+	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"time"
 )
@@ -12,19 +14,29 @@ type LimitOverlayRule struct {
 	delay    time.Duration
 }
 
-var _ Rule = &LimitOverlayRule{}
+func LoadLimitOverlay(id int, name string, cfg configuration.LimitOverlayConfiguration, _ poller.Update) (LimitOverlayRule, error) {
+	return LimitOverlayRule{
+		zoneID:   id,
+		zoneName: name,
+		delay:    cfg.Delay,
+	}, nil
+}
 
-func (l *LimitOverlayRule) Evaluate(update poller.Update) (Action, error) {
-	next := Action{
-		ZoneID:   l.zoneID,
-		ZoneName: l.zoneName,
-		Reason:   "no manual settings detected",
+//var _ evaluate.Evaluator = LimitOverlayRule{}
+
+func (l LimitOverlayRule) Evaluate(update poller.Update) (action.Action, error) {
+	s := State{
+		zoneID:   l.zoneID,
+		zoneName: l.zoneName,
+		mode:     action.NoAction,
 	}
-	if state := GetZoneState(update.ZoneInfo[l.zoneID]); state.Overlay == tado.PermanentOverlay && state.Heating() {
-		next.Action = true
-		next.State = ZoneState{Overlay: tado.NoOverlay}
-		next.Delay = l.delay
-		next.Reason = "manual temp setting detected"
+	e := action.Action{Label: l.zoneName, Reason: "no manual temp setting detected"}
+
+	if state := GetZoneState(update.ZoneInfo[l.zoneID]); state.Overlay == tado.PermanentOverlay {
+		s.mode = action.ZoneInAutoMode
+		e.Delay = l.delay
+		e.Reason = "manual temp setting detected"
 	}
-	return next, nil
+	e.State = s
+	return e, nil
 }

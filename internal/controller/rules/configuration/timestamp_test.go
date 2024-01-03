@@ -1,7 +1,7 @@
 package configuration_test
 
 import (
-	rules "github.com/clambin/tado-exporter/internal/controller/rules/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -12,19 +12,19 @@ func TestTimestamp_UnmarshalYAML(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    rules.Timestamp
+		want    configuration.Timestamp
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
 			name:    "long",
 			input:   "23:30:15",
-			want:    rules.Timestamp{Hour: 23, Minutes: 30, Seconds: 15, Active: true},
+			want:    configuration.Timestamp{Hour: 23, Minutes: 30, Seconds: 15, Active: true},
 			wantErr: assert.NoError,
 		},
 		{
 			name:    "short",
 			input:   "23:30",
-			want:    rules.Timestamp{Hour: 23, Minutes: 30, Seconds: 0, Active: true},
+			want:    configuration.Timestamp{Hour: 23, Minutes: 30, Seconds: 0, Active: true},
 			wantErr: assert.NoError,
 		},
 		{
@@ -48,7 +48,7 @@ func TestTimestamp_UnmarshalYAML(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			var output rules.Timestamp
+			var output configuration.Timestamp
 			tt.wantErr(t, yaml.Unmarshal([]byte(tt.input), &output))
 			assert.Equal(t, tt.want, output)
 		})
@@ -56,7 +56,7 @@ func TestTimestamp_UnmarshalYAML(t *testing.T) {
 }
 
 func TestTimestamp_MarshalYAML(t *testing.T) {
-	ts := rules.Timestamp{
+	ts := configuration.Timestamp{
 		Hour:    23,
 		Minutes: 30,
 		Seconds: 0,

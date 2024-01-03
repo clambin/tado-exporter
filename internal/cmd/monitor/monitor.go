@@ -11,7 +11,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"
-	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
+	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/health"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/prometheus/client_golang/prometheus"
@@ -40,22 +40,22 @@ func New(cfg *viper.Viper, version string, logger *slog.Logger) (*taskmanager.Ma
 	return taskmanager.New(makeTasks(cfg, api, r, version, logger)...), nil
 }
 
-func maybeLoadRules(path string, logger *slog.Logger) ([]rules.ZoneConfig, error) {
+func maybeLoadRules(path string, logger *slog.Logger) (configuration.Configuration, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			err = nil
 		}
-		return nil, err
+		return configuration.Configuration{}, err
 	}
 	defer func(f *os.File) {
 		_ = f.Close()
 	}(f)
 
-	return rules.Load(f, logger)
+	return configuration.Load(f)
 }
 
-func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules []rules.ZoneConfig, version string, l *slog.Logger) []taskmanager.Task {
+func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Configuration, version string, l *slog.Logger) []taskmanager.Task {
 	var tasks []taskmanager.Task
 
 	// Poller
@@ -89,7 +89,7 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules []rules.ZoneConfig, 
 
 	var c *controller.Controller
 	// Controller
-	if len(rules) > 0 {
+	if len(rules.Zones) > 0 {
 		c = controller.New(api, rules, b, p, l.With("component", "controller"))
 		tasks = append(tasks, c)
 	} else {
@@ -100,7 +100,7 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules []rules.ZoneConfig, 
 	if cfg.GetBool("controller.tadoBot.enabled") {
 		tasks = append(tasks,
 			b,
-			bot.New(api, b, p, c.ZoneManagers, l.With(slog.String("component", "tadobot"))),
+			bot.New(api, b, p, c, l.With(slog.String("component", "tadobot"))),
 		)
 	}
 
