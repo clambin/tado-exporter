@@ -3,6 +3,7 @@ package monitor
 import (
 	"bytes"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,7 +50,7 @@ controller:
     token: 1234
 `,
 			rules:  ``,
-			length: 8,
+			length: 5,
 		},
 	}
 
@@ -69,7 +70,7 @@ controller:
 				require.NoError(t, err)
 			}
 
-			tasks := makeTasks(cfg, nil, r, "1.0", slog.Default())
+			tasks := makeTasks(cfg, nil, r, "1.0", prometheus.NewPedanticRegistry(), slog.Default())
 			assert.Len(t, tasks, tt.length)
 		})
 	}

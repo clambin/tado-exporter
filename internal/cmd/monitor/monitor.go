@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 )
 
-func New(cfg *viper.Viper, version string, logger *slog.Logger) (*taskmanager.Manager, error) {
+func New(cfg *viper.Viper, version string, registry prometheus.Registerer, logger *slog.Logger) (*taskmanager.Manager, error) {
 	api, err := tado.New(
 		cfg.GetString("tado.username"),
 		cfg.GetString("tado.password"),
@@ -37,7 +37,7 @@ func New(cfg *viper.Viper, version string, logger *slog.Logger) (*taskmanager.Ma
 	if err != nil {
 		return nil, err
 	}
-	return taskmanager.New(makeTasks(cfg, api, r, version, logger)...), nil
+	return taskmanager.New(makeTasks(cfg, api, r, version, registry, logger)...), nil
 }
 
 func maybeLoadRules(path string, logger *slog.Logger) (configuration.Configuration, error) {
@@ -55,7 +55,7 @@ func maybeLoadRules(path string, logger *slog.Logger) (configuration.Configurati
 	return configuration.Load(f)
 }
 
-func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Configuration, version string, l *slog.Logger) []taskmanager.Task {
+func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Configuration, version string, registry prometheus.Registerer, l *slog.Logger) []taskmanager.Task {
 	var tasks []taskmanager.Task
 
 	// Poller
@@ -64,7 +64,9 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Config
 
 	// Collector
 	coll := &collector.Collector{Poller: p, Logger: l.With("component", "collector")}
-	prometheus.MustRegister(coll)
+	if registry != nil {
+		registry.MustRegister(coll)
+	}
 	tasks = append(tasks, coll)
 
 	// Prometheus Server
@@ -77,31 +79,30 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Config
 	r.Handle("/health", h)
 	tasks = append(tasks, httpserver.New(cfg.GetString("health.addr"), r))
 
-	// Slackbot
-	var b *slackbot.SlackBot
-	if token := cfg.GetString("controller.tadoBot.token"); token != "" {
-		b = slackbot.New(
-			token,
-			slackbot.WithName("tadoBot "+version),
-			slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
-		)
-	}
-
-	var c *controller.Controller
 	// Controller
 	if len(rules.Zones) > 0 {
-		c = controller.New(api, rules, b, p, l.With("component", "controller"))
-		tasks = append(tasks, c)
+		// Slackbot
+		var b *slackbot.SlackBot
+		if token := cfg.GetString("controller.tadoBot.token"); token != "" {
+			b = slackbot.New(
+				token,
+				slackbot.WithName("tadoBot "+version),
+				slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
+			)
+			tasks = append(tasks, b)
+		}
+
+		c := controller.New(api, rules, b, p, l.With("component", "controller"))
+		tasks = append(tasks,
+			c,
+			bot.New(api, b, p, c, l.With(slog.String("component", "tadobot"))),
+		)
 	} else {
 		l.Warn("no rules found. controller will not run")
 	}
 
 	// Slackbot
 	if cfg.GetBool("controller.tadoBot.enabled") {
-		tasks = append(tasks,
-			b,
-			bot.New(api, b, p, c, l.With(slog.String("component", "tadobot"))),
-		)
 	}
 
 	return tasks

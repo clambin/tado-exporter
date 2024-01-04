@@ -7,6 +7,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/cmd/cli"
 	"github.com/clambin/tado-exporter/internal/cmd/config"
 	"github.com/clambin/tado-exporter/internal/cmd/monitor"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
@@ -20,14 +21,16 @@ var (
 	// overridden during build
 	version   = "change-me"
 	configCmd = cobra.Command{
-		Use:   "config",
-		Short: "Show Tado configuration",
-		RunE:  showConfig,
+		Use:     "config",
+		Short:   "Show Tado configuration",
+		RunE:    showConfig,
+		Version: version,
 	}
 	monitorCmd = cobra.Command{
-		Use:   "monitor",
-		Short: "Monitor Tado thermostats",
-		RunE:  runMonitor,
+		Use:     "monitor",
+		Short:   "Monitor Tado thermostats",
+		RunE:    runMonitor,
+		Version: version,
 	}
 )
 
@@ -48,7 +51,7 @@ func runMonitor(cmd *cobra.Command, _ []string) error {
 	}
 	l := slog.New(slog.NewJSONHandler(os.Stderr, &opts))
 
-	a, err := monitor.New(viper.GetViper(), version, l)
+	a, err := monitor.New(viper.GetViper(), version, prometheus.DefaultRegisterer, l)
 	if err != nil {
 		return fmt.Errorf("init: %w", err)
 	}
