@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,29 +14,66 @@ import (
 )
 
 func Test_makeTasks(t *testing.T) {
-	cfg := viper.New()
-	cfg.SetConfigType("yaml")
-	config := bytes.NewBufferString(`
+	testCases := []struct {
+		name   string
+		config string
+		rules  string
+		length int
+	}{
+		{
+			name: "with rules",
+			config: `
 health:
   addr: :9091
 controller:
   tadoBot:
     enabled: true
     token: 1234
-`)
-	require.NoError(t, cfg.ReadConfig(config))
-
-	r, err := rules.Load(bytes.NewBufferString(`
+`,
+			rules: `
 zones:
   - zone: "Bathroom"
     rules:
       - kind: limitOverlay
         delay: 1h
-`), slog.Default())
-	require.NoError(t, err)
+`,
+			length: 8,
+		},
+		{
+			name: "no rules",
+			config: `
+health:
+  addr: :9091
+controller:
+  tadoBot:
+    enabled: true
+    token: 1234
+`,
+			length: 5,
+		},
+	}
 
-	tasks := makeTasks(cfg, nil, r, "1.0", slog.Default())
-	assert.Len(t, tasks, 8)
+	for _, tt := range testCases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := viper.New()
+			cfg.SetConfigType("yaml")
+			config := bytes.NewBufferString(tt.config)
+			require.NoError(t, cfg.ReadConfig(config))
+
+			var r []rules.ZoneConfig
+			if tt.rules != "" {
+				var err error
+				r, err = rules.Load(bytes.NewBufferString(tt.rules), slog.Default())
+				require.NoError(t, err)
+			}
+
+			tasks := makeTasks(cfg, nil, r, "1.0", prometheus.NewPedanticRegistry(), slog.Default())
+			assert.Len(t, tasks, tt.length)
+		})
+	}
 }
 
 func Test_maybeLoadRules(t *testing.T) {

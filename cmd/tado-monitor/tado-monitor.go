@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/clambin/tado-exporter/internal/app"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log/slog"
@@ -41,7 +42,7 @@ func Main(cmd *cobra.Command, _ []string) {
 
 	l.Info("tado-monitor starting", "version", cmd.Version)
 
-	a, err := app.New(viper.GetViper(), version, l)
+	a, err := app.New(viper.GetViper(), version, prometheus.DefaultRegisterer, l)
 	if err != nil {
 		l.Error("failed to start", "err", err)
 		return
