@@ -25,7 +25,7 @@ zones:
       limitOverlay:
         delay: 1h
       nightTime:
-        timestamp: 00:00
+        time: 00:00
 `))
 	require.NoError(t, err)
 
@@ -47,7 +47,7 @@ zones:
         limitOverlay:
             delay: 1h0m0s
         nightTime:
-            timestamp: "00:00:00"
+            time: "00:00:00"
 `, out.String())
 }
 

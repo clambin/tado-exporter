@@ -35,5 +35,9 @@ func (t *Task) firesNoLaterThan(next action.Action) bool {
 }
 
 func (t *Task) Report() string {
-	return t.action.String() + " in " + t.job.TimeToFire().Round(time.Second).String()
+	result := t.action.String() + " in " + t.job.TimeToFire().Round(time.Second).String()
+	if t.action.Label != "" {
+		result = t.action.Label + ": " + result
+	}
+	return result
 }

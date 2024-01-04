@@ -148,16 +148,6 @@ func (p *Processor) processResult() error {
 	return err
 }
 
-func (p *Processor) GetScheduled() (action.Action, bool) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	if p.task == nil {
-		return action.Action{}, false
-	}
-	return p.task.action, true
-}
-
 func (p *Processor) ReportTask() (string, bool) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()

@@ -10,28 +10,45 @@ import (
 )
 
 func TestAction(t *testing.T) {
+	type want struct {
+		isAction assert.BoolAssertionFunc
+		logValue string
+		asString string
+	}
 	testCases := []struct {
-		name         string
-		action       action.Action
-		wantIsAction assert.BoolAssertionFunc
-		wantLogValue string
-		wantString   string
+		name   string
+		action action.Action
+		want
 	}{
 		{
-			name:         "no action",
-			action:       action.Action{Reason: "test"},
-			wantIsAction: assert.False,
-			wantLogValue: `level=INFO msg=action action.action=false action.reason=test
+			name:   "no action",
+			action: action.Action{Reason: "test"},
+			want: want{
+				isAction: assert.False,
+				logValue: `level=INFO msg=action action.action=false action.reason=test
 `,
-			wantString: "no action",
+				asString: "no action",
+			},
 		},
 		{
-			name:         "action",
-			action:       action.Action{State: testutil.FakeState{ModeValue: action.HomeInAwayMode}, Reason: "test", Delay: time.Hour},
-			wantIsAction: assert.True,
-			wantLogValue: `level=INFO msg=action action.action=true action.reason=test action.delay=1h0m0s action.state.mode=away
+			name:   "action",
+			action: action.Action{State: testutil.FakeState{ModeValue: action.HomeInAwayMode}, Reason: "test", Delay: time.Hour},
+			want: want{
+				isAction: assert.True,
+				logValue: `level=INFO msg=action action.action=true action.reason=test action.delay=1h0m0s action.state.mode=away
 `,
-			wantString: "away",
+				asString: "away",
+			},
+		},
+		{
+			name:   "action (label)",
+			action: action.Action{State: testutil.FakeState{ModeValue: action.HomeInAwayMode}, Reason: "test", Delay: time.Hour, Label: "room"},
+			want: want{
+				isAction: assert.True,
+				logValue: `level=INFO msg=action action.action=true action.reason=test action.label=room action.delay=1h0m0s action.state.mode=away
+`,
+				asString: "away",
+			},
 		},
 	}
 
@@ -44,9 +61,9 @@ func TestAction(t *testing.T) {
 			logger := testutil.NewBufferLogger(&logOutput)
 			logger.Info("action", "action", tt.action)
 
-			tt.wantIsAction(t, tt.action.IsAction())
-			assert.Equal(t, tt.wantLogValue, logOutput.String())
-			assert.Equal(t, tt.wantString, tt.action.String())
+			tt.want.isAction(t, tt.action.IsAction())
+			assert.Equal(t, tt.want.logValue, logOutput.String())
+			assert.Equal(t, tt.want.asString, tt.action.String())
 		})
 	}
 }

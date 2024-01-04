@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"github.com/clambin/go-common/taskmanager"
+	"github.com/clambin/tado-exporter/internal/controller/home"
 	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
@@ -26,7 +27,12 @@ type TaskReporter interface {
 func New(api action.TadoSetter, cfg configuration.Configuration, tadoBot notifier.SlackSender, p poller.Poller, logger *slog.Logger) *Controller {
 	c := Controller{logger: logger}
 
-	// todo: add a task for a home manager
+	if cfg.Home.AutoAway.IsActive() {
+		h := home.New(api, p, tadoBot, cfg.Home, logger.With("home", ""))
+		c.reporters = append(c.reporters, h)
+		_ = c.tasks.Add(h)
+	}
+
 	for _, zoneCfg := range cfg.Zones {
 		z := zone.New(api, p, tadoBot, zoneCfg, logger.With("zone", zoneCfg.Name))
 		c.reporters = append(c.reporters, z)

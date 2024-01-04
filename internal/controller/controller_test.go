@@ -15,6 +15,12 @@ import (
 
 func TestController_Run(t *testing.T) {
 	zoneCfg := configuration.Configuration{
+		Home: configuration.HomeConfiguration{
+			AutoAway: configuration.AutoAwayConfiguration{
+				Users: []string{"A", "B"},
+				Delay: time.Hour,
+			},
+		},
 		Zones: []configuration.ZoneConfiguration{{
 			Name: "foo",
 			Rules: configuration.ZoneRuleConfiguration{
@@ -37,4 +43,8 @@ func TestController_Run(t *testing.T) {
 
 	cancel()
 	assert.NoError(t, <-errCh)
+
+	tasks := m.ReportTasks()
+	assert.Empty(t, tasks)
+
 }

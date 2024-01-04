@@ -8,9 +8,9 @@ import (
 	"github.com/clambin/go-common/taskmanager/httpserver"
 	promserver "github.com/clambin/go-common/taskmanager/prometheus"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"
+	"github.com/clambin/tado-exporter/internal/controller/bot"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/health"
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -33,14 +33,14 @@ func New(cfg *viper.Viper, version string, registry prometheus.Registerer, logge
 	}
 
 	// Do we have zone rules?
-	r, err := maybeLoadRules(filepath.Join(filepath.Dir(cfg.ConfigFileUsed()), "rules.yaml"), logger)
+	r, err := maybeLoadRules(filepath.Join(filepath.Dir(cfg.ConfigFileUsed()), "rules.yaml"))
 	if err != nil {
 		return nil, err
 	}
 	return taskmanager.New(makeTasks(cfg, api, r, version, registry, logger)...), nil
 }
 
-func maybeLoadRules(path string, logger *slog.Logger) (configuration.Configuration, error) {
+func maybeLoadRules(path string) (configuration.Configuration, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -81,8 +81,20 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Config
 
 	// Controller
 	if len(rules.Zones) > 0 {
-		// Slackbot
-		var b *slackbot.SlackBot
+		tasks = append(tasks, makeControllerTasks(cfg, api, rules, p, version, l)...)
+	} else {
+		l.Warn("no rules found. controller will not run")
+	}
+
+	return tasks
+}
+
+func makeControllerTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Configuration, p poller.Poller, version string, l *slog.Logger) []taskmanager.Task {
+	var tasks []taskmanager.Task
+
+	// Slackbot
+	var b *slackbot.SlackBot
+	if cfg.GetBool("controller.tadoBot.enabled") {
 		if token := cfg.GetString("controller.tadoBot.token"); token != "" {
 			b = slackbot.New(
 				token,
@@ -91,19 +103,13 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Config
 			)
 			tasks = append(tasks, b)
 		}
-
-		c := controller.New(api, rules, b, p, l.With("component", "controller"))
-		tasks = append(tasks,
-			c,
-			bot.New(api, b, p, c, l.With(slog.String("component", "tadobot"))),
-		)
-	} else {
-		l.Warn("no rules found. controller will not run")
 	}
 
-	// Slackbot
-	if cfg.GetBool("controller.tadoBot.enabled") {
-	}
+	c := controller.New(api, rules, b, p, l.With("component", "controller"))
+	tasks = append(tasks, c)
 
+	if b != nil {
+		tasks = append(tasks, bot.New(api, b, p, c, l.With(slog.String("component", "tadobot"))))
+	}
 	return tasks
 }

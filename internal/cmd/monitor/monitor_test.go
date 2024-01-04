@@ -133,7 +133,7 @@ func Test_maybeLoadRules(t *testing.T) {
 				_ = os.Remove(f.Name())
 			}
 
-			r, err := maybeLoadRules(f.Name(), slog.Default())
+			r, err := maybeLoadRules(f.Name())
 			tt.wantErr(t, err)
 			assert.Equal(t, tt.want, r)
 		})

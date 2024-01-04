@@ -51,7 +51,7 @@ func (c LimitOverlayConfiguration) IsActive() bool {
 }
 
 type NightTimeConfiguration struct {
-	Timestamp Timestamp `yaml:"timestamp"`
+	Timestamp Timestamp `yaml:"time"`
 }
 
 func (c NightTimeConfiguration) IsActive() bool {

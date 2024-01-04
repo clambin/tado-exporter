@@ -91,11 +91,15 @@ func (b *Bot) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
 		slackText = "no rules have been triggered"
 	}
 
-	return []slack.Attachment{{
+	result := []slack.Attachment{{
 		Color: "good",
 		Title: slackTitle,
 		Text:  slackText,
 	}}
+
+	b.logger.Debug("rules", "title", result[0].Title, "text", result[0].Text)
+
+	return result
 }
 
 func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {

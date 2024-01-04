@@ -35,6 +35,11 @@ func (e Action) LogValue() slog.Value {
 		slog.Bool("action", e.IsAction()),
 		slog.String("reason", e.Reason),
 	}
+	if e.Label != "" {
+		values = append(values,
+			slog.String("label", e.Label),
+		)
+	}
 	if e.IsAction() {
 		values = append(values,
 			slog.Duration("delay", e.Delay),

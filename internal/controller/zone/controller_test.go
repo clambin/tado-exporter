@@ -1,12 +1,12 @@
-package home_test
+package zone_test
 
 import (
 	"context"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/controller/home"
 	mocks3 "github.com/clambin/tado-exporter/internal/controller/notifier/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/zone"
 	"github.com/clambin/tado-exporter/internal/poller"
 	mocks2 "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado/testutil"
@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-func TestHomeController(t *testing.T) {
+func TestZoneController(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
 
 	p := mocks2.NewPoller(t)
@@ -27,17 +27,20 @@ func TestHomeController(t *testing.T) {
 
 	b := mocks3.NewSlackSender(t)
 
-	cfg := configuration.HomeConfiguration{AutoAway: configuration.AutoAwayConfiguration{
-		Users: []string{"A"},
-		Delay: time.Hour,
-	}}
+	cfg := configuration.ZoneConfiguration{
+		Name: "room",
+		Rules: configuration.ZoneRuleConfiguration{
+			LimitOverlay: configuration.LimitOverlayConfiguration{
+				Delay: time.Hour,
+			}},
+	}
 
-	h := home.New(api, p, b, cfg, slog.Default())
+	z := zone.New(api, p, b, cfg, slog.Default())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
-		errCh <- h.Run(ctx)
+		errCh <- z.Run(ctx)
 	}()
 
 	testCases := []struct {
@@ -46,29 +49,23 @@ func TestHomeController(t *testing.T) {
 	}{
 		{
 			update: poller.Update{
-				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(10, "A", testutil.Home(true)),
-				},
-				Home: true,
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
 			},
 		},
 		{
 			update: poller.Update{
-				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(10, "A", testutil.Home(false)),
-				},
-				Home: true,
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
 			},
-			event: []slack.Attachment{{Color: "good", Title: "setting home to away mode in 1h0m0s", Text: "A is away"}},
+			event: []slack.Attachment{{Color: "good", Title: "room: moving to auto mode in 1h0m0s", Text: "manual temp setting detected"}},
 		},
 		{
 			update: poller.Update{
-				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(10, "A", testutil.Home(true)),
-				},
-				Home: true,
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
 			},
-			event: []slack.Attachment{{Color: "good", Title: "canceling setting home to away mode", Text: "A is home"}},
+			event: []slack.Attachment{{Color: "good", Title: "room: canceling moving to auto mode", Text: "no manual temp setting detected"}},
 		},
 	}
 
