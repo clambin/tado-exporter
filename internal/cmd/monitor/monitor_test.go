@@ -13,29 +13,66 @@ import (
 )
 
 func Test_makeTasks(t *testing.T) {
-	cfg := viper.New()
-	cfg.SetConfigType("yaml")
-	config := bytes.NewBufferString(`
+	testCses := []struct {
+		name   string
+		config string
+		rules  string
+		length int
+	}{
+		{
+			name: "rules",
+			config: `
 health:
   addr: :9091
 controller:
   tadoBot:
     enabled: true
     token: 1234
-`)
-	require.NoError(t, cfg.ReadConfig(config))
-
-	r, err := configuration.Load(bytes.NewBufferString(`
+`,
+			rules: `
 zones:
   - name: "Bathroom"
     rules:
       limitOverlay:
         delay: 1h
-`))
-	require.NoError(t, err)
+`,
+			length: 8,
+		},
+		{
+			name: "no rules",
+			config: `
+health:
+  addr: :9091
+controller:
+  tadoBot:
+    enabled: true
+    token: 1234
+`,
+			rules:  ``,
+			length: 8,
+		},
+	}
 
-	tasks := makeTasks(cfg, nil, r, "1.0", slog.Default())
-	assert.Len(t, tasks, 8)
+	for _, tt := range testCses {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := viper.New()
+			cfg.SetConfigType("yaml")
+			config := bytes.NewBufferString(tt.config)
+			require.NoError(t, cfg.ReadConfig(config))
+
+			var r configuration.Configuration
+			if tt.rules != "" {
+				var err error
+				r, err = configuration.Load(bytes.NewBufferString(tt.rules))
+				require.NoError(t, err)
+			}
+
+			tasks := makeTasks(cfg, nil, r, "1.0", slog.Default())
+			assert.Len(t, tasks, tt.length)
+		})
+	}
 }
 
 func Test_maybeLoadRules(t *testing.T) {
