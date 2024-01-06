@@ -95,7 +95,7 @@ func TestProcessor(t *testing.T) {
 		f.set(entry.action)
 
 		updateCh <- poller.Update{}
-		// TODO: race condition?
+		// TODO: race condition
 		time.Sleep(100 * time.Millisecond)
 
 		task, ok := proc.ReportTask()

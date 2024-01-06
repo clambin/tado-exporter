@@ -21,6 +21,6 @@ func New(tadoClient action.TadoSetter, p poller.Poller, bot notifier.SlackSender
 	}
 
 	return &Controller{
-		Processor: processor.New(tadoClient, p, bot, loader, logger),
+		Processor: processor.New(tadoClient, p, bot, loader, logger.With("type", "home")),
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -35,18 +36,29 @@ func LoadAutoAwayRule(cfg configuration.AutoAwayConfiguration, update poller.Upd
 }
 
 func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
-	evaluation := action.Action{State: State{mode: action.NoAction}}
 	home, away := a.getDeviceStates(update)
+
+	// TODO: remove before commit
+	slog.Info("home autoaway",
+		"home", strings.Join(home, ", "),
+		"away", strings.Join(away, ", "),
+	)
+
+	var evaluation action.Action
 	if len(home) == 0 {
 		evaluation.Reason = makeReason(away, "away")
 		if update.Home {
 			evaluation.Delay = a.delay
 			evaluation.State = State{mode: action.HomeInAwayMode}
+		} else {
+			slog.Info("home already in away mode")
 		}
 	} else {
 		evaluation.Reason = makeReason(home, "home")
 		if !update.Home {
 			evaluation.State = State{mode: action.HomeInHomeMode}
+		} else {
+			slog.Info("home already in home mode")
 		}
 	}
 	return evaluation, nil
