@@ -38,6 +38,18 @@ func TestState(t *testing.T) {
 			wantLog: `level=INFO msg=state state.type=zone state.name=room state.mode=overlay state.temperature=18
 `,
 		},
+		{
+			name: "off",
+			state: State{
+				zoneID:          10,
+				zoneName:        "room",
+				mode:            action.ZoneInOverlayMode,
+				zoneTemperature: 5,
+			},
+			wantString: `switching off heating`,
+			wantLog: `level=INFO msg=state state.type=zone state.name=room state.mode=overlay state.temperature=5
+`,
+		},
 	}
 
 	for _, tt := range testCases {

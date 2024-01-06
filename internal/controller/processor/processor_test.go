@@ -65,6 +65,16 @@ func TestProcessor(t *testing.T) {
 		},
 		{
 			action: action.Action{
+				Delay:  time.Hour,
+				Reason: "reason",
+				Label:  "foo",
+				State:  testutil.FakeState{ModeValue: action.ZoneInOverlayMode},
+			},
+			task:   "foo: overlay in 1h0m0s",
+			taskOK: assert.True,
+		},
+		{
+			action: action.Action{
 				Reason: "reason gone",
 				Label:  "foo",
 				State:  testutil.FakeState{ModeValue: action.NoAction},
