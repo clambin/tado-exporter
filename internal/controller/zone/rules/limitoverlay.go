@@ -5,6 +5,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/tadotools"
 	"time"
 )
 
@@ -32,7 +33,7 @@ func (l LimitOverlayRule) Evaluate(update poller.Update) (action.Action, error) 
 	}
 	e := action.Action{Label: l.zoneName, Reason: "no manual temp setting detected"}
 
-	if state := GetZoneState(update.ZoneInfo[l.zoneID]); state.Overlay == tado.PermanentOverlay {
+	if state := tadotools.GetZoneState(update.ZoneInfo[l.zoneID]); state.Overlay == tado.PermanentOverlay {
 		s.mode = action.ZoneInAutoMode
 		e.Delay = l.delay
 		e.Reason = "manual temp setting detected"

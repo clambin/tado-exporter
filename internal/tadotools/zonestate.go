@@ -1,4 +1,4 @@
-package rules
+package tadotools
 
 import (
 	"fmt"
@@ -41,45 +41,6 @@ func (s ZoneState) String() any {
 }
 
 /*
-func (s ZoneState) Action() string {
-	if s.Overlay == tado.UnknownOverlay {
-		return "unknown action"
-	}
-
-	if s.Overlay == tado.NoOverlay {
-		return "moving to auto mode"
-	}
-
-	var action string
-	if !s.Heating() {
-		action = "switching off heating"
-	} else {
-		action = fmt.Sprintf("setting temperature to %.1f", s.TargetTemperature.Celsius)
-	}
-
-	if s.Overlay == tado.TimerOverlay || s.Overlay == tado.NextBlockOverlay {
-		action += " for " + s.Duration.String()
-	}
-	return action
-}
-
-type TadoSetter interface {
-	DeleteZoneOverlay(context.Context, int) error
-	SetZoneOverlay(context.Context, int, float64) error
-	//SetZoneTemporaryOverlay(context.Context, int, float64, time.Duration) error
-}
-
-func (s ZoneState) Do(ctx context.Context, api TadoSetter, zoneID int) error {
-	switch s.Overlay {
-	case tado.NoOverlay:
-		return api.DeleteZoneOverlay(ctx, zoneID)
-	case tado.PermanentOverlay:
-		return api.SetZoneOverlay(ctx, zoneID, math.Max(s.TargetTemperature.Celsius, 5.0))
-	default:
-		return fmt.Errorf("unsupported overlay: %s", s.Overlay.String())
-	}
-}
-
 func (s ZoneState) LogValue() slog.Value {
 	values := make([]slog.Attr, 1, 3)
 	values[0] = slog.String("overlay", s.Overlay.String())
@@ -91,6 +52,4 @@ func (s ZoneState) LogValue() slog.Value {
 	}
 	return slog.GroupValue(values...)
 }
-
-
 */

@@ -7,6 +7,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/tadotools"
 	"strings"
 	"time"
 )
@@ -49,7 +50,7 @@ func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 	home, away := a.getDeviceStates(update)
 	allAway := len(home) == 0 && len(away) > 0
 	someoneHome := len(home) > 0
-	currentState := GetZoneState(update.ZoneInfo[a.zoneID])
+	currentState := tadotools.GetZoneState(update.ZoneInfo[a.zoneID])
 
 	if allAway {
 		e.Reason = a.makeReason(away, "away")

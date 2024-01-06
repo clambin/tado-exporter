@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/clambin/go-common/slackbot"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/tadotools"
 	"github.com/slack-go/slack"
 	"log/slog"
 	"slices"
@@ -120,7 +120,7 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 			text = append(text, fmt.Sprintf("%s: %.1fºC (%s)",
 				zone.Name,
 				zoneInfo.SensorDataPoints.InsideTemperature.Celsius,
-				rules.GetZoneState(zoneInfo).String(),
+				tadotools.GetZoneState(zoneInfo).String(),
 			))
 		}
 	}

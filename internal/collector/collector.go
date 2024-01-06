@@ -3,8 +3,8 @@ package collector
 import (
 	"context"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/tadotools"
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"strconv"
@@ -227,7 +227,7 @@ func (c *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 		}
 		ch <- prometheus.MustNewConstMetric(tadoZonePowerState, prometheus.GaugeValue, value, zone.Name)
 
-		zoneState := rules.GetZoneState(zoneInfo)
+		zoneState := tadotools.GetZoneState(zoneInfo)
 		if zoneState.Overlay == tado.NoOverlay {
 			value = 0.0
 		} else {

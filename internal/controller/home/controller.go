@@ -12,7 +12,6 @@ import (
 )
 
 type Controller struct {
-	configuration configuration.HomeConfiguration
 	*processor.Processor
 }
 
@@ -21,8 +20,12 @@ func New(tadoClient action.TadoSetter, p poller.Poller, bot notifier.SlackSender
 		return homeRules.LoadHomeRules(configuration, update)
 	}
 
+	l := logger.With(
+		slog.String("component", "controller"),
+		slog.String("type", "home"),
+	)
+
 	return &Controller{
-		configuration: configuration,
-		Processor:     processor.New(tadoClient, p, bot, loader, logger),
+		Processor: processor.New(tadoClient, p, bot, loader, l),
 	}
 }

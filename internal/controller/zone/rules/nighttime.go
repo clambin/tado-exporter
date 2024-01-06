@@ -6,6 +6,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/tadotools"
 	"time"
 )
 
@@ -35,7 +36,7 @@ func (n NightTimeRule) Evaluate(update poller.Update) (action.Action, error) {
 		mode:     action.NoAction,
 	}
 
-	if state := GetZoneState(update.ZoneInfo[n.zoneID]); state.Overlay == tado.PermanentOverlay && state.Heating() {
+	if state := tadotools.GetZoneState(update.ZoneInfo[n.zoneID]); state.Overlay == tado.PermanentOverlay && state.Heating() {
 		// allow current time to be set during testing
 		now := time.Now
 		if n.GetCurrentTime != nil {
