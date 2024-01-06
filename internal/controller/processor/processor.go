@@ -54,17 +54,17 @@ func (p *Processor) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case update := <-ch:
-			p.logger.Debug("update received")
+			//p.logger.Debug("update received")
 			a, err := p.Evaluate(update)
 			if err != nil {
 				p.logger.Error("failed to get next action", "err", err)
 				break
 			}
-			p.logger.Debug("update evaluated", slog.Any("action", a))
+			//p.logger.Debug("update evaluated", slog.Any("action", a))
 			if err = p.processUpdate(ctx, a); err != nil {
 				p.logger.Error("failed to process tado update", "err", err)
 			}
-			p.logger.Debug("update processed")
+			//p.logger.Debug("update processed")
 		case <-p.notification:
 			if err := p.processResult(); err != nil {
 				p.logger.Error("failed to set next state", "err", err)

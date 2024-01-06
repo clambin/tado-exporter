@@ -20,13 +20,7 @@ func New(tadoClient action.TadoSetter, p poller.Poller, bot notifier.SlackSender
 		return zoneRules.LoadZoneRules(configuration, update)
 	}
 
-	l := logger.With(
-		slog.String("component", "controller"),
-		slog.String("type", "zone"),
-		slog.String("zone", configuration.Name),
-	)
-
 	return &Controller{
-		Processor: processor.New(tadoClient, p, bot, loader, l),
+		Processor: processor.New(tadoClient, p, bot, loader, logger),
 	}
 }

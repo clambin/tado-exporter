@@ -28,13 +28,13 @@ func New(api action.TadoSetter, cfg configuration.Configuration, tadoBot notifie
 	c := Controller{logger: logger}
 
 	if cfg.Home.AutoAway.IsActive() {
-		h := home.New(api, p, tadoBot, cfg.Home, logger.With("home", ""))
+		h := home.New(api, p, tadoBot, cfg.Home, logger.With("type", "home"))
 		c.reporters = append(c.reporters, h)
 		_ = c.tasks.Add(h)
 	}
 
 	for _, zoneCfg := range cfg.Zones {
-		z := zone.New(api, p, tadoBot, zoneCfg, logger.With("zone", zoneCfg.Name))
+		z := zone.New(api, p, tadoBot, zoneCfg, logger.With("type", "zone", "zone", zoneCfg.Name))
 		c.reporters = append(c.reporters, z)
 		_ = c.tasks.Add(z)
 	}

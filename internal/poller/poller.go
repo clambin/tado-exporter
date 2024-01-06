@@ -35,7 +35,7 @@ type TadoPoller struct {
 func New(tadoClient TadoGetter, interval time.Duration, logger *slog.Logger) *TadoPoller {
 	return &TadoPoller{
 		TadoClient: tadoClient,
-		Publisher:  pubsub.New[Update](logger.With(slog.String("component", "registry"))),
+		Publisher:  pubsub.New[Update](logger),
 		interval:   interval,
 		logger:     logger,
 		refresh:    make(chan struct{}),
