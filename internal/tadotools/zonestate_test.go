@@ -77,6 +77,15 @@ func TestGetZoneState(t *testing.T) {
 	}
 }
 
+func TestZoneState_String_Unknown(t *testing.T) {
+	s := tadotools.ZoneState{
+		Overlay:           -1,
+		TargetTemperature: tado.Temperature{Celsius: 18},
+	}
+	assert.Equal(t, "unknown", s.String())
+
+}
+
 /*
 func TestZoneState_LogValue(t *testing.T) {
 	type fields struct {
