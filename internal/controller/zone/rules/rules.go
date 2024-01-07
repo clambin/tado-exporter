@@ -24,18 +24,12 @@ func LoadZoneRules(cfg configuration.ZoneConfiguration, update poller.Update) (r
 	}
 
 	if cfg.Rules.LimitOverlay.IsActive() {
-		rule, err := LoadLimitOverlay(id, cfg.Name, cfg.Rules.LimitOverlay, update)
-		if err != nil {
-			return nil, fmt.Errorf("invalid limitOverlay rule config: %w", err)
-		}
+		rule, _ := LoadLimitOverlay(id, cfg.Name, cfg.Rules.LimitOverlay, update)
 		r = append(r, &rule)
 	}
 
 	if cfg.Rules.NightTime.IsActive() {
-		rule, err := LoadNightTime(id, cfg.Name, cfg.Rules.NightTime, update)
-		if err != nil {
-			return nil, fmt.Errorf("invalid nightTime rule config: %w", err)
-		}
+		rule, _ := LoadNightTime(id, cfg.Name, cfg.Rules.NightTime, update)
 		r = append(r, &rule)
 	}
 	return r, nil

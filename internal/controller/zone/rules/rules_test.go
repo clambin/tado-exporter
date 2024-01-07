@@ -28,18 +28,21 @@ func TestRules_ZoneRules(t *testing.T) {
 	}
 
 	type want struct {
-		action bool
-		delay  time.Duration
-		reason string
+		wantError assert.ErrorAssertionFunc
+		action    bool
+		delay     time.Duration
+		reason    string
 	}
 	testCases := []struct {
 		name      string
+		config    configuration.ZoneConfiguration
 		update    poller.Update
 		timestamp time.Time
 		want
 	}{
 		{
-			name: "limitOverlay before nightTime",
+			name:   "limitOverlay before nightTime",
+			config: cfg,
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay(), testutil.ZoneInfoTemperature(18, 22))},
@@ -48,13 +51,15 @@ func TestRules_ZoneRules(t *testing.T) {
 			},
 			timestamp: time.Date(2023, time.December, 31, 11, 0, 0, 0, time.Local),
 			want: want{
-				action: true,
-				delay:  30 * time.Minute,
-				reason: "manual temp setting detected",
+				wantError: assert.NoError,
+				action:    true,
+				delay:     30 * time.Minute,
+				reason:    "manual temp setting detected",
 			},
 		},
 		{
-			name: "limitOverlay after nightTime",
+			name:   "limitOverlay after nightTime",
+			config: cfg,
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay(), testutil.ZoneInfoTemperature(18, 22))},
@@ -63,13 +68,15 @@ func TestRules_ZoneRules(t *testing.T) {
 			},
 			timestamp: time.Date(2023, time.December, 31, 23, 15, 0, 0, time.Local),
 			want: want{
-				action: true,
-				delay:  15 * time.Minute,
-				reason: "manual temp setting detected",
+				wantError: assert.NoError,
+				action:    true,
+				delay:     15 * time.Minute,
+				reason:    "manual temp setting detected",
 			},
 		},
 		{
-			name: "limitOverlay vs autoAway",
+			name:   "limitOverlay vs autoAway",
+			config: cfg,
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay(), testutil.ZoneInfoTemperature(18, 22))},
@@ -78,19 +85,52 @@ func TestRules_ZoneRules(t *testing.T) {
 			},
 			timestamp: time.Date(2023, time.December, 31, 11, 15, 0, 0, time.Local),
 			want: want{
-				action: true,
-				delay:  30 * time.Minute,
-				reason: "A is away",
+				wantError: assert.NoError,
+				action:    true,
+				delay:     30 * time.Minute,
+				reason:    "A is away",
 			},
 		},
 		{
 			name:      "no action",
+			config:    cfg,
 			update:    update,
 			timestamp: time.Date(2023, time.December, 31, 23, 15, 0, 0, time.Local),
 			want: want{
-				action: false,
-				delay:  0,
-				reason: "A is home, no manual temp setting detected",
+				wantError: assert.NoError,
+				action:    false,
+				delay:     0,
+				reason:    "A is home, no manual temp setting detected",
+			},
+		},
+		{
+			name: "invalid config (zone)",
+			config: configuration.ZoneConfiguration{
+				Name: "invalid room",
+				Rules: configuration.ZoneRuleConfiguration{
+					AutoAway:     configuration.AutoAwayConfiguration{Users: []string{"A"}, Delay: 30 * time.Minute},
+					LimitOverlay: configuration.LimitOverlayConfiguration{Delay: 30 * time.Minute},
+					NightTime:    configuration.NightTimeConfiguration{Timestamp: configuration.Timestamp{Hour: 23, Minutes: 30, Active: true}},
+				},
+			},
+			update: update,
+			want: want{
+				wantError: assert.Error,
+			},
+		},
+		{
+			name: "invalid config (user)",
+			config: configuration.ZoneConfiguration{
+				Name: "room",
+				Rules: configuration.ZoneRuleConfiguration{
+					AutoAway:     configuration.AutoAwayConfiguration{Users: []string{"B"}, Delay: 30 * time.Minute},
+					LimitOverlay: configuration.LimitOverlayConfiguration{Delay: 30 * time.Minute},
+					NightTime:    configuration.NightTimeConfiguration{Timestamp: configuration.Timestamp{Hour: 23, Minutes: 30, Active: true}},
+				},
+			},
+			update: update,
+			want: want{
+				wantError: assert.Error,
 			},
 		},
 	}
@@ -100,8 +140,13 @@ func TestRules_ZoneRules(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			r, err := LoadZoneRules(cfg, update)
-			require.NoError(t, err)
+			r, err := LoadZoneRules(tt.config, tt.update)
+			tt.want.wantError(t, err)
+
+			if err != nil {
+				return
+			}
+
 			require.Len(t, r, 3)
 			r[2].(*NightTimeRule).GetCurrentTime = func() time.Time { return tt.timestamp }
 

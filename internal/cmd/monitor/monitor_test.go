@@ -14,7 +14,7 @@ import (
 )
 
 func Test_makeTasks(t *testing.T) {
-	testCses := []struct {
+	testCases := []struct {
 		name   string
 		config string
 		rules  string
@@ -54,7 +54,7 @@ controller:
 		},
 	}
 
-	for _, tt := range testCses {
+	for _, tt := range testCases {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
