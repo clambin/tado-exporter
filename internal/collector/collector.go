@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado-exporter/internal/tadotools"
+	"github.com/clambin/tado-exporter/pkg/tadotools"
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"strconv"

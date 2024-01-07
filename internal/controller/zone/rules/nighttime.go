@@ -6,7 +6,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado-exporter/internal/tadotools"
+	"github.com/clambin/tado-exporter/pkg/tadotools"
 	"time"
 )
 

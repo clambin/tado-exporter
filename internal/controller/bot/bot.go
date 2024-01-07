@@ -6,7 +6,7 @@ import (
 	"github.com/clambin/go-common/slackbot"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado-exporter/internal/tadotools"
+	"github.com/clambin/tado-exporter/pkg/tadotools"
 	"github.com/slack-go/slack"
 	"log/slog"
 	"slices"

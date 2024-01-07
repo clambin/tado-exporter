@@ -2,7 +2,7 @@ package tadotools_test
 
 import (
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/tadotools"
+	"github.com/clambin/tado-exporter/pkg/tadotools"
 	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
