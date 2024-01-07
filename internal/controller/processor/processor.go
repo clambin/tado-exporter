@@ -54,17 +54,12 @@ func (p *Processor) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case update := <-ch:
-			//p.logger.Debug("update received")
 			a, err := p.Evaluate(update)
 			if err != nil {
 				p.logger.Error("failed to get next action", "err", err)
 				break
 			}
-			//p.logger.Debug("update evaluated", slog.Any("action", a))
-			if err = p.processUpdate(ctx, a); err != nil {
-				p.logger.Error("failed to process tado update", "err", err)
-			}
-			//p.logger.Debug("update processed")
+			p.processUpdate(ctx, a)
 		case <-p.notification:
 			if err := p.processResult(); err != nil {
 				p.logger.Error("failed to set next state", "err", err)
@@ -83,15 +78,13 @@ func (p *Processor) Evaluate(update poller.Update) (action action.Action, err er
 	return p.rules.Evaluate(update)
 }
 
-func (p *Processor) processUpdate(ctx context.Context, action action.Action) error {
+func (p *Processor) processUpdate(ctx context.Context, action action.Action) {
 	if action.IsAction() {
 		p.logger.Debug("scheduling job", slog.Any("next", action))
 		p.scheduleJob(ctx, action)
 	} else {
 		p.cancelJob(action)
 	}
-
-	return nil
 }
 
 func (p *Processor) scheduleJob(ctx context.Context, next action.Action) {
@@ -101,7 +94,7 @@ func (p *Processor) scheduleJob(ctx context.Context, next action.Action) {
 	// if the same state is already scheduled for an earlier time, don't schedule it again.
 	if p.task != nil {
 		if p.task.action.State.Mode() == next.State.Mode() &&
-			p.task.firesNoLaterThan(next) {
+			p.task.scheduledBefore(next) {
 			return
 		}
 

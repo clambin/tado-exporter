@@ -15,11 +15,12 @@ import (
 type AutoAwayRule struct {
 	delay           time.Duration
 	mobileDeviceIDs []int
+	logger          *slog.Logger
 }
 
 var _ rules.Evaluator = AutoAwayRule{}
 
-func LoadAutoAwayRule(cfg configuration.AutoAwayConfiguration, update poller.Update) (AutoAwayRule, error) {
+func LoadAutoAwayRule(cfg configuration.AutoAwayConfiguration, update poller.Update, logger *slog.Logger) (AutoAwayRule, error) {
 	var deviceIDs []int
 	for _, user := range cfg.Users {
 		deviceID, ok := update.GetUserID(user)
@@ -32,36 +33,34 @@ func LoadAutoAwayRule(cfg configuration.AutoAwayConfiguration, update poller.Upd
 	return AutoAwayRule{
 		delay:           cfg.Delay,
 		mobileDeviceIDs: deviceIDs,
+		logger:          logger.With("rule", "autoAway"),
 	}, nil
 }
 
 func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 	home, away := a.getDeviceStates(update)
 
-	// TODO: remove before commit
-	slog.Info("home autoaway",
-		"home", strings.Join(home, ", "),
-		"away", strings.Join(away, ", "),
-	)
-
-	var evaluation action.Action
+	var result action.Action
 	if len(home) == 0 {
-		evaluation.Reason = makeReason(away, "away")
+		result.Reason = makeReason(away, "away")
 		if update.Home {
-			evaluation.Delay = a.delay
-			evaluation.State = State{mode: action.HomeInAwayMode}
-		} else {
-			slog.Info("home already in away mode")
+			result.Delay = a.delay
+			result.State = State{mode: action.HomeInAwayMode}
 		}
 	} else {
-		evaluation.Reason = makeReason(home, "home")
+		result.Reason = makeReason(home, "home")
 		if !update.Home {
-			evaluation.State = State{mode: action.HomeInHomeMode}
-		} else {
-			slog.Info("home already in home mode")
+			result.State = State{mode: action.HomeInHomeMode}
 		}
 	}
-	return evaluation, nil
+
+	a.logger.Debug("home autoway",
+		slog.Bool("home", bool(update.Home)),
+		slog.String("action", result.String()),
+		slog.String("reason", result.Reason),
+	)
+
+	return result, nil
 }
 
 func (a AutoAwayRule) getDeviceStates(update poller.Update) ([]string, []string) {

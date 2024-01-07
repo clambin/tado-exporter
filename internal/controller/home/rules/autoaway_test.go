@@ -9,6 +9,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
+	"log/slog"
 	"testing"
 	"time"
 )
@@ -129,7 +130,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			r, err := LoadAutoAwayRule(cfg, tt.update)
+			r, err := LoadAutoAwayRule(cfg, tt.update, slog.Default())
 			tt.err(t, err)
 			if err != nil {
 				return
@@ -163,6 +164,6 @@ func TestAutoAwayRule_Evaluate_InvalidConfig(t *testing.T) {
 		Delay: time.Hour,
 	}
 	update := poller.Update{UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "A"}}}
-	_, err := LoadAutoAwayRule(cfg, update)
+	_, err := LoadAutoAwayRule(cfg, update, slog.Default())
 	assert.Error(t, err)
 }

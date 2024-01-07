@@ -26,14 +26,14 @@ type Job struct {
 	when       time.Time
 	task       Task
 	err        error
-	CancelFunc context.CancelFunc
+	cancelFunc context.CancelFunc
 	state      State
 	notify     chan struct{}
 	lock       sync.RWMutex
 }
 
 func (j *Job) Cancel() {
-	j.CancelFunc()
+	j.cancelFunc()
 }
 
 func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
@@ -45,7 +45,7 @@ func ScheduleWithNotification(ctx context.Context, task Task, waitTime time.Dura
 	j := Job{
 		task:       task,
 		state:      StateUnknown,
-		CancelFunc: cancel,
+		cancelFunc: cancel,
 		notify:     ch,
 	}
 	go j.run(subCtx, waitTime)
@@ -94,15 +94,15 @@ func (j *Job) setCanceled() {
 	j.err = ErrCanceled
 }
 
-func (j *Job) GetState() (State, error, time.Duration) {
+func (j *Job) GetState() (State, error, time.Time) {
 	j.lock.RLock()
 	defer j.lock.RUnlock()
-	return j.state, j.err, time.Until(j.when)
+	return j.state, j.err, j.when
 }
 
-func (j *Job) TimeToFire() time.Duration {
+func (j *Job) Due() time.Time {
 	if s, _, when := j.GetState(); s == StateScheduled {
 		return when
 	}
-	return 0
+	return time.Time{}
 }

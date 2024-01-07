@@ -7,6 +7,7 @@ import (
 	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"log/slog"
 	"testing"
 	"time"
 )
@@ -22,11 +23,11 @@ func TestRules_HomeRules(t *testing.T) {
 		Home:     true,
 	}
 
-	_, err := LoadHomeRules(cfg, update)
+	_, err := LoadHomeRules(cfg, update, slog.Default())
 	assert.Error(t, err)
 
 	cfg.AutoAway.Users = []string{"A"}
-	r, err := LoadHomeRules(cfg, update)
+	r, err := LoadHomeRules(cfg, update, slog.Default())
 	require.NoError(t, err)
 	assert.Len(t, r, 1)
 }
