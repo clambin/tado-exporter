@@ -47,6 +47,12 @@ func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 		mode:     action.NoAction,
 	}
 
+	if !update.Home {
+		e.State = s
+		e.Reason = "home in AWAY mode"
+		return e, nil
+	}
+
 	home, away := a.getDeviceStates(update)
 	allAway := len(home) == 0 && len(away) > 0
 	someoneHome := len(home) > 0

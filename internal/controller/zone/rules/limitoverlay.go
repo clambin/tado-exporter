@@ -33,6 +33,12 @@ func (l LimitOverlayRule) Evaluate(update poller.Update) (action.Action, error) 
 	}
 	e := action.Action{Label: l.zoneName, Reason: "no manual temp setting detected"}
 
+	if !update.Home {
+		e.State = s
+		e.Reason = "home in AWAY mode"
+		return e, nil
+	}
+
 	if state := tadotools.GetZoneState(update.ZoneInfo[l.zoneID]); state.Overlay == tado.PermanentOverlay {
 		s.mode = action.ZoneInAutoMode
 		e.Delay = l.delay

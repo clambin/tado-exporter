@@ -19,6 +19,7 @@ type NightTimeRule struct {
 }
 
 func LoadNightTime(id int, name string, cfg configuration.NightTimeConfiguration, _ poller.Update) (NightTimeRule, error) {
+
 	return NightTimeRule{
 		zoneID:    id,
 		zoneName:  name,
@@ -34,6 +35,12 @@ func (n NightTimeRule) Evaluate(update poller.Update) (action.Action, error) {
 		zoneID:   n.zoneID,
 		zoneName: n.zoneName,
 		mode:     action.NoAction,
+	}
+
+	if !update.Home {
+		e.State = s
+		e.Reason = "home in AWAY mode"
+		return e, nil
 	}
 
 	if state := tadotools.GetZoneState(update.ZoneInfo[n.zoneID]); state.Overlay == tado.PermanentOverlay && state.Heating() {

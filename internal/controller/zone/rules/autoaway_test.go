@@ -93,7 +93,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 			want: want{
 				err:    assert.NoError,
 				action: assert.False,
-				reason: "A, B are away",
+				reason: "home in AWAY mode",
 			},
 		},
 		{
@@ -105,7 +105,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 					100: testutil.MakeMobileDevice(100, "A", testutil.Home(true)),
 					110: testutil.MakeMobileDevice(110, "B", testutil.Home(false)),
 				},
-				Home: false,
+				Home: true,
 			},
 			want: want{
 				err:     assert.NoError,

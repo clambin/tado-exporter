@@ -54,7 +54,7 @@ func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 		}
 	}
 
-	a.logger.Debug("home autoway",
+	a.logger.Debug("home autoAway",
 		slog.Bool("home", bool(update.Home)),
 		slog.String("action", result.String()),
 		slog.String("reason", result.Reason),

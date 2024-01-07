@@ -93,8 +93,7 @@ func (p *Processor) scheduleJob(ctx context.Context, next action.Action) {
 
 	// if the same state is already scheduled for an earlier time, don't schedule it again.
 	if p.task != nil {
-		if p.task.action.State.Mode() == next.State.Mode() &&
-			p.task.scheduledBefore(next) {
+		if p.task.action.State.IsEqual(next.State) && p.task.scheduledBefore(next) {
 			return
 		}
 
@@ -109,15 +108,15 @@ func (p *Processor) scheduleJob(ctx context.Context, next action.Action) {
 	}
 }
 
-func (p *Processor) cancelJob(next action.Action) {
+func (p *Processor) cancelJob(a action.Action) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
 	if p.task != nil {
-		nextState := p.task.action
-		nextState.Reason = next.Reason
+		canceledAction := p.task.action
+		canceledAction.Reason = a.Reason
 		p.task.job.Cancel()
-		p.notifiers.Notify(notifier.Canceled, nextState)
+		p.notifiers.Notify(notifier.Canceled, canceledAction)
 	}
 }
 

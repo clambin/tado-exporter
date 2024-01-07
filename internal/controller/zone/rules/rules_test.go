@@ -20,12 +20,6 @@ func TestRules_ZoneRules(t *testing.T) {
 			NightTime:    configuration.NightTimeConfiguration{Timestamp: configuration.Timestamp{Hour: 23, Minutes: 30, Active: true}},
 		},
 	}
-	update := poller.Update{
-		Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-		ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
-		UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "A", testutil.Home(true))},
-		Home:     true,
-	}
 
 	type want struct {
 		wantError assert.ErrorAssertionFunc
@@ -92,9 +86,30 @@ func TestRules_ZoneRules(t *testing.T) {
 			},
 		},
 		{
-			name:      "no action",
-			config:    cfg,
-			update:    update,
+			name:   "away",
+			config: cfg,
+			update: poller.Update{
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay(), testutil.ZoneInfoTemperature(18, 22))},
+				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "A", testutil.Home(false))},
+				Home:     false,
+			},
+			timestamp: time.Date(2023, time.December, 31, 11, 15, 0, 0, time.Local),
+			want: want{
+				wantError: assert.NoError,
+				action:    false,
+				reason:    "home in AWAY mode",
+			},
+		},
+		{
+			name:   "no action",
+			config: cfg,
+			update: poller.Update{
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
+				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "A", testutil.Home(true))},
+				Home:     true,
+			},
 			timestamp: time.Date(2023, time.December, 31, 23, 15, 0, 0, time.Local),
 			want: want{
 				wantError: assert.NoError,
@@ -113,7 +128,12 @@ func TestRules_ZoneRules(t *testing.T) {
 					NightTime:    configuration.NightTimeConfiguration{Timestamp: configuration.Timestamp{Hour: 23, Minutes: 30, Active: true}},
 				},
 			},
-			update: update,
+			update: poller.Update{
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
+				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "A", testutil.Home(true))},
+				Home:     true,
+			},
 			want: want{
 				wantError: assert.Error,
 			},
@@ -128,7 +148,12 @@ func TestRules_ZoneRules(t *testing.T) {
 					NightTime:    configuration.NightTimeConfiguration{Timestamp: configuration.Timestamp{Hour: 23, Minutes: 30, Active: true}},
 				},
 			},
-			update: update,
+			update: poller.Update{
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
+				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "A", testutil.Home(true))},
+				Home:     true,
+			},
 			want: want{
 				wantError: assert.Error,
 			},

@@ -51,12 +51,14 @@ func TestZoneController(t *testing.T) {
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
+				Home:     true,
 			},
 		},
 		{
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
+				Home:     true,
 			},
 			event: []slack.Attachment{{Color: "good", Title: "room: moving to auto mode in 1h0m0s", Text: "manual temp setting detected"}},
 		},
@@ -64,6 +66,7 @@ func TestZoneController(t *testing.T) {
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
+				Home:     true,
 			},
 			event: []slack.Attachment{{Color: "good", Title: "room: canceling moving to auto mode", Text: "no manual temp setting detected"}},
 		},
