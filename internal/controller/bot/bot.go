@@ -42,19 +42,19 @@ type Controller interface {
 	ReportTasks() []string
 }
 
-func New(tado TadoSetter, tadoBot SlackBot, p poller.Poller, controller Controller, logger *slog.Logger) *Bot {
+func New(tado TadoSetter, slackbot SlackBot, p poller.Poller, controller Controller, logger *slog.Logger) *Bot {
 	b := Bot{
 		Tado:       tado,
-		slack:      tadoBot,
+		slack:      slackbot,
 		poller:     p,
 		controller: controller,
 		logger:     logger,
 	}
-	tadoBot.Register("rules", b.ReportRules)
-	tadoBot.Register("rooms", b.ReportRooms)
-	tadoBot.Register("set", b.SetRoom)
-	tadoBot.Register("refresh", b.DoRefresh)
-	tadoBot.Register("users", b.ReportUsers)
+	slackbot.Register("rules", b.ReportRules)
+	slackbot.Register("rooms", b.ReportRooms)
+	slackbot.Register("set", b.SetRoom)
+	slackbot.Register("refresh", b.DoRefresh)
+	slackbot.Register("users", b.ReportUsers)
 
 	return &b
 }
@@ -71,12 +71,16 @@ func (b *Bot) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case update := <-ch:
-			b.lock.Lock()
-			b.update = update
-			b.updated = true
-			b.lock.Unlock()
+			b.setUpdate(update)
 		}
 	}
+}
+
+func (b *Bot) setUpdate(update poller.Update) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.update = update
+	b.updated = true
 }
 
 func (b *Bot) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
