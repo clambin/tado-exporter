@@ -12,8 +12,7 @@ var (
 	configFilename string
 	RootCmd        = cobra.Command{
 		Use:   "tado",
-		Short: "Controller for Tadoº thermostats",
-		//Version: version,
+		Short: "Utility for Tadoº thermostats",
 	}
 )
 
