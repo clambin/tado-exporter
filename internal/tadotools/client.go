@@ -54,7 +54,7 @@ func newTadoCallMetrics(namespace, subsystem, application string) *tadoCallMetri
 	}
 }
 
-func (t tadoCallMetrics) MeasureRequest(request *http.Request, _ *http.Response, err error, duration time.Duration) {
+func (t *tadoCallMetrics) MeasureRequest(request *http.Request, _ *http.Response, err error, duration time.Duration) {
 	path := filterPath(request.URL.Path)
 	t.latency.WithLabelValues(request.Method, path).Observe(duration.Seconds())
 	var val float64
@@ -72,12 +72,12 @@ func filterPath(path string) string {
 	return path
 }
 
-func (t tadoCallMetrics) Describe(ch chan<- *prometheus.Desc) {
+func (t *tadoCallMetrics) Describe(ch chan<- *prometheus.Desc) {
 	t.latency.Describe(ch)
 	t.errors.Describe(ch)
 }
 
-func (t tadoCallMetrics) Collect(ch chan<- prometheus.Metric) {
+func (t *tadoCallMetrics) Collect(ch chan<- prometheus.Metric) {
 	t.latency.Collect(ch)
 	t.errors.Collect(ch)
 }
