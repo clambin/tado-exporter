@@ -14,6 +14,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
 	"github.com/clambin/tado-exporter/internal/health"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/tadotools"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"log/slog"
@@ -23,10 +24,11 @@ import (
 )
 
 func New(cfg *viper.Viper, version string, registry prometheus.Registerer, logger *slog.Logger) (*taskmanager.Manager, error) {
-	api, err := tado.New(
+	api, err := tadotools.GetInstrumentedTadoClient(
 		cfg.GetString("tado.username"),
 		cfg.GetString("tado.password"),
 		cfg.GetString("tado.clientSecret"),
+		registry,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("tado: %w", err)
