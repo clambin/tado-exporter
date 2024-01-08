@@ -17,7 +17,7 @@ type Controller struct {
 
 func New(tadoClient action.TadoSetter, p poller.Poller, bot notifier.SlackSender, configuration configuration.ZoneConfiguration, logger *slog.Logger) *Controller {
 	loader := func(update poller.Update) (rules.Evaluator, error) {
-		return zoneRules.LoadZoneRules(configuration, update)
+		return zoneRules.LoadZoneRules(configuration, update, logger)
 	}
 
 	return &Controller{

@@ -7,6 +7,7 @@ import (
 	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"log/slog"
 	"testing"
 	"time"
 )
@@ -165,7 +166,7 @@ func TestRules_ZoneRules(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			r, err := LoadZoneRules(tt.config, tt.update)
+			r, err := LoadZoneRules(tt.config, tt.update, slog.Default())
 			tt.want.wantError(t, err)
 
 			if err != nil {

@@ -8,6 +8,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
+	"log/slog"
 	"testing"
 	"time"
 )
@@ -76,7 +77,7 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			r, err := LoadLimitOverlay(10, "room", tt.cfg, tt.update)
+			r, err := LoadLimitOverlay(10, "room", tt.cfg, tt.update, slog.Default())
 			tt.err(t, err)
 			if err != nil {
 				return

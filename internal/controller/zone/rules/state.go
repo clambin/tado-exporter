@@ -38,7 +38,7 @@ func (s State) String() string {
 	case action.ZoneInAutoMode:
 		return "moving to auto mode"
 	default:
-		return "unknown"
+		return "no action"
 	}
 }
 

@@ -48,7 +48,7 @@ func New(tado TadoSetter, tadoBot SlackBot, p poller.Poller, controller Controll
 		slack:      tadoBot,
 		poller:     p,
 		controller: controller,
-		logger:     logger.With(slog.String("component", "tadobot")),
+		logger:     logger,
 	}
 	tadoBot.Register("rules", b.ReportRules)
 	tadoBot.Register("rooms", b.ReportRooms)

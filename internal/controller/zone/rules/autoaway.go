@@ -8,6 +8,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/pkg/tadotools"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -17,9 +18,10 @@ type AutoAwayRule struct {
 	zoneName        string
 	delay           time.Duration
 	mobileDeviceIDs []int
+	logger          *slog.Logger
 }
 
-func LoadAutoAwayRule(id int, name string, cfg configuration.AutoAwayConfiguration, update poller.Update) (AutoAwayRule, error) {
+func LoadAutoAwayRule(id int, name string, cfg configuration.AutoAwayConfiguration, update poller.Update, logger *slog.Logger) (AutoAwayRule, error) {
 	var deviceIDs []int
 	for _, user := range cfg.Users {
 		deviceID, ok := update.GetUserID(user)
@@ -34,6 +36,7 @@ func LoadAutoAwayRule(id int, name string, cfg configuration.AutoAwayConfigurati
 		zoneName:        name,
 		delay:           cfg.Delay,
 		mobileDeviceIDs: deviceIDs,
+		logger:          logger.With(slog.String("rule", "autoAway")),
 	}, nil
 }
 
@@ -71,6 +74,12 @@ func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 		}
 	}
 	e.State = s
+
+	a.logger.Debug("evaluated",
+		slog.Bool("home", bool(update.Home)),
+		slog.Any("result", e),
+	)
+
 	return e, nil
 }
 
