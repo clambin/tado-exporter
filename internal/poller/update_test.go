@@ -3,10 +3,10 @@ package poller_test
 import (
 	"bytes"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/internal/controller/testutil"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado/testutil"
+	tadoTestutil "github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
-	"log/slog"
 	"testing"
 )
 
@@ -90,25 +90,19 @@ func TestIsHome_String(t *testing.T) {
 
 func TestMobileDevices_LogValue(t *testing.T) {
 	devices := poller.MobileDevices{
-		10: testutil.MakeMobileDevice(10, "home", testutil.Home(true)),
-		11: testutil.MakeMobileDevice(11, "away", testutil.Home(false)),
+		10: tadoTestutil.MakeMobileDevice(10, "home", tadoTestutil.Home(true)),
+		11: tadoTestutil.MakeMobileDevice(11, "away", tadoTestutil.Home(false)),
 		12: {
 			ID:       12,
 			Name:     "stale",
 			Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
 			Location: tado.MobileDeviceLocation{Stale: true, AtHome: false},
 		},
-		13: testutil.MakeMobileDevice(13, "not geotagged"),
+		13: tadoTestutil.MakeMobileDevice(13, "not geotagged"),
 	}
 
-	out := bytes.Buffer{}
-	logger := slog.New(slog.NewTextHandler(&out, &slog.HandlerOptions{ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-		// Remove time from the output for predictable test output.
-		if a.Key == slog.TimeKey {
-			return slog.Attr{}
-		}
-		return a
-	}}))
+	var out bytes.Buffer
+	logger := testutil.NewBufferLogger(&out)
 	logger.Info("devices", "devices", devices)
 
 	logEntry := out.String()

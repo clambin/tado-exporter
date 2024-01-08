@@ -2,10 +2,10 @@ package notifier_test
 
 import (
 	"bytes"
-	"github.com/clambin/tado-exporter/internal/controller/internal/testutil"
 	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/notifier/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
+	"github.com/clambin/tado-exporter/internal/controller/testutil"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

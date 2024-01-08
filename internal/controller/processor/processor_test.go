@@ -2,12 +2,12 @@ package processor_test
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/internal/controller/internal/testutil"
 	mockNotifier "github.com/clambin/tado-exporter/internal/controller/notifier/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/processor"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action/mocks"
+	"github.com/clambin/tado-exporter/internal/controller/testutil"
 	"github.com/clambin/tado-exporter/internal/poller"
 	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/slack-go/slack"

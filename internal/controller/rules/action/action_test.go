@@ -2,8 +2,8 @@ package action_test
 
 import (
 	"bytes"
-	"github.com/clambin/tado-exporter/internal/controller/internal/testutil"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
+	"github.com/clambin/tado-exporter/internal/controller/testutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
