@@ -3,56 +3,89 @@ package rules
 import (
 	"fmt"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/internal/controller/rules"
+	"github.com/clambin/tado-exporter/internal/controller/rules/action"
+	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/pkg/tadotools"
+	"log/slog"
 	"strings"
 	"time"
 )
 
 type AutoAwayRule struct {
-	ZoneID          int
-	ZoneName        string
-	Delay           time.Duration
-	Users           []string
-	MobileDeviceIDs []int
+	zoneID          int
+	zoneName        string
+	delay           time.Duration
+	mobileDeviceIDs []int
+	logger          *slog.Logger
 }
 
-var _ Rule = &AutoAwayRule{}
+func LoadAutoAwayRule(id int, name string, cfg configuration.AutoAwayConfiguration, update poller.Update, logger *slog.Logger) (AutoAwayRule, error) {
+	var deviceIDs []int
+	for _, user := range cfg.Users {
+		deviceID, ok := update.GetUserID(user)
+		if !ok {
+			return AutoAwayRule{}, fmt.Errorf("invalid mobile name: %s", user)
+		}
+		deviceIDs = append(deviceIDs, deviceID)
+	}
 
-func (a *AutoAwayRule) Evaluate(update poller.Update) (Action, error) {
-	next := Action{ZoneID: a.ZoneID, ZoneName: a.ZoneName}
+	return AutoAwayRule{
+		zoneID:          id,
+		zoneName:        name,
+		delay:           cfg.Delay,
+		mobileDeviceIDs: deviceIDs,
+		logger:          logger.With(slog.String("rule", "autoAway")),
+	}, nil
+}
 
-	if err := a.load(update); err != nil {
-		return next, err
+var _ rules.Evaluator = AutoAwayRule{}
+
+func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
+	e := action.Action{Label: a.zoneName}
+	s := State{
+		zoneID:   a.zoneID,
+		zoneName: a.zoneName,
+		mode:     action.NoAction,
+	}
+
+	if !update.Home {
+		e.State = s
+		e.Reason = "home in AWAY mode"
+		return e, nil
 	}
 
 	home, away := a.getDeviceStates(update)
 	allAway := len(home) == 0 && len(away) > 0
 	someoneHome := len(home) > 0
-	currentState := GetZoneState(update.ZoneInfo[a.ZoneID])
+	currentState := tadotools.GetZoneState(update.ZoneInfo[a.zoneID])
 
 	if allAway {
-		next.Reason = makeReason(away, "away")
+		e.Reason = a.makeReason(away, "away")
 		if currentState.Heating() {
-			next.Action = true
-			next.State = ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5.0}}
-			next.Delay = a.Delay
+			e.Delay = a.delay
+			s.mode = action.ZoneInOverlayMode
 		}
 	} else if someoneHome {
+		e.Reason = a.makeReason(home, "home")
 		if !currentState.Heating() && currentState.Overlay == tado.PermanentOverlay {
-			next.Action = true
-			next.State = ZoneState{Overlay: tado.NoOverlay}
-			next.Delay = 0
-			next.Reason = makeReason(home, "home")
-		} else {
-			next.Reason = makeReason(home, "home")
+			s.mode = action.ZoneInAutoMode
 		}
 	}
-	return next, nil
+	e.State = s
+
+	a.logger.Debug("evaluated",
+		slog.Bool("home", bool(update.Home)),
+		slog.Any("result", e),
+	)
+
+	return e, nil
 }
 
-func (a *AutoAwayRule) getDeviceStates(update poller.Update) ([]string, []string) {
+func (a AutoAwayRule) getDeviceStates(update poller.Update) ([]string, []string) {
 	var home, away []string
-	for _, id := range a.MobileDeviceIDs {
+	for _, id := range a.mobileDeviceIDs {
 		if entry, exists := update.UserInfo[id]; exists {
 			switch entry.IsHome() {
 			case tado.DeviceHome:
@@ -65,7 +98,7 @@ func (a *AutoAwayRule) getDeviceStates(update poller.Update) ([]string, []string
 	return home, away
 }
 
-func makeReason(users []string, state string) string {
+func (a AutoAwayRule) makeReason(users []string, state string) string {
 	var verb string
 	if len(users) == 1 {
 		verb = "is"
@@ -73,20 +106,4 @@ func makeReason(users []string, state string) string {
 		verb = "are"
 	}
 	return strings.Join(users, ", ") + " " + verb + " " + state
-}
-
-func (a *AutoAwayRule) load(update poller.Update) error {
-	if len(a.MobileDeviceIDs) > 0 {
-		return nil
-	}
-
-	for _, user := range a.Users {
-		if userID, ok := update.GetUserID(user); ok {
-			a.MobileDeviceIDs = append(a.MobileDeviceIDs, userID)
-		} else {
-			return fmt.Errorf("invalid user: " + user)
-		}
-	}
-
-	return nil
 }

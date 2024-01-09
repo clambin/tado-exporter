@@ -56,12 +56,11 @@ func runMonitor(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("init: %w", err)
 	}
 
-	// context to terminate the created go routines
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
 	l.Info("tado monitor starting", "version", cmd.Version)
-	defer l.Info("tado-monitor stopped")
+	defer l.Info("tado monitor stopped")
 
 	return a.Run(ctx)
 }

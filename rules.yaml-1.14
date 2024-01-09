@@ -1,0 +1,30 @@
+zones:
+  - zone: "Study"
+    rules:
+      - kind: autoAway
+        delay: 1h
+        users: ["Christophe"]
+      - kind: limitOverlay
+        delay: 1h
+  - zone: "Bathroom"
+    rules:
+      - kind: limitOverlay
+        delay: 5m
+  - zone: "Living room"
+    rules:
+      #- kind: limitOverlay
+      #  delay: 2h
+      - kind: nightTime
+        time: "23:30:00"
+  - zone: "Eva Bedroom"
+    rules:
+      - kind: limitOverlay
+        delay: 2h
+      - kind: autoAway
+        delay: 1h
+        users: [ "iPhone Eva" ]
+  #- zone: "Thomas Bedroom"
+  #  rules:
+  #    - kind: autoAway
+  #      delay: 1h
+  #      users: ["Thomas"]

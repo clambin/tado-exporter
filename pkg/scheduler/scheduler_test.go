@@ -29,7 +29,7 @@ func TestSchedule(t *testing.T) {
 		return done && err == nil
 	}, time.Second, 10*time.Millisecond)
 
-	assert.Zero(t, job.TimeToFire())
+	assert.Zero(t, job.Due())
 }
 
 func TestScheduleWithNotification(t *testing.T) {
@@ -90,7 +90,7 @@ func TestJob_TimeToFire(t *testing.T) {
 		return state == scheduler.StateScheduled
 	}, time.Second, time.Millisecond)
 
-	assert.Equal(t, 60*time.Minute, job.TimeToFire().Round(time.Minute))
+	assert.Equal(t, 60*time.Minute, time.Until(job.Due()).Round(time.Minute))
 
 	cancel()
 }
