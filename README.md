@@ -1,4 +1,4 @@
-# tado-monitor
+# tado utility
 ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/clambin/tado-exporter?color=green&label=Release&style=plastic)
 ![Codecov](https://img.shields.io/codecov/c/gh/clambin/tado-exporter?style=plastic)
 ![Build](https://github.com/clambin/tado-exporter/workflows/Build/badge.svg)
@@ -7,42 +7,47 @@
 
 Monitor & control utility Tadoº Smart Thermostat devices.
 
+## Breaking changes in 0.15
+
+### New executable
+
+The binary `tado-monitor` has been renamed to `tado` and now offers multiple subcommands. The Docker image built as part of the release 
+continues to run the exporter/monitoring function. So if you're using the Docker image, this will be transparent to you.
+
+### New rules syntax
+
+With the introduction of "Home" rules, the syntax for zone rules has been reworked.  See the section `Controlling your Tado devices` 
+for details. If you're not using the rules-based controller, this will be transparent to you.
+
 ## Features
 
-tado-monitor offers two types of functionality:
+tado offers two types of functionality:
 
-* an exporter to expose metrics to Prometheus
-* a controller to control the temperature settings of rooms in your Tado-controlled home
-
-The controller is rule-based. It currently supports three types of rules:
-
-* **autoAway** rules switch off the automatic temperature control for a room when a user has left home for a specified amount of time. Typical use case is one of the kids leaving for college for the week.
-* **limitOverlay** disables manual temperature settings in a room after a specified amount of time. Typical use case is to disable the bathroom heating if someone forgot to switch off a manual temperature setting.
-* **nightTime** disables manual temperature settings in a room at a specific time of day. Typical use case is switching the living room to automatic at the end of the day.
-
+* `tad monitor` runs an exporter to expose metrics to Prometheus and, if configured, a controller to manage the thermostat settings in your home & rooms.
+* `tado config` displays the different zones & mobile devices for your account. 
 
 ## Installation
 
 Binaries are available on the [release](https://github.com/clambin/tado-exporter/releases) page. Docker images are available on [ghcr.io](https://github.com/clambin/tado-exporter/pkgs/container/tado-monitor).
 
-## Running tado-monitor
+## Running
 ### Command-line options
 
 The following command-line arguments can be passed:
 
 ```
 Usage:
-  tado monitor [flags]
+tado [command]
 
-Flags:
-      --config string   Configuration file
-      --debug           Log debug messages
-  -h, --help            help for tado-exporter
-  -v, --version         version for tado-exporter
+Available Commands:
+completion  Generate the autocompletion script for the specified shell
+config      Show Tado configuration
+help        Help about any command
+monitor     Monitor Tado thermostats
 ```
 
 ### Configuration file
-The  configuration file option specifies a yaml file to control tado-monitor's behaviour:
+The  configuration file option specifies a yaml file to control the behaviour:
 
 ```
 # Set to true to enable debug logging
@@ -73,7 +78,7 @@ controller:
         token: ""
 ```
 
-If the filename is not specified on the command line, tado-monitor will look for a file `config.yaml` in the following directories:
+If the filename is not specified on the command line, the program looks for a file `config.yaml` in the following directories:
 
 ```
 /etc/tado-monitor
@@ -81,8 +86,8 @@ $HOME/.tado-monitor
 .
 ```
 
-Tado-monitor uses Viper to manage the configuration.  Any value in the configuration file may be overriden by setting an environment variable
-with a prefix `TADO_MONITOR_`. E.g. to avoid setting your Tado credentials in the configuration file, set the following environment variables:
+Any value in the configuration file may be overriden by setting an environment variable with a prefix `TADO_MONITOR_`. 
+E.g. to avoid setting your Tado credentials in the configuration file, set the following environment variables:
 
 ```
 export TADO_MONITOR_TADO.USERNAME="username@example.com"
@@ -106,38 +111,43 @@ var TD = {
 };
 ```
 
-## Zone Rules
+## Controlling your Tado devices
 
-Tado-monitor will look for a file `rules.yaml` in the same directory it found the `config.yaml` file described above.
-This file defines the rules to apply for each listed zone:
+`tado monitor` will look for a file `rules.yaml` in the same directory it found the `config.yaml` file described above.
+This file defines the rules to apply for your home:
 
 ```
+# Home rules control the state of your home (i.e. "home" or "away").
+home:
+  # autoAway sets the home to "away" mode when all defined users are away from home.
+  autoAway:
+    delay: 1h
+    users: [ "A", "B"]
+# Zone rules control the state of a rooom within your home. Rules will either switch heating off when all users are away,
+# or move the room to automatic mode when the room's been in manual mode for a while (think someone switching the bathroom
+# to a manual temperature setting and then forgetting to switch it back to automatic mode).
 zones:
-  - zone: Study
+  - name: "room 1"
     rules:
-      # An autoAway rule switches off the heating in a room when all defined users are away from home
-      - kind: autoAway
+      # autoAway switches off the heating in a room when all defined users are away from home
+      autoAway:
         delay: 1h
-        users: ["Christophe"]
-  - zone: Bathroom
-    rules:
-      # A limitOverlay rule removes a manual temperature control after a specified amount of time
-      - kind: limitOverlay
+        users: ["A"]
+      # limitOverlay removes a manual temperature control after a specified amount of time
+      limitOverlay:
         delay: 1h
-  - zone: Living room
-    rules:
-      # A nightTime rule removes any manual temperature control at a specified time of day
-      - kind: nightTime
+      # nightTime removes any manual temperature control at a specified time of day
+      nightTime:
         time: "23:30:00"
 ```
 
-If the file does not exist, tado-monitor will only run as a Prometheus exporter.
+If the file does not exist, `tado monitor` will only run as a Prometheus exporter.
 
 ## Prometheus
 
-### Adding tado-monitor as a target
+### Adding tado as a target
 
-Add tado-exporter as a target to let Prometheus scrape the metrics into its database.
+Add tado as a target to let Prometheus scrape the metrics into its database.
 This highly depends on your particular Prometheus configuration. In its simplest form, add a new scrape target to `prometheus.yml`:
 
 ```
@@ -151,7 +161,7 @@ where <port> is the Prometheus listener port configured in exporter.addr in the 
 
 ### Metrics
 
-tado-exporter exposes the following metrics:
+tado exposes the following metrics:
 
 #### Metrics by Zone
 
@@ -198,7 +208,7 @@ Feel free to customize as you see fit.
 
 ## Slack bot
 
-Tado-controller can run a Slack bot that will report on any rules being triggered:
+`tado monitor` can run a Slack bot that will report on any rules being triggered:
 
 ![screenshot](assets/screenshots/tadobot_2.png?raw=true)
 
@@ -215,10 +225,10 @@ TadoBot supports the following commands:
   * **set Bathroom 23.5**: sets the bathroom's target temperature to 23.5ºC
   * **set Bathroom 23.5 1h**: same, but switches back to automatic mode after 1 hour
   * **set Study auto**: sets the study to automatic temperature control
-* **version**: show version of tado-monitor
+* **version**: show version
 * **help**: show all available commands
 
-To enable the bot, add a bot to the workspace's Custom Integrations and add the API Token in the configuration file above (*slackbotToken*).
+To enable the bot, add a bot to the workspace's Custom Integrations and add the API Token in the configuration file above (*controller.tadobot.token*).
 
 ## Tado Client API
 
@@ -233,7 +243,6 @@ so feel free to reuse for your own projects.
 
 * Max Rosin for his [Python implementation](https://github.com/ekeih/libtado) of the Tado API
 * [vide/tado-exporter](https://github.com/vide/tado-exporter) for some inspiration
-
 
 ## License
 

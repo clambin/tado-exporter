@@ -2,7 +2,8 @@ package monitor
 
 import (
 	"bytes"
-	"github.com/clambin/tado-exporter/internal/controller/zone/rules"
+	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,7 +21,7 @@ func Test_makeTasks(t *testing.T) {
 		length int
 	}{
 		{
-			name: "with rules",
+			name: "rules",
 			config: `
 health:
   addr: :9091
@@ -31,9 +32,9 @@ controller:
 `,
 			rules: `
 zones:
-  - zone: "Bathroom"
+  - name: "Bathroom"
     rules:
-      - kind: limitOverlay
+      limitOverlay:
         delay: 1h
 `,
 			length: 8,
@@ -48,6 +49,7 @@ controller:
     enabled: true
     token: 1234
 `,
+			rules:  ``,
 			length: 5,
 		},
 	}
@@ -56,20 +58,19 @@ controller:
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-
 			cfg := viper.New()
 			cfg.SetConfigType("yaml")
 			config := bytes.NewBufferString(tt.config)
 			require.NoError(t, cfg.ReadConfig(config))
 
-			var r []rules.ZoneConfig
+			var r configuration.Configuration
 			if tt.rules != "" {
 				var err error
-				r, err = rules.Load(bytes.NewBufferString(tt.rules), slog.Default())
+				r, err = configuration.Load(bytes.NewBufferString(tt.rules))
 				require.NoError(t, err)
 			}
 
-			tasks := makeTasks(cfg, nil, r, "1.0", nil, slog.Default())
+			tasks := makeTasks(cfg, nil, r, "1.0", prometheus.NewPedanticRegistry(), slog.Default())
 			assert.Len(t, tasks, tt.length)
 		})
 	}
@@ -80,24 +81,23 @@ func Test_maybeLoadRules(t *testing.T) {
 		name    string
 		content string
 		wantErr assert.ErrorAssertionFunc
-		want    []rules.ZoneConfig
+		want    configuration.Configuration
 	}{
 		{
 			name: "valid",
 			content: `zones:
-  - zone: "Bathroom"
+  - name: "bathroom"
     rules:
-      - kind: limitOverlay
+      limitOverlay:
         delay: 1h
 `,
 			wantErr: assert.NoError,
-			want: []rules.ZoneConfig{
-				{
-					Zone: "Bathroom",
-					Rules: []rules.ZoneRule{
-						{
-							Kind:  rules.LimitOverlay,
-							Delay: time.Hour,
+			want: configuration.Configuration{
+				Zones: []configuration.ZoneConfiguration{
+					{
+						Name: "bathroom",
+						Rules: configuration.ZoneRuleConfiguration{
+							LimitOverlay: configuration.LimitOverlayConfiguration{Delay: time.Hour},
 						},
 					},
 				},
@@ -133,7 +133,7 @@ func Test_maybeLoadRules(t *testing.T) {
 				_ = os.Remove(f.Name())
 			}
 
-			r, err := maybeLoadRules(f.Name(), slog.Default())
+			r, err := maybeLoadRules(f.Name())
 			tt.wantErr(t, err)
 			assert.Equal(t, tt.want, r)
 		})

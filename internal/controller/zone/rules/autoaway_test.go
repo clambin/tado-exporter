@@ -1,142 +1,168 @@
 package rules
 
 import (
+	"context"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/internal/controller/rules/action/mocks"
+	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"log/slog"
 	"testing"
 	"time"
 )
 
 func TestAutoAwayRule_Evaluate(t *testing.T) {
-	tests := []testCase{
-		{
-			name: "user goes away",
-			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
-				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false))},
-			},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5.0}}, Delay: time.Hour, Reason: "foo is away"},
-		},
-		{
-			name: "user is away",
-			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 5), testutil.ZoneInfoPermanentOverlay())},
-				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false))},
-			},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "foo is away"},
-		},
-		{
-			name: "user comes home",
-			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 5), testutil.ZoneInfoPermanentOverlay())},
-				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
-			},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Delay: 0, Reason: "foo is home"},
-		},
-		{
-			name: "user is home",
-			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 19))},
-				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo", testutil.Home(true))},
-			},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "foo is home"},
-		},
-		{
-			name: "non-geolocation user",
-			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
-				UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "foo")},
-			},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5}}, Delay: time.Hour, Reason: "foo is away"},
-		},
+	type want struct {
+		err     assert.ErrorAssertionFunc
+		action  assert.BoolAssertionFunc
+		delay   time.Duration
+		reason  string
+		overlay bool
 	}
 
-	r := &AutoAwayRule{
-		ZoneID:   10,
-		ZoneName: "living room",
-		Delay:    time.Hour,
-		Users:    []string{"foo"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a, err := r.Evaluate(tt.update)
-			require.NoError(t, err)
-			assert.Equal(t, tt.action, a)
-		})
-	}
-}
-
-func TestAutoAwayRule_Evaluate_MultipleUsers(t *testing.T) {
-	tests := []testCase{
+	var testCases = []struct {
+		name   string
+		update poller.Update
+		want
+	}{
 		{
-			name: "one user goes away",
+			name: "all users are home",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22))},
 				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false)),
-					110: testutil.MakeMobileDevice(110, "bar", testutil.Home(true)),
+					100: testutil.MakeMobileDevice(100, "A", testutil.Home(true)),
+					110: testutil.MakeMobileDevice(110, "B", testutil.Home(true)),
 				},
+				Home: true,
 			},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "bar is home"},
-		},
-		{
-			name: "all users are away",
-			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18))},
-				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false)),
-					110: testutil.MakeMobileDevice(110, "bar", testutil.Home(false)),
-				},
+			want: want{
+				err:    assert.NoError,
+				action: assert.False,
+				reason: "A, B are home",
 			},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.PermanentOverlay, TargetTemperature: tado.Temperature{Celsius: 5.0}}, Delay: time.Hour, Reason: "foo, bar are away"},
 		},
 		{
 			name: "one user is home",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 5), testutil.ZoneInfoPermanentOverlay())},
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22))},
 				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false)),
-					110: testutil.MakeMobileDevice(110, "bar", testutil.Home(true)),
+					100: testutil.MakeMobileDevice(100, "A", testutil.Home(true)),
+					110: testutil.MakeMobileDevice(110, "B", testutil.Home(false)),
 				},
+				Home: true,
 			},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: true, State: ZoneState{Overlay: tado.NoOverlay}, Reason: "bar is home"},
+			want: want{
+				err:    assert.NoError,
+				action: assert.False,
+				reason: "A is home",
+			},
 		},
 		{
-			name: "user is home, schedule for room is off",
+			name: "all users go away",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "living room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 18), testutil.ZoneInfoPermanentOverlay())},
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22))},
 				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(100, "foo", testutil.Home(false)),
-					110: testutil.MakeMobileDevice(110, "bar", testutil.Home(true)),
+					100: testutil.MakeMobileDevice(100, "A", testutil.Home(false)),
+					110: testutil.MakeMobileDevice(110, "B", testutil.Home(false)),
 				},
+				Home: true,
 			},
-			action: Action{ZoneID: 10, ZoneName: "living room", Action: false, Reason: "bar is home"},
+			want: want{
+				err:     assert.NoError,
+				action:  assert.True,
+				delay:   time.Hour,
+				reason:  "A, B are away",
+				overlay: true,
+			},
+		},
+		{
+			name: "all users are away",
+			update: poller.Update{
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
+				UserInfo: map[int]tado.MobileDevice{
+					100: testutil.MakeMobileDevice(100, "A", testutil.Home(false)),
+					110: testutil.MakeMobileDevice(110, "B", testutil.Home(false)),
+				},
+				Home: false,
+			},
+			want: want{
+				err:    assert.NoError,
+				action: assert.False,
+				reason: "home in AWAY mode",
+			},
+		},
+		{
+			name: "user comes home",
+			update: poller.Update{
+				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
+				UserInfo: map[int]tado.MobileDevice{
+					100: testutil.MakeMobileDevice(100, "A", testutil.Home(true)),
+					110: testutil.MakeMobileDevice(110, "B", testutil.Home(false)),
+				},
+				Home: true,
+			},
+			want: want{
+				err:     assert.NoError,
+				action:  assert.True,
+				reason:  "A is home",
+				overlay: false,
+			},
 		},
 	}
 
-	r := &AutoAwayRule{
-		ZoneID:   10,
-		ZoneName: "living room",
-		Delay:    time.Hour,
-		Users:    []string{"foo", "bar"},
+	cfg := configuration.AutoAwayConfiguration{
+		Users: []string{"A", "B"},
+		Delay: time.Hour,
 	}
-	for _, tt := range tests {
+
+	for _, tt := range testCases {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			a, err := r.Evaluate(tt.update)
-			require.NoError(t, err)
-			assert.Equal(t, tt.action, a)
+			t.Parallel()
+			r, err := LoadAutoAwayRule(10, "room", cfg, tt.update, slog.Default())
+			tt.err(t, err)
+			if err != nil {
+				return
+			}
+			e, err := r.Evaluate(tt.update)
+			tt.want.err(t, err)
+			if err != nil {
+				return
+			}
+			tt.action(t, e.IsAction())
+			assert.Equal(t, tt.want.delay, e.Delay)
+			assert.Equal(t, tt.want.reason, e.Reason)
+
+			if !e.IsAction() {
+				return
+			}
+
+			ctx := context.Background()
+			c := mocks.NewTadoSetter(t)
+			if tt.want.overlay {
+				c.EXPECT().SetZoneOverlay(ctx, 10, 0.0).Return(nil).Once()
+			} else {
+				c.EXPECT().DeleteZoneOverlay(ctx, 10).Return(nil).Once()
+			}
+
+			assert.NoError(t, e.State.Do(ctx, c))
 		})
 	}
+}
+
+func TestAutoAwayRule_Evaluate_InvalidConfig(t *testing.T) {
+	cfg := configuration.AutoAwayConfiguration{
+		Users: []string{"A", "B"},
+		Delay: time.Hour,
+	}
+	update := poller.Update{UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "A"}}}
+	_, err := LoadAutoAwayRule(10, "room", cfg, update, slog.Default())
+	assert.Error(t, err)
 }
