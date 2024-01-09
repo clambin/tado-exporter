@@ -82,10 +82,6 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Config
 	// Controller
 	if len(rules.Zones) > 0 {
 		tasks = append(tasks, makeControllerTasks(cfg, api, rules, p, version, l)...)
-	} else {
-		l.Warn("no rules found. controller will not run")
-	}
-
 	return tasks
 }
 
