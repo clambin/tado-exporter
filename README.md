@@ -11,11 +11,8 @@ Monitor & control utility Tadoº Smart Thermostat devices.
 
 ### New executable
 
-v0.15 introduces multiple functionalities supported by the single binary: the existing exporter/monitoring function
-and a new option to dump the Tado configuration to screen.  For this reason the binary has been renamed from `tado-monitor` to `tado`.
-
-The Docker image built as part of the release continues to run the exporter/monitoring function. So if you're using the Docker image,
-this will be transparent to you.
+The binary `tado-monitor` has been renamed to `tado` and now offers multiple subcommands. The Docker image built as part of the release 
+continues to run the exporter/monitoring function. So if you're using the Docker image, this will be transparent to you.
 
 ### New rules syntax
 
@@ -26,7 +23,7 @@ for details. If you're not using the rules-based controller, this will be transp
 
 tado offers two types of functionality:
 
-* `tad monitor` runs an exporter to expose metrics to Prometheus and, if configured, a control to control the thermostats in your home & rooms.
+* `tad monitor` runs an exporter to expose metrics to Prometheus and, if configured, a controller to manage the thermostat settings in your home & rooms.
 * `tado config` displays the different zones & mobile devices for your account. 
 
 ## Installation
@@ -117,7 +114,7 @@ var TD = {
 ## Controlling your Tado devices
 
 `tado monitor` will look for a file `rules.yaml` in the same directory it found the `config.yaml` file described above.
-This file defines the rules to apply for each listed zone:
+This file defines the rules to apply for your home:
 
 ```
 # Home rules control the state of your home (i.e. "home" or "away").
@@ -246,7 +243,6 @@ so feel free to reuse for your own projects.
 
 * Max Rosin for his [Python implementation](https://github.com/ekeih/libtado) of the Tado API
 * [vide/tado-exporter](https://github.com/vide/tado-exporter) for some inspiration
-
 
 ## License
 
