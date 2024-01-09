@@ -18,10 +18,8 @@ func TestTask_scheduledBefore(t *testing.T) {
 	defer ticker.Stop()
 
 	for i := 1; i < 1600; i++ {
-		select {
-		case <-ticker.C:
-			a2 := action.Action{Delay: time.Until(task.job.Due())}
-			assert.True(t, task.scheduledBefore(a2))
-		}
+		<-ticker.C
+		a2 := action.Action{Delay: time.Until(task.job.Due())}
+		assert.True(t, task.scheduledBefore(a2))
 	}
 }
