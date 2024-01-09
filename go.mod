@@ -3,6 +3,8 @@ module github.com/clambin/tado-exporter
 go 1.21
 
 require (
+	github.com/clambin/go-common/httpclient v0.6.0
+	github.com/clambin/go-common/set v0.3.0
 	github.com/clambin/go-common/slackbot v0.6.0
 	github.com/clambin/go-common/taskmanager v0.3.0
 	github.com/clambin/tado v1.3.0
@@ -17,7 +19,7 @@ require (
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/clambin/go-common/set v0.3.0 // indirect
+	github.com/clambin/go-common/cache v0.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
