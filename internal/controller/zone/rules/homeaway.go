@@ -43,12 +43,12 @@ func (r HomeAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 
 	if state.Overlay == tado.NoOverlay {
 		e.State = s
-		e.Reason = "home in AWAY mode, no manual temp control detected"
+		e.Reason = "home in AWAY mode, no manual temp setting detected"
 		return e, nil
 	}
 
 	s.mode = action.ZoneInAutoMode
 	e.State = s
-	e.Reason = "home in AWAY mode, manual temp control detected"
+	e.Reason = "home in AWAY mode, manual temp setting detected"
 	return e, nil
 }

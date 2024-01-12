@@ -99,7 +99,7 @@ func TestRules_ZoneRules(t *testing.T) {
 			want: want{
 				wantError: assert.NoError,
 				action:    true,
-				reason:    "home in AWAY mode, manual temp control detected",
+				reason:    "home in AWAY mode, manual temp setting detected",
 			},
 		},
 		{

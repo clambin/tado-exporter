@@ -49,7 +49,7 @@ func TestHomeAwayRule_Evaluate(t *testing.T) {
 			want: want{
 				err:    assert.NoError,
 				action: assert.True,
-				reason: "home in AWAY mode, manual temp control detected",
+				reason: "home in AWAY mode, manual temp setting detected",
 			},
 		},
 		{
@@ -62,7 +62,7 @@ func TestHomeAwayRule_Evaluate(t *testing.T) {
 			want: want{
 				err:     assert.NoError,
 				action:  assert.False,
-				reason:  "home in AWAY mode, no manual temp control detected",
+				reason:  "home in AWAY mode, no manual temp setting detected",
 				overlay: false,
 			},
 		},

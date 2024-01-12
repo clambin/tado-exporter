@@ -12,13 +12,16 @@ import (
 	"github.com/clambin/tado/testutil"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"log/slog"
 	"testing"
 	"time"
 )
 
 func TestZoneController(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
 	api := mocks.NewTadoSetter(t)
+	api.EXPECT().DeleteZoneOverlay(mock.Anything, 10).Return(nil)
 
 	p := mocks2.NewPoller(t)
 	pCh := make(chan poller.Update)
@@ -37,7 +40,6 @@ func TestZoneController(t *testing.T) {
 
 	z := zone.New(api, p, b, cfg, slog.Default())
 
-	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
 		errCh <- z.Run(ctx)
@@ -65,14 +67,14 @@ func TestZoneController(t *testing.T) {
 		{
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
-				Home:     true,
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
+				Home:     false,
 			},
-			event: []slack.Attachment{{Color: "good", Title: "room: canceling moving to auto mode", Text: "home in HOME mode, no manual temp setting detected"}},
+			event: []slack.Attachment{{Color: "good", Title: "room: moving to auto mode", Text: "home in AWAY mode, manual temp setting detected"}},
 		},
 	}
 
-	for _, entry := range playbook {
+	for index, entry := range playbook {
 		var done chan struct{}
 
 		if entry.event != nil {
@@ -86,6 +88,7 @@ func TestZoneController(t *testing.T) {
 		if entry.event != nil {
 			<-done
 		}
+		t.Log(index, " passed")
 	}
 
 	cancel()
