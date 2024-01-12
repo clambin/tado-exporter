@@ -184,3 +184,17 @@ func TestRules_ZoneRules(t *testing.T) {
 		})
 	}
 }
+
+func TestRules_ZoneRules_Empty(t *testing.T) {
+	cfg := configuration.ZoneConfiguration{
+		Name: "room",
+	}
+	update := poller.Update{Zones: map[int]tado.Zone{
+		10: {ID: 10, Name: "room"},
+	}}
+
+	r, err := LoadZoneRules(cfg, update, slog.Default())
+	require.NoError(t, err)
+
+	assert.Len(t, r, 0)
+}
