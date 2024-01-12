@@ -43,7 +43,7 @@ func TestZoneController(t *testing.T) {
 		errCh <- z.Run(ctx)
 	}()
 
-	testCases := []struct {
+	playbook := []struct {
 		update poller.Update
 		event  []slack.Attachment
 	}{
@@ -68,22 +68,22 @@ func TestZoneController(t *testing.T) {
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
 				Home:     true,
 			},
-			event: []slack.Attachment{{Color: "good", Title: "room: canceling moving to auto mode", Text: "no manual temp setting detected"}},
+			event: []slack.Attachment{{Color: "good", Title: "room: canceling moving to auto mode", Text: "home in HOME mode, no manual temp setting detected"}},
 		},
 	}
 
-	for _, tt := range testCases {
+	for _, entry := range playbook {
 		var done chan struct{}
 
-		if tt.event != nil {
+		if entry.event != nil {
 			done = make(chan struct{})
-			b.EXPECT().Send("", tt.event).RunAndReturn(func(_ string, attachments []slack.Attachment) error {
+			b.EXPECT().Send("", entry.event).RunAndReturn(func(_ string, attachments []slack.Attachment) error {
 				done <- struct{}{}
 				return nil
 			}).Once()
 		}
-		pCh <- tt.update
-		if tt.event != nil {
+		pCh <- entry.update
+		if entry.event != nil {
 			<-done
 		}
 	}

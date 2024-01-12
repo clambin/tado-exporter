@@ -98,8 +98,8 @@ func TestRules_ZoneRules(t *testing.T) {
 			timestamp: time.Date(2023, time.December, 31, 11, 15, 0, 0, time.Local),
 			want: want{
 				wantError: assert.NoError,
-				action:    false,
-				reason:    "home in AWAY mode",
+				action:    true,
+				reason:    "home in AWAY mode, manual temp control detected",
 			},
 		},
 		{
@@ -116,7 +116,7 @@ func TestRules_ZoneRules(t *testing.T) {
 				wantError: assert.NoError,
 				action:    false,
 				delay:     0,
-				reason:    "A is home, no manual temp setting detected",
+				reason:    "A is home, home in HOME mode, no manual temp setting detected",
 			},
 		},
 		{
@@ -173,8 +173,8 @@ func TestRules_ZoneRules(t *testing.T) {
 				return
 			}
 
-			require.Len(t, r, 3)
-			r[2].(*NightTimeRule).GetCurrentTime = func() time.Time { return tt.timestamp }
+			require.Len(t, r, 4)
+			r[3].(*NightTimeRule).GetCurrentTime = func() time.Time { return tt.timestamp }
 
 			e, err := r.Evaluate(tt.update)
 			assert.NoError(t, err)

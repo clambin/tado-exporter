@@ -33,6 +33,10 @@ type ZoneRuleConfiguration struct {
 	NightTime    NightTimeConfiguration    `yaml:"nightTime"`
 }
 
+func (c ZoneRuleConfiguration) IsActive() bool {
+	return c.AutoAway.IsActive() || c.LimitOverlay.IsActive() || c.NightTime.IsActive()
+}
+
 type AutoAwayConfiguration struct {
 	Users []string      `yaml:"users"`
 	Delay time.Duration `yaml:"delay"`

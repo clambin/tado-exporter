@@ -101,3 +101,51 @@ func Test_IsActive(t *testing.T) {
 		})
 	}
 }
+
+func TestZoneRuleConfiguration_IsActive(t *testing.T) {
+	type fields struct {
+		AutoAway     configuration.AutoAwayConfiguration
+		LimitOverlay configuration.LimitOverlayConfiguration
+		NightTime    configuration.NightTimeConfiguration
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   assert.BoolAssertionFunc
+	}{
+		{
+			name: "none",
+			want: assert.False,
+		},
+		{
+			name:   "autoAway",
+			fields: fields{AutoAway: configuration.AutoAwayConfiguration{Users: []string{"A"}}},
+			want:   assert.True,
+		},
+		{
+			name:   "limitOverlay",
+			fields: fields{LimitOverlay: configuration.LimitOverlayConfiguration{Delay: time.Hour}},
+			want:   assert.True,
+		},
+		{
+			name: "nightTime",
+			fields: fields{NightTime: configuration.NightTimeConfiguration{Timestamp: configuration.Timestamp{
+				Hour:    0,
+				Minutes: 0,
+				Seconds: 0,
+				Active:  true,
+			}}},
+			want: assert.True,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := configuration.ZoneRuleConfiguration{
+				AutoAway:     tt.fields.AutoAway,
+				LimitOverlay: tt.fields.LimitOverlay,
+				NightTime:    tt.fields.NightTime,
+			}
+			tt.want(t, c.IsActive())
+		})
+	}
+}
