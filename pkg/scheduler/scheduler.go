@@ -18,10 +18,6 @@ const (
 
 var ErrCanceled = errors.New("job canceled")
 
-type Task interface {
-	Run(ctx context.Context) error
-}
-
 type Job struct {
 	when       time.Time
 	task       Task
@@ -32,8 +28,8 @@ type Job struct {
 	lock       sync.RWMutex
 }
 
-func (j *Job) Cancel() {
-	j.cancelFunc()
+type Task interface {
+	Run(ctx context.Context) error
 }
 
 func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
@@ -65,6 +61,10 @@ func (j *Job) run(ctx context.Context, waitTime time.Duration) {
 	if j.notify != nil {
 		j.notify <- struct{}{}
 	}
+}
+
+func (j *Job) Cancel() {
+	j.cancelFunc()
 }
 
 func (j *Job) Result() (bool, error) {
