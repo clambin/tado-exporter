@@ -54,28 +54,3 @@ func (e Action) String() string {
 	}
 	return e.State.String()
 }
-
-type Mode int
-
-func (m Mode) String() string {
-	if name, ok := modeNames[m]; ok {
-		return name
-	}
-	return "unknown"
-}
-
-const (
-	NoAction Mode = iota
-	HomeInHomeMode
-	HomeInAwayMode
-	ZoneInOverlayMode
-	ZoneInAutoMode
-)
-
-var modeNames = map[Mode]string{
-	NoAction:          "no action",
-	HomeInHomeMode:    "home",
-	HomeInAwayMode:    "away",
-	ZoneInOverlayMode: "overlay",
-	ZoneInAutoMode:    "auto",
-}

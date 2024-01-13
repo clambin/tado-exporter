@@ -77,3 +77,14 @@ func TestAction(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkMode_String(b *testing.B) {
+	// with hash:
+	// BenchmarkMode_String-16         182526478                6.682 ns/op           0 B/op          0 allocs/op
+	// with slice:
+	// BenchmarkMode_String-16         1000000000               0.2144 ns/op          0 B/op          0 allocs/op
+	m := action.Mode(-1)
+	for i := 0; i < b.N; i++ {
+		_ = m.String()
+	}
+}
