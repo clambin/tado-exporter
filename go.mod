@@ -7,6 +7,7 @@ require (
 	github.com/clambin/go-common/slackbot v0.6.0
 	github.com/clambin/go-common/taskmanager v0.3.0
 	github.com/clambin/tado v1.3.0
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
 	github.com/slack-go/slack v0.12.3
 	github.com/spf13/cobra v1.8.0

@@ -24,16 +24,17 @@ func LoadHomeAwayRule(id int, name string, _ poller.Update, _ *slog.Logger) (Hom
 }
 
 func (r HomeAwayRule) Evaluate(update poller.Update) (action.Action, error) {
-	e := action.Action{Label: r.zoneName}
-	s := State{
-		zoneID:   r.zoneID,
-		zoneName: r.zoneName,
-		mode:     action.NoAction,
+	e := action.Action{
+		Label:  r.zoneName,
+		Reason: "home in HOME mode",
+		State: &State{
+			zoneID:   r.zoneID,
+			zoneName: r.zoneName,
+			mode:     action.NoAction,
+		},
 	}
 
 	if update.Home {
-		e.State = s
-		e.Reason = "home in HOME mode"
 		return e, nil
 	}
 
@@ -42,13 +43,11 @@ func (r HomeAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 	state := tadotools.GetZoneState(info)
 
 	if state.Overlay == tado.NoOverlay {
-		e.State = s
 		e.Reason = "home in AWAY mode, no manual temp setting detected"
 		return e, nil
 	}
 
-	s.mode = action.ZoneInAutoMode
-	e.State = s
+	e.State.(*State).mode = action.ZoneInAutoMode
 	e.Reason = "home in AWAY mode, manual temp setting detected"
 	return e, nil
 }

@@ -33,15 +33,17 @@ func LoadNightTime(id int, name string, cfg configuration.NightTimeConfiguration
 var _ rules.Evaluator = NightTimeRule{}
 
 func (r NightTimeRule) Evaluate(update poller.Update) (action.Action, error) {
-	e := action.Action{Label: r.zoneName, Reason: "no manual temp setting detected"}
-	s := State{
-		zoneID:   r.zoneID,
-		zoneName: r.zoneName,
-		mode:     action.NoAction,
+	e := action.Action{
+		Label:  r.zoneName,
+		Reason: "no manual temp setting detected",
+		State: &State{
+			zoneID:   r.zoneID,
+			zoneName: r.zoneName,
+			mode:     action.NoAction,
+		},
 	}
 
 	if !update.Home {
-		e.State = s
 		e.Reason = "home in AWAY mode"
 		return e, nil
 	}
@@ -53,11 +55,10 @@ func (r NightTimeRule) Evaluate(update poller.Update) (action.Action, error) {
 			now = r.GetCurrentTime
 		}
 
-		s.mode = action.ZoneInAutoMode
 		e.Delay = getNextNightTimeDelay(now(), r.timestamp)
 		e.Reason = "manual temp setting detected"
+		e.State.(*State).mode = action.ZoneInAutoMode
 	}
-	e.State = s
 
 	r.logger.Debug("evaluated",
 		slog.Bool("home", bool(update.Home)),

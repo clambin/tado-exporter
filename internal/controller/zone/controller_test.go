@@ -3,12 +3,12 @@ package zone_test
 import (
 	"context"
 	"github.com/clambin/tado"
-	mocks3 "github.com/clambin/tado-exporter/internal/controller/notifier/mocks"
+	mockNotifier "github.com/clambin/tado-exporter/internal/controller/notifier/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/zone"
 	"github.com/clambin/tado-exporter/internal/poller"
-	mocks2 "github.com/clambin/tado-exporter/internal/poller/mocks"
+	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado/testutil"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
@@ -23,12 +23,12 @@ func TestZoneController(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
 	api.EXPECT().DeleteZoneOverlay(mock.Anything, 10).Return(nil)
 
-	p := mocks2.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 	pCh := make(chan poller.Update)
 	p.EXPECT().Subscribe().Return(pCh)
 	p.EXPECT().Unsubscribe(pCh).Return()
 
-	b := mocks3.NewSlackSender(t)
+	b := mockNotifier.NewSlackSender(t)
 
 	cfg := configuration.ZoneConfiguration{
 		Name: "room",
@@ -74,7 +74,7 @@ func TestZoneController(t *testing.T) {
 		},
 	}
 
-	for index, entry := range playbook {
+	for _, entry := range playbook {
 		var done chan struct{}
 
 		if entry.event != nil {
@@ -88,7 +88,6 @@ func TestZoneController(t *testing.T) {
 		if entry.event != nil {
 			<-done
 		}
-		t.Log(index, " passed")
 	}
 
 	cancel()

@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"errors"
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
@@ -11,7 +12,7 @@ import (
 func LoadZoneRules(cfg configuration.ZoneConfiguration, update poller.Update, logger *slog.Logger) (rules.Rules, error) {
 	id, ok := update.GetZoneID(cfg.Name)
 	if !ok {
-		return nil, fmt.Errorf("invalid zone name: %s", cfg.Name)
+		return nil, errors.New("invalid zone name: " + cfg.Name)
 	}
 
 	if !cfg.Rules.IsActive() {

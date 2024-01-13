@@ -1,13 +1,13 @@
 package rules
 
 import (
-	"fmt"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/pkg/tadotools"
+	"github.com/pkg/errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -26,7 +26,7 @@ func LoadAutoAwayRule(id int, name string, cfg configuration.AutoAwayConfigurati
 	for _, user := range cfg.Users {
 		deviceID, ok := update.GetUserID(user)
 		if !ok {
-			return AutoAwayRule{}, fmt.Errorf("invalid mobile name: %s", user)
+			return AutoAwayRule{}, errors.New("invalid mobile name: " + user)
 		}
 		deviceIDs = append(deviceIDs, deviceID)
 	}
@@ -43,15 +43,16 @@ func LoadAutoAwayRule(id int, name string, cfg configuration.AutoAwayConfigurati
 var _ rules.Evaluator = AutoAwayRule{}
 
 func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
-	e := action.Action{Label: a.zoneName}
-	s := State{
-		zoneID:   a.zoneID,
-		zoneName: a.zoneName,
-		mode:     action.NoAction,
+	e := action.Action{
+		Label: a.zoneName,
+		State: &State{
+			zoneID:   a.zoneID,
+			zoneName: a.zoneName,
+			mode:     action.NoAction,
+		},
 	}
 
 	if !update.Home {
-		e.State = s
 		e.Reason = "home in AWAY mode"
 		return e, nil
 	}
@@ -65,15 +66,14 @@ func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 		e.Reason = a.makeReason(away, "away")
 		if currentState.Heating() {
 			e.Delay = a.delay
-			s.mode = action.ZoneInOverlayMode
+			e.State.(*State).mode = action.ZoneInOverlayMode
 		}
 	} else if someoneHome {
 		e.Reason = a.makeReason(home, "home")
 		if !currentState.Heating() && currentState.Overlay == tado.PermanentOverlay {
-			s.mode = action.ZoneInAutoMode
+			e.State.(*State).mode = action.ZoneInAutoMode
 		}
 	}
-	e.State = s
 
 	a.logger.Debug("evaluated",
 		slog.Bool("home", bool(update.Home)),
