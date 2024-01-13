@@ -24,17 +24,17 @@ func newTask(ctx context.Context, api action.TadoSetter, next action.Action, not
 	return &task
 }
 
-func (t *Task) Run(ctx context.Context) (err error) {
+func (t Task) Run(ctx context.Context) (err error) {
 	return t.action.State.Do(ctx, t.api)
 }
 
-func (t *Task) scheduledBefore(next action.Action) bool {
+func (t Task) scheduledBefore(next action.Action) bool {
 	scheduled := t.job.Due().Round(time.Second)
 	newJob := time.Now().Add(next.Delay).Round(time.Second)
 	return scheduled.Before(newJob) || scheduled.Equal(newJob)
 }
 
-func (t *Task) Report() string {
+func (t Task) Report() string {
 	result := t.action.String() + " in " + time.Until(t.job.Due()).Round(time.Second).String()
 	if t.action.Label != "" {
 		result = t.action.Label + ": " + result

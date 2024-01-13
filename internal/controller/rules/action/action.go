@@ -31,20 +31,15 @@ type State interface {
 }
 
 func (e Action) LogValue() slog.Value {
-	values := []slog.Attr{
-		slog.Bool("action", e.IsAction()),
-		slog.String("reason", e.Reason),
-	}
+	values := make([]slog.Attr, 2, 5)
+	values[0] = slog.Bool("action", e.IsAction())
+	values[1] = slog.String("reason", e.Reason)
+
 	if e.Label != "" {
-		values = append(values,
-			slog.String("label", e.Label),
-		)
+		values = append(values, slog.String("label", e.Label))
 	}
 	if e.IsAction() {
-		values = append(values,
-			slog.Duration("delay", e.Delay),
-			slog.Any("state", e.State),
-		)
+		values = append(values, slog.Duration("delay", e.Delay), slog.Any("state", e.State))
 	}
 	return slog.GroupValue(values...)
 }

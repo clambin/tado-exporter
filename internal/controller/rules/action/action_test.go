@@ -50,6 +50,16 @@ func TestAction(t *testing.T) {
 				asString: "away",
 			},
 		},
+		{
+			name:   "invalid mode",
+			action: action.Action{State: testutil.FakeState{ModeValue: -1}, Reason: "test", Delay: time.Hour, Label: "room"},
+			want: want{
+				isAction: assert.True,
+				logValue: `level=INFO msg=action action.action=true action.reason=test action.label=room action.delay=1h0m0s action.state.mode=unknown
+`,
+				asString: "unknown",
+			},
+		},
 	}
 
 	for _, tt := range testCases {

@@ -80,7 +80,7 @@ func (p *Processor) Evaluate(update poller.Update) (action action.Action, err er
 
 func (p *Processor) processUpdate(ctx context.Context, action action.Action) {
 	if action.IsAction() {
-		p.logger.Debug("scheduling job", slog.Any("next", action))
+		p.logger.Debug("scheduling job", "next", action)
 		p.scheduleJob(ctx, action)
 	} else {
 		p.cancelJob(action)
