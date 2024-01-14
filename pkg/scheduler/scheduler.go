@@ -20,42 +20,41 @@ var ErrCanceled = errors.New("job canceled")
 
 type Job struct {
 	when       time.Time
-	task       Task
+	runner     Runnable
 	err        error
+	subCtx     context.Context
 	cancelFunc context.CancelFunc
 	state      State
 	notify     chan struct{}
 	lock       sync.RWMutex
 }
 
-type Task interface {
+type Runnable interface {
 	Run(ctx context.Context) error
 }
 
-func Schedule(ctx context.Context, task Task, waitTime time.Duration) *Job {
-	return ScheduleWithNotification(ctx, task, waitTime, nil)
+func New(ctx context.Context, runner Runnable) *Job {
+	return NewWithNotification(ctx, runner, nil)
 }
 
-func ScheduleWithNotification(ctx context.Context, task Task, waitTime time.Duration, ch chan struct{}) *Job {
+func NewWithNotification(ctx context.Context, runner Runnable, ch chan struct{}) *Job {
 	subCtx, cancel := context.WithCancel(ctx)
-	j := Job{
-		task:       task,
+	return &Job{
+		runner:     runner,
 		state:      StateUnknown,
+		subCtx:     subCtx,
 		cancelFunc: cancel,
 		notify:     ch,
 	}
-	go j.run(subCtx, waitTime)
-
-	return &j
 }
 
-func (j *Job) run(ctx context.Context, waitTime time.Duration) {
+func (j *Job) Run(waitTime time.Duration) {
 	j.setScheduled(waitTime)
 	select {
-	case <-ctx.Done():
+	case <-j.subCtx.Done():
 		j.setCanceled()
 	case <-time.After(waitTime):
-		j.setCompleted(j.task.Run(ctx))
+		j.setCompleted(j.runner.Run(j.subCtx))
 	}
 	j.Cancel()
 	if j.notify != nil {
