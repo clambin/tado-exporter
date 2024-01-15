@@ -35,6 +35,8 @@ var (
 )
 
 func main() {
+	//go func() { _ = http.ListenAndServe(":6060", nil) }()
+
 	cli.RootCmd.Version = version
 	cli.RootCmd.AddCommand(&configCmd, &monitorCmd)
 
