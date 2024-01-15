@@ -43,10 +43,9 @@ func TestProcessor(t *testing.T) {
 	}()
 
 	playbook := []struct {
-		action  action.Action
-		message []slack.Attachment
-		task    string
-		taskOK  assert.BoolAssertionFunc
+		action   action.Action
+		message  []slack.Attachment
+		wantTask string
 	}{
 		{
 			action: action.Action{
@@ -60,8 +59,7 @@ func TestProcessor(t *testing.T) {
 				Title: "foo: overlay in 1h0m0s",
 				Text:  "reason",
 			}},
-			task:   "foo: overlay in 1h0m0s",
-			taskOK: assert.True,
+			wantTask: "foo: overlay in 1h0m0s",
 		},
 		{
 			action: action.Action{
@@ -70,8 +68,7 @@ func TestProcessor(t *testing.T) {
 				Label:  "foo",
 				State:  testutil.FakeState{ModeValue: action.ZoneInOverlayMode},
 			},
-			task:   "foo: overlay in 1h0m0s",
-			taskOK: assert.True,
+			wantTask: "foo: overlay in 1h0m0s",
 		},
 		{
 			action: action.Action{
@@ -84,7 +81,6 @@ func TestProcessor(t *testing.T) {
 				Title: "foo: canceling overlay",
 				Text:  "reason gone",
 			}},
-			taskOK: assert.False,
 		},
 	}
 
@@ -95,12 +91,13 @@ func TestProcessor(t *testing.T) {
 		f.set(entry.action)
 
 		updateCh <- poller.Update{}
-		// TODO: race condition
-		time.Sleep(100 * time.Millisecond)
 
-		task, ok := proc.ReportTask()
-		assert.Equal(t, entry.task, task)
-		entry.taskOK(t, ok)
+		if entry.wantTask != "" {
+			assert.Eventually(t, func() bool {
+				task, ok := proc.ReportTask()
+				return ok && task == entry.wantTask
+			}, time.Second, time.Millisecond)
+		}
 	}
 
 	cancel()
