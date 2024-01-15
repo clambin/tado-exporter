@@ -2,7 +2,10 @@ package processor
 
 import (
 	"context"
+	"errors"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
+	"github.com/clambin/tado-exporter/internal/controller/testutil"
+	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
@@ -10,6 +13,24 @@ import (
 )
 
 func TestTask(t *testing.T) {
+	a := action.Action{
+		Delay:  100 * time.Millisecond,
+		Reason: "foo",
+		Label:  "bar",
+		State:  testutil.FakeState{ModeValue: action.ZoneInAutoMode},
+	}
+
+	ctx := context.Background()
+	ch := make(chan struct{})
+	task := newTask(ctx, nil, a, ch)
+
+	<-ch
+	completed, err := task.job.Result()
+	assert.NoError(t, err)
+	assert.True(t, completed)
+}
+
+func TestTask_Stress(t *testing.T) {
 	const actionCount = 1e3
 
 	var wg sync.WaitGroup
@@ -22,19 +43,11 @@ func TestTask(t *testing.T) {
 			a := action.Action{Delay: time.Hour}
 			task := newTask(ctx, nil, a, nil)
 
-			for {
-				completed, _ := task.job.Result()
-				if completed {
-					return
-				}
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
+			assert.Eventually(t, func() bool {
+				completed, err := task.job.Result()
+				return completed && errors.Is(err, scheduler.ErrCanceled)
+			}, time.Second, 100*time.Millisecond)
 
-				time.Sleep(time.Second)
-			}
 		}()
 	}
 	cancel()
