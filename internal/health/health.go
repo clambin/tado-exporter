@@ -36,22 +36,33 @@ func (h *Health) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case update := <-ch:
-			h.lock.Lock()
-			h.update = update
-			h.updated = true
-			h.lock.Unlock()
+			h.setUpdate(update)
 		}
 	}
 }
 
-func (h *Health) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+func (h *Health) isUpdated() bool {
 	h.lock.RLock()
 	defer h.lock.RUnlock()
-	if !h.updated {
+	return h.updated
+}
+
+func (h *Health) setUpdate(update poller.Update) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	h.update = update
+	h.updated = true
+}
+
+func (h *Health) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+	if !h.isUpdated() {
 		http.Error(w, "no update yet", http.StatusServiceUnavailable)
 		h.Poller.Refresh()
 		return
 	}
+
+	h.lock.RLock()
+	defer h.lock.RUnlock()
 
 	w.Header().Set("Content-Type", "application/json")
 

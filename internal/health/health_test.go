@@ -46,9 +46,7 @@ func TestHealth_Handle(t *testing.T) {
 	}
 
 	assert.Eventually(t, func() bool {
-		h.lock.RLock()
-		defer h.lock.RUnlock()
-		return h.updated
+		return h.isUpdated()
 	}, time.Second, 10*time.Millisecond)
 
 	resp = httptest.NewRecorder()
@@ -81,15 +79,14 @@ func BenchmarkHealth_Handle(b *testing.B) {
 	p.EXPECT().Unsubscribe(ch)
 
 	h := New(&p, slog.Default())
-	h.update = poller.Update{
+	h.setUpdate(poller.Update{
 		Zones: map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{
 			1: {
 				SensorDataPoints: tado.ZoneInfoSensorDataPoints{InsideTemperature: tado.Temperature{Celsius: 22.0}},
 			},
 		},
-	}
-	h.updated = true
+	})
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

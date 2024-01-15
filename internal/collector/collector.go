@@ -110,11 +110,11 @@ var (
 )
 
 type Collector struct {
-	Poller     poller.Poller
-	Logger     *slog.Logger
-	lock       sync.RWMutex
-	lastUpdate poller.Update
-	haveUpdate bool
+	Poller    poller.Poller
+	Logger    *slog.Logger
+	lock      sync.RWMutex
+	update    poller.Update
+	isUpdated bool
 }
 
 func (c *Collector) Run(ctx context.Context) error {
@@ -130,8 +130,8 @@ func (c *Collector) Run(ctx context.Context) error {
 			return nil
 		case update := <-ch:
 			c.lock.Lock()
-			c.lastUpdate = update
-			c.haveUpdate = true
+			c.update = update
+			c.isUpdated = true
 			c.lock.Unlock()
 		}
 	}
@@ -159,7 +159,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	if c.haveUpdate {
+	if c.isUpdated {
 		c.collectUsers(ch)
 		c.collectWeather(ch)
 		c.collectZones(ch)
@@ -170,7 +170,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *Collector) collectUsers(ch chan<- prometheus.Metric) {
 	var value float64
-	for _, userInfo := range c.lastUpdate.UserInfo {
+	for _, userInfo := range c.update.UserInfo {
 		value = 0.0
 		if userInfo.IsHome() == tado.DeviceHome {
 			value = 1.0
@@ -180,14 +180,14 @@ func (c *Collector) collectUsers(ch chan<- prometheus.Metric) {
 }
 
 func (c *Collector) collectWeather(ch chan<- prometheus.Metric) {
-	ch <- prometheus.MustNewConstMetric(tadoOutsideSolarIntensity, prometheus.GaugeValue, c.lastUpdate.WeatherInfo.SolarIntensity.Percentage)
-	ch <- prometheus.MustNewConstMetric(tadoOutsideTemperature, prometheus.GaugeValue, c.lastUpdate.WeatherInfo.OutsideTemperature.Celsius)
-	ch <- prometheus.MustNewConstMetric(tadoOutsideWeather, prometheus.GaugeValue, 1, c.lastUpdate.WeatherInfo.WeatherState.Value)
+	ch <- prometheus.MustNewConstMetric(tadoOutsideSolarIntensity, prometheus.GaugeValue, c.update.WeatherInfo.SolarIntensity.Percentage)
+	ch <- prometheus.MustNewConstMetric(tadoOutsideTemperature, prometheus.GaugeValue, c.update.WeatherInfo.OutsideTemperature.Celsius)
+	ch <- prometheus.MustNewConstMetric(tadoOutsideWeather, prometheus.GaugeValue, 1, c.update.WeatherInfo.WeatherState.Value)
 }
 
 func (c *Collector) collectZones(ch chan<- prometheus.Metric) {
 	var value float64
-	for _, zone := range c.lastUpdate.Zones {
+	for _, zone := range c.update.Zones {
 		for i, device := range zone.Devices {
 			id := zone.Name + "_" + strconv.Itoa(i)
 			value = 0.0
@@ -207,8 +207,8 @@ func (c *Collector) collectZones(ch chan<- prometheus.Metric) {
 
 func (c *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 	var value float64
-	for zoneID, zoneInfo := range c.lastUpdate.ZoneInfo {
-		zone, found := c.lastUpdate.Zones[zoneID]
+	for zoneID, zoneInfo := range c.update.ZoneInfo {
+		zone, found := c.update.Zones[zoneID]
 
 		if !found {
 			c.Logger.Warn("invalid zoneID in collected tado metrics. skipping collection", "id", zoneID)
@@ -249,5 +249,5 @@ func (c *Collector) collectZoneInfos(ch chan<- prometheus.Metric) {
 }
 
 func (c *Collector) collectHomeState(ch chan<- prometheus.Metric) {
-	ch <- prometheus.MustNewConstMetric(tadoHomeState, prometheus.GaugeValue, 1, c.lastUpdate.Home.String())
+	ch <- prometheus.MustNewConstMetric(tadoHomeState, prometheus.GaugeValue, 1, c.update.Home.String())
 }
