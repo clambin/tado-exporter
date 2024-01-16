@@ -8,7 +8,7 @@ import (
 type Publisher[T any] struct {
 	clients map[chan T]struct{}
 	logger  *slog.Logger
-	lock    sync.Mutex
+	lock    sync.RWMutex
 }
 
 func New[T any](logger *slog.Logger) *Publisher[T] {
@@ -35,8 +35,8 @@ func (p *Publisher[T]) Unsubscribe(ch chan T) {
 }
 
 func (p *Publisher[T]) Publish(info T) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.lock.RLock()
+	defer p.lock.RUnlock()
 	for ch := range p.clients {
 		ch <- info
 	}
