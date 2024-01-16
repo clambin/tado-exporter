@@ -61,7 +61,9 @@ func getCombinedReason(actions []action.Action) string {
 	var last string
 
 	for _, a := range actions {
-		if a.Reason != last {
+		// TODO: a.Reason != "" is an effort to remove "home in HOME mode" where it's not really needed.
+		// Not sure if this is the best approach.
+		if a.Reason != "" && a.Reason != last {
 			results = append(results, a.Reason)
 			last = a.Reason
 		}

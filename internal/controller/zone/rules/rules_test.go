@@ -116,7 +116,8 @@ func TestRules_ZoneRules(t *testing.T) {
 				wantError: assert.NoError,
 				action:    false,
 				delay:     0,
-				reason:    "A is home, home in HOME mode, no manual temp setting detected",
+				//reason:    "A is home, home in HOME mode, no manual temp setting detected",
+				reason: "A is home, no manual temp setting detected",
 			},
 		},
 		{

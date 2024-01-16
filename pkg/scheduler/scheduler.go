@@ -30,7 +30,7 @@ type Job struct {
 }
 
 type Runnable interface {
-	Run(ctx context.Context) error
+	Run(context.Context) error
 }
 
 func New(ctx context.Context, runner Runnable) *Job {
@@ -67,9 +67,8 @@ func (j *Job) Cancel() {
 }
 
 func (j *Job) Result() (bool, error) {
-	result, err, _ := j.GetState()
-	completed := result == StateCompleted || result == StateCanceled
-	return completed, err
+	state, err, _ := j.GetState()
+	return state == StateCompleted || state == StateCanceled, err
 }
 
 func (j *Job) setScheduled(waitTime time.Duration) {

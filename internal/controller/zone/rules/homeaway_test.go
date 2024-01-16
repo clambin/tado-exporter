@@ -36,7 +36,7 @@ func TestHomeAwayRule_Evaluate(t *testing.T) {
 			want: want{
 				err:    assert.NoError,
 				action: assert.False,
-				reason: "home in HOME mode",
+				//reason: "home in HOME mode",
 			},
 		},
 		{

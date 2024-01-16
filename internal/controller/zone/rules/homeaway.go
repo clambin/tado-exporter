@@ -25,8 +25,8 @@ func LoadHomeAwayRule(id int, name string, _ poller.Update, _ *slog.Logger) (Hom
 
 func (r HomeAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 	e := action.Action{
-		Label:  r.zoneName,
-		Reason: "home in HOME mode",
+		Label: r.zoneName,
+		//Reason: "home in HOME mode",
 		State: &State{
 			zoneID:   r.zoneID,
 			zoneName: r.zoneName,
