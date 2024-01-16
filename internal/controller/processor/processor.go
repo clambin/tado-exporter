@@ -80,20 +80,20 @@ func (p *Processor) Evaluate(update poller.Update) (action action.Action, err er
 
 func (p *Processor) processUpdate(ctx context.Context, action action.Action) {
 	if action.IsAction() {
-		p.logger.Debug("scheduling job", slog.Any("next", action))
+		p.logger.Debug("scheduling job", "next", action)
 		p.scheduleJob(ctx, action)
 	} else {
 		p.cancelJob(action)
 	}
 }
 
-func (p *Processor) scheduleJob(ctx context.Context, next action.Action) {
+func (p *Processor) scheduleJob(ctx context.Context, action action.Action) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
 	// if the same state is already scheduled for an earlier time, don't schedule it again.
 	if p.task != nil {
-		if p.task.action.State.IsEqual(next.State) && p.task.scheduledBefore(next) {
+		if p.task.action.State.IsEqual(action.State) && p.task.scheduledBefore(action) {
 			return
 		}
 
@@ -101,10 +101,10 @@ func (p *Processor) scheduleJob(ctx context.Context, next action.Action) {
 		p.task.job.Cancel()
 	}
 
-	p.task = newTask(ctx, p.tadoClient, next, p.notification)
+	p.task = newTask(ctx, p.tadoClient, action, p.notification)
 
-	if next.Delay > 0 {
-		p.notifiers.Notify(notifier.Queued, next)
+	if action.Delay > 0 {
+		p.notifiers.Notify(notifier.Queued, action)
 	}
 }
 

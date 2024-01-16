@@ -2,7 +2,6 @@ package rules
 
 import (
 	"fmt"
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
@@ -38,7 +37,7 @@ func LoadAutoAwayRule(cfg configuration.AutoAwayConfiguration, update poller.Upd
 }
 
 func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
-	home, away := a.getDeviceStates(update)
+	home, away := update.GetDeviceStatus(a.mobileDeviceIDs...)
 
 	var result action.Action
 	if len(home) == 0 {
@@ -56,25 +55,11 @@ func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 
 	a.logger.Debug("evaluated",
 		slog.Bool("home", bool(update.Home)),
+		slog.Any("devices", update.UserInfo),
 		slog.Any("result", result),
 	)
 
 	return result, nil
-}
-
-func (a AutoAwayRule) getDeviceStates(update poller.Update) ([]string, []string) {
-	var home, away []string
-	for _, id := range a.mobileDeviceIDs {
-		if entry, exists := update.UserInfo[id]; exists {
-			switch entry.IsHome() {
-			case tado.DeviceHome:
-				home = append(home, entry.Name)
-			case tado.DeviceAway, tado.DeviceUnknown:
-				away = append(away, entry.Name)
-			}
-		}
-	}
-	return home, away
 }
 
 func makeReason(users []string, state string) string {

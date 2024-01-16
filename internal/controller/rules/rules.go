@@ -2,6 +2,7 @@ package rules
 
 import (
 	"cmp"
+	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"slices"
@@ -55,17 +56,12 @@ func filterFirstAction(actions []action.Action) []action.Action {
 }
 
 func getCombinedReason(actions []action.Action) string {
-	slices.SortFunc(actions, func(a, b action.Action) int { return cmp.Compare(a.Reason, b.Reason) })
-
-	results := make([]string, 0, len(actions))
-	var last string
-
-	for _, a := range actions {
-		if a.Reason != last {
-			results = append(results, a.Reason)
-			last = a.Reason
+	reasons := set.New[string]()
+	for i := range actions {
+		// TODO: a.Reason != "" is an effort to remove "home in HOME mode" where it's not really needed.
+		if actions[i].Reason != "" {
+			reasons.Add(actions[i].Reason)
 		}
 	}
-
-	return strings.Join(results, ", ")
+	return strings.Join(reasons.ListOrdered(), ", ")
 }

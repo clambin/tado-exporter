@@ -34,7 +34,7 @@ func TestCollector(t *testing.T) {
 	require.Eventually(t, func() bool {
 		c.lock.RLock()
 		defer c.lock.RUnlock()
-		return c.haveUpdate
+		return c.isUpdated
 	}, time.Second, 10*time.Millisecond)
 
 	require.NoError(t, testutil.GatherAndCompare(r, bytes.NewBufferString(`

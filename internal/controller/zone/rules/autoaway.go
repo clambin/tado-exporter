@@ -1,13 +1,13 @@
 package rules
 
 import (
-	"fmt"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/pkg/tadotools"
+	"github.com/pkg/errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -26,7 +26,7 @@ func LoadAutoAwayRule(id int, name string, cfg configuration.AutoAwayConfigurati
 	for _, user := range cfg.Users {
 		deviceID, ok := update.GetUserID(user)
 		if !ok {
-			return AutoAwayRule{}, fmt.Errorf("invalid mobile name: %s", user)
+			return AutoAwayRule{}, errors.New("invalid mobile name: " + user)
 		}
 		deviceIDs = append(deviceIDs, deviceID)
 	}
@@ -42,63 +42,49 @@ func LoadAutoAwayRule(id int, name string, cfg configuration.AutoAwayConfigurati
 
 var _ rules.Evaluator = AutoAwayRule{}
 
-func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
-	e := action.Action{Label: a.zoneName}
-	s := State{
-		zoneID:   a.zoneID,
-		zoneName: a.zoneName,
-		mode:     action.NoAction,
+func (r AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
+	a := action.Action{
+		Label: r.zoneName,
+		State: &State{
+			zoneID:   r.zoneID,
+			zoneName: r.zoneName,
+			mode:     action.NoAction,
+		},
 	}
 
 	if !update.Home {
-		e.State = s
-		e.Reason = "home in AWAY mode"
-		return e, nil
+		a.Reason = "home in AWAY mode"
+		return a, nil
 	}
 
-	home, away := a.getDeviceStates(update)
+	home, away := update.GetDeviceStatus(r.mobileDeviceIDs...)
 	allAway := len(home) == 0 && len(away) > 0
 	someoneHome := len(home) > 0
-	currentState := tadotools.GetZoneState(update.ZoneInfo[a.zoneID])
+	currentState := tadotools.GetZoneState(update.ZoneInfo[r.zoneID])
 
 	if allAway {
-		e.Reason = a.makeReason(away, "away")
+		a.Reason = r.makeReason(away, "away")
 		if currentState.Heating() {
-			e.Delay = a.delay
-			s.mode = action.ZoneInOverlayMode
+			a.Delay = r.delay
+			a.State.(*State).mode = action.ZoneInOverlayMode
 		}
 	} else if someoneHome {
-		e.Reason = a.makeReason(home, "home")
+		a.Reason = r.makeReason(home, "home")
 		if !currentState.Heating() && currentState.Overlay == tado.PermanentOverlay {
-			s.mode = action.ZoneInAutoMode
+			a.State.(*State).mode = action.ZoneInAutoMode
 		}
 	}
-	e.State = s
 
-	a.logger.Debug("evaluated",
+	r.logger.Debug("evaluated",
 		slog.Bool("home", bool(update.Home)),
-		slog.Any("result", e),
+		slog.Any("devices", update.UserInfo),
+		slog.Any("result", a),
 	)
 
-	return e, nil
+	return a, nil
 }
 
-func (a AutoAwayRule) getDeviceStates(update poller.Update) ([]string, []string) {
-	var home, away []string
-	for _, id := range a.mobileDeviceIDs {
-		if entry, exists := update.UserInfo[id]; exists {
-			switch entry.IsHome() {
-			case tado.DeviceHome:
-				home = append(home, entry.Name)
-			case tado.DeviceAway, tado.DeviceUnknown:
-				away = append(away, entry.Name)
-			}
-		}
-	}
-	return home, away
-}
-
-func (a AutoAwayRule) makeReason(users []string, state string) string {
+func (r AutoAwayRule) makeReason(users []string, state string) string {
 	var verb string
 	if len(users) == 1 {
 		verb = "is"

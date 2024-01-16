@@ -6,6 +6,7 @@ import (
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"sync"
 	"testing"
 	"time"
 )
@@ -14,7 +15,7 @@ type MyTask struct {
 	err error
 }
 
-var _ scheduler.Task = &MyTask{}
+var _ scheduler.Runnable = &MyTask{}
 
 func (t MyTask) Run(_ context.Context) error {
 	return t.err
@@ -22,7 +23,8 @@ func (t MyTask) Run(_ context.Context) error {
 
 func TestSchedule(t *testing.T) {
 	var task MyTask
-	job := scheduler.Schedule(context.Background(), &task, 100*time.Millisecond)
+	job := scheduler.New(context.Background(), &task)
+	go job.Run(100 * time.Millisecond)
 
 	assert.Eventually(t, func() bool {
 		done, err := job.Result()
@@ -35,7 +37,8 @@ func TestSchedule(t *testing.T) {
 func TestScheduleWithNotification(t *testing.T) {
 	ch := make(chan struct{})
 	var task MyTask
-	job := scheduler.ScheduleWithNotification(context.Background(), &task, 100*time.Millisecond, ch)
+	job := scheduler.NewWithNotification(context.Background(), &task, ch)
+	go job.Run(100 * time.Millisecond)
 
 	<-ch
 	done, err := job.Result()
@@ -43,10 +46,29 @@ func TestScheduleWithNotification(t *testing.T) {
 	assert.True(t, done)
 }
 
+func TestSchedule_Stress(t *testing.T) {
+	const jobCount = 1e5
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	for i := 0; i < jobCount; i++ {
+		wg.Add(1)
+		job := scheduler.New(ctx, &MyTask{})
+		go job.Run(time.Hour)
+		go func() {
+			time.Sleep(10 * time.Millisecond)
+			job.Cancel()
+			wg.Done()
+		}()
+	}
+	cancel()
+	wg.Wait()
+}
+
 func TestSchedule_Failure(t *testing.T) {
 	ch := make(chan struct{})
 	task := MyTask{err: fmt.Errorf("failed")}
-	job := scheduler.ScheduleWithNotification(context.Background(), &task, 100*time.Millisecond, ch)
+	job := scheduler.NewWithNotification(context.Background(), &task, ch)
+	go job.Run(100 * time.Millisecond)
 
 	<-ch
 	_, err := job.Result()
@@ -57,7 +79,8 @@ func TestSchedule_Failure(t *testing.T) {
 func TestJob_Cancel(t *testing.T) {
 	ch := make(chan struct{})
 	var task MyTask
-	job := scheduler.ScheduleWithNotification(context.Background(), &task, time.Hour, ch)
+	job := scheduler.NewWithNotification(context.Background(), &task, ch)
+	go job.Run(time.Hour)
 
 	job.Cancel()
 	<-ch
@@ -70,7 +93,8 @@ func TestJob_Cancel_Chained(t *testing.T) {
 	ch := make(chan struct{})
 	var task MyTask
 	ctx, cancel := context.WithCancel(context.Background())
-	job := scheduler.ScheduleWithNotification(ctx, &task, time.Hour, ch)
+	job := scheduler.NewWithNotification(ctx, &task, ch)
+	go job.Run(time.Hour)
 
 	cancel()
 	<-ch
@@ -80,10 +104,10 @@ func TestJob_Cancel_Chained(t *testing.T) {
 }
 
 func TestJob_TimeToFire(t *testing.T) {
-	ch := make(chan struct{})
 	var task MyTask
 	ctx, cancel := context.WithCancel(context.Background())
-	job := scheduler.ScheduleWithNotification(ctx, &task, time.Hour, ch)
+	job := scheduler.New(ctx, &task)
+	go job.Run(time.Hour)
 
 	assert.Eventually(t, func() bool {
 		state, _, _ := job.GetState()

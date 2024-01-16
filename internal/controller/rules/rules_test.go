@@ -94,6 +94,28 @@ func TestRules_Evaluate(t *testing.T) {
 	}
 }
 
+func BenchmarkRules_Evaluate(b *testing.B) {
+	var r Rules
+	for i := 0; i < 10; i++ {
+		r = append(r, stubbedEvaluator{})
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := r.Evaluate(poller.Update{})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func Benchmark_getCombinedReasons(b *testing.B) {
+	actions := make([]action.Action, 5)
+
+	for i := 0; i < b.N; i++ {
+		_ = getCombinedReason(actions)
+	}
+}
+
 var _ Evaluator = stubbedEvaluator{}
 
 type stubbedEvaluator struct {

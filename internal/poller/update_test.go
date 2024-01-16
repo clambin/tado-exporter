@@ -7,6 +7,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/poller"
 	tadoTestutil "github.com/clambin/tado/testutil"
 	"github.com/stretchr/testify/assert"
+	"slices"
 	"testing"
 )
 
@@ -106,8 +107,46 @@ func TestMobileDevices_LogValue(t *testing.T) {
 	logger.Info("devices", "devices", devices)
 
 	logEntry := out.String()
-	assert.Contains(t, logEntry, ` devices.device_10.id=10 devices.device_10.name=home devices.device_10.geotracked=true devices.device_10.location.home=true devices.device_10.location.stale=false`)
-	assert.Contains(t, logEntry, ` devices.device_11.id=11 devices.device_11.name=away devices.device_11.geotracked=true devices.device_11.location.home=false devices.device_11.location.stale=false`)
-	assert.Contains(t, logEntry, ` devices.device_12.id=12 devices.device_12.name=stale devices.device_12.geotracked=true devices.device_12.location.home=false devices.device_12.location.stale=true`)
-	assert.Contains(t, logEntry, ` devices.device_13.id=13 devices.device_13.name="not geotagged" devices.device_13.geotracked=false devices.device_13.location.home=false devices.device_13.location.stale=false`)
+	assert.Equal(t, `level=INFO msg=devices devices.device_10.id=10 devices.device_10.name=home devices.device_10.geotracked=true devices.device_10.location.home=true devices.device_10.location.stale=false devices.device_11.id=11 devices.device_11.name=away devices.device_11.geotracked=true devices.device_11.location.home=false devices.device_11.location.stale=false devices.device_12.id=12 devices.device_12.name=stale devices.device_12.geotracked=true devices.device_12.location.home=false devices.device_12.location.stale=true devices.device_13.id=13 devices.device_13.name="not geotagged" devices.device_13.geotracked=false
+`, logEntry)
+}
+
+func TestUpdate_GetDeviceStatus(t *testing.T) {
+	testCases := []struct {
+		name     string
+		ids      []int
+		wantHome []string
+		wantAway []string
+	}{
+		{
+			name:     "no ids",
+			wantHome: nil,
+			wantAway: []string{"bar", "foo"},
+		},
+		{
+			name:     "ids",
+			ids:      []int{1, 2},
+			wantHome: nil,
+			wantAway: []string{"bar", "foo"},
+		},
+		{
+			name:     "ids",
+			ids:      []int{1},
+			wantHome: nil,
+			wantAway: []string{"foo"},
+		},
+	}
+
+	for _, tt := range testCases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			home, away := testUpdate.GetDeviceStatus(tt.ids...)
+			slices.Sort(home)
+			slices.Sort(away)
+			assert.Equal(t, tt.wantHome, home)
+			assert.Equal(t, tt.wantAway, away)
+		})
+	}
 }

@@ -22,37 +22,38 @@ func LoadLimitOverlay(id int, name string, cfg configuration.LimitOverlayConfigu
 		zoneID:   id,
 		zoneName: name,
 		delay:    cfg.Delay,
-		logger:   logger.With("rule", "limitOverlay"),
+		logger:   logger.With(slog.String("rule", "limitOverlay")),
 	}, nil
 }
 
 //var _ evaluate.Evaluator = LimitOverlayRule{}
 
 func (r LimitOverlayRule) Evaluate(update poller.Update) (action.Action, error) {
-	s := State{
-		zoneID:   r.zoneID,
-		zoneName: r.zoneName,
-		mode:     action.NoAction,
+	a := action.Action{
+		Label:  r.zoneName,
+		Reason: "no manual temp setting detected",
+		State: &State{
+			zoneID:   r.zoneID,
+			zoneName: r.zoneName,
+			mode:     action.NoAction,
+		},
 	}
-	e := action.Action{Label: r.zoneName, Reason: "no manual temp setting detected"}
 
 	if !update.Home {
-		e.State = s
-		e.Reason = "home in AWAY mode"
-		return e, nil
+		a.Reason = "home in AWAY mode"
+		return a, nil
 	}
 
 	if state := tadotools.GetZoneState(update.ZoneInfo[r.zoneID]); state.Overlay == tado.PermanentOverlay {
-		s.mode = action.ZoneInAutoMode
-		e.Delay = r.delay
-		e.Reason = "manual temp setting detected"
+		a.State.(*State).mode = action.ZoneInAutoMode
+		a.Delay = r.delay
+		a.Reason = "manual temp setting detected"
 	}
-	e.State = s
 
 	r.logger.Debug("evaluated",
 		slog.Bool("home", bool(update.Home)),
-		slog.Any("result", e),
+		slog.Any("result", a),
 	)
 
-	return e, nil
+	return a, nil
 }

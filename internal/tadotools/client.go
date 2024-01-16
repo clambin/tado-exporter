@@ -45,7 +45,7 @@ func newTadoCallMetrics(namespace, subsystem, application string) *tadoCallMetri
 			Name:        prometheus.BuildFQName(namespace, subsystem, "api_latency"),
 			Help:        "latency of HTTP calls",
 			ConstLabels: map[string]string{"application": application},
-		}, []string{"method", "path"}), // TODO: return code?
+		}, []string{"method", "path"}),
 		errors: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name:        prometheus.BuildFQName(namespace, subsystem, "api_errors_total"),
 			Help:        "Number of failed HTTP calls",

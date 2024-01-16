@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+var _ yaml.Marshaler = Timestamp{}
+var _ yaml.Unmarshaler = &Timestamp{}
+
 type Timestamp struct {
 	Hour    int
 	Minutes int
@@ -30,7 +33,6 @@ func (t *Timestamp) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (t Timestamp) MarshalYAML() (interface{}, error) {
-	ts := time.Date(0, 0, 0, t.Hour, t.Minutes, t.Seconds, 0, time.UTC)
-	return ts.Format("15:04:05"), nil
+func (t Timestamp) MarshalYAML() (any, error) {
+	return time.Date(0, 0, 0, t.Hour, t.Minutes, t.Seconds, 0, time.UTC).Format("15:04:05"), nil
 }

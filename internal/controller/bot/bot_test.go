@@ -3,7 +3,7 @@ package bot
 import (
 	"context"
 	"github.com/clambin/tado"
-	mocks2 "github.com/clambin/tado-exporter/internal/controller/bot/mocks"
+	"github.com/clambin/tado-exporter/internal/controller/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
 	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado/testutil"
@@ -18,8 +18,8 @@ import (
 )
 
 func TestBot_Run(t *testing.T) {
-	api := mocks2.NewTadoSetter(t)
-	b := mocks2.NewSlackBot(t)
+	api := mocks.NewTadoSetter(t)
+	b := mocks.NewSlackBot(t)
 	b.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	ch := make(chan poller.Update)
@@ -46,11 +46,11 @@ func TestBot_Run(t *testing.T) {
 }
 
 func TestExecutor_ReportRules(t *testing.T) {
-	api := mocks2.NewTadoSetter(t)
-	bot := mocks2.NewSlackBot(t)
+	api := mocks.NewTadoSetter(t)
+	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
-	controller := mocks2.NewController(t)
+	controller := mocks.NewController(t)
 	controller.EXPECT().ReportTasks().Return(nil).Once()
 
 	c := New(api, bot, nil, controller, slog.Default())
@@ -67,8 +67,8 @@ func TestExecutor_ReportRules(t *testing.T) {
 }
 
 func TestExecutor_SetRoom(t *testing.T) {
-	api := mocks2.NewTadoSetter(t)
-	bot := mocks2.NewSlackBot(t)
+	api := mocks.NewTadoSetter(t)
+	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	p := mockPoller.NewPoller(t)
@@ -157,8 +157,8 @@ func TestExecutor_SetRoom(t *testing.T) {
 }
 
 func TestExecutor_DoRefresh(t *testing.T) {
-	api := mocks2.NewTadoSetter(t)
-	bot := mocks2.NewSlackBot(t)
+	api := mocks.NewTadoSetter(t)
+	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	p := mockPoller.NewPoller(t)
@@ -169,8 +169,8 @@ func TestExecutor_DoRefresh(t *testing.T) {
 }
 
 func TestExecutor_ReportRooms(t *testing.T) {
-	api := mocks2.NewTadoSetter(t)
-	bot := mocks2.NewSlackBot(t)
+	api := mocks.NewTadoSetter(t)
+	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	c := New(api, bot, nil, nil, slog.Default())
@@ -194,8 +194,8 @@ func TestExecutor_ReportRooms(t *testing.T) {
 }
 
 func TestExecutor_ReportUsers(t *testing.T) {
-	api := mocks2.NewTadoSetter(t)
-	bot := mocks2.NewSlackBot(t)
+	api := mocks.NewTadoSetter(t)
+	bot := mocks.NewSlackBot(t)
 	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
 
 	c := New(api, bot, nil, nil, slog.Default())
