@@ -33,7 +33,7 @@ func LoadNightTime(id int, name string, cfg configuration.NightTimeConfiguration
 var _ rules.Evaluator = NightTimeRule{}
 
 func (r NightTimeRule) Evaluate(update poller.Update) (action.Action, error) {
-	e := action.Action{
+	a := action.Action{
 		Label:  r.zoneName,
 		Reason: "no manual temp setting detected",
 		State: &State{
@@ -44,8 +44,8 @@ func (r NightTimeRule) Evaluate(update poller.Update) (action.Action, error) {
 	}
 
 	if !update.Home {
-		e.Reason = "home in AWAY mode"
-		return e, nil
+		a.Reason = "home in AWAY mode"
+		return a, nil
 	}
 
 	if state := tadotools.GetZoneState(update.ZoneInfo[r.zoneID]); state.Overlay == tado.PermanentOverlay && state.Heating() {
@@ -55,17 +55,17 @@ func (r NightTimeRule) Evaluate(update poller.Update) (action.Action, error) {
 			now = r.GetCurrentTime
 		}
 
-		e.Delay = getNextNightTimeDelay(now(), r.timestamp)
-		e.Reason = "manual temp setting detected"
-		e.State.(*State).mode = action.ZoneInAutoMode
+		a.Delay = getNextNightTimeDelay(now(), r.timestamp)
+		a.Reason = "manual temp setting detected"
+		a.State.(*State).mode = action.ZoneInAutoMode
 	}
 
 	r.logger.Debug("evaluated",
 		slog.Bool("home", bool(update.Home)),
-		slog.Any("result", e),
+		slog.Any("result", a),
 	)
 
-	return e, nil
+	return a, nil
 }
 
 func getNextNightTimeDelay(now time.Time, limit configuration.Timestamp) time.Duration {

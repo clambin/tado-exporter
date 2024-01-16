@@ -42,49 +42,49 @@ func LoadAutoAwayRule(id int, name string, cfg configuration.AutoAwayConfigurati
 
 var _ rules.Evaluator = AutoAwayRule{}
 
-func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
-	e := action.Action{
-		Label: a.zoneName,
+func (r AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
+	a := action.Action{
+		Label: r.zoneName,
 		State: &State{
-			zoneID:   a.zoneID,
-			zoneName: a.zoneName,
+			zoneID:   r.zoneID,
+			zoneName: r.zoneName,
 			mode:     action.NoAction,
 		},
 	}
 
 	if !update.Home {
-		e.Reason = "home in AWAY mode"
-		return e, nil
+		a.Reason = "home in AWAY mode"
+		return a, nil
 	}
 
-	home, away := update.GetDeviceStatus(a.mobileDeviceIDs...)
+	home, away := update.GetDeviceStatus(r.mobileDeviceIDs...)
 	allAway := len(home) == 0 && len(away) > 0
 	someoneHome := len(home) > 0
-	currentState := tadotools.GetZoneState(update.ZoneInfo[a.zoneID])
+	currentState := tadotools.GetZoneState(update.ZoneInfo[r.zoneID])
 
 	if allAway {
-		e.Reason = a.makeReason(away, "away")
+		a.Reason = r.makeReason(away, "away")
 		if currentState.Heating() {
-			e.Delay = a.delay
-			e.State.(*State).mode = action.ZoneInOverlayMode
+			a.Delay = r.delay
+			a.State.(*State).mode = action.ZoneInOverlayMode
 		}
 	} else if someoneHome {
-		e.Reason = a.makeReason(home, "home")
+		a.Reason = r.makeReason(home, "home")
 		if !currentState.Heating() && currentState.Overlay == tado.PermanentOverlay {
-			e.State.(*State).mode = action.ZoneInAutoMode
+			a.State.(*State).mode = action.ZoneInAutoMode
 		}
 	}
 
-	a.logger.Debug("evaluated",
+	r.logger.Debug("evaluated",
 		slog.Bool("home", bool(update.Home)),
 		slog.Any("devices", update.UserInfo),
-		slog.Any("result", e),
+		slog.Any("result", a),
 	)
 
-	return e, nil
+	return a, nil
 }
 
-func (a AutoAwayRule) makeReason(users []string, state string) string {
+func (r AutoAwayRule) makeReason(users []string, state string) string {
 	var verb string
 	if len(users) == 1 {
 		verb = "is"

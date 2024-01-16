@@ -29,7 +29,7 @@ func LoadLimitOverlay(id int, name string, cfg configuration.LimitOverlayConfigu
 //var _ evaluate.Evaluator = LimitOverlayRule{}
 
 func (r LimitOverlayRule) Evaluate(update poller.Update) (action.Action, error) {
-	e := action.Action{
+	a := action.Action{
 		Label:  r.zoneName,
 		Reason: "no manual temp setting detected",
 		State: &State{
@@ -40,20 +40,20 @@ func (r LimitOverlayRule) Evaluate(update poller.Update) (action.Action, error) 
 	}
 
 	if !update.Home {
-		e.Reason = "home in AWAY mode"
-		return e, nil
+		a.Reason = "home in AWAY mode"
+		return a, nil
 	}
 
 	if state := tadotools.GetZoneState(update.ZoneInfo[r.zoneID]); state.Overlay == tado.PermanentOverlay {
-		e.State.(*State).mode = action.ZoneInAutoMode
-		e.Delay = r.delay
-		e.Reason = "manual temp setting detected"
+		a.State.(*State).mode = action.ZoneInAutoMode
+		a.Delay = r.delay
+		a.Reason = "manual temp setting detected"
 	}
 
 	r.logger.Debug("evaluated",
 		slog.Bool("home", bool(update.Home)),
-		slog.Any("result", e),
+		slog.Any("result", a),
 	)
 
-	return e, nil
+	return a, nil
 }
