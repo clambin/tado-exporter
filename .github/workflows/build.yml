@@ -1,10 +1,10 @@
-name: Build
+name: build
 
 on:
   push:
     branches:
       - master
-      - away
+      - fix
   pull_request_target:
     branches-ignore:
       - master

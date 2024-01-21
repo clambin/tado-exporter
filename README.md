@@ -1,9 +1,10 @@
 # tado utility
-![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/clambin/tado-exporter?color=green&label=Release&style=plastic)
-![Codecov](https://img.shields.io/codecov/c/gh/clambin/tado-exporter?style=plastic)
-![Build](https://github.com/clambin/tado-exporter/workflows/Build/badge.svg)
-![Go Report Card](https://goreportcard.com/badge/github.com/clambin/tado-exporter)
-![GitHub](https://img.shields.io/github/license/clambin/tado-exporter?style=plastic)
+[![release](https://img.shields.io/github/v/tag/clambin/tado-exporter?color=green&label=release&style=plastic)](https://github.com/clambin/tado-exporter/releases)
+[![codecov](https://img.shields.io/codecov/c/gh/clambin/tado-exporter?style=plastic)](https://app.codecov.io/gh/clambin/tado-exporter)
+[![test](https://github.com/clambin/tado-exporter/workflows/test/badge.svg)](https://github.com/clambin/tado-exporter/actions)
+[![build](https://github.com/clambin/tado-exporter/workflows/build/badge.svg)](https://github.com/clambin/tado-exporter/actions)
+[![report card](https://goreportcard.com/badge/github.com/clambin/tado-exporter)](https://goreportcard.com/report/github.com/clambin/tado-exporter)
+[![license](https://img.shields.io/github/license/clambin/tado-exporter?style=plastic)](LICENSE.md)
 
 Monitor & control utility Tadoº Smart Thermostat devices.
 
@@ -163,42 +164,38 @@ where <port> is the Prometheus listener port configured in exporter.addr in the 
 
 tado exposes the following metrics:
 
+#### General metrics
+
+| metric | type | help |
+| --- | --- | --- |
+| tado_outside_temp_celsius | GAUGE | Current outside temperature in degrees celsius |
+| tado_solar_intensity_percentage | GAUGE | Current solar intensity in percentage (0-100) |
+| tado_weather | GAUGE | Current weather. Always one. See label 'tado_weather' |
+
 #### Metrics by Zone
 
 The following metrics are reported for each discovered zone.  The zone name is added as 'zone_name' label.
 
-```
-* tado_outside_temp_celsius:            Current outside temperature in degrees celsius
-* tado_solar_intensity_percentage       Current solar intensity in percentage (0-100)
-* tado_weather:                         Current weather. Always one. See label 'tado_weather'
-* tado_zone_device_battery_status:      Tado device battery status
-* tado_zone_device_connection_status:   Tado device connection status
-* tado_zone_heating_percentage:         Current heating percentage in this zone in percentage (0-100)
-* tado_zone_humidity_percentage:        Current humidity percentage in this zone
-* tado_zone_open_window_duration:       Duration of open window event in seconds
-* tado_zone_open_window_remaining:      Remaining duration of open window event in seconds
-* tado_zone_power_state:                Power status of this zone
-* tado_zone_target_manual_mode:         1 if this zone is in manual temp target mode
-* tado_zone_target_temp_celsius:        Target temperature of this zone in degrees celsius
-* tado_zone_temperature_celsius:        Current temperature of this zone in degrees celsius
-```
+| metric | type | help |
+| --- | --- | --- |
+| tado_zone_device_battery_status | GAUGE | Tado device battery status |
+| tado_zone_device_connection_status | GAUGE | Tado device connection status |
+| tado_zone_heating_percentage | GAUGE | Current heating percentage in this zone in percentage (0-100) |
+| tado_zone_humidity_percentage | GAUGE | Current humidity percentage in this zone |
+| tado_zone_open_window_duration | GAUGE | Duration of open window event in seconds |
+| tado_zone_open_window_remaining | GAUGE | Remaining duration of open window event in seconds |
+| tado_zone_power_state | GAUGE | Power status of this zone |
+| tado_zone_target_manual_mode | GAUGE | 1 if this zone is in manual temp target mode |
+| tado_zone_target_temp_celsius | GAUGE | Target temperature of this zone in degrees celsius |
+| tado_zone_temperature_celsius | GAUGE | Current temperature of this zone in degrees celsius |
 
 #### Mobile device home/away status metrics
 
 Tado reports the home/away status of registered mobile devices. See device name is added as 'name' label.
 
-```
-* tado_mobile_device_status:            Status of any geotracked mobile devices (1: at home, 0: away)
-
-```
-
-#### General metrics
-
-```
-* tado_outside_temp_celsius:            Current outside temperature in degrees celsius
-* tado_solar_intensity_percentage:      Current solar intensity in percentage (0-100)
-* tado_weather:                         Current weather. Always one. See label 'tado_weather'
-```
+| metric | type | help |
+| --- | --- | --- |
+| tado_mobile_device_status | GAUGE | Tado mobile device status. 1 if the device is "home" |
 
 ### Grafana
 
