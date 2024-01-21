@@ -1,4 +1,4 @@
-name: Vulnerabilities
+name: vulnerabilities
 
 on:
   push:
