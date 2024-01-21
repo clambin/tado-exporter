@@ -39,7 +39,7 @@ func (r HomeAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 	}
 
 	// LoadZoneRules has already validated zoneID. no need to check here.
-	info, _ := update.ZoneInfo[r.zoneID]
+	info := update.ZoneInfo[r.zoneID]
 	state := tadotools.GetZoneState(info)
 
 	if state.Overlay == tado.NoOverlay {
