@@ -69,7 +69,7 @@ type MobileDevices map[int]tado.MobileDevice
 func (m MobileDevices) LogValue() slog.Value {
 	var loggedDevices []slog.Attr
 	for _, deviceID := range m.sortedDeviceIDs() {
-		device, _ := m[deviceID]
+		device := m[deviceID]
 		attribs := logDevice(device)
 		loggedDevices = append(loggedDevices, slog.Group("device_"+strconv.Itoa(deviceID), attribs...))
 	}
