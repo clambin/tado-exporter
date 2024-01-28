@@ -154,9 +154,6 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 }
 
 func (b *Bot) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
 	zoneID, zoneName, auto, temperature, duration, err := b.parseSetRoomCommand(args...)
 
 	if err != nil {
@@ -197,31 +194,10 @@ func (b *Bot) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
 	}}
 }
 
-func (b *Bot) SetHome(ctx context.Context, args ...string) []slack.Attachment {
-	if len(args) != 1 {
-		return []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}}
-	}
-
-	var err error
-	switch args[0] {
-	case "home":
-		err = b.Tado.SetHomeState(ctx, true)
-	case "away":
-		err = b.Tado.SetHomeState(ctx, false)
-	case "auto":
-		err = b.Tado.UnsetHomeState(ctx)
-	default:
-		return []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}}
-	}
-
-	if err != nil {
-		return []slack.Attachment{{Color: "bad", Text: "failed: " + err.Error()}}
-	}
-
-	return []slack.Attachment{{Color: "good", Text: "set home to " + args[0] + " mode"}}
-}
-
 func (b *Bot) parseSetRoomCommand(args ...string) (zoneID int, zoneName string, auto bool, temperature float64, duration time.Duration, err error) {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	if len(args) < 2 {
 		err = fmt.Errorf("missing parameters\nUsage: set room <room> [auto|<temperature> [<duration>]")
 		return
@@ -266,11 +242,33 @@ func (b *Bot) parseSetRoomCommand(args ...string) (zoneID int, zoneName string, 
 	return
 }
 
+func (b *Bot) SetHome(ctx context.Context, args ...string) []slack.Attachment {
+	if len(args) != 1 {
+		return []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}}
+	}
+
+	var err error
+	switch args[0] {
+	case "home":
+		err = b.Tado.SetHomeState(ctx, true)
+	case "away":
+		err = b.Tado.SetHomeState(ctx, false)
+	case "auto":
+		err = b.Tado.UnsetHomeState(ctx)
+	default:
+		return []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}}
+	}
+
+	if err != nil {
+		return []slack.Attachment{{Color: "bad", Text: "failed: " + err.Error()}}
+	}
+
+	return []slack.Attachment{{Color: "good", Text: "set home to " + args[0] + " mode"}}
+}
+
 func (b *Bot) DoRefresh(_ context.Context, _ ...string) []slack.Attachment {
 	b.poller.Refresh()
-	return []slack.Attachment{{
-		Text: "refreshing Tado data",
-	}}
+	return []slack.Attachment{{Text: "refreshing Tado data"}}
 }
 
 func (b *Bot) ReportUsers(_ context.Context, _ ...string) []slack.Attachment {

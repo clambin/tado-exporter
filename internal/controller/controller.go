@@ -24,17 +24,17 @@ type TaskReporter interface {
 }
 
 // New creates a new Controller object
-func New(api action.TadoSetter, cfg configuration.Configuration, b notifier.SlackSender, p poller.Poller, logger *slog.Logger) *Controller {
+func New(api action.TadoSetter, cfg configuration.Configuration, s notifier.SlackSender, p poller.Poller, logger *slog.Logger) *Controller {
 	c := Controller{logger: logger}
 
 	if cfg.Home.AutoAway.IsActive() {
-		h := home.New(api, p, b, cfg.Home, logger.With("type", "home"))
+		h := home.New(api, p, s, cfg.Home, logger.With("type", "home"))
 		c.reporters = append(c.reporters, h)
 		_ = c.tasks.Add(h)
 	}
 
 	for _, zoneCfg := range cfg.Zones {
-		z := zone.New(api, p, b, zoneCfg, logger.With("type", "zone", "zone", zoneCfg.Name))
+		z := zone.New(api, p, s, zoneCfg, logger.With("type", "zone", "zone", zoneCfg.Name))
 		c.reporters = append(c.reporters, z)
 		_ = c.tasks.Add(z)
 	}
@@ -50,7 +50,7 @@ func (c *Controller) Run(ctx context.Context) error {
 }
 
 func (c *Controller) ReportTasks() []string {
-	var tasks []string
+	tasks := make([]string, 0, len(c.reporters))
 	for _, r := range c.reporters {
 		if t, ok := r.ReportTask(); ok {
 			tasks = append(tasks, t)

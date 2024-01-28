@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/controller/bot/mocks"
+	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
 	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado/testutil"
@@ -71,8 +71,6 @@ func TestExecutor_SetRoom(t *testing.T) {
 		name     string
 		args     []string
 		want     []slack.Attachment
-		Color    string
-		Text     string
 		action   bool
 		del      bool
 		duration time.Duration
@@ -272,12 +270,6 @@ func TestExecutor_ReportRooms(t *testing.T) {
 }
 
 func TestExecutor_ReportUsers(t *testing.T) {
-	api := mocks.NewTadoSetter(t)
-	s := mocks.NewSlackBot(t)
-	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
-
-	b := New(api, s, nil, nil, slog.Default())
-
 	testCases := []struct {
 		name    string
 		update  poller.Update
@@ -316,7 +308,16 @@ func TestExecutor_ReportUsers(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			api := mocks.NewTadoSetter(t)
+			s := mocks.NewSlackBot(t)
+			s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
+
+			b := New(api, s, nil, nil, slog.Default())
+
 			b.update = tt.update
 			b.updated = tt.updated
 

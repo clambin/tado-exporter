@@ -8,9 +8,9 @@ import (
 	"github.com/clambin/go-common/taskmanager/httpserver"
 	promserver "github.com/clambin/go-common/taskmanager/prometheus"
 	"github.com/clambin/tado"
+	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"
-	"github.com/clambin/tado-exporter/internal/controller/bot"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/health"
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -92,23 +92,21 @@ func makeControllerTasks(cfg *viper.Viper, api *tado.APIClient, rules configurat
 	var tasks []taskmanager.Task
 
 	// Slackbot
-	var b *slackbot.SlackBot
-	if cfg.GetBool("controller.tadoBot.enabled") {
-		if token := cfg.GetString("controller.tadoBot.token"); token != "" {
-			b = slackbot.New(
-				token,
-				slackbot.WithName("tadoBot "+version),
-				slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
-			)
-			tasks = append(tasks, b)
-		}
+	var s *slackbot.SlackBot
+	if token := cfg.GetString("controller.tadoBot.token"); token != "" {
+		s = slackbot.New(
+			token,
+			slackbot.WithName("tadoBot "+version),
+			slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
+		)
+		tasks = append(tasks, s)
 	}
 
-	c := controller.New(api, rules, b, p, l.With("component", "controller"))
+	c := controller.New(api, rules, s, p, l.With("component", "controller"))
 	tasks = append(tasks, c)
 
-	if b != nil {
-		tasks = append(tasks, bot.New(api, b, p, c, l.With(slog.String("component", "tadobot"))))
+	if s != nil && cfg.GetBool("controller.tadoBot.enabled") {
+		tasks = append(tasks, bot.New(api, s, p, c, l.With(slog.String("component", "tadobot"))))
 	}
 	return tasks
 }
