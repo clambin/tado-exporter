@@ -213,6 +213,9 @@ func TestExecutor_SetHome(t *testing.T) {
 			s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
 			p := mockPoller.NewPoller(t)
+			if tt.action != actionNone && tt.err == nil {
+				p.EXPECT().Refresh()
+			}
 
 			executor := New(api, s, p, nil, slog.Default())
 

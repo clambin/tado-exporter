@@ -123,7 +123,7 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 		}}
 	}
 
-	text := make([]string, 0)
+	text := make([]string, 0, len(b.update.Zones))
 
 	for zoneID, zone := range b.update.Zones {
 		if zoneInfo, found := b.update.ZoneInfo[zoneID]; found {
@@ -262,6 +262,8 @@ func (b *Bot) SetHome(ctx context.Context, args ...string) []slack.Attachment {
 	if err != nil {
 		return []slack.Attachment{{Color: "bad", Text: "failed: " + err.Error()}}
 	}
+
+	b.poller.Refresh()
 
 	return []slack.Attachment{{Color: "good", Text: "set home to " + args[0] + " mode"}}
 }
