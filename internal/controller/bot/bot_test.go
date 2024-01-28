@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/controller/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -12,7 +13,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"log/slog"
-	"strconv"
 	"testing"
 	"time"
 )
@@ -67,103 +67,92 @@ func TestExecutor_ReportRules(t *testing.T) {
 }
 
 func TestExecutor_SetRoom(t *testing.T) {
-	api := mocks.NewTadoSetter(t)
-	s := mocks.NewSlackBot(t)
-	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
-
-	p := mockPoller.NewPoller(t)
-
-	executor := New(api, s, p, nil, slog.Default())
-	executor.update = poller.Update{
-		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22), testutil.ZoneInfoPermanentOverlay())},
-	}
-	executor.updated = true
-
-	var testCases = []struct {
-		Args     []string
+	tests := []struct {
+		name     string
+		args     []string
+		want     []slack.Attachment
 		Color    string
 		Text     string
-		Action   bool
-		Delete   bool
-		Duration time.Duration
+		action   bool
+		del      bool
+		duration time.Duration
 	}{
 		{
-			Args:  []string{},
-			Color: "bad",
-			Text:  "invalid command: missing parameters\nUsage: set room <room> [auto|<temperature> [<duration>]",
+			name: "empty",
+			args: []string{},
+			want: []slack.Attachment{{Color: "bad", Text: "invalid command: missing parameters\nUsage: set room <room> [auto|<temperature> [<duration>]"}},
 		},
 		{
-			Args:  []string{"foo"},
-			Color: "bad",
-			Text:  "invalid command: missing parameters\nUsage: set room <room> [auto|<temperature> [<duration>]",
+			name: "missing parameters",
+			args: []string{"foo"},
+			want: []slack.Attachment{{Color: "bad", Text: "invalid command: missing parameters\nUsage: set room <room> [auto|<temperature> [<duration>]"}},
 		},
 		{
-			Args:  []string{"not-a-room", "auto"},
-			Color: "bad",
-			Text:  "invalid command: invalid room name",
+			name: "invalid parameters",
+			args: []string{"foo", "25,0"},
+			want: []slack.Attachment{{Color: "bad", Text: "invalid command: invalid target temperature: \"25,0\""}},
 		},
 		{
-			Args:  []string{"foo", "25,0"},
-			Color: "bad",
-			Text:  "invalid command: invalid target temperature: \"25,0\"",
+			name: "invalid duration",
+			args: []string{"foo", "25.0", "invalid"},
+			want: []slack.Attachment{{Color: "bad", Text: "invalid command: invalid duration: \"invalid\""}},
 		},
 		{
-			Args:  []string{"foo", "25.0", "invalid"},
-			Color: "bad",
-			Text:  "invalid command: invalid duration: \"invalid\"",
+			name:   "set permanent",
+			args:   []string{"foo", "25.0"},
+			want:   []slack.Attachment{{Color: "good", Text: "Setting target temperature for foo to 25.0ºC"}},
+			action: true,
 		},
 		{
-			Args:   []string{"foo", "25.0"},
-			Color:  "good",
-			Text:   "Setting target temperature for foo to 25.0ºC",
-			Action: true,
+			name:     "set temporary",
+			args:     []string{"foo", "25.0", "5m"},
+			want:     []slack.Attachment{{Color: "good", Text: "Setting target temperature for foo to 25.0ºC for 5m0s"}},
+			action:   true,
+			duration: 5 * time.Minute,
 		},
 		{
-			Args:     []string{"foo", "25.0", "5m"},
-			Color:    "good",
-			Text:     "Setting target temperature for foo to 25.0ºC for 5m0s",
-			Action:   true,
-			Duration: 5 * time.Minute,
-		},
-		{
-			Args:   []string{"foo", "auto"},
-			Color:  "good",
-			Text:   "Setting foo to automatic mode",
-			Action: true,
-			Delete: true,
+			name:   "auto mode",
+			args:   []string{"foo", "auto"},
+			want:   []slack.Attachment{{Color: "good", Text: "Setting foo to automatic mode"}},
+			action: true,
+			del:    true,
 		},
 	}
 
-	for index, testCase := range testCases {
-		t.Run(strconv.Itoa(index), func(t *testing.T) {
-			if testCase.Action {
-				if testCase.Delete {
-					api.EXPECT().DeleteZoneOverlay(mock.Anything, 1).Return(nil).Once()
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			api := mocks.NewTadoSetter(t)
+			s := mocks.NewSlackBot(t)
+			s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
+
+			p := mockPoller.NewPoller(t)
+			executor := New(api, s, p, nil, slog.Default())
+			executor.update = poller.Update{
+				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
+				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22), testutil.ZoneInfoPermanentOverlay())},
+			}
+			executor.updated = true
+
+			if tt.action {
+				if tt.del {
+					api.EXPECT().DeleteZoneOverlay(ctx, 1).Return(nil).Once()
 				} else {
-					api.EXPECT().SetZoneTemporaryOverlay(mock.Anything, 1, 25.0, testCase.Duration).Return(nil).Once()
+					api.EXPECT().SetZoneTemporaryOverlay(ctx, 1, 25.0, tt.duration).Return(nil).Once()
 				}
 				p.EXPECT().Refresh().Once()
 			}
 
-			attachments := executor.SetRoom(context.Background(), testCase.Args...)
-
-			require.Len(t, attachments, 1, index)
-			assert.Equal(t, testCase.Color, attachments[0].Color, index)
-			assert.Empty(t, attachments[0].Title, index)
-			assert.Equal(t, testCase.Text, attachments[0].Text, index)
+			attachments := executor.SetRoom(ctx, tt.args...)
+			assert.Equal(t, tt.want, attachments)
 		})
 	}
 }
 
 func TestExecutor_SetHome(t *testing.T) {
-	api := mocks.NewTadoSetter(t)
-	s := mocks.NewSlackBot(t)
-	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
-
-	p := mockPoller.NewPoller(t)
-
-	executor := New(api, s, p, nil, slog.Default())
 	type action int
 	const (
 		actionNone action = iota
@@ -175,6 +164,7 @@ func TestExecutor_SetHome(t *testing.T) {
 		name   string
 		args   []string
 		action action
+		err    error
 		want   []slack.Attachment
 	}{
 		{
@@ -205,23 +195,40 @@ func TestExecutor_SetHome(t *testing.T) {
 			action: actionAuto,
 			want:   []slack.Attachment{{Color: "good", Text: "set home to auto mode"}},
 		},
+		{
+			name:   "auto (fail)",
+			args:   []string{"auto"},
+			action: actionAuto,
+			err:    errors.New("fail"),
+			want:   []slack.Attachment{{Color: "bad", Text: "failed: fail"}},
+		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctx := context.Background()
+			api := mocks.NewTadoSetter(t)
+			s := mocks.NewSlackBot(t)
+			s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
+
+			p := mockPoller.NewPoller(t)
+
+			executor := New(api, s, p, nil, slog.Default())
+
 			switch tt.action {
+			case actionNone:
 			case actionHome:
-				api.EXPECT().SetHomeState(ctx, true).Return(nil)
+				api.EXPECT().SetHomeState(ctx, true).Return(tt.err)
 			case actionAway:
-				api.EXPECT().SetHomeState(ctx, false).Return(nil)
+				api.EXPECT().SetHomeState(ctx, false).Return(tt.err)
 			case actionAuto:
-				api.EXPECT().UnsetHomeState(ctx).Return(nil)
-			default:
+				api.EXPECT().UnsetHomeState(ctx).Return(tt.err)
 			}
 
 			attachments := executor.SetHome(ctx, tt.args...)
-
 			assert.Equal(t, tt.want, attachments)
 		})
 	}
@@ -275,12 +282,12 @@ func TestExecutor_ReportUsers(t *testing.T) {
 		name    string
 		update  poller.Update
 		updated bool
-		want    slack.Attachment
+		want    []slack.Attachment
 	}{
 		{
 			name: "no update yet",
 			//update: nil,
-			want: slack.Attachment{Color: "bad", Text: "no update yet. please check back later"},
+			want: []slack.Attachment{{Color: "bad", Text: "no update yet. please check back later"}},
 		},
 		{
 			name: "home",
@@ -288,7 +295,7 @@ func TestExecutor_ReportUsers(t *testing.T) {
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
 			},
 			updated: true,
-			want:    slack.Attachment{Title: "users:", Text: "foo: home"},
+			want:    []slack.Attachment{{Title: "users:", Text: "foo: home"}},
 		},
 		{
 			name: "away",
@@ -296,7 +303,7 @@ func TestExecutor_ReportUsers(t *testing.T) {
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(false))},
 			},
 			updated: true,
-			want:    slack.Attachment{Title: "users:", Text: "foo: away"},
+			want:    []slack.Attachment{{Title: "users:", Text: "foo: away"}},
 		},
 		{
 			name: "unknown",
@@ -304,7 +311,7 @@ func TestExecutor_ReportUsers(t *testing.T) {
 				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo")},
 			},
 			updated: true,
-			want:    slack.Attachment{Title: "users:", Text: "foo: unknown"},
+			want:    []slack.Attachment{{Title: "users:", Text: "foo: unknown"}},
 		},
 	}
 
@@ -314,8 +321,7 @@ func TestExecutor_ReportUsers(t *testing.T) {
 			b.updated = tt.updated
 
 			attachments := b.ReportUsers(context.Background())
-			require.Len(t, attachments, 1)
-			assert.Equal(t, tt.want, attachments[0])
+			assert.Equal(t, tt.want, attachments)
 		})
 	}
 }
