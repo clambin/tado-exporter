@@ -71,6 +71,8 @@ func (r AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 	} else if someoneHome {
 		a.Reason = r.makeReason(home, "home")
 		if !currentState.Heating() && currentState.Overlay == tado.PermanentOverlay {
+			// TODO: this resets the thermostat if we switched off the heating because the house was in AWAY mode
+			// However, if the user switch off the heating, we will immediately switch the heating back on, which not what the user wanted.
 			a.State.(*State).mode = action.ZoneInAutoMode
 		}
 	}
