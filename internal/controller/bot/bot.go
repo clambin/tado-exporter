@@ -37,7 +37,6 @@ type TadoSetter interface {
 type SlackBot interface {
 	Add(commands slackbot.Commands)
 	Run(ctx context.Context) error
-	Send(channel string, attachments []slack.Attachment) error
 }
 
 type Controller interface {
