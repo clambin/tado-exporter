@@ -33,7 +33,7 @@ type TadoSetter interface {
 }
 
 type SlackBot interface {
-	Register(name string, command slackbot.CommandFunc)
+	Add(commands slackbot.Commands)
 	Run(ctx context.Context) error
 	Send(channel string, attachments []slack.Attachment) error
 }
@@ -42,19 +42,21 @@ type Controller interface {
 	ReportTasks() []string
 }
 
-func New(tado TadoSetter, slackbot SlackBot, p poller.Poller, controller Controller, logger *slog.Logger) *Bot {
+func New(tado TadoSetter, s SlackBot, p poller.Poller, controller Controller, logger *slog.Logger) *Bot {
 	b := Bot{
 		Tado:       tado,
-		slack:      slackbot,
+		slack:      s,
 		poller:     p,
 		controller: controller,
 		logger:     logger,
 	}
-	slackbot.Register("rules", b.ReportRules)
-	slackbot.Register("rooms", b.ReportRooms)
-	slackbot.Register("set", b.SetRoom)
-	slackbot.Register("refresh", b.DoRefresh)
-	slackbot.Register("users", b.ReportUsers)
+	s.Add(slackbot.Commands{
+		"rules":   slackbot.HandlerFunc(b.ReportRules),
+		"rooms":   slackbot.HandlerFunc(b.ReportRooms),
+		"set":     slackbot.HandlerFunc(b.SetRoom),
+		"refresh": slackbot.HandlerFunc(b.DoRefresh),
+		"users":   slackbot.HandlerFunc(b.ReportUsers),
+	})
 
 	return &b
 }

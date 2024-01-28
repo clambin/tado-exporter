@@ -19,26 +19,26 @@ import (
 
 func TestBot_Run(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-	b := mocks.NewSlackBot(t)
-	b.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
+	s := mocks.NewSlackBot(t)
+	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
 	ch := make(chan poller.Update)
 	p := mockPoller.NewPoller(t)
 	p.EXPECT().Subscribe().Return(ch).Once()
 	p.EXPECT().Unsubscribe(ch).Return().Once()
 
-	c := New(api, b, p, nil, slog.Default())
+	b := New(api, s, p, nil, slog.Default())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
-	go func() { errCh <- c.Run(ctx) }()
+	go func() { errCh <- b.Run(ctx) }()
 
 	ch <- poller.Update{}
 
 	assert.Eventually(t, func() bool {
-		c.lock.RLock()
-		defer c.lock.RUnlock()
-		return c.updated
+		b.lock.RLock()
+		defer b.lock.RUnlock()
+		return b.updated
 	}, time.Second, 10*time.Millisecond)
 
 	cancel()
@@ -47,33 +47,33 @@ func TestBot_Run(t *testing.T) {
 
 func TestExecutor_ReportRules(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-	bot := mocks.NewSlackBot(t)
-	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
+	s := mocks.NewSlackBot(t)
+	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
 	controller := mocks.NewController(t)
 	controller.EXPECT().ReportTasks().Return(nil).Once()
 
-	c := New(api, bot, nil, controller, slog.Default())
+	b := New(api, s, nil, controller, slog.Default())
 
 	ctx := context.Background()
-	attachments := c.ReportRules(ctx)
+	attachments := b.ReportRules(ctx)
 	require.Len(t, attachments, 1)
 	assert.Equal(t, "no rules have been triggered", attachments[0].Text)
 
 	controller.EXPECT().ReportTasks().Return([]string{"foo"}).Once()
-	attachments = c.ReportRules(ctx)
+	attachments = b.ReportRules(ctx)
 	require.Len(t, attachments, 1)
 	assert.Equal(t, "foo", attachments[0].Text)
 }
 
 func TestExecutor_SetRoom(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-	bot := mocks.NewSlackBot(t)
-	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
+	s := mocks.NewSlackBot(t)
+	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
 	p := mockPoller.NewPoller(t)
 
-	executor := New(api, bot, p, nil, slog.Default())
+	executor := New(api, s, p, nil, slog.Default())
 	executor.update = poller.Update{
 		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22), testutil.ZoneInfoPermanentOverlay())},
@@ -158,35 +158,35 @@ func TestExecutor_SetRoom(t *testing.T) {
 
 func TestExecutor_DoRefresh(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-	bot := mocks.NewSlackBot(t)
-	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
+	s := mocks.NewSlackBot(t)
+	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
 	p := mockPoller.NewPoller(t)
 	p.EXPECT().Refresh()
 
-	c := New(api, bot, p, nil, slog.Default())
-	c.DoRefresh(context.Background())
+	b := New(api, s, p, nil, slog.Default())
+	b.DoRefresh(context.Background())
 }
 
 func TestExecutor_ReportRooms(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-	bot := mocks.NewSlackBot(t)
-	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
+	s := mocks.NewSlackBot(t)
+	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
-	c := New(api, bot, nil, nil, slog.Default())
+	b := New(api, s, nil, nil, slog.Default())
 
-	attachments := c.ReportRooms(context.Background())
+	attachments := b.ReportRooms(context.Background())
 	require.Len(t, attachments, 1)
 	assert.Empty(t, attachments[0].Title)
 	assert.Equal(t, "no updates yet. please check back later", attachments[0].Text)
 
-	c.update = poller.Update{
+	b.update = poller.Update{
 		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
 		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(22.0, 18.0), testutil.ZoneInfoPermanentOverlay())},
 	}
-	c.updated = true
+	b.updated = true
 
-	attachments = c.ReportRooms(context.Background())
+	attachments = b.ReportRooms(context.Background())
 	require.Len(t, attachments, 1)
 	assert.Equal(t, "rooms:", attachments[0].Title)
 	assert.Equal(t, "foo: 22.0ºC (target: 18.0, MANUAL)", attachments[0].Text)
@@ -195,10 +195,10 @@ func TestExecutor_ReportRooms(t *testing.T) {
 
 func TestExecutor_ReportUsers(t *testing.T) {
 	api := mocks.NewTadoSetter(t)
-	bot := mocks.NewSlackBot(t)
-	bot.EXPECT().Register(mock.AnythingOfType("string"), mock.Anything)
+	s := mocks.NewSlackBot(t)
+	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
-	c := New(api, bot, nil, nil, slog.Default())
+	b := New(api, s, nil, nil, slog.Default())
 
 	testCases := []struct {
 		name    string
@@ -239,14 +239,12 @@ func TestExecutor_ReportUsers(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			c.update = tt.update
-			c.updated = tt.updated
+			b.update = tt.update
+			b.updated = tt.updated
 
-			attachments := c.ReportUsers(context.Background())
+			attachments := b.ReportUsers(context.Background())
 			require.Len(t, attachments, 1)
 			assert.Equal(t, tt.want, attachments[0])
-			//assert.Equal(t, "users:", attachments[0].Title)
-			//assert.Equal(t, tt.expected, attachments[0].Text)
 		})
 	}
 }

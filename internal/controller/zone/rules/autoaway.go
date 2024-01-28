@@ -1,13 +1,13 @@
 package rules
 
 import (
+	"errors"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/pkg/tadotools"
-	"github.com/pkg/errors"
 	"log/slog"
 	"strings"
 	"time"

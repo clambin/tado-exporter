@@ -24,36 +24,35 @@ func (_m *SlackBot) EXPECT() *SlackBot_Expecter {
 	return &SlackBot_Expecter{mock: &_m.Mock}
 }
 
-// Register provides a mock function with given fields: name, command
-func (_m *SlackBot) Register(name string, command slackbot.CommandFunc) {
-	_m.Called(name, command)
+// Add provides a mock function with given fields: commands
+func (_m *SlackBot) Add(commands slackbot.Commands) {
+	_m.Called(commands)
 }
 
-// SlackBot_Register_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Register'
-type SlackBot_Register_Call struct {
+// SlackBot_Add_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Add'
+type SlackBot_Add_Call struct {
 	*mock.Call
 }
 
-// Register is a helper method to define mock.On call
-//   - name string
-//   - command slackbot.CommandFunc
-func (_e *SlackBot_Expecter) Register(name interface{}, command interface{}) *SlackBot_Register_Call {
-	return &SlackBot_Register_Call{Call: _e.mock.On("Register", name, command)}
+// Add is a helper method to define mock.On call
+//   - commands slackbot.Commands
+func (_e *SlackBot_Expecter) Add(commands interface{}) *SlackBot_Add_Call {
+	return &SlackBot_Add_Call{Call: _e.mock.On("Add", commands)}
 }
 
-func (_c *SlackBot_Register_Call) Run(run func(name string, command slackbot.CommandFunc)) *SlackBot_Register_Call {
+func (_c *SlackBot_Add_Call) Run(run func(commands slackbot.Commands)) *SlackBot_Add_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(slackbot.CommandFunc))
+		run(args[0].(slackbot.Commands))
 	})
 	return _c
 }
 
-func (_c *SlackBot_Register_Call) Return() *SlackBot_Register_Call {
+func (_c *SlackBot_Add_Call) Return() *SlackBot_Add_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *SlackBot_Register_Call) RunAndReturn(run func(string, slackbot.CommandFunc)) *SlackBot_Register_Call {
+func (_c *SlackBot_Add_Call) RunAndReturn(run func(slackbot.Commands)) *SlackBot_Add_Call {
 	_c.Call.Return(run)
 	return _c
 }
