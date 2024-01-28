@@ -91,12 +91,12 @@ func TestExecutor_SetRoom(t *testing.T) {
 		{
 			Args:  []string{},
 			Color: "bad",
-			Text:  "invalid command: missing parameters\nUsage: set <room> [auto|<temperature> [<duration>]",
+			Text:  "invalid command: missing parameters\nUsage: set room <room> [auto|<temperature> [<duration>]",
 		},
 		{
 			Args:  []string{"foo"},
 			Color: "bad",
-			Text:  "invalid command: missing parameters\nUsage: set <room> [auto|<temperature> [<duration>]",
+			Text:  "invalid command: missing parameters\nUsage: set room <room> [auto|<temperature> [<duration>]",
 		},
 		{
 			Args:  []string{"not-a-room", "auto"},
@@ -152,6 +152,77 @@ func TestExecutor_SetRoom(t *testing.T) {
 			assert.Equal(t, testCase.Color, attachments[0].Color, index)
 			assert.Empty(t, attachments[0].Title, index)
 			assert.Equal(t, testCase.Text, attachments[0].Text, index)
+		})
+	}
+}
+
+func TestExecutor_SetHome(t *testing.T) {
+	api := mocks.NewTadoSetter(t)
+	s := mocks.NewSlackBot(t)
+	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
+
+	p := mockPoller.NewPoller(t)
+
+	executor := New(api, s, p, nil, slog.Default())
+	type action int
+	const (
+		actionNone action = iota
+		actionHome
+		actionAway
+		actionAuto
+	)
+	tests := []struct {
+		name   string
+		args   []string
+		action action
+		want   []slack.Attachment
+	}{
+		{
+			name: "empty",
+			args: []string{},
+			want: []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}},
+		},
+		{
+			name: "invalid",
+			args: []string{"foo"},
+			want: []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}},
+		},
+		{
+			name:   "home",
+			args:   []string{"home"},
+			action: actionHome,
+			want:   []slack.Attachment{{Color: "good", Text: "set home to home mode"}},
+		},
+		{
+			name:   "away",
+			args:   []string{"away"},
+			action: actionAway,
+			want:   []slack.Attachment{{Color: "good", Text: "set home to away mode"}},
+		},
+		{
+			name:   "auto",
+			args:   []string{"auto"},
+			action: actionAuto,
+			want:   []slack.Attachment{{Color: "good", Text: "set home to auto mode"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			switch tt.action {
+			case actionHome:
+				api.EXPECT().SetHomeState(ctx, true).Return(nil)
+			case actionAway:
+				api.EXPECT().SetHomeState(ctx, false).Return(nil)
+			case actionAuto:
+				api.EXPECT().UnsetHomeState(ctx).Return(nil)
+			default:
+			}
+
+			attachments := executor.SetHome(ctx, tt.args...)
+
+			assert.Equal(t, tt.want, attachments)
 		})
 	}
 }

@@ -30,6 +30,8 @@ type Bot struct {
 type TadoSetter interface {
 	DeleteZoneOverlay(context.Context, int) error
 	SetZoneTemporaryOverlay(context.Context, int, float64, time.Duration) error
+	SetHomeState(ctx context.Context, home bool) error
+	UnsetHomeState(ctx context.Context) error
 }
 
 type SlackBot interface {
@@ -51,9 +53,12 @@ func New(tado TadoSetter, s SlackBot, p poller.Poller, controller Controller, lo
 		logger:     logger,
 	}
 	s.Add(slackbot.Commands{
-		"rules":   slackbot.HandlerFunc(b.ReportRules),
-		"rooms":   slackbot.HandlerFunc(b.ReportRooms),
-		"set":     slackbot.HandlerFunc(b.SetRoom),
+		"rules": slackbot.HandlerFunc(b.ReportRules),
+		"rooms": slackbot.HandlerFunc(b.ReportRooms),
+		"set": slackbot.Commands{
+			"room": slackbot.HandlerFunc(b.SetRoom),
+			"home": slackbot.HandlerFunc(b.SetHome),
+		},
 		"refresh": slackbot.HandlerFunc(b.DoRefresh),
 		"users":   slackbot.HandlerFunc(b.ReportUsers),
 	})
@@ -153,7 +158,7 @@ func (b *Bot) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	zoneID, zoneName, auto, temperature, duration, err := b.parseSetCommand(args...)
+	zoneID, zoneName, auto, temperature, duration, err := b.parseSetRoomCommand(args...)
 
 	if err != nil {
 		err = fmt.Errorf("invalid command: %w", err)
@@ -193,9 +198,33 @@ func (b *Bot) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
 	}}
 }
 
-func (b *Bot) parseSetCommand(args ...string) (zoneID int, zoneName string, auto bool, temperature float64, duration time.Duration, err error) {
+func (b *Bot) SetHome(ctx context.Context, args ...string) []slack.Attachment {
+	if len(args) != 1 {
+		return []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}}
+	}
+
+	var err error
+	switch args[0] {
+	case "home":
+		err = b.Tado.SetHomeState(ctx, true)
+	case "away":
+		err = b.Tado.SetHomeState(ctx, false)
+	case "auto":
+		err = b.Tado.UnsetHomeState(ctx)
+	default:
+		return []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}}
+	}
+
+	if err != nil {
+		return []slack.Attachment{{Color: "bad", Text: "failed: " + err.Error()}}
+	}
+
+	return []slack.Attachment{{Color: "good", Text: "set home to " + args[0] + " mode"}}
+}
+
+func (b *Bot) parseSetRoomCommand(args ...string) (zoneID int, zoneName string, auto bool, temperature float64, duration time.Duration, err error) {
 	if len(args) < 2 {
-		err = fmt.Errorf("missing parameters\nUsage: set <room> [auto|<temperature> [<duration>]")
+		err = fmt.Errorf("missing parameters\nUsage: set room <room> [auto|<temperature> [<duration>]")
 		return
 	}
 

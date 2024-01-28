@@ -69,6 +69,53 @@ func (_c *TadoSetter_DeleteZoneOverlay_Call) RunAndReturn(run func(context.Conte
 	return _c
 }
 
+// SetHomeState provides a mock function with given fields: ctx, home
+func (_m *TadoSetter) SetHomeState(ctx context.Context, home bool) error {
+	ret := _m.Called(ctx, home)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetHomeState")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, bool) error); ok {
+		r0 = rf(ctx, home)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// TadoSetter_SetHomeState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHomeState'
+type TadoSetter_SetHomeState_Call struct {
+	*mock.Call
+}
+
+// SetHomeState is a helper method to define mock.On call
+//   - ctx context.Context
+//   - home bool
+func (_e *TadoSetter_Expecter) SetHomeState(ctx interface{}, home interface{}) *TadoSetter_SetHomeState_Call {
+	return &TadoSetter_SetHomeState_Call{Call: _e.mock.On("SetHomeState", ctx, home)}
+}
+
+func (_c *TadoSetter_SetHomeState_Call) Run(run func(ctx context.Context, home bool)) *TadoSetter_SetHomeState_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(bool))
+	})
+	return _c
+}
+
+func (_c *TadoSetter_SetHomeState_Call) Return(_a0 error) *TadoSetter_SetHomeState_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *TadoSetter_SetHomeState_Call) RunAndReturn(run func(context.Context, bool) error) *TadoSetter_SetHomeState_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetZoneTemporaryOverlay provides a mock function with given fields: _a0, _a1, _a2, _a3
 func (_m *TadoSetter) SetZoneTemporaryOverlay(_a0 context.Context, _a1 int, _a2 float64, _a3 time.Duration) error {
 	ret := _m.Called(_a0, _a1, _a2, _a3)
@@ -114,6 +161,52 @@ func (_c *TadoSetter_SetZoneTemporaryOverlay_Call) Return(_a0 error) *TadoSetter
 }
 
 func (_c *TadoSetter_SetZoneTemporaryOverlay_Call) RunAndReturn(run func(context.Context, int, float64, time.Duration) error) *TadoSetter_SetZoneTemporaryOverlay_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UnsetHomeState provides a mock function with given fields: ctx
+func (_m *TadoSetter) UnsetHomeState(ctx context.Context) error {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UnsetHomeState")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// TadoSetter_UnsetHomeState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UnsetHomeState'
+type TadoSetter_UnsetHomeState_Call struct {
+	*mock.Call
+}
+
+// UnsetHomeState is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *TadoSetter_Expecter) UnsetHomeState(ctx interface{}) *TadoSetter_UnsetHomeState_Call {
+	return &TadoSetter_UnsetHomeState_Call{Call: _e.mock.On("UnsetHomeState", ctx)}
+}
+
+func (_c *TadoSetter_UnsetHomeState_Call) Run(run func(ctx context.Context)) *TadoSetter_UnsetHomeState_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *TadoSetter_UnsetHomeState_Call) Return(_a0 error) *TadoSetter_UnsetHomeState_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *TadoSetter_UnsetHomeState_Call) RunAndReturn(run func(context.Context) error) *TadoSetter_UnsetHomeState_Call {
 	_c.Call.Return(run)
 	return _c
 }
