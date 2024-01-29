@@ -30,31 +30,37 @@ type Bot struct {
 type TadoSetter interface {
 	DeleteZoneOverlay(context.Context, int) error
 	SetZoneTemporaryOverlay(context.Context, int, float64, time.Duration) error
+	SetHomeState(ctx context.Context, home bool) error
+	UnsetHomeState(ctx context.Context) error
 }
 
 type SlackBot interface {
-	Register(name string, command slackbot.CommandFunc)
+	Add(commands slackbot.Commands)
 	Run(ctx context.Context) error
-	Send(channel string, attachments []slack.Attachment) error
 }
 
 type Controller interface {
 	ReportTasks() []string
 }
 
-func New(tado TadoSetter, slackbot SlackBot, p poller.Poller, controller Controller, logger *slog.Logger) *Bot {
+func New(tado TadoSetter, s SlackBot, p poller.Poller, controller Controller, logger *slog.Logger) *Bot {
 	b := Bot{
 		Tado:       tado,
-		slack:      slackbot,
+		slack:      s,
 		poller:     p,
 		controller: controller,
 		logger:     logger,
 	}
-	slackbot.Register("rules", b.ReportRules)
-	slackbot.Register("rooms", b.ReportRooms)
-	slackbot.Register("set", b.SetRoom)
-	slackbot.Register("refresh", b.DoRefresh)
-	slackbot.Register("users", b.ReportUsers)
+	s.Add(slackbot.Commands{
+		"rules": slackbot.HandlerFunc(b.ReportRules),
+		"rooms": slackbot.HandlerFunc(b.ReportRooms),
+		"set": slackbot.Commands{
+			"room": slackbot.HandlerFunc(b.SetRoom),
+			"home": slackbot.HandlerFunc(b.SetHome),
+		},
+		"refresh": slackbot.HandlerFunc(b.DoRefresh),
+		"users":   slackbot.HandlerFunc(b.ReportUsers),
+	})
 
 	return &b
 }
@@ -117,7 +123,7 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 		}}
 	}
 
-	text := make([]string, 0)
+	text := make([]string, 0, len(b.update.Zones))
 
 	for zoneID, zone := range b.update.Zones {
 		if zoneInfo, found := b.update.ZoneInfo[zoneID]; found {
@@ -148,10 +154,7 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 }
 
 func (b *Bot) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	zoneID, zoneName, auto, temperature, duration, err := b.parseSetCommand(args...)
+	zoneID, zoneName, auto, temperature, duration, err := b.parseSetRoomCommand(args...)
 
 	if err != nil {
 		err = fmt.Errorf("invalid command: %w", err)
@@ -191,9 +194,12 @@ func (b *Bot) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
 	}}
 }
 
-func (b *Bot) parseSetCommand(args ...string) (zoneID int, zoneName string, auto bool, temperature float64, duration time.Duration, err error) {
+func (b *Bot) parseSetRoomCommand(args ...string) (zoneID int, zoneName string, auto bool, temperature float64, duration time.Duration, err error) {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	if len(args) < 2 {
-		err = fmt.Errorf("missing parameters\nUsage: set <room> [auto|<temperature> [<duration>]")
+		err = fmt.Errorf("missing parameters\nUsage: set room <room> [auto|<temperature> [<duration>]")
 		return
 	}
 
@@ -236,11 +242,35 @@ func (b *Bot) parseSetCommand(args ...string) (zoneID int, zoneName string, auto
 	return
 }
 
+func (b *Bot) SetHome(ctx context.Context, args ...string) []slack.Attachment {
+	if len(args) != 1 {
+		return []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}}
+	}
+
+	var err error
+	switch args[0] {
+	case "home":
+		err = b.Tado.SetHomeState(ctx, true)
+	case "away":
+		err = b.Tado.SetHomeState(ctx, false)
+	case "auto":
+		err = b.Tado.UnsetHomeState(ctx)
+	default:
+		return []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}}
+	}
+
+	if err != nil {
+		return []slack.Attachment{{Color: "bad", Text: "failed: " + err.Error()}}
+	}
+
+	b.poller.Refresh()
+
+	return []slack.Attachment{{Color: "good", Text: "set home to " + args[0] + " mode"}}
+}
+
 func (b *Bot) DoRefresh(_ context.Context, _ ...string) []slack.Attachment {
 	b.poller.Refresh()
-	return []slack.Attachment{{
-		Text: "refreshing Tado data",
-	}}
+	return []slack.Attachment{{Text: "refreshing Tado data"}}
 }
 
 func (b *Bot) ReportUsers(_ context.Context, _ ...string) []slack.Attachment {

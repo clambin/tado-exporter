@@ -7,7 +7,7 @@ packages:
   github.com/clambin/tado-exporter/internal/collector:
     interfaces:
       TadoSetter:
-  github.com/clambin/tado-exporter/internal/controller/bot:
+  github.com/clambin/tado-exporter/internal/bot:
     interfaces:
       TadoSetter:
       SlackBot:

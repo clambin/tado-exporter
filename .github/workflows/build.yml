@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - fix
+      - slackbot
   pull_request_target:
     branches-ignore:
       - master
