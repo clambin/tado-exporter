@@ -16,9 +16,7 @@ func TestZoneController(t *testing.T) {
 	cfg := configuration.ZoneConfiguration{
 		Name: "room",
 		Rules: configuration.ZoneRuleConfiguration{
-			LimitOverlay: configuration.LimitOverlayConfiguration{
-				Delay: time.Hour,
-			}},
+			LimitOverlay: configuration.LimitOverlayConfiguration{Delay: time.Hour}},
 	}
 
 	z := zone.New(nil, nil, nil, cfg, slog.Default())
