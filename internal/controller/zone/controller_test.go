@@ -1,35 +1,18 @@
 package zone_test
 
 import (
-	"context"
 	"github.com/clambin/tado"
-	mockNotifier "github.com/clambin/tado-exporter/internal/controller/notifier/mocks"
-	"github.com/clambin/tado-exporter/internal/controller/rules/action/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/zone"
 	"github.com/clambin/tado-exporter/internal/poller"
-	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado/testutil"
-	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"log/slog"
 	"testing"
 	"time"
 )
 
 func TestZoneController(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	api := mocks.NewTadoSetter(t)
-	api.EXPECT().DeleteZoneOverlay(mock.Anything, 10).Return(nil)
-
-	p := mockPoller.NewPoller(t)
-	pCh := make(chan poller.Update)
-	p.EXPECT().Subscribe().Return(pCh)
-	p.EXPECT().Unsubscribe(pCh).Return()
-
-	b := mockNotifier.NewSlackSender(t)
-
 	cfg := configuration.ZoneConfiguration{
 		Name: "room",
 		Rules: configuration.ZoneRuleConfiguration{
@@ -38,58 +21,55 @@ func TestZoneController(t *testing.T) {
 			}},
 	}
 
-	z := zone.New(api, p, b, cfg, slog.Default())
+	z := zone.New(nil, nil, nil, cfg, slog.Default())
 
-	errCh := make(chan error)
-	go func() {
-		errCh <- z.Run(ctx)
-	}()
-
-	playbook := []struct {
+	tests := []struct {
+		name   string
 		update poller.Update
-		event  []slack.Attachment
+		action string
+		delay  time.Duration
 	}{
 		{
+			name: "no overlay",
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
 				Home:     true,
 			},
+			action: "no action",
+			delay:  0,
 		},
 		{
+			name: "permanent overlay (home)",
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
 				Home:     true,
 			},
-			event: []slack.Attachment{{Color: "good", Title: "room: moving to auto mode in 1h0m0s", Text: "manual temp setting detected"}},
+			action: "moving to auto mode",
+			delay:  time.Hour,
 		},
 		{
+			name: "permanent overlay (away)",
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
 				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
 				Home:     false,
 			},
-			event: []slack.Attachment{{Color: "good", Title: "room: moving to auto mode", Text: "home in AWAY mode, manual temp setting detected"}},
+			action: "moving to auto mode",
+			delay:  0,
 		},
 	}
 
-	for _, entry := range playbook {
-		var done chan struct{}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-		if entry.event != nil {
-			done = make(chan struct{})
-			b.EXPECT().Send("", entry.event).RunAndReturn(func(_ string, attachments []slack.Attachment) error {
-				done <- struct{}{}
-				return nil
-			}).Once()
-		}
-		pCh <- entry.update
-		if done != nil {
-			<-done
-		}
+			a, err := z.Evaluate(tt.update)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.action, a.String())
+			assert.Equal(t, tt.delay, a.Delay)
+		})
 	}
-
-	cancel()
-	assert.NoError(t, <-errCh)
 }
