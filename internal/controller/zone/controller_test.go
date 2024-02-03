@@ -85,7 +85,7 @@ func TestZoneController(t *testing.T) {
 			}).Once()
 		}
 		pCh <- entry.update
-		if entry.event != nil {
+		if done != nil {
 			<-done
 		}
 	}
