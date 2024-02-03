@@ -69,6 +69,9 @@ func (p *Processor) Run(ctx context.Context) error {
 }
 
 func (p *Processor) Evaluate(update poller.Update) (action action.Action, err error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
 	if p.rules == nil {
 		if p.rules, err = p.loader(update); err != nil {
 			return action, fmt.Errorf("failed to load rules: %w", err)
