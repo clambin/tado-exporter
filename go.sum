@@ -6,8 +6,8 @@ github.com/clambin/go-common/cache v0.2.2 h1:Tjb+71+/2ckrZlSbLDYgCEpkS2HwkTRkQ/1
 github.com/clambin/go-common/cache v0.2.2/go.mod h1:6DMcBIPTGckXMNQTGfdEMiLAbKqIOWzgk5KNyiJK54M=
 github.com/clambin/go-common/httpclient v0.6.0 h1:zSt9OV8ekXB/LwFwazEO4x8z+9p968nwfDQOmvF784A=
 github.com/clambin/go-common/httpclient v0.6.0/go.mod h1:77y+6LzAKdenkU+vwQFdNKyxs2HhUXEiqYwzS7Q9FKI=
-github.com/clambin/go-common/set v0.4.1 h1:mtn+Q86omfaXtJFMUYoLlxNmRIT5Cmsrs8ig7PW/g28=
-github.com/clambin/go-common/set v0.4.1/go.mod h1:Q5GpBoM7B7abNV2Wzys+wQMInBHMoHyh/h0Cn2OmY4A=
+github.com/clambin/go-common/set v0.4.2 h1:GCQADniYvOTsW6yK/d/cwLH8W3io5mukudXNgQQbceU=
+github.com/clambin/go-common/set v0.4.2/go.mod h1:Q5GpBoM7B7abNV2Wzys+wQMInBHMoHyh/h0Cn2OmY4A=
 github.com/clambin/go-common/slackbot v0.7.0 h1:P/MwoHQOXkHU20K8IxthEtxyC9ZmTi/CalJykKFtF2Q=
 github.com/clambin/go-common/slackbot v0.7.0/go.mod h1:9k1LVOK2rP8Wpgu3estPQkKdOuOmX1akYPFBLYKwV/w=
 github.com/clambin/go-common/taskmanager v0.3.0 h1:ASA0axYdGBOukljpdfJxgDE2BwneA1iSgvA/7tLxKw4=
