@@ -13,14 +13,6 @@ import (
 )
 
 func TestZoneController(t *testing.T) {
-	cfg := configuration.ZoneConfiguration{
-		Name: "room",
-		Rules: configuration.ZoneRuleConfiguration{
-			LimitOverlay: configuration.LimitOverlayConfiguration{Delay: time.Hour}},
-	}
-
-	z := zone.New(nil, nil, nil, cfg, slog.Default())
-
 	tests := []struct {
 		name   string
 		update poller.Update
@@ -58,6 +50,13 @@ func TestZoneController(t *testing.T) {
 			delay:  0,
 		},
 	}
+
+	cfg := configuration.ZoneConfiguration{
+		Name: "room",
+		Rules: configuration.ZoneRuleConfiguration{
+			LimitOverlay: configuration.LimitOverlayConfiguration{Delay: time.Hour}},
+	}
+	z := zone.New(nil, nil, nil, cfg, slog.Default())
 
 	for _, tt := range tests {
 		tt := tt
