@@ -41,7 +41,7 @@ func TestZoneController(t *testing.T) {
 			name: "permanent overlay (home)",
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay(), testutil.ZoneInfoTemperature(18, 22))},
 				Home:     true,
 			},
 			action: "moving to auto mode",

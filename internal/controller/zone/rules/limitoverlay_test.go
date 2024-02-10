@@ -66,9 +66,8 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 			cfg: configuration.LimitOverlayConfiguration{Delay: time.Hour},
 			want: want{
 				err:    assert.NoError,
-				action: assert.True,
-				delay:  time.Hour,
-				reason: "manual temp setting detected",
+				action: assert.False,
+				reason: "no manual temp setting detected",
 			},
 		},
 	}
