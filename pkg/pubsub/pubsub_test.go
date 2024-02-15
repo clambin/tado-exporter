@@ -13,7 +13,7 @@ func TestPublisher(t *testing.T) {
 
 	const clients = 10
 	var chs []chan int
-	for i := 0; i < clients; i++ {
+	for range clients {
 		chs = append(chs, p.Subscribe())
 	}
 

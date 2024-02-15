@@ -37,7 +37,7 @@ func TestTask_Stress(t *testing.T) {
 	wg.Add(actionCount)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	for i := 0; i < actionCount; i++ {
+	for range int(actionCount) {
 		go func() {
 			defer wg.Done()
 			a := action.Action{Delay: time.Hour}
