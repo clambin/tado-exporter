@@ -28,7 +28,7 @@ func TestRules_ZoneRules(t *testing.T) {
 		delay     time.Duration
 		reason    string
 	}
-	testCases := []struct {
+	tests := []struct {
 		name      string
 		config    configuration.ZoneConfiguration
 		update    poller.Update
@@ -162,8 +162,7 @@ func TestRules_ZoneRules(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
-		tt := tt
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 

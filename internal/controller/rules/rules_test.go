@@ -100,7 +100,7 @@ func BenchmarkRules_Evaluate(b *testing.B) {
 		r = append(r, stubbedEvaluator{})
 	}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := r.Evaluate(poller.Update{})
 		if err != nil {
 			b.Fatal(err)
@@ -111,7 +111,7 @@ func BenchmarkRules_Evaluate(b *testing.B) {
 func Benchmark_getCombinedReasons(b *testing.B) {
 	actions := make([]action.Action, 5)
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = getCombinedReason(actions)
 	}
 }

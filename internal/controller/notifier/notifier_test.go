@@ -66,6 +66,7 @@ func TestNotifiers_Notify(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			b := mocks.NewSlackSender(t)
 			var logOutput bytes.Buffer
 			l := notifier.Notifiers{

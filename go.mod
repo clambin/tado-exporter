@@ -1,6 +1,6 @@
 module github.com/clambin/tado-exporter
 
-go 1.21
+go 1.22
 
 require (
 	github.com/clambin/go-common/httpclient v0.6.0

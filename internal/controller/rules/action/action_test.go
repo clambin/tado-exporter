@@ -63,7 +63,6 @@ func TestAction(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -84,7 +83,7 @@ func BenchmarkMode_String(b *testing.B) {
 	// with slice:
 	// BenchmarkMode_String-16         1000000000               0.2144 ns/op          0 B/op          0 allocs/op
 	m := action.Mode(-1)
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = m.String()
 	}
 }

@@ -89,7 +89,7 @@ func BenchmarkHealth_Handle(b *testing.B) {
 	})
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		resp := httptest.NewRecorder()
 		h.ServeHTTP(resp, &http.Request{})
 	}

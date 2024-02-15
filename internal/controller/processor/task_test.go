@@ -64,7 +64,7 @@ func TestTask_scheduledBefore(t *testing.T) {
 	ticker := time.NewTicker(time.Millisecond)
 	defer ticker.Stop()
 
-	for i := 1; i < 1600; i++ {
+	for range 1600 {
 		<-ticker.C
 		a2 := action.Action{Delay: time.Until(task.job.Due())}
 		assert.True(t, task.scheduledBefore(a2))
