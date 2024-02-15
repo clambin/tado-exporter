@@ -10,13 +10,13 @@ on:
       - master
 jobs:
   test:
-    uses: clambin/workflows/.github/workflows/test.yaml@main
+    uses: clambin/workflows/.github/workflows/test.yaml@go122
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
   build:
     needs:
       - test
-    uses: clambin/workflows/.github/workflows/build.yaml@main
+    uses: clambin/workflows/.github/workflows/build.yaml@go122
     with:
       target: tado
       image: tado-monitor

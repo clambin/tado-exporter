@@ -59,7 +59,6 @@ func TestZoneController(t *testing.T) {
 	z := zone.New(nil, nil, nil, cfg, slog.Default())
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 

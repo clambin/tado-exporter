@@ -62,8 +62,9 @@ tado_monitor_api_errors_total{application="tado",method="GET",path="/api/v2/me"}
 	}
 
 	for _, tt := range testCases {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			r := prometheus.NewPedanticRegistry()
 			roundTripper := getRegisteredRoundTripper(finalRoundTripper, r)
 

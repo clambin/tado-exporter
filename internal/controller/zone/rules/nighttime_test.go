@@ -21,7 +21,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 		reason string
 	}
 
-	testCases := []struct {
+	tests := []struct {
 		name   string
 		update poller.Update
 		cfg    configuration.NightTimeConfiguration
@@ -76,8 +76,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
-		tt := tt
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			r, err := LoadNightTime(10, "room", tt.cfg, tt.update, slog.Default())

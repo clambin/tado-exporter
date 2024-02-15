@@ -24,7 +24,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 		home   bool
 	}
 
-	var testCases = []struct {
+	tests := []struct {
 		name   string
 		update poller.Update
 		want
@@ -126,8 +126,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 		Delay: time.Hour,
 	}
 
-	for _, tt := range testCases {
-		tt := tt
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			r, err := LoadAutoAwayRule(cfg, tt.update, slog.Default())

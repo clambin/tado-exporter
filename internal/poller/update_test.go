@@ -75,6 +75,7 @@ func TestUpdate_GetUserID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			zoneID, ok := testUpdate.GetUserID(tt.zone)
 			assert.Equal(t, tt.wantOK, ok)
 			assert.Equal(t, tt.want, zoneID)
@@ -138,7 +139,6 @@ func TestUpdate_GetDeviceStatus(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
