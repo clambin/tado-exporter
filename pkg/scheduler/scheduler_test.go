@@ -50,7 +50,7 @@ func TestSchedule_Stress(t *testing.T) {
 	const jobCount = 1e5
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
-	for i := 0; i < jobCount; i++ {
+	for range int(jobCount) {
 		wg.Add(1)
 		job := scheduler.New(ctx, &MyTask{})
 		go job.Run(time.Hour)

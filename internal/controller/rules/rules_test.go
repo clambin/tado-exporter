@@ -96,7 +96,7 @@ func TestRules_Evaluate(t *testing.T) {
 
 func BenchmarkRules_Evaluate(b *testing.B) {
 	var r Rules
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		r = append(r, stubbedEvaluator{})
 	}
 	b.ResetTimer()

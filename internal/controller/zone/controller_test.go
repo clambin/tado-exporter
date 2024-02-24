@@ -13,14 +13,6 @@ import (
 )
 
 func TestZoneController(t *testing.T) {
-	cfg := configuration.ZoneConfiguration{
-		Name: "room",
-		Rules: configuration.ZoneRuleConfiguration{
-			LimitOverlay: configuration.LimitOverlayConfiguration{Delay: time.Hour}},
-	}
-
-	z := zone.New(nil, nil, nil, cfg, slog.Default())
-
 	tests := []struct {
 		name   string
 		update poller.Update
@@ -41,7 +33,7 @@ func TestZoneController(t *testing.T) {
 			name: "permanent overlay (home)",
 			update: poller.Update{
 				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
+				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay(), testutil.ZoneInfoTemperature(18, 22))},
 				Home:     true,
 			},
 			action: "moving to auto mode",
@@ -58,6 +50,13 @@ func TestZoneController(t *testing.T) {
 			delay:  0,
 		},
 	}
+
+	cfg := configuration.ZoneConfiguration{
+		Name: "room",
+		Rules: configuration.ZoneRuleConfiguration{
+			LimitOverlay: configuration.LimitOverlayConfiguration{Delay: time.Hour}},
+	}
+	z := zone.New(nil, nil, nil, cfg, slog.Default())
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
