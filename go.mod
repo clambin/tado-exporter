@@ -9,7 +9,7 @@ require (
 	github.com/clambin/go-common/taskmanager v0.3.0
 	github.com/clambin/tado v1.3.1
 	github.com/prometheus/client_golang v1.18.0
-	github.com/slack-go/slack v0.12.4
+	github.com/slack-go/slack v0.12.5
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
