@@ -3,7 +3,7 @@ module github.com/clambin/tado-exporter
 go 1.22
 
 require (
-	github.com/clambin/go-common/httpclient v0.6.0
+	github.com/clambin/go-common/httpclient v0.7.0
 	github.com/clambin/go-common/set v0.4.3
 	github.com/clambin/go-common/slackbot v0.7.0
 	github.com/clambin/go-common/taskmanager v0.3.0
