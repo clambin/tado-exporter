@@ -28,15 +28,20 @@ var _ prometheus.Collector = &Monitor{}
 
 type Monitor struct {
 	*taskmanager.Manager
-	collector *collector.Collector
+	httpClientMetrics roundtripper.RoundTripMetrics
+	tadoMetrics       *collector.Metrics
 }
 
-func New(cfg *viper.Viper, version string, metrics roundtripper.RoundTripMetrics, logger *slog.Logger) (*Monitor, error) {
+func New(cfg *viper.Viper, version string, logger *slog.Logger) (*Monitor, error) {
+	m := Monitor{
+		httpClientMetrics: roundtripper.NewDefaultRoundTripMetrics("tado", "monitor", "tado"),
+		tadoMetrics:       collector.NewMetrics(),
+	}
 	api, err := tadotools.GetInstrumentedTadoClient(
 		cfg.GetString("tado.username"),
 		cfg.GetString("tado.password"),
 		cfg.GetString("tado.clientSecret"),
-		metrics,
+		m.httpClientMetrics,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("tado: %w", err)
@@ -48,7 +53,8 @@ func New(cfg *viper.Viper, version string, metrics roundtripper.RoundTripMetrics
 		return nil, err
 	}
 
-	return makeMonitor(cfg, api, version, rules, logger), nil
+	m.buildManager(cfg, api, version, rules, logger)
+	return &m, nil
 }
 
 func maybeLoadRules(path string) (configuration.Configuration, error) {
@@ -66,13 +72,17 @@ func maybeLoadRules(path string) (configuration.Configuration, error) {
 	return configuration.Load(f)
 }
 
-func makeMonitor(cfg *viper.Viper, api *tado.APIClient, version string, rules configuration.Configuration, l *slog.Logger) *Monitor {
-	var monitor Monitor
-	monitor.Manager = taskmanager.New(monitor.makeTasks(cfg, api, version, rules, l)...)
-	return &monitor
+func (m *Monitor) Describe(ch chan<- *prometheus.Desc) {
+	m.httpClientMetrics.Describe(ch)
+	m.tadoMetrics.Describe(ch)
 }
 
-func (m *Monitor) makeTasks(cfg *viper.Viper, api *tado.APIClient, version string, rules configuration.Configuration, l *slog.Logger) []taskmanager.Task {
+func (m *Monitor) Collect(ch chan<- prometheus.Metric) {
+	m.httpClientMetrics.Collect(ch)
+	m.tadoMetrics.Collect(ch)
+}
+
+func (m *Monitor) buildManager(cfg *viper.Viper, api *tado.APIClient, version string, rules configuration.Configuration, l *slog.Logger) {
 	var tasks []taskmanager.Task
 
 	// Poller
@@ -80,8 +90,7 @@ func (m *Monitor) makeTasks(cfg *viper.Viper, api *tado.APIClient, version strin
 	tasks = append(tasks, p)
 
 	// Collector
-	m.collector = &collector.Collector{Poller: p, Logger: l.With("component", "collector")}
-	tasks = append(tasks, m.collector)
+	tasks = append(tasks, &collector.Collector{Poller: p, Metrics: m.tadoMetrics, Logger: l.With("component", "collector")})
 
 	// Prometheus Server
 	tasks = append(tasks, promserver.New(promserver.WithAddr(cfg.GetString("exporter.addr"))))
@@ -94,35 +103,25 @@ func (m *Monitor) makeTasks(cfg *viper.Viper, api *tado.APIClient, version strin
 	tasks = append(tasks, httpserver.New(cfg.GetString("health.addr"), r))
 
 	// Controller
-	if len(rules.Zones) == 0 {
-		return tasks
+	if len(rules.Zones) > 0 {
+		// Slackbot
+		var s *slackbot.SlackBot
+		if token := cfg.GetString("controller.tadoBot.token"); token != "" {
+			s = slackbot.New(
+				token,
+				slackbot.WithName("tadoBot "+version),
+				slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
+			)
+			tasks = append(tasks, s)
+		}
+
+		c := controller.New(api, rules, s, p, l.With("component", "controller"))
+		tasks = append(tasks, c)
+
+		if s != nil && cfg.GetBool("controller.tadoBot.enabled") {
+			tasks = append(tasks, bot.New(api, s, p, c, l.With(slog.String("component", "tadobot"))))
+		}
 	}
 
-	// Slackbot
-	var s *slackbot.SlackBot
-	if token := cfg.GetString("controller.tadoBot.token"); token != "" {
-		s = slackbot.New(
-			token,
-			slackbot.WithName("tadoBot "+version),
-			slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
-		)
-		tasks = append(tasks, s)
-	}
-
-	c := controller.New(api, rules, s, p, l.With("component", "controller"))
-	tasks = append(tasks, c)
-
-	if s != nil && cfg.GetBool("controller.tadoBot.enabled") {
-		tasks = append(tasks, bot.New(api, s, p, c, l.With(slog.String("component", "tadobot"))))
-	}
-
-	return tasks
-}
-
-func (m *Monitor) Describe(ch chan<- *prometheus.Desc) {
-	m.collector.Describe(ch)
-}
-
-func (m *Monitor) Collect(ch chan<- prometheus.Metric) {
-	m.collector.Collect(ch)
+	m.Manager = taskmanager.New(tasks...)
 }

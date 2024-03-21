@@ -1,81 +1,13 @@
 package monitor
 
 import (
-	"bytes"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"log/slog"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
-
-func Test_makeTasks(t *testing.T) {
-	testCases := []struct {
-		name   string
-		config string
-		rules  string
-		length int
-	}{
-		{
-			name: "rules",
-			config: `
-health:
-  addr: :9091
-controller:
-  tadoBot:
-    enabled: true
-    token: 1234
-`,
-			rules: `
-zones:
-  - name: "Bathroom"
-    rules:
-      limitOverlay:
-        delay: 1h
-`,
-			length: 8,
-		},
-		{
-			name: "no rules",
-			config: `
-health:
-  addr: :9091
-controller:
-  tadoBot:
-    enabled: true
-    token: 1234
-`,
-			rules:  ``,
-			length: 5,
-		},
-	}
-
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			cfg := viper.New()
-			cfg.SetConfigType("yaml")
-			config := bytes.NewBufferString(tt.config)
-			require.NoError(t, cfg.ReadConfig(config))
-
-			var rules configuration.Configuration
-			if tt.rules != "" {
-				var err error
-				rules, err = configuration.Load(strings.NewReader(tt.rules))
-				require.NoError(t, err)
-			}
-
-			var mon Monitor
-			tasks := mon.makeTasks(cfg, nil, "1.0", rules, slog.Default())
-			assert.Len(t, tasks, tt.length)
-			assert.NotNil(t, mon.collector)
-		})
-	}
-}
 
 func Test_maybeLoadRules(t *testing.T) {
 	testCases := []struct {

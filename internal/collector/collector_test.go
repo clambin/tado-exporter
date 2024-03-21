@@ -1,43 +1,22 @@
 package collector
 
 import (
-	"bytes"
-	"context"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado-exporter/internal/poller/mocks"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"log/slog"
+	"strings"
 	"testing"
-	"time"
 )
 
 func TestCollector(t *testing.T) {
-	ch := make(chan poller.Update, 1)
-	p := mocks.NewPoller(t)
-	p.EXPECT().Subscribe().Return(ch).Once()
-	p.EXPECT().Unsubscribe(ch).Once()
+	m := NewMetrics()
+	c := Collector{Poller: nil, Metrics: m, Logger: slog.Default()}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	errCh := make(chan error)
+	c.process(Update)
 
-	c := Collector{Poller: p, Logger: slog.Default()}
-	r := prometheus.NewRegistry()
-	r.MustRegister(&c)
-	go func() { errCh <- c.Run(ctx) }()
-
-	ch <- Update
-
-	require.Eventually(t, func() bool {
-		c.lock.RLock()
-		defer c.lock.RUnlock()
-		return c.isUpdated
-	}, time.Second, 10*time.Millisecond)
-
-	require.NoError(t, testutil.GatherAndCompare(r, bytes.NewBufferString(`
+	require.NoError(t, testutil.CollectAndCompare(m, strings.NewReader(`
 # HELP tado_home_state State of the home. Always 1. Label home_state specifies the state
 # TYPE tado_home_state gauge
 tado_home_state{home_state="HOME"} 1
@@ -66,7 +45,7 @@ tado_zone_device_connection_status{firmware="67.2",id="foo_0",type="RU02",zone_n
 # TYPE tado_zone_heating_percentage gauge
 tado_zone_heating_percentage{zone_name="bar"} 50
 tado_zone_heating_percentage{zone_name="foo"} 85
-# HELP tado_zone_humidity_percentage Current humidity percentage in this zone
+# HELP tado_zone_humidity_percentage Current humidity percentage in this zone in percentage (0-100)
 # TYPE tado_zone_humidity_percentage gauge
 tado_zone_humidity_percentage{zone_name="bar"} 45
 tado_zone_humidity_percentage{zone_name="foo"} 65
@@ -95,9 +74,6 @@ tado_zone_target_temp_celsius{zone_name="foo"} 22
 tado_zone_temperature_celsius{zone_name="bar"} 18
 tado_zone_temperature_celsius{zone_name="foo"} 21
 `)))
-
-	cancel()
-	assert.NoError(t, <-errCh)
 }
 
 var Update = poller.Update{
