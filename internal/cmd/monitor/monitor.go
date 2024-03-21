@@ -34,7 +34,7 @@ type Monitor struct {
 
 func New(cfg *viper.Viper, version string, logger *slog.Logger) (*Monitor, error) {
 	m := Monitor{
-		httpClientMetrics: roundtripper.NewDefaultRoundTripMetrics("tado", "monitor", "tado"),
+		httpClientMetrics: tadotools.NewTadoCallMetrics("tado", "monitor", "tado"),
 		tadoMetrics:       collector.NewMetrics(),
 	}
 	api, err := tadotools.GetInstrumentedTadoClient(
