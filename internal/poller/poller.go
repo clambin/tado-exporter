@@ -50,21 +50,15 @@ func (p *TadoPoller) Run(ctx context.Context) error {
 	defer timer.Stop()
 
 	for {
-		shouldPoll := false
+		if err := p.poll(ctx); err != nil {
+			p.logger.Error("failed to get tado metrics", slog.Any("err", err))
+		}
+
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-timer.C:
-			shouldPoll = true
 		case <-p.refresh:
-			shouldPoll = true
-		}
-
-		if shouldPoll {
-			// poll for new data
-			if err := p.poll(ctx); err != nil {
-				p.logger.Error("failed to get tado metrics", slog.Any("err", err))
-			}
 		}
 	}
 }

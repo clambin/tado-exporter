@@ -3,6 +3,7 @@ package monitor
 import (
 	"errors"
 	"fmt"
+	"github.com/clambin/go-common/http/roundtripper"
 	"github.com/clambin/go-common/slackbot"
 	"github.com/clambin/go-common/taskmanager"
 	"github.com/clambin/go-common/taskmanager/httpserver"
@@ -14,7 +15,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/health"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado-exporter/internal/tadotools"
+	"github.com/clambin/tado-exporter/pkg/tadotools"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"log/slog"
@@ -23,23 +24,37 @@ import (
 	"path/filepath"
 )
 
-func New(cfg *viper.Viper, version string, registry prometheus.Registerer, logger *slog.Logger) (*taskmanager.Manager, error) {
+var _ prometheus.Collector = &Monitor{}
+
+type Monitor struct {
+	*taskmanager.Manager
+	httpClientMetrics roundtripper.RoundTripMetrics
+	tadoMetrics       *collector.Metrics
+}
+
+func New(cfg *viper.Viper, version string, logger *slog.Logger) (*Monitor, error) {
+	m := Monitor{
+		httpClientMetrics: tadotools.NewTadoCallMetrics("tado", "monitor", "tado"),
+		tadoMetrics:       collector.NewMetrics(),
+	}
 	api, err := tadotools.GetInstrumentedTadoClient(
 		cfg.GetString("tado.username"),
 		cfg.GetString("tado.password"),
 		cfg.GetString("tado.clientSecret"),
-		registry,
+		m.httpClientMetrics,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("tado: %w", err)
 	}
 
 	// Do we have zone rules?
-	r, err := maybeLoadRules(filepath.Join(filepath.Dir(cfg.ConfigFileUsed()), "rules.yaml"))
+	rules, err := maybeLoadRules(filepath.Join(filepath.Dir(cfg.ConfigFileUsed()), "rules.yaml"))
 	if err != nil {
 		return nil, err
 	}
-	return taskmanager.New(makeTasks(cfg, api, r, version, registry, logger)...), nil
+
+	m.buildManager(cfg, api, version, rules, logger)
+	return &m, nil
 }
 
 func maybeLoadRules(path string) (configuration.Configuration, error) {
@@ -57,7 +72,17 @@ func maybeLoadRules(path string) (configuration.Configuration, error) {
 	return configuration.Load(f)
 }
 
-func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Configuration, version string, registry prometheus.Registerer, l *slog.Logger) []taskmanager.Task {
+func (m *Monitor) Describe(ch chan<- *prometheus.Desc) {
+	m.httpClientMetrics.Describe(ch)
+	m.tadoMetrics.Describe(ch)
+}
+
+func (m *Monitor) Collect(ch chan<- prometheus.Metric) {
+	m.httpClientMetrics.Collect(ch)
+	m.tadoMetrics.Collect(ch)
+}
+
+func (m *Monitor) buildManager(cfg *viper.Viper, api *tado.APIClient, version string, rules configuration.Configuration, l *slog.Logger) {
 	var tasks []taskmanager.Task
 
 	// Poller
@@ -65,11 +90,7 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Config
 	tasks = append(tasks, p)
 
 	// Collector
-	coll := &collector.Collector{Poller: p, Logger: l.With("component", "collector")}
-	if registry != nil {
-		registry.MustRegister(coll)
-	}
-	tasks = append(tasks, coll)
+	tasks = append(tasks, &collector.Collector{Poller: p, Metrics: m.tadoMetrics, Logger: l.With("component", "collector")})
 
 	// Prometheus Server
 	tasks = append(tasks, promserver.New(promserver.WithAddr(cfg.GetString("exporter.addr"))))
@@ -83,30 +104,24 @@ func makeTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Config
 
 	// Controller
 	if len(rules.Zones) > 0 {
-		tasks = append(tasks, makeControllerTasks(cfg, api, rules, p, version, l)...)
+		// Slackbot
+		var s *slackbot.SlackBot
+		if token := cfg.GetString("controller.tadoBot.token"); token != "" {
+			s = slackbot.New(
+				token,
+				slackbot.WithName("tadoBot "+version),
+				slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
+			)
+			tasks = append(tasks, s)
+		}
+
+		c := controller.New(api, rules, s, p, l.With("component", "controller"))
+		tasks = append(tasks, c)
+
+		if s != nil && cfg.GetBool("controller.tadoBot.enabled") {
+			tasks = append(tasks, bot.New(api, s, p, c, l.With(slog.String("component", "tadobot"))))
+		}
 	}
-	return tasks
-}
 
-func makeControllerTasks(cfg *viper.Viper, api *tado.APIClient, rules configuration.Configuration, p poller.Poller, version string, l *slog.Logger) []taskmanager.Task {
-	var tasks []taskmanager.Task
-
-	// Slackbot
-	var s *slackbot.SlackBot
-	if token := cfg.GetString("controller.tadoBot.token"); token != "" {
-		s = slackbot.New(
-			token,
-			slackbot.WithName("tadoBot "+version),
-			slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
-		)
-		tasks = append(tasks, s)
-	}
-
-	c := controller.New(api, rules, s, p, l.With("component", "controller"))
-	tasks = append(tasks, c)
-
-	if s != nil && cfg.GetBool("controller.tadoBot.enabled") {
-		tasks = append(tasks, bot.New(api, s, p, c, l.With(slog.String("component", "tadobot"))))
-	}
-	return tasks
+	m.Manager = taskmanager.New(tasks...)
 }

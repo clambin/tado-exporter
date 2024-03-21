@@ -16,20 +16,18 @@ import (
 
 func TestTadoPoller_Run(t *testing.T) {
 	api := mocks.NewTadoGetter(t)
+	prepareMockAPI(api)
 
 	p := poller.New(api, time.Minute, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
-
-	prepareMockAPI(api)
 
 	ch := p.Subscribe()
 	errCh := make(chan error)
 	go func() {
 		errCh <- p.Run(ctx)
 	}()
-	p.Refresh()
-	update := <-ch
 
+	update := <-ch
 	require.Len(t, update.UserInfo, 2)
 	assert.Equal(t, "foo", update.UserInfo[1].Name)
 	device := update.UserInfo[1]
@@ -37,15 +35,12 @@ func TestTadoPoller_Run(t *testing.T) {
 	assert.Equal(t, "bar", update.UserInfo[2].Name)
 	device = update.UserInfo[2]
 	assert.Equal(t, tado.DeviceAway, (&device).IsHome())
-
 	assert.Equal(t, "CLOUDY_MOSTLY", update.WeatherInfo.WeatherState.Value)
 	assert.Equal(t, 3.4, update.WeatherInfo.OutsideTemperature.Celsius)
 	assert.Equal(t, 13.3, update.WeatherInfo.SolarIntensity.Percentage)
-
 	require.Len(t, update.Zones, 2)
 	assert.Equal(t, "foo", update.Zones[1].Name)
 	assert.Equal(t, "bar", update.Zones[2].Name)
-
 	require.Len(t, update.ZoneInfo, 2)
 	assert.True(t, bool(update.Home))
 

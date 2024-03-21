@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/cmd/cli"
@@ -53,18 +52,19 @@ func runMonitor(cmd *cobra.Command, _ []string) error {
 	}
 	l := slog.New(slog.NewJSONHandler(os.Stderr, &opts))
 
-	a, err := monitor.New(viper.GetViper(), version, prometheus.DefaultRegisterer, l)
+	m, err := monitor.New(viper.GetViper(), version, l)
 	if err != nil {
 		return fmt.Errorf("init: %w", err)
 	}
+	prometheus.MustRegister(m)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
 	defer cancel()
 
-	l.Info("tado monitor starting", "version", cmd.Version)
+	l.Info("tado monitor starting", "version", version)
 	defer l.Info("tado monitor stopped")
 
-	return a.Run(ctx)
+	return m.Manager.Run(ctx)
 }
 
 func showConfig(cmd *cobra.Command, _ []string) error {
