@@ -1,8 +1,8 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"github.com/clambin/go-common/http/roundtripper"
 	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/cmd/cli"
 	"github.com/clambin/tado-exporter/internal/cmd/config"
@@ -53,18 +53,20 @@ func runMonitor(cmd *cobra.Command, _ []string) error {
 	}
 	l := slog.New(slog.NewJSONHandler(os.Stderr, &opts))
 
-	a, err := monitor.New(viper.GetViper(), version, prometheus.DefaultRegisterer, l)
+	httpMetrics := roundtripper.NewDefaultRoundTripMetrics("tado", "monitor", "tado")
+	m, err := monitor.New(viper.GetViper(), version, httpMetrics, l)
 	if err != nil {
 		return fmt.Errorf("init: %w", err)
 	}
+	prometheus.MustRegister(httpMetrics, m)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
 	defer cancel()
 
-	l.Info("tado monitor starting", "version", cmd.Version)
+	l.Info("tado monitor starting", "version", version)
 	defer l.Info("tado monitor stopped")
 
-	return a.Run(ctx)
+	return m.Run(ctx)
 }
 
 func showConfig(cmd *cobra.Command, _ []string) error {

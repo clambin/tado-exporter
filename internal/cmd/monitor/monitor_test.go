@@ -3,12 +3,12 @@ package monitor
 import (
 	"bytes"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"log/slog"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -62,15 +62,17 @@ controller:
 			config := bytes.NewBufferString(tt.config)
 			require.NoError(t, cfg.ReadConfig(config))
 
-			var r configuration.Configuration
+			var rules configuration.Configuration
 			if tt.rules != "" {
 				var err error
-				r, err = configuration.Load(bytes.NewBufferString(tt.rules))
+				rules, err = configuration.Load(strings.NewReader(tt.rules))
 				require.NoError(t, err)
 			}
 
-			tasks := makeTasks(cfg, nil, r, "1.0", prometheus.NewPedanticRegistry(), slog.Default())
+			var mon Monitor
+			tasks := mon.makeTasks(cfg, nil, "1.0", rules, slog.Default())
 			assert.Len(t, tasks, tt.length)
+			assert.NotNil(t, mon.collector)
 		})
 	}
 }
