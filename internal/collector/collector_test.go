@@ -76,6 +76,16 @@ tado_zone_temperature_celsius{zone_name="foo"} 21
 `)))
 }
 
+func BenchmarkCollector_process(b *testing.B) {
+	m := NewMetrics()
+	c := Collector{Poller: nil, Metrics: m, Logger: slog.Default()}
+
+	b.ResetTimer()
+	for range b.N {
+		c.process(Update)
+	}
+}
+
 var Update = poller.Update{
 	Home: true,
 	UserInfo: map[int]tado.MobileDevice{

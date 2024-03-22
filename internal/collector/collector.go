@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"strconv"
+	"sync"
 )
 
 var _ prometheus.Collector = &Metrics{}
@@ -202,11 +203,14 @@ func (c *Collector) Run(ctx context.Context) error {
 }
 
 func (c *Collector) process(update poller.Update) {
-	c.collectUsers(update)
-	c.collectWeather(update)
-	c.collectZones(update)
-	c.collectZoneInfos(update)
-	c.collectHomeState(update)
+	var wg sync.WaitGroup
+	wg.Add(5)
+	go func() { defer wg.Done(); c.collectUsers(update) }()
+	go func() { defer wg.Done(); c.collectWeather(update) }()
+	go func() { defer wg.Done(); c.collectZones(update) }()
+	go func() { defer wg.Done(); c.collectZoneInfos(update) }()
+	go func() { defer wg.Done(); c.collectHomeState(update) }()
+	wg.Wait()
 }
 
 func (c *Collector) collectUsers(update poller.Update) {
