@@ -3,6 +3,7 @@ package tadotools
 import (
 	"context"
 	"fmt"
+	"github.com/clambin/go-common/http/metrics"
 	"github.com/clambin/go-common/http/roundtripper"
 	"github.com/clambin/tado"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 	"time"
 )
 
-func GetInstrumentedTadoClient(username, password, secret string, metrics roundtripper.RoundTripMetrics) (*tado.APIClient, error) {
+func GetInstrumentedTadoClient(username, password, secret string, metrics metrics.RequestMetrics) (*tado.APIClient, error) {
 	c, err := tado.New(username, password, secret)
 	if err != nil {
 		return nil, fmt.Errorf("tado: %w", err)
@@ -21,29 +22,29 @@ func GetInstrumentedTadoClient(username, password, secret string, metrics roundt
 	return c, nil
 }
 
-func getInstrumentedRoundTripper(rt http.RoundTripper, metrics roundtripper.RoundTripMetrics) http.RoundTripper {
+func getInstrumentedRoundTripper(rt http.RoundTripper, metrics metrics.RequestMetrics) http.RoundTripper {
 	return roundtripper.New(
-		roundtripper.WithInstrumentedRoundTripper(metrics),
+		roundtripper.WithRequestMetrics(metrics),
 		roundtripper.WithRoundTripper(rt),
 	)
 }
 
-var _ roundtripper.RoundTripMetrics = &tadoCallMetrics{}
+var _ metrics.RequestMetrics = &tadoCallMetrics{}
 
 type tadoCallMetrics struct {
-	roundtripper.RoundTripMetrics
+	metrics.RequestMetrics
 }
 
-func NewTadoCallMetrics(namespace, subsystem, application string) roundtripper.RoundTripMetrics {
+func NewTadoCallMetrics(namespace, subsystem string, labels map[string]string) metrics.RequestMetrics {
 	return &tadoCallMetrics{
-		RoundTripMetrics: roundtripper.NewDefaultRoundTripMetrics(namespace, subsystem, application),
+		RequestMetrics: metrics.NewRequestSummaryMetrics(namespace, subsystem, labels),
 	}
 }
 
-func (t *tadoCallMetrics) Measure(req *http.Request, resp *http.Response, err error, duration time.Duration) {
+func (t *tadoCallMetrics) Measure(req *http.Request, statusCode int, duration time.Duration) {
 	req2 := req.Clone(context.Background())
 	req2.URL.Path = filterPath(req.URL.Path)
-	t.RoundTripMetrics.Measure(req2, resp, err, duration)
+	t.RequestMetrics.Measure(req2, statusCode, duration)
 }
 
 func filterPath(path string) string {

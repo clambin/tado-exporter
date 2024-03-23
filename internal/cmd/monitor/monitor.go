@@ -3,7 +3,7 @@ package monitor
 import (
 	"errors"
 	"fmt"
-	"github.com/clambin/go-common/http/roundtripper"
+	"github.com/clambin/go-common/http/metrics"
 	"github.com/clambin/go-common/slackbot"
 	"github.com/clambin/go-common/taskmanager"
 	"github.com/clambin/go-common/taskmanager/httpserver"
@@ -28,13 +28,13 @@ var _ prometheus.Collector = &Monitor{}
 
 type Monitor struct {
 	*taskmanager.Manager
-	httpClientMetrics roundtripper.RoundTripMetrics
+	httpClientMetrics metrics.RequestMetrics
 	tadoMetrics       *collector.Metrics
 }
 
 func New(cfg *viper.Viper, version string, logger *slog.Logger) (*Monitor, error) {
 	m := Monitor{
-		httpClientMetrics: tadotools.NewTadoCallMetrics("tado", "monitor", "tado"),
+		httpClientMetrics: tadotools.NewTadoCallMetrics("tado", "monitor", nil),
 		tadoMetrics:       collector.NewMetrics(),
 	}
 	api, err := tadotools.GetInstrumentedTadoClient(
