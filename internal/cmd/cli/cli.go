@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"github.com/clambin/go-common/charmer"
+	"github.com/clambin/tado-exporter/internal/cmd/config"
+	"github.com/clambin/tado-exporter/internal/cmd/monitor"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log/slog"
@@ -13,6 +16,9 @@ var (
 	RootCmd        = cobra.Command{
 		Use:   "tado",
 		Short: "Utility for Tadoº thermostats",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			charmer.SetJSONLogger(cmd, viper.GetBool("debug"))
+		},
 	}
 )
 
@@ -21,6 +27,20 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&configFilename, "config", "", "Configuration file")
 	RootCmd.PersistentFlags().Bool("debug", false, "Log debug messages")
 	_ = viper.BindPFlag("debug", RootCmd.PersistentFlags().Lookup("debug"))
+
+	RootCmd.AddCommand(&config.Cmd, &monitor.Cmd)
+}
+
+var args = charmer.Arguments{
+	"debug":                      charmer.Argument{Default: false},
+	"tado.username":              charmer.Argument{Default: ""},
+	"tado.password":              charmer.Argument{Default: ""},
+	"tado.clientSecret":          charmer.Argument{Default: ""},
+	"exporter.addr":              charmer.Argument{Default: ":9090"},
+	"poller.interval":            charmer.Argument{Default: 30 * time.Second},
+	"health.addr":                charmer.Argument{Default: ":8080"},
+	"controller.tadobot.enabled": charmer.Argument{Default: true},
+	"controller.tadobot.token":   charmer.Argument{Default: ""},
 }
 
 func initConfig() {
@@ -33,15 +53,9 @@ func initConfig() {
 		viper.SetConfigName("config")
 	}
 
-	viper.SetDefault("debug", false)
-	viper.SetDefault("tado.username", "")
-	viper.SetDefault("tado.password", "")
-	viper.SetDefault("tado.clientSecret", "")
-	viper.SetDefault("exporter.addr", ":9090")
-	viper.SetDefault("poller.interval", 30*time.Second)
-	viper.SetDefault("health.addr", ":8080")
-	viper.SetDefault("controller.tadobot.enabled", true)
-	viper.SetDefault("controller.tadobot.token", "")
+	if err := charmer.SetDefaults(viper.GetViper(), args); err != nil {
+		panic("failed to set viper defaults: " + err.Error())
+	}
 
 	viper.SetEnvPrefix("TADO_MONITOR")
 	viper.AutomaticEnv()

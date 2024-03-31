@@ -3,6 +3,7 @@ module github.com/clambin/tado-exporter
 go 1.22.1
 
 require (
+	github.com/clambin/go-common/charmer v0.2.0
 	github.com/clambin/go-common/http v0.4.3
 	github.com/clambin/go-common/set v0.4.3
 	github.com/clambin/go-common/slackbot v0.7.0

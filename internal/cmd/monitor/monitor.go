@@ -3,6 +3,7 @@ package monitor
 import (
 	"errors"
 	"fmt"
+	"github.com/clambin/go-common/charmer"
 	"github.com/clambin/go-common/http/metrics"
 	"github.com/clambin/go-common/slackbot"
 	"github.com/clambin/go-common/taskmanager"
@@ -17,12 +18,39 @@ import (
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/pkg/tadotools"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 )
+
+var (
+	Cmd = cobra.Command{
+		Use:   "monitor",
+		Short: "Monitor Tado thermostats",
+		RunE:  runMonitor,
+	}
+)
+
+func runMonitor(cmd *cobra.Command, _ []string) error {
+	l := charmer.GetLogger(cmd)
+	m, err := New(viper.GetViper(), cmd.Root().Version, l)
+	if err != nil {
+		return fmt.Errorf("init: %w", err)
+	}
+	prometheus.MustRegister(m)
+
+	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
+	defer cancel()
+
+	l.Info("tado monitor starting", "version", cmd.Root().Version)
+	defer l.Info("tado monitor stopped")
+
+	return m.Manager.Run(ctx)
+}
 
 var _ prometheus.Collector = &Monitor{}
 
@@ -97,10 +125,9 @@ func (m *Monitor) buildManager(cfg *viper.Viper, api *tado.APIClient, version st
 
 	// Health Endpoint
 	h := health.New(p, l.With("component", "health"))
-	tasks = append(tasks, h)
 	r := http.NewServeMux()
 	r.Handle("/health", h)
-	tasks = append(tasks, httpserver.New(cfg.GetString("health.addr"), r))
+	tasks = append(tasks, h, httpserver.New(cfg.GetString("health.addr"), r))
 
 	// Controller
 	if len(rules.Zones) > 0 {
@@ -118,7 +145,7 @@ func (m *Monitor) buildManager(cfg *viper.Viper, api *tado.APIClient, version st
 		c := controller.New(api, rules, s, p, l.With("component", "controller"))
 		tasks = append(tasks, c)
 
-		if s != nil && cfg.GetBool("controller.tadoBot.enabled") {
+		if s != nil && cfg.GetBool("controller.tadobot.enabled") {
 			tasks = append(tasks, bot.New(api, s, p, c, l.With(slog.String("component", "tadobot"))))
 		}
 	}
