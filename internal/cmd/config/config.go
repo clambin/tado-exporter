@@ -4,7 +4,35 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
+	"os"
 )
+
+var (
+	Cmd = cobra.Command{
+		Use:   "config",
+		Short: "Show Tado configuration",
+		RunE:  showConfig,
+	}
+)
+
+func showConfig(cmd *cobra.Command, _ []string) error {
+	api, err := tado.New(
+		viper.GetString("tado.username"),
+		viper.GetString("tado.password"),
+		viper.GetString("tado.clientSecret"),
+	)
+	if err != nil {
+		return fmt.Errorf("tado: %w", err)
+	}
+
+	enc := yaml.NewEncoder(os.Stdout)
+	enc.SetIndent(2)
+
+	return ShowConfig(cmd.Context(), api, enc)
+}
 
 type Encoder interface {
 	Encode(any) error

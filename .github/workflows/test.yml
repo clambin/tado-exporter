@@ -4,7 +4,7 @@ on:
   push:
     branches-ignore:
       - master
-      - http
+      - charmer
   pull_request_target:
 
 jobs:

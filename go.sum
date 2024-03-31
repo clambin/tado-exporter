@@ -4,6 +4,8 @@ github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj
 github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/clambin/go-common/cache v0.3.0 h1:nLG0wDWnLxCAP6ih5A8zVCInN7YGBWlonBtNTPvJUA4=
 github.com/clambin/go-common/cache v0.3.0/go.mod h1:kk8t1usGhQjSOdjE5YKEwWBJigZThxKIl1wYP7hujeE=
+github.com/clambin/go-common/charmer v0.2.0 h1:RLqdH1pRVQUBSKRPpKgDVlad6St3FyFDOikzbc//6Nk=
+github.com/clambin/go-common/charmer v0.2.0/go.mod h1:8Y/XKmTspOZ9xc0fgV8mvYS0mkXBuAidO3MCJLCMfrg=
 github.com/clambin/go-common/http v0.4.3 h1:XRXi7rE4lPGpK4cALfM8ADcVDadgYfpzluM/4irn1E0=
 github.com/clambin/go-common/http v0.4.3/go.mod h1:g2LMIgauEx/3wAIYNxrjM2AiKWNbODNlUXUinrWkbPY=
 github.com/clambin/go-common/set v0.4.3 h1:Sm9lkAJsh82j40RDpfQIziHyHjwr07+KsQF6vgCVXm4=
@@ -12,6 +14,8 @@ github.com/clambin/go-common/slackbot v0.7.0 h1:P/MwoHQOXkHU20K8IxthEtxyC9ZmTi/C
 github.com/clambin/go-common/slackbot v0.7.0/go.mod h1:9k1LVOK2rP8Wpgu3estPQkKdOuOmX1akYPFBLYKwV/w=
 github.com/clambin/go-common/taskmanager v0.3.0 h1:ASA0axYdGBOukljpdfJxgDE2BwneA1iSgvA/7tLxKw4=
 github.com/clambin/go-common/taskmanager v0.3.0/go.mod h1:lciRo5ME2pCRf0fi5Rx7TcDDgr3/6HuE9qxFgFamfLg=
+github.com/clambin/go-common/testutils v0.1.0 h1:/nGWaOCIhW+Ew1c2NU7GLY/YPb8dp9SV8+MTgWksAgk=
+github.com/clambin/go-common/testutils v0.1.0/go.mod h1:bV0j8D4zhNkleCeluFKLBeLQ0L/dqkxbaR/joLn8kzg=
 github.com/clambin/tado v1.3.2 h1:8VbEDU87WthNrvvrWfqkgYBOrjFBSFI/rT29INLJvoI=
 github.com/clambin/tado v1.3.2/go.mod h1:JZ5mPjybqSsluRiSgYPdvjM5qYCw+I/sLsrzowggnhk=
 github.com/cpuguy83/go-md2man/v2 v2.0.3/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
