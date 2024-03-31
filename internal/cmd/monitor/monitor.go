@@ -76,13 +76,13 @@ func maybeLoadRules(path string) (configuration.Configuration, error) {
 	return configuration.Load(f)
 }
 
-type tadoClient interface {
+type TadoClient interface {
 	poller.TadoGetter
 	bot.TadoSetter
 	action.TadoSetter
 }
 
-func runMonitor(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheus.Registerer, api tadoClient, version string) error {
+func runMonitor(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheus.Registerer, api TadoClient, version string) error {
 	var g errgroup.Group
 
 	// poller
