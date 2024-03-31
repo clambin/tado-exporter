@@ -16,7 +16,7 @@ var (
 	RootCmd        = cobra.Command{
 		Use:   "tado",
 		Short: "Utility for Tadoº thermostats",
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			charmer.SetJSONLogger(cmd, viper.GetBool("debug"))
 		},
 	}
