@@ -1,15 +1,31 @@
+FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:1.22 as builder
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+ARG VERSION
+ENV VERSION=$VERSION
+
+WORKDIR /app/
+ADD . .
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build \
+    -ldflags="-X main.version=$VERSION" \
+    -o tado \
+    cmd/tado/tado.go
+
 FROM alpine
 
 RUN apk update && \
     apk add --no-cache tzdata
 
 WORKDIR /app
+COPY --from=builder /app/tado /app/tado
 
-ARG TARGETOS
-ARG TARGETARCH
+RUN /usr/sbin/addgroup app
+RUN /usr/sbin/adduser app -G app -D
+USER app
 
-COPY ./bld/tado-$TARGETOS-$TARGETARCH /app/tado
-
-EXPOSE 8080
 ENTRYPOINT ["/app/tado", "monitor"]
 CMD []

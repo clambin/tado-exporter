@@ -16,7 +16,6 @@ jobs:
   build:
     needs:
       - test
-    uses: clambin/workflows/.github/workflows/build.yaml@main
+    uses: clambin/workflows/.github/workflows/build.yaml@docker
     with:
-      target: tado
-      image: tado-monitor
+      image: ghcr.io/clambin/tado-monitor
