@@ -4,10 +4,8 @@ on:
   push:
     branches:
       - master
-      - charmer
-  pull_request_target:
-    branches-ignore:
-      - master
+      - build
+
 jobs:
   test:
     uses: clambin/workflows/.github/workflows/test.yaml@main
