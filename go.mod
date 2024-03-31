@@ -7,7 +7,6 @@ require (
 	github.com/clambin/go-common/http v0.4.3
 	github.com/clambin/go-common/set v0.4.3
 	github.com/clambin/go-common/slackbot v0.7.0
-	github.com/clambin/go-common/taskmanager v0.3.0
 	github.com/clambin/tado v1.3.2
 	github.com/prometheus/client_golang v1.19.0
 	github.com/slack-go/slack v0.12.5

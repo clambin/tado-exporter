@@ -2,24 +2,24 @@ package controller
 
 import (
 	"context"
-	"github.com/clambin/go-common/taskmanager"
 	"github.com/clambin/tado-exporter/internal/controller/home"
 	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/controller/zone"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"golang.org/x/sync/errgroup"
 	"log/slog"
 )
 
 // Controller object for tado-controller
 type Controller struct {
-	reporters []TaskReporter
-	tasks     taskmanager.Manager
-	logger    *slog.Logger
+	tasks  []task
+	logger *slog.Logger
 }
 
-type TaskReporter interface {
+type task interface {
+	Run(ctx context.Context) error
 	ReportTask() (string, bool)
 }
 
@@ -29,14 +29,12 @@ func New(api action.TadoSetter, cfg configuration.Configuration, s notifier.Slac
 
 	if cfg.Home.AutoAway.IsActive() {
 		h := home.New(api, p, s, cfg.Home, logger.With("type", "home"))
-		c.reporters = append(c.reporters, h)
-		_ = c.tasks.Add(h)
+		c.tasks = append(c.tasks, h)
 	}
 
 	for _, zoneCfg := range cfg.Zones {
 		z := zone.New(api, p, s, zoneCfg, logger.With("type", "zone", "zone", zoneCfg.Name))
-		c.reporters = append(c.reporters, z)
-		_ = c.tasks.Add(z)
+		c.tasks = append(c.tasks, z)
 	}
 
 	return &c
@@ -46,15 +44,21 @@ func New(api action.TadoSetter, cfg configuration.Configuration, s notifier.Slac
 func (c *Controller) Run(ctx context.Context) error {
 	c.logger.Debug("started")
 	defer c.logger.Debug("stopped")
-	return c.tasks.Run(ctx)
+
+	var g errgroup.Group
+	for _, t := range c.tasks {
+		g.Go(func() error { return t.Run(ctx) })
+	}
+
+	return g.Wait()
 }
 
 func (c *Controller) ReportTasks() []string {
-	tasks := make([]string, 0, len(c.reporters))
-	for _, r := range c.reporters {
-		if t, ok := r.ReportTask(); ok {
-			tasks = append(tasks, t)
+	reports := make([]string, 0, len(c.tasks))
+	for _, t := range c.tasks {
+		if report, ok := t.ReportTask(); ok {
+			reports = append(reports, report)
 		}
 	}
-	return tasks
+	return reports
 }

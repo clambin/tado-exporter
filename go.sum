@@ -12,8 +12,6 @@ github.com/clambin/go-common/set v0.4.3 h1:Sm9lkAJsh82j40RDpfQIziHyHjwr07+KsQF6v
 github.com/clambin/go-common/set v0.4.3/go.mod h1:Q5GpBoM7B7abNV2Wzys+wQMInBHMoHyh/h0Cn2OmY4A=
 github.com/clambin/go-common/slackbot v0.7.0 h1:P/MwoHQOXkHU20K8IxthEtxyC9ZmTi/CalJykKFtF2Q=
 github.com/clambin/go-common/slackbot v0.7.0/go.mod h1:9k1LVOK2rP8Wpgu3estPQkKdOuOmX1akYPFBLYKwV/w=
-github.com/clambin/go-common/taskmanager v0.3.0 h1:ASA0axYdGBOukljpdfJxgDE2BwneA1iSgvA/7tLxKw4=
-github.com/clambin/go-common/taskmanager v0.3.0/go.mod h1:lciRo5ME2pCRf0fi5Rx7TcDDgr3/6HuE9qxFgFamfLg=
 github.com/clambin/go-common/testutils v0.1.0 h1:/nGWaOCIhW+Ew1c2NU7GLY/YPb8dp9SV8+MTgWksAgk=
 github.com/clambin/go-common/testutils v0.1.0/go.mod h1:bV0j8D4zhNkleCeluFKLBeLQ0L/dqkxbaR/joLn8kzg=
 github.com/clambin/tado v1.3.2 h1:8VbEDU87WthNrvvrWfqkgYBOrjFBSFI/rT29INLJvoI=
