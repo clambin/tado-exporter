@@ -24,12 +24,12 @@ for details. If you're not using the rules-based controller, this will be transp
 
 tado offers two types of functionality:
 
-* `tad monitor` runs an exporter to expose metrics to Prometheus and, if configured, a controller to manage the thermostat settings in your home & rooms.
+* `tado monitor` runs an exporter to expose metrics to Prometheus and, if configured, a controller to manage the thermostat settings in your home & rooms.
 * `tado config` displays the different zones & mobile devices for your account. 
 
 ## Installation
 
-Docker images are available on [ghcr.io](https://github.com/clambin/tado-exporter/pkgs/container/tado-monitor).
+Docker images for `tado monitor` are available on [ghcr.io](https://github.com/clambin/tado-exporter/pkgs/container/tado-monitor).
 
 ## Running
 ### Command-line options
