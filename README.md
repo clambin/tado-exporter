@@ -29,7 +29,7 @@ tado offers two types of functionality:
 
 ## Installation
 
-Binaries are available on the [release](https://github.com/clambin/tado-exporter/releases) page. Docker images are available on [ghcr.io](https://github.com/clambin/tado-exporter/pkgs/container/tado-monitor).
+Docker images are available on [ghcr.io](https://github.com/clambin/tado-exporter/pkgs/container/tado-monitor).
 
 ## Running
 ### Command-line options
