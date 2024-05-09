@@ -4,11 +4,11 @@ go 1.22.2
 
 require (
 	github.com/clambin/go-common/charmer v0.2.0
-	github.com/clambin/go-common/http v0.4.3
+	github.com/clambin/go-common/http v0.4.4
 	github.com/clambin/go-common/set v0.4.3
 	github.com/clambin/go-common/slackbot v0.7.0
 	github.com/clambin/tado v1.3.3
-	github.com/prometheus/client_golang v1.19.0
+	github.com/prometheus/client_golang v1.19.1
 	github.com/slack-go/slack v0.12.5
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
@@ -20,7 +20,7 @@ require (
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/clambin/go-common/cache v0.3.0 // indirect
+	github.com/clambin/go-common/cache v0.4.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
