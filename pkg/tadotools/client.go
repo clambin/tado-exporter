@@ -1,14 +1,14 @@
 package tadotools
 
 import (
-	"context"
 	"fmt"
 	"github.com/clambin/go-common/http/metrics"
 	"github.com/clambin/go-common/http/roundtripper"
 	"github.com/clambin/tado"
+	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
+	"strconv"
 	"strings"
-	"time"
 )
 
 func GetInstrumentedTadoClient(username, password, secret string, metrics metrics.RequestMetrics) (*tado.APIClient, error) {
@@ -29,28 +29,18 @@ func getInstrumentedRoundTripper(rt http.RoundTripper, metrics metrics.RequestMe
 	)
 }
 
-var _ metrics.RequestMetrics = &tadoCallMetrics{}
-
-type tadoCallMetrics struct {
-	metrics.RequestMetrics
-}
-
-func NewTadoCallMetrics(namespace, subsystem string, labels map[string]string) metrics.RequestMetrics {
-	return &tadoCallMetrics{
-		RequestMetrics: metrics.NewRequestSummaryMetrics(namespace, subsystem, labels),
-	}
-}
-
-func (t *tadoCallMetrics) Measure(req *http.Request, statusCode int, duration time.Duration) {
-	req2 := req.Clone(context.Background())
-	req2.URL.Path = filterPath(req.URL.Path)
-	t.RequestMetrics.Measure(req2, statusCode, duration)
-}
-
-func filterPath(path string) string {
-	const homePath = "/api/v2/homes"
-	if strings.HasPrefix(path, homePath) {
-		return homePath
-	}
-	return path
+func NewTadoCallMetrics(namespace, subsystem string, labels prometheus.Labels) metrics.RequestMetrics {
+	return metrics.NewRequestMetrics(metrics.Options{
+		Namespace:   namespace,
+		Subsystem:   subsystem,
+		ConstLabels: labels,
+		LabelValues: func(request *http.Request, i int) (string, string, string) {
+			const homePath = "/api/v2/homes"
+			path := request.URL.Path
+			if strings.HasPrefix(path, homePath) {
+				path = homePath
+			}
+			return request.Method, path, strconv.Itoa(i)
+		},
+	})
 }

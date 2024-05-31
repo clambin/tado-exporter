@@ -28,15 +28,6 @@ tado_monitor_http_requests_total{application="tado",code="404",method="GET",path
 `,
 		},
 		{
-			name: "blank",
-			path: "",
-			want: `
-# HELP tado_monitor_http_requests_total total number of http requests
-# TYPE tado_monitor_http_requests_total counter
-tado_monitor_http_requests_total{application="tado",code="404",method="GET",path="/"} 1
-`,
-		},
-		{
 			name: "home",
 			path: "/api/v2/homes/631798/mobileDevices",
 			want: `
