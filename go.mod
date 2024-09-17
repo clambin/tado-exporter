@@ -8,7 +8,7 @@ require (
 	github.com/clambin/go-common/set v0.4.3
 	github.com/clambin/go-common/slackbot v0.8.1
 	github.com/clambin/tado v1.4.1
-	github.com/prometheus/client_golang v1.20.3
+	github.com/prometheus/client_golang v1.20.4
 	github.com/slack-go/slack v0.14.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
