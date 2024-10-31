@@ -1,12 +1,11 @@
 package rules
 
 import (
-	"context"
-	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/controller/rules/action/mocks"
+	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado/testutil"
+	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"log/slog"
 	"testing"
 	"time"
@@ -14,89 +13,91 @@ import (
 
 func TestHomeAwayRule_Evaluate(t *testing.T) {
 	type want struct {
-		err     assert.ErrorAssertionFunc
-		action  assert.BoolAssertionFunc
-		delay   time.Duration
-		reason  string
-		overlay bool
+		err    assert.ErrorAssertionFunc
+		action string
+		delay  time.Duration
+		reason string
 	}
 
-	var testCases = []struct {
+	tests := []struct {
 		name   string
 		update poller.Update
 		want
 	}{
 		{
-			name: "home in HOME mode",
+			name: "zone in overlay, but home in HOME mode: no action",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22))},
-				Home:     true,
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				Zones: poller.Zones{
+					{
+						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{
+							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](5.0)}},
+							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
+						},
+					},
+				},
 			},
 			want: want{
 				err:    assert.NoError,
-				action: assert.False,
-				//reason: "home in HOME mode",
+				action: "no action",
 			},
 		},
 		{
-			name: "home in AWAY mode, overlay set",
+			name: "zone in overlay and home in AWAY mode: delete overlay",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
-				Home:     false,
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.AWAY)},
+				Zones: poller.Zones{
+					{
+						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{
+							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](5.0)}},
+							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
+						},
+					},
+				},
 			},
 			want: want{
 				err:    assert.NoError,
-				action: assert.True,
+				action: "moving to auto mode",
 				reason: "home in AWAY mode, manual temp setting detected",
 			},
 		},
 		{
-			name: "home in AWAY mode, zone in auto mode",
+			name: "zone in auto mode: no action",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
-				Home:     false,
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.AWAY)},
+				Zones: poller.Zones{
+					{
+						Zone:      tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](5.0)}}},
+					},
+				},
 			},
 			want: want{
-				err:     assert.NoError,
-				action:  assert.False,
-				reason:  "home in AWAY mode, no manual temp setting detected",
-				overlay: false,
+				err:    assert.NoError,
+				action: "no action",
+				reason: "home in AWAY mode, no manual temp setting detected",
 			},
 		},
 	}
 
-	for _, tt := range testCases {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			r, err := LoadHomeAwayRule(10, "room", tt.update, slog.Default())
-			tt.err(t, err)
-
-			if err != nil {
-				return
-			}
+			require.NoError(t, err)
 
 			e, err := r.Evaluate(tt.update)
 			tt.want.err(t, err)
 			if err != nil {
 				return
 			}
-			tt.action(t, e.IsAction())
+			assert.Equal(t, tt.want.action, e.String())
 			assert.Equal(t, tt.want.delay, e.Delay)
 			assert.Equal(t, tt.want.reason, e.Reason)
-
-			if !e.IsAction() {
-				return
-			}
-
-			ctx := context.Background()
-			c := mocks.NewTadoSetter(t)
-			c.EXPECT().DeleteZoneOverlay(ctx, 10).Return(nil).Once()
-
-			assert.NoError(t, e.State.Do(ctx, c))
 		})
 	}
 }

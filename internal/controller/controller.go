@@ -12,7 +12,7 @@ import (
 	"log/slog"
 )
 
-// Controller object for tado-controller
+// Controller for tado-controller
 type Controller struct {
 	tasks  []task
 	logger *slog.Logger
@@ -24,7 +24,7 @@ type task interface {
 }
 
 // New creates a new Controller object
-func New(api action.TadoSetter, cfg configuration.Configuration, s notifier.SlackSender, p poller.Poller, logger *slog.Logger) *Controller {
+func New(api action.TadoClient, cfg configuration.Configuration, s notifier.SlackSender, p poller.Poller, logger *slog.Logger) *Controller {
 	c := Controller{logger: logger}
 
 	if cfg.Home.AutoAway.IsActive() {

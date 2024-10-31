@@ -3,6 +3,7 @@ package action
 import (
 	"context"
 	"fmt"
+	"github.com/clambin/tado/v2"
 	"log/slog"
 	"time"
 )
@@ -16,16 +17,16 @@ type Action struct {
 	State  State
 }
 
-type TadoSetter interface {
-	SetZoneOverlay(context.Context, int, float64) error
-	DeleteZoneOverlay(context.Context, int) error
-	SetHomeState(ctx context.Context, home bool) error
+type TadoClient interface {
+	SetPresenceLockWithResponse(ctx context.Context, homeId tado.HomeId, body tado.SetPresenceLockJSONRequestBody, reqEditors ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error)
+	SetZoneOverlayWithResponse(ctx context.Context, homeId tado.HomeId, zoneId tado.ZoneId, body tado.SetZoneOverlayJSONRequestBody, reqEditors ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error)
+	DeleteZoneOverlayWithResponse(ctx context.Context, homeId tado.HomeId, zoneId tado.ZoneId, reqEditors ...tado.RequestEditorFn) (*tado.DeleteZoneOverlayResponse, error)
 }
 
 type State interface {
 	slog.LogValuer
 	fmt.Stringer
-	Do(context.Context, TadoSetter) error
+	Do(context.Context, TadoClient) error
 	IsEqual(State) bool
 	Mode() Mode
 }
@@ -53,4 +54,31 @@ func (e Action) String() string {
 		return "no action"
 	}
 	return e.State.String()
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type Mode int
+
+func (m Mode) String() string {
+	if m >= 0 && int(m) < len(modeNames) {
+		return modeNames[m]
+	}
+	return "unknown"
+}
+
+const (
+	NoAction Mode = iota
+	HomeInHomeMode
+	HomeInAwayMode
+	ZoneInOverlayMode
+	ZoneInAutoMode
+)
+
+var modeNames = []string{
+	"no action",
+	"home",
+	"away",
+	"overlay",
+	"auto",
 }

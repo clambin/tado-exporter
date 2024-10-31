@@ -1,10 +1,10 @@
 package rules
 
 import (
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
+	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado/testutil"
+	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"log/slog"
@@ -12,15 +12,15 @@ import (
 	"time"
 )
 
-func TestRules_HomeRules(t *testing.T) {
+func TestLoadHomeRules(t *testing.T) {
 	cfg := configuration.HomeConfiguration{
 		AutoAway: configuration.AutoAwayConfiguration{Users: []string{"A", "B"}, Delay: 30 * time.Minute},
 	}
 	update := poller.Update{
-		Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-		ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo()},
-		UserInfo: map[int]tado.MobileDevice{100: testutil.MakeMobileDevice(100, "A", testutil.Home(true))},
-		Home:     true,
+		MobileDevices: []tado.MobileDevice{
+			{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}},
+			{Id: oapi.VarP[tado.MobileDeviceId](101), Name: oapi.VarP("B"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(false)}},
+		},
 	}
 
 	_, err := LoadHomeRules(cfg, update, slog.Default())

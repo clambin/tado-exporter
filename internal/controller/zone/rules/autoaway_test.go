@@ -1,13 +1,12 @@
 package rules
 
 import (
-	"context"
-	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/controller/rules/action/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
+	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado/testutil"
+	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"log/slog"
 	"testing"
 	"time"
@@ -15,11 +14,10 @@ import (
 
 func TestAutoAwayRule_Evaluate(t *testing.T) {
 	type want struct {
-		err     assert.ErrorAssertionFunc
-		action  assert.BoolAssertionFunc
-		delay   time.Duration
-		reason  string
-		overlay bool
+		err    assert.ErrorAssertionFunc
+		action string
+		delay  time.Duration
+		reason string
 	}
 
 	var testCases = []struct {
@@ -28,91 +26,142 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 		want
 	}{
 		{
-			name: "all users are home",
+			name: "zone is heated, all users are home: no action required",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22))},
-				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(100, "A", testutil.Home(true)),
-					110: testutil.MakeMobileDevice(110, "B", testutil.Home(true)),
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				Zones: poller.Zones{
+					{
+						Zone:      tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
+					},
 				},
-				Home: true,
+				MobileDevices: []tado.MobileDevice{
+					{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationHome},
+					{Id: oapi.VarP[tado.MobileDeviceId](101), Name: oapi.VarP("B"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationHome},
+				},
 			},
 			want: want{
 				err:    assert.NoError,
-				action: assert.False,
+				action: "no action",
 				reason: "A, B are home",
 			},
 		},
 		{
-			name: "one user is home",
+			name: "zone is heated, one user is home: no action",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22))},
-				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(100, "A", testutil.Home(true)),
-					110: testutil.MakeMobileDevice(110, "B", testutil.Home(false)),
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				Zones: poller.Zones{
+					{
+						Zone:      tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
+					},
 				},
-				Home: true,
+				MobileDevices: []tado.MobileDevice{
+					{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationHome},
+					{Id: oapi.VarP[tado.MobileDeviceId](101), Name: oapi.VarP("B"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationAway},
+				},
 			},
 			want: want{
 				err:    assert.NoError,
-				action: assert.False,
+				action: "no action",
 				reason: "A is home",
 			},
 		},
 		{
-			name: "all users go away",
+			name: "zone is heated, all users are away: switch off heating",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22))},
-				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(100, "A", testutil.Home(false)),
-					110: testutil.MakeMobileDevice(110, "B", testutil.Home(false)),
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				Zones: poller.Zones{
+					{
+						Zone:      tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
+					},
 				},
-				Home: true,
-			},
-			want: want{
-				err:     assert.NoError,
-				action:  assert.True,
-				delay:   time.Hour,
-				reason:  "A, B are away",
-				overlay: true,
-			},
-		},
-		{
-			name: "all users are away",
-			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
-				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(100, "A", testutil.Home(false)),
-					110: testutil.MakeMobileDevice(110, "B", testutil.Home(false)),
+				MobileDevices: []tado.MobileDevice{
+					{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationAway},
+					{Id: oapi.VarP[tado.MobileDeviceId](101), Name: oapi.VarP("B"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationAway},
 				},
-				Home: false,
 			},
 			want: want{
 				err:    assert.NoError,
-				action: assert.False,
-				reason: "home in AWAY mode",
+				action: "switching off heating",
+				delay:  time.Hour,
+				reason: "A, B are away",
 			},
 		},
 		{
-			name: "user comes home",
+			name: "zone is not heated, all users are away: no action",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
-				UserInfo: map[int]tado.MobileDevice{
-					100: testutil.MakeMobileDevice(100, "A", testutil.Home(true)),
-					110: testutil.MakeMobileDevice(110, "B", testutil.Home(false)),
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				Zones: poller.Zones{
+					{
+						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{
+							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](5.0)}},
+							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
+						},
+					},
 				},
-				Home: true,
+				MobileDevices: []tado.MobileDevice{
+					{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationAway},
+					{Id: oapi.VarP[tado.MobileDeviceId](101), Name: oapi.VarP("B"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationAway},
+				},
 			},
 			want: want{
-				err:     assert.NoError,
-				action:  assert.True,
-				reason:  "A is home",
-				overlay: false,
+				err:    assert.NoError,
+				action: "no action",
+				reason: "A, B are away",
+			},
+		},
+		{
+			name: "zone is not heated, user comes home: switch to auto mode",
+			update: poller.Update{
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				Zones: poller.Zones{
+					{
+						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{
+							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](5.0)}},
+							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
+						},
+					},
+				},
+				MobileDevices: []tado.MobileDevice{
+					{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationHome},
+					{Id: oapi.VarP[tado.MobileDeviceId](101), Name: oapi.VarP("B"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationAway},
+				},
+			},
+			want: want{
+				err:    assert.NoError,
+				action: "moving to auto mode",
+				reason: "A is home",
+			},
+		},
+		{
+			name: "zone is heated, all users are away, but home in away mode: no action",
+			update: poller.Update{
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.AWAY)},
+				Zones: poller.Zones{
+					{
+						Zone:      tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
+					},
+				},
+				MobileDevices: []tado.MobileDevice{
+					{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationAway},
+					{Id: oapi.VarP[tado.MobileDeviceId](101), Name: oapi.VarP("B"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationAway},
+				},
+			},
+			want: want{
+				err:    assert.NoError,
+				action: "no action",
+				reason: "home in AWAY mode",
 			},
 		},
 	}
@@ -124,44 +173,53 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			r, err := LoadAutoAwayRule(10, "room", cfg, tt.update, slog.Default())
-			tt.err(t, err)
-			if err != nil {
-				return
-			}
+			require.NoError(t, err)
+
 			e, err := r.Evaluate(tt.update)
 			tt.want.err(t, err)
 			if err != nil {
 				return
 			}
-			tt.action(t, e.IsAction())
+			assert.Equal(t, tt.want.action, e.String())
 			assert.Equal(t, tt.want.delay, e.Delay)
 			assert.Equal(t, tt.want.reason, e.Reason)
-
-			if !e.IsAction() {
-				return
-			}
-
-			ctx := context.Background()
-			c := mocks.NewTadoSetter(t)
-			if tt.want.overlay {
-				c.EXPECT().SetZoneOverlay(ctx, 10, 0.0).Return(nil).Once()
-			} else {
-				c.EXPECT().DeleteZoneOverlay(ctx, 10).Return(nil).Once()
-			}
-
-			assert.NoError(t, e.State.Do(ctx, c))
 		})
 	}
 }
 
-func TestAutoAwayRule_Evaluate_InvalidConfig(t *testing.T) {
-	cfg := configuration.AutoAwayConfiguration{
-		Users: []string{"A", "B"},
-		Delay: time.Hour,
+func TestLoadAutoAwayRule(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  configuration.AutoAwayConfiguration
+		want assert.ErrorAssertionFunc
+	}{
+		{
+			name: "valid",
+			cfg:  configuration.AutoAwayConfiguration{Users: []string{"A"}, Delay: time.Hour},
+			want: assert.NoError,
+		},
+		{
+			name: "invalid user",
+			cfg:  configuration.AutoAwayConfiguration{Users: []string{"A", "B"}, Delay: time.Hour},
+			want: assert.Error,
+		},
+		{
+			name: "no users",
+			cfg:  configuration.AutoAwayConfiguration{Users: nil, Delay: time.Hour},
+			want: assert.Error,
+		},
 	}
-	update := poller.Update{UserInfo: map[int]tado.MobileDevice{100: {ID: 100, Name: "A"}}}
-	_, err := LoadAutoAwayRule(10, "room", cfg, update, slog.Default())
-	assert.Error(t, err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			update := poller.Update{
+				MobileDevices: []tado.MobileDevice{
+					{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}},
+				},
+			}
+			_, err := LoadAutoAwayRule(10, "room", tt.cfg, update, slog.Default())
+			tt.want(t, err)
+		})
+	}
 }

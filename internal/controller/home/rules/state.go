@@ -2,14 +2,17 @@ package rules
 
 import (
 	"context"
+	"fmt"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
+	"github.com/clambin/tado/v2"
 	"log/slog"
 )
 
 var _ action.State = State{}
 
 type State struct {
-	mode action.Mode
+	mode   action.Mode
+	homeId tado.HomeId
 }
 
 func (s State) LogValue() slog.Value {
@@ -23,8 +26,19 @@ func (s State) String() string {
 	return "setting home to " + s.mode.String() + " mode"
 }
 
-func (s State) Do(ctx context.Context, setter action.TadoSetter) error {
-	return setter.SetHomeState(ctx, s.mode == action.HomeInHomeMode)
+func (s State) Do(ctx context.Context, setter action.TadoClient) error {
+	var homePresence tado.HomePresence
+	switch s.mode {
+	case action.HomeInHomeMode:
+		homePresence = tado.HOME
+	case action.HomeInAwayMode:
+		homePresence = tado.AWAY
+	default:
+		return fmt.Errorf("invalid home mode: %s", s.mode.String())
+	}
+
+	_, err := setter.SetPresenceLockWithResponse(ctx, s.homeId, tado.SetPresenceLockJSONRequestBody{HomePresence: &homePresence})
+	return err
 }
 
 func (s State) IsEqual(state action.State) bool {

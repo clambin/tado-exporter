@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/clambin/go-common/charmer"
+	gchttp "github.com/clambin/go-common/http"
 	"github.com/clambin/go-common/slackbot"
 	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"
-	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/health"
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -42,9 +42,8 @@ func monitor(cmd *cobra.Command, _ []string) error {
 	prometheus.MustRegister(tadoHTTPClientMetrics)
 
 	api, err := tadotools.GetInstrumentedTadoClient(
-		viper.GetString("tado.username"),
-		viper.GetString("tado.password"),
-		viper.GetString("tado.clientSecret"),
+		cmd.Context(),
+		viper.GetString("tado.username"), viper.GetString("tado.password"),
 		tadoHTTPClientMetrics,
 	)
 	if err != nil {
@@ -57,7 +56,7 @@ func monitor(cmd *cobra.Command, _ []string) error {
 	l.Info("tado monitor starting", "version", cmd.Root().Version)
 	defer l.Info("tado monitor stopped")
 
-	return runMonitor(ctx, l, viper.GetViper(), prometheus.DefaultRegisterer, api, cmd.Root().Version)
+	return run(ctx, l, viper.GetViper(), prometheus.DefaultRegisterer, api, cmd.Root().Version)
 
 }
 
@@ -77,12 +76,11 @@ func maybeLoadRules(path string) (configuration.Configuration, error) {
 }
 
 type TadoClient interface {
-	poller.TadoGetter
-	bot.TadoSetter
-	action.TadoSetter
+	poller.TadoClient
+	bot.TadoClient
 }
 
-func runMonitor(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheus.Registerer, api TadoClient, version string) error {
+func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheus.Registerer, api TadoClient, version string) error {
 	var g errgroup.Group
 
 	// poller
@@ -95,24 +93,18 @@ func runMonitor(ctx context.Context, l *slog.Logger, v *viper.Viper, registry pr
 	g.Go(func() error { return coll.Run(ctx) })
 
 	// exporter
-	go func() {
-		if err := http.ListenAndServe(v.GetString("exporter.addr"), promhttp.Handler()); !errors.Is(err, http.ErrServerClosed) {
-			l.Error("Prometheus server error", "error", err)
-			panic(err)
-		}
-	}()
+	g.Go(func() error {
+		return gchttp.RunServer(ctx, &http.Server{Addr: v.GetString("exporter.addr"), Handler: promhttp.Handler()})
+	})
 
 	// health
 	h := health.New(p, l.With("component", "health"))
-	g.Go(func() error { return h.Run(ctx) })
-	go func() {
+	g.Go(func() error { h.Run(ctx); return nil })
+	g.Go(func() error {
 		r := http.NewServeMux()
 		r.Handle("/health", h)
-		if err := http.ListenAndServe(v.GetString("health.addr"), r); !errors.Is(err, http.ErrServerClosed) {
-			l.Error("Health server error", "error", err)
-			panic(err)
-		}
-	}()
+		return gchttp.RunServer(ctx, &http.Server{Addr: v.GetString("health.addr"), Handler: r})
+	})
 
 	// Do we have zone rules?
 	rules, err := maybeLoadRules(filepath.Join(filepath.Dir(v.ConfigFileUsed()), "rules.yaml"))

@@ -2,8 +2,11 @@ package rules
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/testutil"
+	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -80,4 +83,77 @@ func TestState_IsEqual(t *testing.T) {
 	}
 	assert.True(t, t1.IsEqual(t1))
 	assert.False(t, t1.IsEqual(t2))
+}
+
+func TestState_Do(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name    string
+		state   State
+		client  fakeClient
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "invalid mode",
+			state: State{
+				homeId: 1,
+				zoneID: 10,
+				mode:   action.NoAction,
+			},
+			client:  fakeClient{},
+			wantErr: assert.Error,
+		},
+		{
+			name: "set overlay",
+			state: State{
+				homeId:          1,
+				zoneID:          10,
+				mode:            action.ZoneInOverlayMode,
+				zoneTemperature: 15,
+			},
+			client:  fakeClient{expect: "set"},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "delete overlay",
+			state: State{
+				homeId: 1,
+				zoneID: 10,
+				mode:   action.ZoneInAutoMode,
+			},
+			client:  fakeClient{expect: "delete"},
+			wantErr: assert.NoError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.wantErr(t, tt.state.Do(ctx, tt.client))
+		})
+	}
+}
+
+var _ action.TadoClient = fakeClient{}
+
+type fakeClient struct {
+	expect string
+}
+
+func (f fakeClient) SetPresenceLockWithResponse(_ context.Context, _ tado.HomeId, _ tado.SetPresenceLockJSONRequestBody, _ ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
+	// not used in this package
+	panic("implement me")
+}
+
+func (f fakeClient) DeleteZoneOverlayWithResponse(_ context.Context, homeId tado.HomeId, zoneId tado.ZoneId, _ ...tado.RequestEditorFn) (*tado.DeleteZoneOverlayResponse, error) {
+	if homeId != 1 || zoneId != 10 || f.expect != "delete" {
+		return nil, errors.New("invalid request")
+	}
+	return nil, nil
+}
+
+func (f fakeClient) SetZoneOverlayWithResponse(_ context.Context, homeId tado.HomeId, zoneId tado.ZoneId, _ tado.SetZoneOverlayJSONRequestBody, _ ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
+	if homeId != 1 || zoneId != 10 || f.expect != "set" {
+		return nil, errors.New("invalid request")
+	}
+	return nil, nil
 }

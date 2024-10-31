@@ -17,7 +17,7 @@ type Processor struct {
 	loader       RulesLoader
 	rules        rules.Evaluator
 	task         *Task
-	tadoClient   action.TadoSetter
+	tadoClient   action.TadoClient
 	notifiers    notifier.Notifiers
 	poller       poller.Poller
 	logger       *slog.Logger
@@ -27,7 +27,7 @@ type Processor struct {
 
 type RulesLoader func(update poller.Update) (rules.Evaluator, error)
 
-func New(tadoClient action.TadoSetter, p poller.Poller, bot notifier.SlackSender, loader RulesLoader, logger *slog.Logger) *Processor {
+func New(tadoClient action.TadoClient, p poller.Poller, bot notifier.SlackSender, loader RulesLoader, logger *slog.Logger) *Processor {
 	processor := Processor{
 		loader:       loader,
 		tadoClient:   tadoClient,

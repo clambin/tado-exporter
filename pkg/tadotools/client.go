@@ -1,25 +1,27 @@
 package tadotools
 
 import (
-	"fmt"
+	"context"
 	"github.com/clambin/go-common/http/metrics"
 	"github.com/clambin/go-common/http/roundtripper"
-	"github.com/clambin/tado"
+	"github.com/clambin/tado/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-func GetInstrumentedTadoClient(username, password, secret string, metrics metrics.RequestMetrics) (*tado.APIClient, error) {
-	c, err := tado.New(username, password, secret)
+func GetInstrumentedTadoClient(ctx context.Context, username string, password string, metrics metrics.RequestMetrics) (*tado.ClientWithResponses, error) {
+	tadoHttpClient, err := tado.NewOAuth2Client(ctx, username, password)
 	if err != nil {
-		return nil, fmt.Errorf("tado: %w", err)
+		return nil, err
 	}
-
-	c.HTTPClient = &http.Client{Transport: getInstrumentedRoundTripper(c.HTTPClient.Transport, metrics)}
-
-	return c, nil
+	origTP := tadoHttpClient.Transport
+	tadoHttpClient.Transport = roundtripper.New(
+		roundtripper.WithRequestMetrics(metrics),
+		roundtripper.WithRoundTripper(origTP),
+	)
+	return tado.NewClientWithResponses(tado.ServerURL, tado.WithHTTPClient(tadoHttpClient))
 }
 
 func getInstrumentedRoundTripper(rt http.RoundTripper, metrics metrics.RequestMetrics) http.RoundTripper {

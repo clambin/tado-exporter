@@ -2,13 +2,10 @@ package collector
 
 import (
 	"context"
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado-exporter/pkg/tadotools"
+	"github.com/clambin/tado/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
-	"strconv"
-	"sync"
 )
 
 var _ prometheus.Collector = &Metrics{}
@@ -134,12 +131,11 @@ func NewMetrics() *Metrics {
 		}, []string{"zone_name"}),
 		tadoOutsideTemperature: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace:   "tado",
-			Subsystem:   "outside",
-			Name:        "temp_celsius",
+			Subsystem:   "",
+			Name:        "outside_temp_celsius",
 			Help:        "Current outside temperature in degrees celsius",
 			ConstLabels: nil,
 		}, nil),
-		// TODO: make consistent. tado_outside_solar_intensity_percentage
 		tadoOutsideSolarIntensity: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace:   "tado",
 			Subsystem:   "",
@@ -147,7 +143,6 @@ func NewMetrics() *Metrics {
 			Help:        "Current solar intensity in percentage (0-100)",
 			ConstLabels: nil,
 		}, nil),
-		// TODO: make consistent. tado_outside_weather
 		tadoOutsideWeather: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace:   "tado",
 			Subsystem:   "",
@@ -203,95 +198,80 @@ func (c *Collector) Run(ctx context.Context) error {
 }
 
 func (c *Collector) process(update poller.Update) {
-	var wg sync.WaitGroup
-	wg.Add(5)
-	go func() { defer wg.Done(); c.collectUsers(update) }()
-	go func() { defer wg.Done(); c.collectWeather(update) }()
-	go func() { defer wg.Done(); c.collectZones(update) }()
-	go func() { defer wg.Done(); c.collectZoneInfos(update) }()
-	go func() { defer wg.Done(); c.collectHomeState(update) }()
-	wg.Wait()
+	c.collectUsers(update)
+	c.collectWeather(update)
+	c.collectHomeState(update)
+	c.collectZones(update)
 }
 
 func (c *Collector) collectUsers(update poller.Update) {
-	var value float64
-	for _, userInfo := range update.UserInfo {
-		value = 0.0
-		if userInfo.IsHome() == tado.DeviceHome {
+	for _, userInfo := range update.MobileDevices {
+		var value float64
+		if *userInfo.Settings.GeoTrackingEnabled && *userInfo.Location.AtHome {
 			value = 1.0
 		}
-		c.Metrics.tadoMobileDeviceStatus.WithLabelValues(userInfo.Name).Set(value)
+		c.Metrics.tadoMobileDeviceStatus.WithLabelValues(*userInfo.Name).Set(value)
 	}
 }
 
 func (c *Collector) collectWeather(update poller.Update) {
-	c.Metrics.tadoOutsideSolarIntensity.WithLabelValues().Set(update.WeatherInfo.SolarIntensity.Percentage)
-	c.Metrics.tadoOutsideTemperature.WithLabelValues().Set(update.WeatherInfo.OutsideTemperature.Celsius)
-	c.Metrics.tadoOutsideWeather.WithLabelValues(update.WeatherInfo.WeatherState.Value).Set(1)
+	c.Metrics.tadoOutsideSolarIntensity.WithLabelValues().Set(float64(*update.SolarIntensity.Percentage))
+	c.Metrics.tadoOutsideTemperature.WithLabelValues().Set(float64(*update.OutsideTemperature.Celsius))
+	c.Metrics.tadoOutsideWeather.WithLabelValues(string(*update.WeatherState.Value)).Set(1)
+}
+
+func (c *Collector) collectHomeState(home poller.Update) {
+	c.Metrics.tadoHomeState.WithLabelValues(string(*home.HomeState.Presence)).Set(1)
 }
 
 func (c *Collector) collectZones(update poller.Update) {
-	var value float64
 	for _, zone := range update.Zones {
-		for i, device := range zone.Devices {
-			id := zone.Name + "_" + strconv.Itoa(i)
-			value = 0.0
-			if device.ConnectionState.Value {
-				value = 1.0
-			}
-			c.Metrics.tadoZoneDeviceConnectionStatus.WithLabelValues(zone.Name, id, device.DeviceType, device.CurrentFwVersion).Set(value)
-
-			value = 0.0
-			if device.BatteryState == "NORMAL" {
-				value = 1.0
-			}
-			c.Metrics.tadoZoneDeviceBatteryStatus.WithLabelValues(zone.Name, id, device.DeviceType).Set(value)
-		}
+		c.collectZoneDevices(zone)
+		c.collectZoneInfo(zone)
 	}
 }
 
-func (c *Collector) collectZoneInfos(update poller.Update) {
+func (c *Collector) collectZoneDevices(zone poller.Zone) {
+	for _, device := range *zone.Devices {
+		zoneName := *zone.Name
+		deviceType := *device.DeviceType
+		id := zoneName + "_" + *device.SerialNo
+
+		var value float64
+		if *device.ConnectionState.Value {
+			value = 1.0
+		}
+		c.Metrics.tadoZoneDeviceConnectionStatus.WithLabelValues(zoneName, id, deviceType, *device.CurrentFwVersion).Set(value)
+
+		value = 0.0
+		if *device.BatteryState == tado.BatteryStateNORMAL {
+			value = 1.0
+		}
+		c.Metrics.tadoZoneDeviceBatteryStatus.WithLabelValues(zoneName, id, deviceType).Set(value)
+	}
+}
+
+func (c *Collector) collectZoneInfo(zone poller.Zone) {
+	zoneName := *zone.Name
+	c.Metrics.tadoZoneTemperatureCelsius.WithLabelValues(zoneName).Set(float64(*zone.SensorDataPoints.InsideTemperature.Celsius))
+	var targetTemperature float32
+	if zone.Setting.Temperature != nil {
+		targetTemperature = *zone.Setting.Temperature.Celsius
+	}
+	c.Metrics.tadoZoneTargetTempCelsius.WithLabelValues(zoneName).Set(float64(targetTemperature))
+	c.Metrics.tadoZoneHeatingPercentage.WithLabelValues(zoneName).Set(float64(*zone.ActivityDataPoints.HeatingPower.Percentage))
+	c.Metrics.tadoZoneHumidityPercentage.WithLabelValues(zoneName).Set(float64(*zone.SensorDataPoints.Humidity.Percentage))
+	var duration, remaining float64
+	if zone.OpenWindow != nil {
+		duration = float64(*zone.OpenWindow.DurationInSeconds)
+		remaining = float64(*zone.OpenWindow.RemainingTimeInSeconds)
+	}
+	c.Metrics.tadoZoneOpenWindowDuration.WithLabelValues(zoneName).Set(duration)
+	c.Metrics.tadoZoneOpenWindowRemaining.WithLabelValues(zoneName).Set(remaining)
+
 	var value float64
-	for zoneID, zoneInfo := range update.ZoneInfo {
-		zone, found := update.Zones[zoneID]
-
-		if !found {
-			c.Logger.Warn("invalid zoneID in collected tado metrics. skipping collection", "id", zoneID)
-			continue
-		}
-
-		c.Metrics.tadoZoneHeatingPercentage.WithLabelValues(zone.Name).Set(zoneInfo.ActivityDataPoints.HeatingPower.Percentage)
-		c.Metrics.tadoZoneHumidityPercentage.WithLabelValues(zone.Name).Set(zoneInfo.SensorDataPoints.Humidity.Percentage)
-		c.Metrics.tadoZoneOpenWindowDuration.WithLabelValues(zone.Name).Set(float64(zoneInfo.OpenWindow.DurationInSeconds))
-		c.Metrics.tadoZoneOpenWindowRemaining.WithLabelValues(zone.Name).Set(float64(zoneInfo.OpenWindow.RemainingTimeInSeconds))
-
-		if zoneInfo.Setting.Power == "ON" {
-			value = 1.0
-		} else {
-			value = 0.0
-		}
-		c.Metrics.tadoZonePowerState.WithLabelValues(zone.Name).Set(value)
-
-		zoneState := tadotools.GetZoneState(zoneInfo)
-		if zoneState.Overlay == tado.NoOverlay {
-			value = 0.0
-		} else {
-			value = 1.0
-		}
-		c.Metrics.tadoZoneTargetManualMode.WithLabelValues(zone.Name).Set(value)
-
-		// TODO: don't think this is necessary: Setting.Temperature always has the active temp setting, even when in overlay.
-		if zoneState.Overlay == tado.NoOverlay {
-			value = zoneInfo.Setting.Temperature.Celsius
-		} else {
-			value = zoneInfo.Overlay.Setting.Temperature.Celsius
-		}
-		c.Metrics.tadoZoneTargetTempCelsius.WithLabelValues(zone.Name).Set(value)
-
-		c.Metrics.tadoZoneTemperatureCelsius.WithLabelValues(zone.Name).Set(zoneInfo.SensorDataPoints.InsideTemperature.Celsius)
+	if *zone.Setting.Power == tado.PowerON {
+		value = 1.0
 	}
-}
-
-func (c *Collector) collectHomeState(update poller.Update) {
-	c.Metrics.tadoHomeState.WithLabelValues(update.Home.String()).Set(1)
+	c.Metrics.tadoZonePowerState.WithLabelValues(zoneName).Set(value)
 }

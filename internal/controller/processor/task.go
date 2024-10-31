@@ -8,14 +8,14 @@ import (
 )
 
 type Task struct {
-	api    action.TadoSetter
+	api    action.TadoClient
 	action action.Action
 	job    *scheduler.Job
 }
 
 var _ scheduler.Runnable = &Task{}
 
-func newTask(ctx context.Context, api action.TadoSetter, next action.Action, notification chan struct{}) *Task {
+func newTask(ctx context.Context, api action.TadoClient, next action.Action, notification chan struct{}) *Task {
 	task := Task{
 		api:    api,
 		action: next,

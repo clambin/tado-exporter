@@ -4,20 +4,20 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
+	"github.com/clambin/tado-exporter/pkg/tadotools"
+	"github.com/clambin/tado/v2"
 	"log/slog"
 	"strconv"
 )
 
-type TadoSetter interface {
-}
-
 var _ action.State = &State{}
 
 type State struct {
-	zoneID          int
+	homeId          tado.HomeId
+	zoneID          tado.ZoneId
 	zoneName        string
 	mode            action.Mode
-	zoneTemperature float64
+	zoneTemperature float32
 }
 
 func (s State) Mode() action.Mode {
@@ -34,7 +34,7 @@ func (s State) String() string {
 		if s.zoneTemperature <= 5.0 {
 			return "switching off heating"
 		}
-		return "heating to " + strconv.FormatFloat(s.zoneTemperature, 'f', 1, 64) + "º"
+		return "heating to " + strconv.FormatFloat(float64(s.zoneTemperature), 'f', 1, 32) + "º"
 	case action.ZoneInAutoMode:
 		return "moving to auto mode"
 	default:
@@ -50,18 +50,19 @@ func (s State) LogValue() slog.Value {
 	values[2] = slog.String("mode", s.mode.String())
 
 	if s.mode == action.ZoneInOverlayMode {
-		values = append(values, slog.Float64("temperature", s.zoneTemperature))
+		values = append(values, slog.Float64("temperature", float64(s.zoneTemperature)))
 	}
 
 	return slog.GroupValue(values...)
 }
 
-func (s State) Do(ctx context.Context, setter action.TadoSetter) error {
+func (s State) Do(ctx context.Context, setter action.TadoClient) error {
 	switch s.mode {
 	case action.ZoneInOverlayMode:
-		return setter.SetZoneOverlay(ctx, s.zoneID, s.zoneTemperature)
+		return tadotools.SetOverlay(ctx, setter, s.homeId, s.zoneID, s.zoneTemperature, 0)
 	case action.ZoneInAutoMode:
-		return setter.DeleteZoneOverlay(ctx, s.zoneID)
+		_, err := setter.DeleteZoneOverlayWithResponse(ctx, s.homeId, s.zoneID)
+		return err
 	default:
 		return fmt.Errorf("invalid mode: %d", s.mode)
 	}

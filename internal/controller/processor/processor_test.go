@@ -20,7 +20,7 @@ import (
 )
 
 func TestProcessor(t *testing.T) {
-	api := mocks.NewTadoSetter(t)
+	api := mocks.NewTadoClient(t)
 
 	p := mockPoller.NewPoller(t)
 	updateCh := make(chan poller.Update)

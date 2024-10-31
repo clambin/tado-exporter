@@ -18,7 +18,7 @@ func (f FakeState) String() string {
 	return f.ModeValue.String()
 }
 
-func (f FakeState) Do(_ context.Context, _ action.TadoSetter) error {
+func (f FakeState) Do(_ context.Context, _ action.TadoClient) error {
 	return nil
 }
 

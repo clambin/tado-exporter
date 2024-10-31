@@ -3,11 +3,11 @@ package bot
 import (
 	"context"
 	"errors"
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/bot/mocks"
+	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
 	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
-	"github.com/clambin/tado/testutil"
+	"github.com/clambin/tado/v2"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -18,7 +18,7 @@ import (
 )
 
 func TestBot_Run(t *testing.T) {
-	api := mocks.NewTadoSetter(t)
+	api := mocks.NewTadoClient(t)
 	s := mocks.NewSlackBot(t)
 	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
@@ -45,8 +45,8 @@ func TestBot_Run(t *testing.T) {
 	assert.NoError(t, <-errCh)
 }
 
-func TestExecutor_ReportRules(t *testing.T) {
-	api := mocks.NewTadoSetter(t)
+func TestBot_ReportRules(t *testing.T) {
+	api := mocks.NewTadoClient(t)
 	s := mocks.NewSlackBot(t)
 	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
@@ -122,34 +122,54 @@ func TestExecutor_SetRoom(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			api := mocks.NewTadoSetter(t)
+			api := mocks.NewTadoClient(t)
 			s := mocks.NewSlackBot(t)
 			s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
 			p := mockPoller.NewPoller(t)
-			executor := New(api, s, p, nil, slog.Default())
-			executor.update = poller.Update{
-				Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-				ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22), testutil.ZoneInfoPermanentOverlay())},
+			bot := New(api, s, p, nil, slog.Default())
+			bot.update = poller.Update{
+				HomeBase: tado.HomeBase{Id: oapi.VarP(tado.HomeId(1))},
+				Zones:    []poller.Zone{{Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("foo")}}},
 			}
-			executor.updated = true
+			bot.updated = true
 
 			if tt.action {
 				if tt.del {
-					api.EXPECT().DeleteZoneOverlay(ctx, 1).Return(nil).Once()
+					api.EXPECT().
+						DeleteZoneOverlayWithResponse(ctx, tado.HomeId(1), 10).
+						Return(nil, nil).
+						Once()
 				} else {
-					api.EXPECT().SetZoneTemporaryOverlay(ctx, 1, 25.0, tt.duration).Return(nil).Once()
+					api.EXPECT().
+						SetZoneOverlayWithResponse(ctx, tado.HomeId(1), 10, mock.Anything).
+						RunAndReturn(func(ctx context.Context, homeId int64, zoneId int, overlay tado.ZoneOverlay, _ ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
+							if *overlay.Setting.Temperature.Celsius != 25 {
+								return nil, errors.New("invalid temperature")
+							}
+							if tt.duration > 0 {
+								if *overlay.Termination.Type != tado.ZoneOverlayTerminationTypeTIMER || *overlay.Termination.DurationInSeconds != int(tt.duration.Seconds()) {
+									return nil, errors.New("invalid termination")
+								}
+							} else {
+								if *overlay.Termination.Type != tado.ZoneOverlayTerminationTypeMANUAL {
+									return nil, errors.New("invalid termination")
+								}
+							}
+							return nil, nil
+						}).
+						Once()
 				}
 				p.EXPECT().Refresh().Once()
 			}
 
-			attachments := executor.SetRoom(ctx, tt.args...)
+			attachments := bot.SetRoom(ctx, tt.args...)
 			assert.Equal(t, tt.want, attachments)
 		})
 	}
 }
 
-func TestExecutor_SetHome(t *testing.T) {
+func TestBot_SetHome(t *testing.T) {
 	type action int
 	const (
 		actionNone action = iota
@@ -192,21 +212,12 @@ func TestExecutor_SetHome(t *testing.T) {
 			action: actionAuto,
 			want:   []slack.Attachment{{Color: "good", Text: "set home to auto mode"}},
 		},
-		{
-			name:   "auto (fail)",
-			args:   []string{"auto"},
-			action: actionAuto,
-			err:    errors.New("fail"),
-			want:   []slack.Attachment{{Color: "bad", Text: "failed: fail"}},
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			ctx := context.Background()
-			api := mocks.NewTadoSetter(t)
+			api := mocks.NewTadoClient(t)
 			s := mocks.NewSlackBot(t)
 			s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
@@ -215,42 +226,61 @@ func TestExecutor_SetHome(t *testing.T) {
 				p.EXPECT().Refresh()
 			}
 
-			executor := New(api, s, p, nil, slog.Default())
+			bot := New(api, s, p, nil, slog.Default())
+			bot.setUpdate(poller.Update{
+				HomeBase: tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+			})
 
 			switch tt.action {
 			case actionNone:
 			case actionHome:
-				api.EXPECT().SetHomeState(ctx, true).Return(tt.err)
+				api.EXPECT().
+					SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.Anything).
+					RunAndReturn(func(_ context.Context, zoneId int64, lock tado.PresenceLock, _ ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
+						if *lock.HomePresence != tado.HOME || zoneId != 1 {
+							return nil, errors.New("invalid arg")
+						}
+						return nil, tt.err
+					}).
+					Once()
 			case actionAway:
-				api.EXPECT().SetHomeState(ctx, false).Return(tt.err)
+				api.EXPECT().
+					SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.Anything).
+					RunAndReturn(func(_ context.Context, zoneId int64, lock tado.PresenceLock, _ ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
+						if *lock.HomePresence != tado.AWAY || zoneId != 1 {
+							return nil, errors.New("invalid arg")
+						}
+						return nil, tt.err
+					}).
+					Once()
 			case actionAuto:
-				api.EXPECT().UnsetHomeState(ctx).Return(tt.err)
+				api.EXPECT().
+					DeletePresenceLockWithResponse(ctx, tado.HomeId(1)).
+					Return(nil, tt.err)
 			}
 
-			attachments := executor.SetHome(ctx, tt.args...)
+			attachments := bot.SetHome(ctx, tt.args...)
 			assert.Equal(t, tt.want, attachments)
 		})
 	}
 }
 
-func TestExecutor_DoRefresh(t *testing.T) {
-	api := mocks.NewTadoSetter(t)
+func TestBot_DoRefresh(t *testing.T) {
 	s := mocks.NewSlackBot(t)
 	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
 	p := mockPoller.NewPoller(t)
 	p.EXPECT().Refresh()
 
-	b := New(api, s, p, nil, slog.Default())
+	b := New(nil, s, p, nil, slog.Default())
 	b.DoRefresh(context.Background())
 }
 
-func TestExecutor_ReportRooms(t *testing.T) {
-	api := mocks.NewTadoSetter(t)
+func TestBot_ReportRooms(t *testing.T) {
 	s := mocks.NewSlackBot(t)
 	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
-	b := New(api, s, nil, nil, slog.Default())
+	b := New(nil, s, nil, nil, slog.Default())
 
 	attachments := b.ReportRooms(context.Background())
 	require.Len(t, attachments, 1)
@@ -258,20 +288,28 @@ func TestExecutor_ReportRooms(t *testing.T) {
 	assert.Equal(t, "no updates yet. please check back later", attachments[0].Text)
 
 	b.update = poller.Update{
-		Zones:    map[int]tado.Zone{1: {ID: 1, Name: "foo"}},
-		ZoneInfo: map[int]tado.ZoneInfo{1: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(22.0, 18.0), testutil.ZoneInfoPermanentOverlay())},
+		Zones: poller.Zones{
+			{
+				Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+				ZoneState: tado.ZoneState{
+					Setting:          &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](18.0)}},
+					Overlay:          &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
+					SensorDataPoints: &oapi.SensorDataPoint,
+				},
+			},
+		},
 	}
 	b.updated = true
 
 	attachments = b.ReportRooms(context.Background())
 	require.Len(t, attachments, 1)
 	assert.Equal(t, "rooms:", attachments[0].Title)
-	assert.Equal(t, "foo: 22.0ºC (target: 18.0, MANUAL)", attachments[0].Text)
+	assert.Equal(t, "room: 21.0ºC (target: 18.0, MANUAL)", attachments[0].Text)
 
 }
 
-func TestExecutor_ReportUsers(t *testing.T) {
-	testCases := []struct {
+func TestBot_ReportUsers(t *testing.T) {
+	tests := []struct {
 		name    string
 		update  poller.Update
 		updated bool
@@ -285,41 +323,38 @@ func TestExecutor_ReportUsers(t *testing.T) {
 		{
 			name: "home",
 			update: poller.Update{
-				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(true))},
+				MobileDevices: []tado.MobileDevice{
+					{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationHome},
+				},
 			},
 			updated: true,
-			want:    []slack.Attachment{{Title: "users:", Text: "foo: home"}},
+			want:    []slack.Attachment{{Title: "users:", Text: "A: home"}},
 		},
 		{
 			name: "away",
 			update: poller.Update{
-				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo", testutil.Home(false))},
+				MobileDevices: []tado.MobileDevice{
+					{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationAway},
+				},
 			},
 			updated: true,
-			want:    []slack.Attachment{{Title: "users:", Text: "foo: away"}},
-		},
-		{
-			name: "unknown",
-			update: poller.Update{
-				UserInfo: map[int]tado.MobileDevice{10: testutil.MakeMobileDevice(10, "foo")},
-			},
-			updated: true,
-			want:    []slack.Attachment{{Title: "users:", Text: "foo: unknown"}},
+			want:    []slack.Attachment{{Title: "users:", Text: "A: away"}},
 		},
 	}
 
-	for _, tt := range testCases {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			api := mocks.NewTadoSetter(t)
+			api := mocks.NewTadoClient(t)
 			s := mocks.NewSlackBot(t)
 			s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
 
 			b := New(api, s, nil, nil, slog.Default())
 
-			b.update = tt.update
-			b.updated = tt.updated
+			if tt.updated {
+				b.setUpdate(tt.update)
+			}
 
 			attachments := b.ReportUsers(context.Background())
 			assert.Equal(t, tt.want, attachments)

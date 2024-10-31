@@ -1,13 +1,12 @@
 package rules
 
 import (
-	"context"
-	"github.com/clambin/tado"
-	"github.com/clambin/tado-exporter/internal/controller/rules/action/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
+	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado/testutil"
+	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"log/slog"
 	"testing"
 	"time"
@@ -16,7 +15,7 @@ import (
 func TestLimitOverlayRule_Evaluate(t *testing.T) {
 	type want struct {
 		err    assert.ErrorAssertionFunc
-		action assert.BoolAssertionFunc
+		action string
 		delay  time.Duration
 		reason string
 	}
@@ -24,80 +23,111 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 	tests := []struct {
 		name   string
 		update poller.Update
-		cfg    configuration.LimitOverlayConfiguration
 		want
 	}{
 		{
-			name: "zone in auto mode",
+			name: "zone in auto mode: no action",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoTemperature(18, 22))},
-				Home:     true,
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				Zones: poller.Zones{
+					{
+						Zone:      tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
+					},
+				},
 			},
-			cfg: configuration.LimitOverlayConfiguration{Delay: time.Hour},
 			want: want{
 				err:    assert.NoError,
-				action: assert.False,
+				action: "no action",
 				reason: "no manual temp setting detected",
 			},
 		},
 		{
-			name: "zone in manual mode (heating)",
+			name: "zone had timer overlay: no action",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay(), testutil.ZoneInfoTemperature(18, 22))},
-				Home:     true,
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				Zones: poller.Zones{
+					{
+						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{
+							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}},
+							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationTimer},
+						},
+					},
+				},
 			},
-			cfg: configuration.LimitOverlayConfiguration{Delay: time.Hour},
-			want: want{
-				err:    assert.NoError,
-				action: assert.True,
-				delay:  time.Hour,
-				reason: "manual temp setting detected",
-			},
+			want: want{assert.NoError, "no action", 0, "no manual temp setting detected"},
 		},
 		{
-			name: "zone in manual mode (off)",
+			name: "zone has manual mode, but not heating: no action",
 			update: poller.Update{
-				Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-				ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay())},
-				Home:     true,
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				Zones: poller.Zones{
+					{
+						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{
+							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](5.0)}},
+							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
+						},
+					},
+				},
 			},
-			cfg: configuration.LimitOverlayConfiguration{Delay: time.Hour},
-			want: want{
-				err:    assert.NoError,
-				action: assert.False,
-				reason: "no manual temp setting detected",
+			want: want{assert.NoError, "no action", 0, "no manual temp setting detected"},
+		},
+		{
+			name: "zone has manual 'off' overlay, but home is AWAY: no action",
+			update: poller.Update{
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.AWAY)},
+				Zones: poller.Zones{
+					{
+						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{
+							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}},
+							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
+						},
+					},
+				},
 			},
+			want: want{assert.NoError, "no action", 0, "home in AWAY mode"},
+		},
+		{
+			name: "zone has manual 'off' overlay and home is HOME: remove overlay",
+			update: poller.Update{
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				Zones: poller.Zones{
+					{
+						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{
+							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}},
+							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
+						},
+					},
+				},
+			},
+			want: want{assert.NoError, "moving to auto mode", time.Hour, "manual temp setting detected"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			r, err := LoadLimitOverlay(10, "room", tt.cfg, tt.update, slog.Default())
-			tt.err(t, err)
-			if err != nil {
-				return
-			}
+			cfg := configuration.LimitOverlayConfiguration{Delay: time.Hour}
+			r, err := LoadLimitOverlay(10, "room", cfg, tt.update, slog.Default())
+			require.NoError(t, err)
+
 			e, err := r.Evaluate(tt.update)
 			tt.want.err(t, err)
 			if err != nil {
 				return
 			}
-			tt.action(t, e.IsAction())
+			assert.Equal(t, tt.want.action, e.String())
 			assert.Equal(t, tt.want.delay, e.Delay)
 			assert.Equal(t, tt.want.reason, e.Reason)
-
-			if !e.IsAction() {
-				return
-			}
-
-			ctx := context.Background()
-			c := mocks.NewTadoSetter(t)
-			c.EXPECT().DeleteZoneOverlay(ctx, 10).Return(nil).Once()
-
-			assert.NoError(t, e.State.Do(ctx, c))
 		})
 	}
 }
