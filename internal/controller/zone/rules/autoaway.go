@@ -80,9 +80,9 @@ func (r AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 		}
 	} else if someoneHome {
 		a.Reason = r.makeReason(home, "home")
-		if *zone.Setting.Temperature.Celsius <= 5 && zone.Overlay != nil && *zone.Overlay.Termination.Type == tado.ZoneOverlayTerminationTypeMANUAL {
+		if zone.GetTargetTemperature() <= 5 && zone.Overlay != nil && *zone.Overlay.Termination.Type == tado.ZoneOverlayTerminationTypeMANUAL {
 			// TODO: this resets the thermostat if we switched off the heating because the house was in AWAY mode
-			// However, if the user switch off the heating, we will immediately switch the heating back on, which is not what the user wanted.
+			// However, if the user switched off the heating, we will immediately switch the heating back on, which is not what the user wanted.
 			a.State.(*State).mode = action.ZoneInAutoMode
 		}
 	}
