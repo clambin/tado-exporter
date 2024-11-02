@@ -134,7 +134,7 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 		text = append(text, fmt.Sprintf("%s: %.1fºC (%s)",
 			*zone.Name,
 			*zone.SensorDataPoints.InsideTemperature.Celsius,
-			zoneState(zone.ZoneState),
+			zoneState(zone),
 		))
 	}
 
@@ -156,21 +156,20 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 	}}
 }
 
-func zoneState(zoneState tado.ZoneState) string {
-	if *zoneState.Setting.Temperature.Celsius <= 5.0 {
+func zoneState(zone poller.Zone) string {
+	targetTemperature := zone.GetTargetTemperature()
+	if targetTemperature <= 5.0 {
 		return "off"
 	}
 
-	targetTemperature := *zoneState.Setting.Temperature.Celsius
-
-	if zoneState.Overlay == nil {
+	if zone.Overlay == nil {
 		return fmt.Sprintf("target: %.1f", targetTemperature)
 	}
-	switch *zoneState.Overlay.Termination.Type {
+	switch *zone.Overlay.Termination.Type {
 	case tado.ZoneOverlayTerminationTypeMANUAL:
 		return fmt.Sprintf("target: %.1f, MANUAL", targetTemperature)
 	default:
-		return fmt.Sprintf("target: %.1f, MANUAL for %s", targetTemperature, (time.Duration(*zoneState.Overlay.Termination.DurationInSeconds) * time.Second).String())
+		return fmt.Sprintf("target: %.1f, MANUAL for %s", targetTemperature, (time.Duration(*zone.Overlay.Termination.DurationInSeconds) * time.Second).String())
 	}
 }
 

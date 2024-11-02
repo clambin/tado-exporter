@@ -43,6 +43,13 @@ func (z Zone) GetZoneOverlayTerminationType() tado.ZoneOverlayTerminationType {
 	return *z.ZoneState.Overlay.Termination.Type
 }
 
+func (z Zone) GetTargetTemperature() float32 {
+	if z.ZoneState.Setting.Temperature == nil {
+		return 0
+	}
+	return *z.ZoneState.Setting.Temperature.Celsius
+}
+
 type MobileDevices []tado.MobileDevice
 
 func (m MobileDevices) GetMobileDevice(deviceName string) (tado.MobileDevice, bool) {

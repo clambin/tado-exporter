@@ -254,11 +254,7 @@ func (c *Collector) collectZoneDevices(zone poller.Zone) {
 func (c *Collector) collectZoneInfo(zone poller.Zone) {
 	zoneName := *zone.Name
 	c.Metrics.tadoZoneTemperatureCelsius.WithLabelValues(zoneName).Set(float64(*zone.SensorDataPoints.InsideTemperature.Celsius))
-	var targetTemperature float32
-	if zone.Setting.Temperature != nil {
-		targetTemperature = *zone.Setting.Temperature.Celsius
-	}
-	c.Metrics.tadoZoneTargetTempCelsius.WithLabelValues(zoneName).Set(float64(targetTemperature))
+	c.Metrics.tadoZoneTargetTempCelsius.WithLabelValues(zoneName).Set(float64(zone.GetTargetTemperature()))
 	c.Metrics.tadoZoneHeatingPercentage.WithLabelValues(zoneName).Set(float64(*zone.ActivityDataPoints.HeatingPower.Percentage))
 	c.Metrics.tadoZoneHumidityPercentage.WithLabelValues(zoneName).Set(float64(*zone.SensorDataPoints.Humidity.Percentage))
 	var duration, remaining float64
