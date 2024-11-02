@@ -20,7 +20,9 @@ func MustUpdate() poller.Update {
 		panic(err)
 	}
 	var update poller.Update
-	err = json.NewDecoder(f).Decode(&update)
+	if err = json.NewDecoder(f).Decode(&update); err != nil {
+		panic(err)
+	}
 	return update
 }
 
