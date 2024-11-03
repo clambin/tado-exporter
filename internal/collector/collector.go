@@ -270,4 +270,9 @@ func (c *Collector) collectZoneInfo(zone poller.Zone) {
 		value = 1.0
 	}
 	c.Metrics.tadoZonePowerState.WithLabelValues(zoneName).Set(value)
+	value = 0
+	if zone.ZoneState.Overlay != nil {
+		value = 1
+	}
+	c.Metrics.tadoZoneTargetManualMode.WithLabelValues(zoneName).Set(value)
 }

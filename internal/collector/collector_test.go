@@ -90,6 +90,10 @@ tado_zone_open_window_duration{zone_name="Living room"} 300
 # HELP tado_zone_open_window_remaining Remaining duration of open window event in seconds
 # TYPE tado_zone_open_window_remaining gauge
 tado_zone_open_window_remaining{zone_name="Living room"} 150
+
+# HELP tado_zone_target_manual_mode 1 if this zone is in manual temp target mode
+# TYPE tado_zone_target_manual_mode gauge
+tado_zone_target_manual_mode{zone_name="Living room"} 0
 `)))
 }
 
