@@ -34,7 +34,6 @@ var args = charmer.Arguments{
 	"debug":                      charmer.Argument{Default: false},
 	"tado.username":              charmer.Argument{Default: ""},
 	"tado.password":              charmer.Argument{Default: ""},
-	"tado.clientSecret":          charmer.Argument{Default: ""},
 	"exporter.addr":              charmer.Argument{Default: ":9090"},
 	"poller.interval":            charmer.Argument{Default: 30 * time.Second},
 	"health.addr":                charmer.Argument{Default: ":8080"},

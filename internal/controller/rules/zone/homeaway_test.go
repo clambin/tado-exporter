@@ -83,6 +83,16 @@ func TestHomeAwayRule_Evaluate(t *testing.T) {
 				reason: "home in AWAY mode, no manual temp setting detected",
 			},
 		},
+		{
+			name: "invalid zone",
+			update: poller.Update{
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.AWAY)},
+			},
+			want: want{
+				err: assert.Error,
+			},
+		},
 	}
 
 	for _, tt := range tests {

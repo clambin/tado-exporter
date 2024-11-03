@@ -111,6 +111,16 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 			},
 			want: want{assert.NoError, "moving to auto mode", time.Hour, "manual temp setting detected"},
 		},
+		{
+			name: "invalid zone",
+			update: poller.Update{
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+			},
+			want: want{
+				err: assert.Error,
+			},
+		},
 	}
 
 	for _, tt := range tests {

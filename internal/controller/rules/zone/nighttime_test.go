@@ -130,6 +130,16 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 			now:  time.Date(2023, time.December, 31, 23, 45, 0, 0, time.Local),
 			want: want{assert.NoError, "moving to auto mode", 23*time.Hour + 45*time.Minute, "manual temp setting detected"},
 		},
+		{
+			name: "invalid zone",
+			update: poller.Update{
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+			},
+			want: want{
+				err: assert.Error,
+			},
+		},
 	}
 
 	for _, tt := range tests {

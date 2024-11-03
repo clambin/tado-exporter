@@ -306,6 +306,11 @@ func TestBot_ReportRooms(t *testing.T) {
 	assert.Equal(t, "rooms:", attachments[0].Title)
 	assert.Equal(t, "room: 21.0ºC (target: 18.0, MANUAL)", attachments[0].Text)
 
+	b.update.Zones[0].Setting.Temperature = nil
+	attachments = b.ReportRooms(context.Background())
+	require.Len(t, attachments, 1)
+	assert.Equal(t, "rooms:", attachments[0].Title)
+	assert.Equal(t, "room: 21.0ºC (off)", attachments[0].Text)
 }
 
 func TestBot_ReportUsers(t *testing.T) {

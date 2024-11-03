@@ -69,7 +69,6 @@ health:
 tado:
     username: ""
     password: ""
-    clientsecret: ""
 # Section for controller functionality
 controller:
     tadobot:
@@ -93,23 +92,6 @@ E.g. to avoid setting your Tado credentials in the configuration file, set the f
 ```
 export TADO_MONITOR_TADO.USERNAME="username@example.com"
 export TADO_MONITOR_TADO.PASSWORD="your-password"
-```
-
-### Tadoº credentials
-In case you run into authentication problems, you may need to retrieve your `CLIENT_SECRET` and add it to the "tado" configuration section
-(or set it as a environment variable). To get your `CLIENT_SECRET`, log into tado.com and visit [https://my.tado.com/webapp/env.js](https://my.tado.com/webapp/env.js).
-The client secret can be found in the oauth section:
-
-```
-var TD = {
-	config: {
-...
-		oauth: {
-...
-			clientSecret: 'verylongclientsecret'
-		}
-	}
-};
 ```
 
 ## Controlling your Tado devices

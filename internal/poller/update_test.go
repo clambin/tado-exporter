@@ -7,6 +7,20 @@ import (
 	"testing"
 )
 
+func TestZone_GetTargetTemperature(t *testing.T) {
+	zone := Zone{
+		ZoneState: tado.ZoneState{
+			Setting: &tado.ZoneSetting{
+				Temperature: &tado.Temperature{Celsius: oapi.VarP(float32(21))},
+			},
+		},
+	}
+
+	assert.Equal(t, float32(21), zone.GetTargetTemperature())
+	zone.ZoneState.Setting.Temperature = nil
+	assert.Equal(t, float32(0), zone.GetTargetTemperature())
+}
+
 func TestMobileDevices_LogValue(t *testing.T) {
 	tests := []struct {
 		name    string

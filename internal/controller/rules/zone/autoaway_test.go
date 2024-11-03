@@ -164,6 +164,20 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				reason: "home in AWAY mode",
 			},
 		},
+		{
+			name: "invalid zone",
+			update: poller.Update{
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				MobileDevices: []tado.MobileDevice{
+					{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationAway},
+					{Id: oapi.VarP[tado.MobileDeviceId](101), Name: oapi.VarP("B"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationAway},
+				},
+			},
+			want: want{
+				err: assert.Error,
+			},
+		},
 	}
 
 	cfg := configuration.AutoAwayConfiguration{
