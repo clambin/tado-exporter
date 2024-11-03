@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado/v2"
+	"log/slog"
 )
 
 type Update struct {
@@ -80,4 +81,17 @@ func (m MobileDevices) GetDeviceState(ids ...tado.MobileDeviceId) ([]string, []s
 		}
 	}
 	return home, away
+}
+
+func (m MobileDevices) LogValue() slog.Value {
+	devices := make([]slog.Attr, 0, len(m))
+	for _, device := range m {
+		deviceAttrs := make([]any, 1, 2)
+		deviceAttrs[0] = slog.Bool("geotracked", *device.Settings.GeoTrackingEnabled)
+		if *device.Settings.GeoTrackingEnabled {
+			deviceAttrs = append(deviceAttrs, slog.Bool("home", *device.Location.AtHome))
+		}
+		devices = append(devices, slog.Group(*device.Name, deviceAttrs...))
+	}
+	return slog.AnyValue(devices)
 }

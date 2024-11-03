@@ -4,9 +4,6 @@ dir: "{{.InterfaceDir}}/mocks"
 mockname: "{{.InterfaceName}}"
 outpkg: "mocks"
 packages:
-  github.com/clambin/tado-exporter/internal/cmd/config:
-    interfaces:
-      TadoClient:
   github.com/clambin/tado-exporter/internal/cmd/monitor:
     interfaces:
       TadoClient:

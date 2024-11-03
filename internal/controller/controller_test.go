@@ -9,15 +9,14 @@ import (
 	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
-	"io"
 	"log/slog"
+	"os"
 	"sync/atomic"
 	"testing"
 	"time"
 )
 
 func TestController_Run(t *testing.T) {
-	t.Skip("flaky test")
 	zoneCfg := configuration.Configuration{
 		Home: configuration.HomeConfiguration{
 			AutoAway: configuration.AutoAwayConfiguration{
@@ -42,7 +41,7 @@ func TestController_Run(t *testing.T) {
 	})
 	p.EXPECT().Unsubscribe(ch)
 
-	l := slog.New(slog.NewTextHandler(io.Discard, nil))
+	l := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})).With("component", "controller")
 
 	m := controller.New(nil, zoneCfg, nil, p, l)
 
@@ -54,7 +53,7 @@ func TestController_Run(t *testing.T) {
 		return subscribers.Load() >= 2
 	}, time.Second, time.Millisecond)
 
-	ch <- poller.Update{
+	u := poller.Update{
 		HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
 		HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
 		Zones: poller.Zones{
@@ -72,8 +71,10 @@ func TestController_Run(t *testing.T) {
 			{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationHome},
 		},
 	}
+	for range subscribers.Load() {
+		ch <- u
+	}
 
-	// TODO: flaky test
 	assert.Eventually(t, func() bool {
 		tasks := m.ReportTasks()
 		return len(tasks) == 1

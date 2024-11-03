@@ -1,4 +1,4 @@
-package rules
+package zone
 
 import (
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
@@ -89,5 +89,3 @@ func TestRules_LoadZoneRules(t *testing.T) {
 		})
 	}
 }
-
-// TODO: tests to validate interaction between different rules

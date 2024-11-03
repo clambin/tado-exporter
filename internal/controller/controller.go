@@ -2,11 +2,11 @@ package controller
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/internal/controller/home"
 	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/zone"
+	"github.com/clambin/tado-exporter/internal/controller/rules/home"
+	"github.com/clambin/tado-exporter/internal/controller/rules/zone"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"golang.org/x/sync/errgroup"
 	"log/slog"

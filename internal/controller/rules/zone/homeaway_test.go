@@ -1,4 +1,4 @@
-package rules
+package zone
 
 import (
 	"github.com/clambin/tado-exporter/internal/oapi"

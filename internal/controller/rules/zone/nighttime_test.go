@@ -1,4 +1,4 @@
-package rules
+package zone
 
 import (
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func TestLimitOverlayRule_Evaluate(t *testing.T) {
+func TestNightTimeRule_Evaluate(t *testing.T) {
 	type want struct {
 		err    assert.ErrorAssertionFunc
 		action string
@@ -23,6 +23,7 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 	tests := []struct {
 		name   string
 		update poller.Update
+		now    time.Time
 		want
 	}{
 		{
@@ -37,14 +38,10 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 					},
 				},
 			},
-			want: want{
-				err:    assert.NoError,
-				action: "no action",
-				reason: "no manual temp setting detected",
-			},
+			want: want{assert.NoError, "no action", 0, "no manual temp setting detected"},
 		},
 		{
-			name: "zone had timer overlay: no action",
+			name: "zone in non-manual overlay: no action",
 			update: poller.Update{
 				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
 				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
@@ -58,10 +55,11 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 					},
 				},
 			},
+			now:  time.Date(2023, time.December, 31, 22, 30, 0, 0, time.Local),
 			want: want{assert.NoError, "no action", 0, "no manual temp setting detected"},
 		},
 		{
-			name: "zone has manual mode, but not heating: no action",
+			name: "zone in manual mode, but not heating: no action",
 			update: poller.Update{
 				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
 				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
@@ -75,10 +73,11 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 					},
 				},
 			},
+			now:  time.Date(2023, time.December, 31, 23, 45, 0, 0, time.Local),
 			want: want{assert.NoError, "no action", 0, "no manual temp setting detected"},
 		},
 		{
-			name: "zone has manual 'off' overlay, but home is AWAY: no action",
+			name: "zone in manual mode, but home is AWAY: no action",
 			update: poller.Update{
 				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
 				HomeState: tado.HomeState{Presence: oapi.VarP(tado.AWAY)},
@@ -86,16 +85,17 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}},
+							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](25.0)}},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 						},
 					},
 				},
 			},
+			now:  time.Date(2023, time.December, 31, 23, 45, 0, 0, time.Local),
 			want: want{assert.NoError, "no action", 0, "home in AWAY mode"},
 		},
 		{
-			name: "zone has manual 'off' overlay and home is HOME: remove overlay",
+			name: "zone in manual mode: switch off manual mode today",
 			update: poller.Update{
 				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
 				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
@@ -103,23 +103,42 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}},
+							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](25.0)}},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 						},
 					},
 				},
 			},
-			want: want{assert.NoError, "moving to auto mode", time.Hour, "manual temp setting detected"},
+			now:  time.Date(2023, time.December, 31, 23, 15, 0, 0, time.Local),
+			want: want{assert.NoError, "moving to auto mode", 15 * time.Minute, "manual temp setting detected"},
+		},
+		{
+			name: "zone in manual mode: switch off manual mode tomorrow",
+			update: poller.Update{
+				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+				Zones: poller.Zones{
+					{
+						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+						ZoneState: tado.ZoneState{
+							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](25.0)}},
+							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
+						},
+					},
+				},
+			},
+			now:  time.Date(2023, time.December, 31, 23, 45, 0, 0, time.Local),
+			want: want{assert.NoError, "moving to auto mode", 23*time.Hour + 45*time.Minute, "manual temp setting detected"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			cfg := configuration.LimitOverlayConfiguration{Delay: time.Hour}
-			r, err := LoadLimitOverlay(10, "room", cfg, tt.update, slog.Default())
+			cfg := configuration.NightTimeConfiguration{Timestamp: configuration.Timestamp{Hour: 23, Minutes: 30, Seconds: 0, Active: true}}
+			r, err := LoadNightTime(10, "room", cfg, tt.update, slog.Default())
 			require.NoError(t, err)
 
+			r.getCurrentTime = func() time.Time { return tt.now }
 			e, err := r.Evaluate(tt.update)
 			tt.want.err(t, err)
 			if err != nil {

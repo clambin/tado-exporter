@@ -1,4 +1,4 @@
-package rules
+package home
 
 import (
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"

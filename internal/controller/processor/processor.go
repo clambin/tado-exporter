@@ -13,6 +13,10 @@ import (
 	"sync"
 )
 
+// A Processor receives updated from a Poller and evaluates a set of rules.  If a rule results in an action,
+// Processor schedules a task and manages that task until its completed.
+//
+// The Controller uses this to evaluate rules for a home and its zones.
 type Processor struct {
 	loader       RulesLoader
 	rules        rules.Evaluator

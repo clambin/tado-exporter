@@ -1,4 +1,4 @@
-package rules
+package home
 
 import (
 	"fmt"

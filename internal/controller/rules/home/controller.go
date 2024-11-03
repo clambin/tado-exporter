@@ -1,4 +1,4 @@
-package zone
+package home
 
 import (
 	"github.com/clambin/tado-exporter/internal/controller/notifier"
@@ -6,7 +6,6 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
-	zoneRules "github.com/clambin/tado-exporter/internal/controller/zone/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"log/slog"
 )
@@ -15,9 +14,9 @@ type Controller struct {
 	*processor.Processor
 }
 
-func New(tadoClient action.TadoClient, p poller.Poller, bot notifier.SlackSender, configuration configuration.ZoneConfiguration, logger *slog.Logger) *Controller {
+func New(tadoClient action.TadoClient, p poller.Poller, bot notifier.SlackSender, configuration configuration.HomeConfiguration, logger *slog.Logger) *Controller {
 	loader := func(update poller.Update) (rules.Evaluator, error) {
-		return zoneRules.LoadZoneRules(configuration, update, logger)
+		return LoadHomeRules(configuration, update, logger)
 	}
 
 	return &Controller{
