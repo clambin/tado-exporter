@@ -206,11 +206,13 @@ func (c *Collector) process(update poller.Update) {
 
 func (c *Collector) collectUsers(update poller.Update) {
 	for _, userInfo := range update.MobileDevices {
-		var value float64
-		if *userInfo.Settings.GeoTrackingEnabled && *userInfo.Location.AtHome {
-			value = 1.0
+		if *userInfo.Settings.GeoTrackingEnabled {
+			var value float64
+			if *userInfo.Location.AtHome {
+				value = 1.0
+			}
+			c.Metrics.tadoMobileDeviceStatus.WithLabelValues(*userInfo.Name).Set(value)
 		}
-		c.Metrics.tadoMobileDeviceStatus.WithLabelValues(*userInfo.Name).Set(value)
 	}
 }
 
