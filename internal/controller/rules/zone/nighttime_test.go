@@ -67,7 +67,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](5.0)}},
+							Setting: &tado.ZoneSetting{},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 						},
 					},

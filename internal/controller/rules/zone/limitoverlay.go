@@ -51,10 +51,10 @@ func (r LimitOverlayRule) Evaluate(update poller.Update) (action.Action, error) 
 		return a, err
 	}
 
-	if zone.ZoneState.Overlay != nil && *zone.ZoneState.Overlay.Termination.Type == tado.ZoneOverlayTerminationTypeMANUAL {
+	if zone.GetZoneOverlayTerminationType() == tado.ZoneOverlayTerminationTypeMANUAL {
 		// If autoAway switched off the heating, this rule will reset that after r.delay. As a workaround, we only delete
 		// the overlay if it's set to heating (temperature > 5ºC, i.e. "not off").
-		if *zone.ZoneState.Setting.Temperature.Celsius > 5.0 {
+		if zone.GetTargetTemperature() > 5.0 {
 			a.State.(*State).mode = action.ZoneInAutoMode
 			a.Delay = r.delay
 			a.Reason = "manual temp setting detected"

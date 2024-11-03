@@ -53,7 +53,7 @@ func (r NightTimeRule) Evaluate(update poller.Update) (action.Action, error) {
 
 	// If autoAway switched off the heating, this rule will reset that after r.delay. As a workaround, we only delete
 	// the overlay if it's set to heating (temperature > 5ºC, i.e. "not off").
-	if zone.ZoneState.Overlay != nil && *zone.ZoneState.Overlay.Termination.Type == tado.ZoneOverlayTerminationTypeMANUAL && *zone.ZoneState.Setting.Temperature.Celsius > 5.0 {
+	if zone.GetZoneOverlayTerminationType() == tado.ZoneOverlayTerminationTypeMANUAL && zone.GetTargetTemperature() > 5.0 {
 		// allow current time to be set during testing
 		now := time.Now
 		if r.getCurrentTime != nil {

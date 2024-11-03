@@ -61,7 +61,7 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 			want: want{assert.NoError, "no action", 0, "no manual temp setting detected"},
 		},
 		{
-			name: "zone has manual mode, but not heating: no action",
+			name: "zone has manual 'off' mode, home is HOME: no action",
 			update: poller.Update{
 				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
 				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
@@ -69,7 +69,7 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](5.0)}},
+							Setting: &tado.ZoneSetting{},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 						},
 					},
@@ -86,7 +86,7 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}},
+							Setting: &tado.ZoneSetting{},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 						},
 					},
@@ -95,7 +95,7 @@ func TestLimitOverlayRule_Evaluate(t *testing.T) {
 			want: want{assert.NoError, "no action", 0, "home in AWAY mode"},
 		},
 		{
-			name: "zone has manual 'off' overlay and home is HOME: remove overlay",
+			name: "zone has manual 'on' overlay and home is HOME: remove overlay",
 			update: poller.Update{
 				HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
 				HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
