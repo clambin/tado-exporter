@@ -85,11 +85,11 @@ tado_zone_temperature_celsius{zone_name="Living room"} 20.0
 
 # HELP tado_zone_open_window_duration Duration of open window event in seconds
 # TYPE tado_zone_open_window_duration gauge
-tado_zone_open_window_duration{zone_name="Living room"} 0
+tado_zone_open_window_duration{zone_name="Living room"} 300
 
 # HELP tado_zone_open_window_remaining Remaining duration of open window event in seconds
 # TYPE tado_zone_open_window_remaining gauge
-tado_zone_open_window_remaining{zone_name="Living room"} 0
+tado_zone_open_window_remaining{zone_name="Living room"} 150
 `)))
 }
 

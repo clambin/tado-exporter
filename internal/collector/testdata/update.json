@@ -179,7 +179,10 @@
       "nextTimeBlock": {
         "start": "2024-10-29T16:00:00Z"
       },
-      "openWindow": null,
+      "openWindow": {
+        "durationInSeconds": 300,
+        "remainingTimeInSeconds": 150
+      },
       "preparation": null,
       "runningOfflineSchedule": false,
       "sensorDataPoints": {
