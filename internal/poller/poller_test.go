@@ -30,7 +30,7 @@ func TestTadoPoller_Run(t *testing.T) {
 
 	zone, err := update.GetZone("room")
 	assert.NoError(t, err)
-	assert.Equal(t, poller.ZoneOverlayTerminationTypeNONE, zone.GetZoneOverlayTerminationType())
+	assert.Equal(t, 10, *zone.Id)
 
 	device, ok := update.GetMobileDevice("A")
 	assert.True(t, ok)

@@ -21,6 +21,17 @@ func TestZone_GetTargetTemperature(t *testing.T) {
 	assert.Equal(t, float32(0), zone.GetTargetTemperature())
 }
 
+func TestZone_GetZoneOverlayTerminationType(t *testing.T) {
+	zone := Zone{
+		ZoneState: tado.ZoneState{
+			Overlay: &tado.ZoneOverlay{Termination: &tado.ZoneOverlayTermination{Type: oapi.VarP(tado.ZoneOverlayTerminationTypeMANUAL)}},
+		},
+	}
+	assert.Equal(t, tado.ZoneOverlayTerminationTypeMANUAL, zone.GetZoneOverlayTerminationType())
+	zone.ZoneState.Overlay = nil
+	assert.Equal(t, ZoneOverlayTerminationTypeNONE, zone.GetZoneOverlayTerminationType())
+}
+
 func TestMobileDevices_LogValue(t *testing.T) {
 	tests := []struct {
 		name    string
