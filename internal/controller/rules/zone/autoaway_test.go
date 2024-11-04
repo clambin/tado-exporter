@@ -114,7 +114,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 			want: want{
 				err:    assert.NoError,
 				action: "no action",
-				reason: "A, B are away",
+				reason: "A, B are away, heating is off",
 			},
 		},
 		{

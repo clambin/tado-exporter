@@ -74,10 +74,13 @@ func (r AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 
 	if allAway {
 		a.Reason = r.makeReason(away, "away")
-		if zone.GetTargetTemperature() > 5 {
+		if zone.GetTargetTemperature() <= 5 {
+			a.Reason += ", heating is off"
+		} else {
 			a.Delay = r.delay
 			a.State.(*State).mode = action.ZoneInOverlayMode
 		}
+
 	} else if someoneHome {
 		a.Reason = r.makeReason(home, "home")
 		zone.GetTargetTemperature()
