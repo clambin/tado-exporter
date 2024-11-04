@@ -1,4 +1,4 @@
-# Prometheus Metrics
+# Prometheus metrics
 
 tado exposes the following metrics:
 
@@ -11,7 +11,7 @@ tado exposes the following metrics:
 | tado_solar_intensity_percentage | GAUGE | |Current solar intensity in percentage (0-100) |
 | tado_weather | GAUGE | tado_weather|Current weather. Always one. See label 'tado_weather' |
 
-## Metrics by Zone
+## Metrics by zone
 
 The following metrics are reported for each discovered zone. The zone name is added as 'zone_name' label.
 
