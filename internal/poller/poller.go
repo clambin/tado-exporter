@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/clambin/tado-exporter/pkg/pubsub"
 	"github.com/clambin/tado/v2"
+	"github.com/clambin/tado/v2/tools"
 	"log/slog"
 	"time"
 )
@@ -82,16 +83,16 @@ func (p *TadoPoller) poll(ctx context.Context) error {
 }
 
 func (p *TadoPoller) update(ctx context.Context) (Update, error) {
-	me, err := p.TadoClient.GetMeWithResponse(ctx)
+	homes, err := tools.GetHomes(ctx, p.TadoClient)
 	if err != nil {
-		return Update{}, fmt.Errorf("GetMeWithResponse: %w", err)
+		return Update{}, fmt.Errorf("GetHomes: %w", err)
 	}
-	if len(*me.JSON200.Homes) > 1 {
-		return Update{}, fmt.Errorf("only one registered home supported")
+	if len(homes) > 1 {
+		return Update{}, fmt.Errorf("only one home supported")
 	}
 
-	update := Update{HomeBase: (*me.JSON200.Homes)[0]}
-	homeId := *(*me.JSON200.Homes)[0].Id
+	update := Update{HomeBase: homes[0]}
+	homeId := *update.HomeBase.Id
 	if update.HomeState, err = p.getHomeState(ctx, homeId); err != nil {
 		return Update{}, err
 	}
