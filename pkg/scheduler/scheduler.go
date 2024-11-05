@@ -11,8 +11,7 @@ import (
 type state int
 
 const (
-	stateUnknown state = iota
-	stateScheduled
+	stateScheduled state = iota
 	stateCanceled
 	stateCompleted
 )
