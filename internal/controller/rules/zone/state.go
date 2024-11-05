@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
-	"github.com/clambin/tado-exporter/pkg/tadotools"
+	"github.com/clambin/tado-exporter/internal/tadotools"
 	"github.com/clambin/tado/v2"
 	"log/slog"
 	"net/http"

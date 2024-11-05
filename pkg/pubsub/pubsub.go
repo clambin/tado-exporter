@@ -1,3 +1,4 @@
+// Package pubsub provides a basic Publish/Subscribe implementation.
 package pubsub
 
 import (
@@ -5,12 +6,14 @@ import (
 	"sync"
 )
 
+// Publisher allows clients to subscribe and sends them the information provided by Publish.
 type Publisher[T any] struct {
 	clients map[chan T]struct{}
 	logger  *slog.Logger
 	lock    sync.RWMutex
 }
 
+// New returns a new Publisher
 func New[T any](logger *slog.Logger) *Publisher[T] {
 	return &Publisher[T]{
 		clients: make(map[chan T]struct{}),
@@ -18,6 +21,7 @@ func New[T any](logger *slog.Logger) *Publisher[T] {
 	}
 }
 
+// Subscribe registers the caller and returns a new channel on which it will publish updates.
 func (p *Publisher[T]) Subscribe() chan T {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -27,6 +31,7 @@ func (p *Publisher[T]) Subscribe() chan T {
 	return ch
 }
 
+// Unsubscribe removes the registered client/channel.
 func (p *Publisher[T]) Unsubscribe(ch chan T) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -34,6 +39,7 @@ func (p *Publisher[T]) Unsubscribe(ch chan T) {
 	p.logger.Debug("subscriber removed", slog.Int("subscribers", len(p.clients)))
 }
 
+// Publish sends info to all registered clients.
 func (p *Publisher[T]) Publish(info T) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()

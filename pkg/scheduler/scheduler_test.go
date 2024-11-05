@@ -11,16 +11,6 @@ import (
 	"time"
 )
 
-type MyTask struct {
-	err error
-}
-
-var _ scheduler.Runnable = &MyTask{}
-
-func (t MyTask) Run(_ context.Context) error {
-	return t.err
-}
-
 func TestSchedule(t *testing.T) {
 	ch := make(chan struct{})
 
@@ -87,16 +77,10 @@ func TestJob_Cancel_Chained(t *testing.T) {
 	assert.ErrorIs(t, err, scheduler.ErrCanceled)
 }
 
-func TestJob_TimeToFire(t *testing.T) {
+func TestJob_Due(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	f := scheduler.RunFunc(func(_ context.Context) error { return nil })
 	job := scheduler.Schedule(ctx, f, time.Hour, nil)
-
-	assert.Eventually(t, func() bool {
-		state, _, _ := job.GetState()
-		return state == scheduler.StateScheduled
-	}, time.Second, time.Millisecond)
-
 	assert.Equal(t, 60*time.Minute, time.Until(job.Due()).Round(time.Minute))
 
 	cancel()

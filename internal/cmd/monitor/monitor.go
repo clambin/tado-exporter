@@ -13,7 +13,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/health"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado-exporter/pkg/tadotools"
+	"github.com/clambin/tado-exporter/internal/tadotools"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
