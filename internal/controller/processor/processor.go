@@ -94,13 +94,13 @@ func (p *Processor) processUpdate(ctx context.Context, action action.Action) {
 	}
 }
 
-func (p *Processor) scheduleJob(ctx context.Context, action action.Action) {
+func (p *Processor) scheduleJob(ctx context.Context, a action.Action) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
 	// if the same state is already scheduled for an earlier time, don't schedule it again.
 	if p.task != nil {
-		if p.task.action.State.IsEqual(action.State) && p.task.scheduledBefore(action) {
+		if p.task.action.State.IsEqual(a.State) && p.task.scheduledBefore(a) {
 			return
 		}
 
@@ -108,10 +108,10 @@ func (p *Processor) scheduleJob(ctx context.Context, action action.Action) {
 		p.task.job.Cancel()
 	}
 
-	p.task = scheduleTask(ctx, p.tadoClient, action, p.taskDone)
+	p.task = scheduleTask(ctx, p.tadoClient, a, p.taskDone)
 
-	if action.Delay > 0 {
-		p.notifiers.Notify(notifier.Queued, action)
+	if a.Delay > 0 {
+		p.notifiers.Notify(notifier.Queued, a)
 	}
 }
 

@@ -32,6 +32,12 @@ type Runnable interface {
 	Run(context.Context) error
 }
 
+type RunFunc func(context.Context) error
+
+func (r RunFunc) Run(ctx context.Context) error {
+	return r(ctx)
+}
+
 func Schedule(ctx context.Context, runner Runnable, delay time.Duration, ch chan struct{}) *Job {
 	subCtx, cancel := context.WithCancel(ctx)
 	j := Job{

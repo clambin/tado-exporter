@@ -8,30 +8,24 @@ import (
 )
 
 type Task struct {
-	client action.TadoClient
 	action action.Action
 	job    *scheduler.Job
 }
 
-var _ scheduler.Runnable = &Task{}
-
 func scheduleTask(ctx context.Context, client action.TadoClient, a action.Action, done chan struct{}) *Task {
-	task := Task{
-		client: client,
+	f := scheduler.RunFunc(func(ctx context.Context) error {
+		return a.State.Do(ctx, client)
+	})
+	return &Task{
 		action: a,
+		job:    scheduler.Schedule(ctx, f, a.Delay, done),
 	}
-	task.job = scheduler.Schedule(ctx, &task, a.Delay, done)
-	return &task
 }
 
-func (t Task) Run(ctx context.Context) error {
-	return t.action.State.Do(ctx, t.client)
-}
-
-func (t Task) scheduledBefore(next action.Action) bool {
-	scheduled := t.job.Due().Round(time.Second)
-	newJob := time.Now().Add(next.Delay).Round(time.Second)
-	return scheduled.Before(newJob) || scheduled.Equal(newJob)
+func (t Task) scheduledBefore(a action.Action) bool {
+	currentActionDue := t.job.Due().Round(time.Second)
+	nextActionDue := time.Now().Add(a.Delay).Round(time.Second)
+	return currentActionDue.Before(nextActionDue) || currentActionDue.Equal(nextActionDue)
 }
 
 func (t Task) Report() string {
