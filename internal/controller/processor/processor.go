@@ -108,7 +108,7 @@ func (p *Processor) scheduleJob(ctx context.Context, action action.Action) {
 		p.task.job.Cancel()
 	}
 
-	p.task = newTask(ctx, p.tadoClient, action, p.taskDone)
+	p.task = scheduleTask(ctx, p.tadoClient, action, p.taskDone)
 
 	if action.Delay > 0 {
 		p.notifiers.Notify(notifier.Queued, action)

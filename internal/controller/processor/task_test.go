@@ -22,7 +22,7 @@ func TestTask(t *testing.T) {
 
 	ctx := context.Background()
 	ch := make(chan struct{})
-	task := newTask(ctx, nil, a, ch)
+	task := scheduleTask(ctx, nil, a, ch)
 
 	<-ch
 	completed, err := task.job.Result()
@@ -41,7 +41,7 @@ func TestTask_Stress(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			a := action.Action{Delay: time.Hour}
-			task := newTask(ctx, nil, a, nil)
+			task := scheduleTask(ctx, nil, a, nil)
 
 			assert.Eventually(t, func() bool {
 				completed, err := task.job.Result()
@@ -57,8 +57,7 @@ func TestTask_Stress(t *testing.T) {
 func TestTask_scheduledBefore(t *testing.T) {
 	ctx := context.Background()
 	a := action.Action{Delay: time.Hour}
-	task := newTask(ctx, nil, a, nil)
-	go task.job.Run(a.Delay)
+	task := scheduleTask(ctx, nil, a, nil)
 	defer task.job.Cancel()
 
 	ticker := time.NewTicker(time.Millisecond)

@@ -8,25 +8,24 @@ import (
 )
 
 type Task struct {
-	api    action.TadoClient
+	client action.TadoClient
 	action action.Action
 	job    *scheduler.Job
 }
 
 var _ scheduler.Runnable = &Task{}
 
-func newTask(ctx context.Context, api action.TadoClient, next action.Action, notification chan struct{}) *Task {
+func scheduleTask(ctx context.Context, client action.TadoClient, a action.Action, done chan struct{}) *Task {
 	task := Task{
-		api:    api,
-		action: next,
+		client: client,
+		action: a,
 	}
-	task.job = scheduler.NewWithNotification(ctx, &task, notification)
-	go task.job.Run(next.Delay)
+	task.job = scheduler.Schedule(ctx, &task, a.Delay, done)
 	return &task
 }
 
 func (t Task) Run(ctx context.Context) error {
-	return t.action.State.Do(ctx, t.api)
+	return t.action.State.Do(ctx, t.client)
 }
 
 func (t Task) scheduledBefore(next action.Action) bool {

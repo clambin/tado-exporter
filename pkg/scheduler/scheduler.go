@@ -19,51 +19,50 @@ const (
 var ErrCanceled = errors.New("job canceled")
 
 type Job struct {
-	when       time.Time
-	runner     Runnable
-	err        error
-	subCtx     context.Context
-	cancelFunc context.CancelFunc
-	state      State
-	notify     chan struct{}
-	lock       sync.RWMutex
+	when   time.Time
+	runner Runnable
+	err    error
+	cancel context.CancelFunc
+	done   chan struct{}
+	state  State
+	lock   sync.RWMutex
 }
 
 type Runnable interface {
 	Run(context.Context) error
 }
 
-func New(ctx context.Context, runner Runnable) *Job {
-	return NewWithNotification(ctx, runner, nil)
-}
-
-func NewWithNotification(ctx context.Context, runner Runnable, ch chan struct{}) *Job {
+func Schedule(ctx context.Context, runner Runnable, delay time.Duration, ch chan struct{}) *Job {
 	subCtx, cancel := context.WithCancel(ctx)
-	return &Job{
-		runner:     runner,
-		state:      StateUnknown,
-		subCtx:     subCtx,
-		cancelFunc: cancel,
-		notify:     ch,
+	j := Job{
+		runner: runner,
+		state:  StateUnknown,
+		cancel: cancel,
+		done:   ch,
 	}
+	go j.Run(subCtx, delay)
+	return &j
 }
 
-func (j *Job) Run(waitTime time.Duration) {
-	j.setScheduled(waitTime)
+func (j *Job) Run(ctx context.Context, waitTime time.Duration) {
+	j.schedule(waitTime)
 	select {
-	case <-j.subCtx.Done():
-		j.setCanceled()
+	case <-ctx.Done():
+		j.markCanceled()
 	case <-time.After(waitTime):
-		j.setCompleted(j.runner.Run(j.subCtx))
+		err := j.runner.Run(ctx)
+		j.markCompleted(err)
 	}
 	j.Cancel()
-	if j.notify != nil {
-		j.notify <- struct{}{}
+	if j.done != nil {
+		j.done <- struct{}{}
 	}
 }
 
 func (j *Job) Cancel() {
-	j.cancelFunc()
+	if j.cancel != nil {
+		j.cancel()
+	}
 }
 
 func (j *Job) Result() (bool, error) {
@@ -71,21 +70,21 @@ func (j *Job) Result() (bool, error) {
 	return state == StateCompleted || state == StateCanceled, err
 }
 
-func (j *Job) setScheduled(waitTime time.Duration) {
+func (j *Job) schedule(waitTime time.Duration) {
 	j.lock.Lock()
 	defer j.lock.Unlock()
 	j.state = StateScheduled
 	j.when = time.Now().Add(waitTime)
 }
 
-func (j *Job) setCompleted(err error) {
+func (j *Job) markCompleted(err error) {
 	j.lock.Lock()
 	defer j.lock.Unlock()
 	j.state = StateCompleted
 	j.err = err
 }
 
-func (j *Job) setCanceled() {
+func (j *Job) markCanceled() {
 	j.lock.Lock()
 	defer j.lock.Unlock()
 	j.state = StateCanceled
