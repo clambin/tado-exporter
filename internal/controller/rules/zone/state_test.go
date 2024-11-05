@@ -138,12 +138,12 @@ func (f fakeClient) DeleteZoneOverlayWithResponse(_ context.Context, homeId tado
 	if homeId != 1 || zoneId != 10 || f.expect != "delete" {
 		return nil, errors.New("invalid request")
 	}
-	return &tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK, Status: "200 OK"}}, nil
+	return &tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent, Status: http.StatusText(http.StatusNoContent)}}, nil
 }
 
 func (f fakeClient) SetZoneOverlayWithResponse(_ context.Context, homeId tado.HomeId, zoneId tado.ZoneId, _ tado.SetZoneOverlayJSONRequestBody, _ ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
 	if homeId != 1 || zoneId != 10 || f.expect != "set" {
 		return nil, errors.New("invalid request")
 	}
-	return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK, Status: "200 OK"}}, nil
+	return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK, Status: http.StatusText(http.StatusOK)}}, nil
 }
