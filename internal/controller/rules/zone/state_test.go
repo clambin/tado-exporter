@@ -1,13 +1,12 @@
 package zone
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
-	"github.com/clambin/tado-exporter/internal/controller/testutil"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"testing"
 )
 
@@ -26,8 +25,7 @@ func TestState(t *testing.T) {
 				mode:     action.ZoneInAutoMode,
 			},
 			wantString: `moving to auto mode`,
-			wantLog: `level=INFO msg=state state.type=zone state.name=room state.mode=auto
-`,
+			wantLog:    "[type=zone name=room mode=auto]",
 		},
 		{
 			name: "overlay mode",
@@ -38,8 +36,7 @@ func TestState(t *testing.T) {
 				zoneTemperature: 18,
 			},
 			wantString: `heating to 18.0º`,
-			wantLog: `level=INFO msg=state state.type=zone state.name=room state.mode=overlay state.temperature=18
-`,
+			wantLog:    "[type=zone name=room mode=overlay temperature=18]",
 		},
 		{
 			name: "off",
@@ -50,21 +47,14 @@ func TestState(t *testing.T) {
 				zoneTemperature: 5,
 			},
 			wantString: `switching off heating`,
-			wantLog: `level=INFO msg=state state.type=zone state.name=room state.mode=overlay state.temperature=5
-`,
+			wantLog:    "[type=zone name=room mode=overlay temperature=5]",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var logOutput bytes.Buffer
-			logger := testutil.NewBufferLogger(&logOutput)
-			logger.Info("state", "state", tt.state)
-
 			assert.Equal(t, tt.wantString, tt.state.String())
-			assert.Equal(t, tt.wantLog, logOutput.String())
+			assert.Equal(t, tt.wantLog, tt.state.LogValue().String())
 		})
 	}
 }
@@ -148,12 +138,12 @@ func (f fakeClient) DeleteZoneOverlayWithResponse(_ context.Context, homeId tado
 	if homeId != 1 || zoneId != 10 || f.expect != "delete" {
 		return nil, errors.New("invalid request")
 	}
-	return nil, nil
+	return &tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK, Status: "200 OK"}}, nil
 }
 
 func (f fakeClient) SetZoneOverlayWithResponse(_ context.Context, homeId tado.HomeId, zoneId tado.ZoneId, _ tado.SetZoneOverlayJSONRequestBody, _ ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
 	if homeId != 1 || zoneId != 10 || f.expect != "set" {
 		return nil, errors.New("invalid request")
 	}
-	return nil, nil
+	return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK, Status: "200 OK"}}, nil
 }

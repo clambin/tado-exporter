@@ -2,11 +2,13 @@ package zone
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/pkg/tadotools"
 	"github.com/clambin/tado/v2"
 	"log/slog"
+	"net/http"
 	"strconv"
 )
 
@@ -61,7 +63,10 @@ func (s State) Do(ctx context.Context, setter action.TadoClient) error {
 	case action.ZoneInOverlayMode:
 		return tadotools.SetOverlay(ctx, setter, s.homeId, s.zoneID, s.zoneTemperature, 0)
 	case action.ZoneInAutoMode:
-		_, err := setter.DeleteZoneOverlayWithResponse(ctx, s.homeId, s.zoneID)
+		resp, err := setter.DeleteZoneOverlayWithResponse(ctx, s.homeId, s.zoneID)
+		if err == nil && resp.StatusCode() != http.StatusNoContent {
+			err = errors.New(resp.Status())
+		}
 		return err
 	default:
 		return fmt.Errorf("invalid mode: %d", s.mode)

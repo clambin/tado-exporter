@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"log/slog"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -138,7 +139,7 @@ func TestExecutor_SetRoom(t *testing.T) {
 				if tt.del {
 					api.EXPECT().
 						DeleteZoneOverlayWithResponse(ctx, tado.HomeId(1), 10).
-						Return(nil, nil).
+						Return(&tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK, Status: http.StatusText(http.StatusOK)}}, nil).
 						Once()
 				} else {
 					api.EXPECT().
@@ -156,7 +157,7 @@ func TestExecutor_SetRoom(t *testing.T) {
 									return nil, errors.New("invalid termination")
 								}
 							}
-							return nil, nil
+							return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK, Status: http.StatusText(http.StatusOK)}}, nil
 						}).
 						Once()
 				}

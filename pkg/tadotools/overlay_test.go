@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -13,25 +14,40 @@ func TestSetOverlay(t *testing.T) {
 		name        string
 		temperature float32
 		duration    time.Duration
+		statusCode  int
+		wantErr     assert.ErrorAssertionFunc
 	}{
 		{
 			name:        "manual overlay",
 			temperature: 19.5,
 			duration:    0,
+			wantErr:     assert.NoError,
 		},
 		{
 			name:        "timer overlay",
 			temperature: 19.5,
 			duration:    time.Hour,
+			wantErr:     assert.NoError,
+		},
+		{
+			name:        "failure",
+			temperature: 19.5,
+			duration:    time.Hour,
+			statusCode:  http.StatusBadRequest,
+			wantErr:     assert.Error,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var c fakeClient
 			ctx := context.Background()
+			c := fakeClient{statusCode: tt.statusCode}
 			err := SetOverlay(ctx, &c, 1, 10, tt.temperature, tt.duration)
-			assert.NoError(t, err)
+			tt.wantErr(t, err)
+
+			if err != nil {
+				return
+			}
 
 			assert.Equal(t, tado.PowerON, *c.body.Setting.Power)
 			assert.Equal(t, tado.HEATING, *c.body.Setting.Type)
@@ -49,10 +65,16 @@ func TestSetOverlay(t *testing.T) {
 var _ TadoClient = &fakeClient{}
 
 type fakeClient struct {
-	body tado.SetZoneOverlayJSONRequestBody
+	body       tado.SetZoneOverlayJSONRequestBody
+	statusCode int
+	status     string
 }
 
 func (f *fakeClient) SetZoneOverlayWithResponse(_ context.Context, _ tado.HomeId, _ tado.ZoneId, body tado.SetZoneOverlayJSONRequestBody, _ ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
 	f.body = body
-	return nil, nil
+	if f.statusCode == 0 {
+		f.statusCode = http.StatusOK
+		f.status = "200 OK"
+	}
+	return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: f.statusCode, Status: f.status}}, nil
 }

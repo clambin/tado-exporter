@@ -2,8 +2,10 @@ package tadotools
 
 import (
 	"context"
+	"fmt"
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado/v2"
+	"net/http"
 	"time"
 )
 
@@ -27,6 +29,9 @@ func SetOverlay(ctx context.Context, c TadoClient, homeId tado.HomeId, zoneId ta
 		req.Termination.Type = oapi.VarP(tado.ZoneOverlayTerminationTypeTIMER)
 		req.Termination.DurationInSeconds = oapi.VarP(int(duration.Seconds()))
 	}
-	_, err := c.SetZoneOverlayWithResponse(ctx, homeId, zoneId, req)
+	resp, err := c.SetZoneOverlayWithResponse(ctx, homeId, zoneId, req)
+	if err == nil && resp.StatusCode() != http.StatusOK {
+		err = fmt.Errorf("SetZoneOverlayWithResponse: %s", resp.Status())
+	}
 	return err
 }

@@ -35,6 +35,7 @@ func (r NightTimeRule) Evaluate(update poller.Update) (action.Action, error) {
 		Label:  r.zoneName,
 		Reason: "no manual temp setting detected",
 		State: &State{
+			homeId:   *update.HomeBase.Id,
 			zoneID:   r.zoneID,
 			zoneName: r.zoneName,
 			mode:     action.NoAction,
