@@ -1,6 +1,8 @@
 package zone
 
 import (
+	"context"
+	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
@@ -108,6 +110,15 @@ func TestHomeAwayRule_Evaluate(t *testing.T) {
 			assert.Equal(t, tt.want.action, e.String())
 			assert.Equal(t, tt.want.delay, e.Delay)
 			assert.Equal(t, tt.want.reason, e.Reason)
+
+			switch e.State.Mode() {
+			case action.ZoneInAutoMode:
+				assert.NoError(t, e.State.Do(context.Background(), fakeClient{expect: "delete"}))
+			case action.NoAction:
+			default:
+				t.Errorf("unknown state: %s", e.State.Mode().String())
+			}
+
 		})
 	}
 }
