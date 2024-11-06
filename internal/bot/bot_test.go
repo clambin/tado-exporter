@@ -19,9 +19,12 @@ import (
 )
 
 func TestBot_Run(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	api := mocks.NewTadoClient(t)
 	s := mocks.NewSlackBot(t)
 	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
+	s.EXPECT().Run(ctx).Return(nil)
 
 	ch := make(chan poller.Update)
 	p := mockPoller.NewPoller(t)
@@ -30,7 +33,6 @@ func TestBot_Run(t *testing.T) {
 
 	b := New(api, s, p, nil, slog.Default())
 
-	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() { errCh <- b.Run(ctx) }()
 
@@ -50,7 +52,6 @@ func TestBot_ReportRules(t *testing.T) {
 	api := mocks.NewTadoClient(t)
 	s := mocks.NewSlackBot(t)
 	s.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
-
 	controller := mocks.NewController(t)
 	controller.EXPECT().ReportTasks().Return(nil).Once()
 

@@ -50,13 +50,22 @@ func monitor(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("tado: %w", err)
 	}
 
+	var slack *slackbot.SlackBot
+	if token := viper.GetString("slack.token"); token != "" {
+		slack = slackbot.New(
+			token,
+			slackbot.WithName("tadoBot "+cmd.Root().Version),
+			slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
+		)
+	}
+
 	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	l.Info("tado monitor starting", "version", cmd.Root().Version)
 	defer l.Info("tado monitor stopped")
 
-	return run(ctx, l, viper.GetViper(), prometheus.DefaultRegisterer, api, cmd.Root().Version)
+	return run(ctx, l, viper.GetViper(), prometheus.DefaultRegisterer, api, slack)
 
 }
 
@@ -80,7 +89,7 @@ type TadoClient interface {
 	bot.TadoClient
 }
 
-func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheus.Registerer, api TadoClient, version string) error {
+func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheus.Registerer, api TadoClient, slack bot.SlackBot) error {
 	var g errgroup.Group
 
 	// poller
@@ -113,25 +122,17 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 	}
 
 	// Controller
+	var c *controller.Controller
 	if len(rules.Zones) > 0 {
-		// Slackbot
-		var s *slackbot.SlackBot
-		if token := v.GetString("controller.tadoBot.token"); token != "" {
-			s = slackbot.New(
-				token,
-				slackbot.WithName("tadoBot "+version),
-				slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
-			)
-			g.Go(func() error { return s.Run(ctx) })
-		}
-
-		c := controller.New(api, rules, s, p, l.With("component", "controller"))
+		c = controller.New(api, rules, slack, p, l.With("component", "controller"))
 		g.Go(func() error { return c.Run(ctx) })
+	}
 
-		if s != nil && v.GetBool("controller.tadobot.enabled") {
-			b := bot.New(api, s, p, c, l.With(slog.String("component", "tadobot")))
-			g.Go(func() error { return b.Run(ctx) })
-		}
+	// TadoBot
+	var b *bot.Bot
+	if slack != nil {
+		b = bot.New(api, slack, p, c, l.With(slog.String("component", "tadobot")))
+		g.Go(func() error { return b.Run(ctx) })
 	}
 
 	// now that all dependencies have started, start the poller

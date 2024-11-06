@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/go-common/slackbot"
+	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -37,18 +38,19 @@ type TadoClient interface {
 type SlackBot interface {
 	Add(commands slackbot.Commands)
 	Run(ctx context.Context) error
+	notifier.SlackSender // TODO: this is added just so we can use the Slackbot interface to build the Controller in internal/monitor/monitor.go. We don't actually need it in this package.
 }
 
 type Controller interface {
 	ReportTasks() []string
 }
 
-func New(tado TadoClient, s SlackBot, p poller.Poller, controller Controller, logger *slog.Logger) *Bot {
+func New(tado TadoClient, s SlackBot, p poller.Poller, c Controller, logger *slog.Logger) *Bot {
 	b := Bot{
 		Tado:       tado,
 		slack:      s,
 		poller:     p,
-		controller: controller,
+		controller: c,
 		logger:     logger,
 	}
 	s.Add(slackbot.Commands{
@@ -67,6 +69,11 @@ func New(tado TadoClient, s SlackBot, p poller.Poller, controller Controller, lo
 
 // Run the controller
 func (b *Bot) Run(ctx context.Context) error {
+	b.logger.Debug("slackbot started")
+	defer b.logger.Debug("slackbot stopped")
+	errCh := make(chan error)
+	go func() { errCh <- b.slack.Run(ctx) }()
+
 	b.logger.Debug("started")
 	defer b.logger.Debug("stopped")
 
@@ -74,6 +81,10 @@ func (b *Bot) Run(ctx context.Context) error {
 	defer b.poller.Unsubscribe(ch)
 	for {
 		select {
+		case err := <-errCh:
+			if err != nil {
+				return fmt.Errorf("slackbot failed: %w", err)
+			}
 		case <-ctx.Done():
 			return nil
 		case update := <-ch:
@@ -96,6 +107,16 @@ func (b *Bot) getUpdate() (poller.Update, bool) {
 }
 
 func (b *Bot) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	if b.controller == nil {
+		return []slack.Attachment{{
+			Color: "bad",
+			Text:  "controller isn't running",
+		}}
+	}
+
 	text := b.controller.ReportTasks()
 
 	var slackText, slackTitle string
