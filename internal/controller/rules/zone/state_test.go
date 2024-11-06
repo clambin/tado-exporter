@@ -3,6 +3,7 @@ package zone
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
@@ -10,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestState(t *testing.T) {
+func TestState_String_LogValue(t *testing.T) {
 	tests := []struct {
 		name       string
 		state      State
@@ -94,17 +95,6 @@ func TestState_Do(t *testing.T) {
 			wantErr: assert.Error,
 		},
 		{
-			name: "set overlay",
-			state: State{
-				homeId:          1,
-				zoneID:          10,
-				mode:            action.ZoneInOverlayMode,
-				zoneTemperature: 15,
-			},
-			client:  fakeClient{expect: "set"},
-			wantErr: assert.NoError,
-		},
-		{
 			name: "delete overlay",
 			state: State{
 				homeId: 1,
@@ -112,6 +102,28 @@ func TestState_Do(t *testing.T) {
 				mode:   action.ZoneInAutoMode,
 			},
 			client:  fakeClient{expect: "delete"},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "set overlay (heating)",
+			state: State{
+				homeId:          1,
+				zoneID:          10,
+				mode:            action.ZoneInOverlayMode,
+				zoneTemperature: 15,
+			},
+			client:  fakeClient{expect: "set (heating)"},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "set overlay (off)",
+			state: State{
+				homeId:          1,
+				zoneID:          10,
+				mode:            action.ZoneInOverlayMode,
+				zoneTemperature: 0,
+			},
+			client:  fakeClient{expect: "set (off)"},
 			wantErr: assert.NoError,
 		},
 	}
@@ -141,8 +153,21 @@ func (f fakeClient) DeleteZoneOverlayWithResponse(_ context.Context, homeId tado
 	return &tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent, Status: http.StatusText(http.StatusNoContent)}}, nil
 }
 
-func (f fakeClient) SetZoneOverlayWithResponse(_ context.Context, homeId tado.HomeId, zoneId tado.ZoneId, _ tado.SetZoneOverlayJSONRequestBody, _ ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
-	if homeId != 1 || zoneId != 10 || f.expect != "set" {
+func (f fakeClient) SetZoneOverlayWithResponse(_ context.Context, homeId tado.HomeId, zoneId tado.ZoneId, req tado.SetZoneOverlayJSONRequestBody, _ ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
+	switch f.expect {
+	case "delete":
+	case "set (heating)":
+		if *req.Setting.Power != tado.PowerON || *req.Setting.Temperature.Celsius < 5 {
+			return nil, errors.New("invalid request")
+		}
+	case "set (off)":
+		if *req.Setting.Power != tado.PowerOFF || req.Setting.Temperature != nil {
+			return nil, errors.New("invalid request")
+		}
+	default:
+		return nil, fmt.Errorf("invalid mode: %s", f.expect)
+	}
+	if homeId != 1 || zoneId != 10 {
 		return nil, errors.New("invalid request")
 	}
 	return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK, Status: http.StatusText(http.StatusOK)}}, nil

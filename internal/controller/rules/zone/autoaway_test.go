@@ -35,7 +35,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				Zones: poller.Zones{
 					{
 						Zone:      tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
-						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
+						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
 					},
 				},
 				MobileDevices: []tado.MobileDevice{
@@ -57,7 +57,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				Zones: poller.Zones{
 					{
 						Zone:      tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
-						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
+						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
 					},
 				},
 				MobileDevices: []tado.MobileDevice{
@@ -79,7 +79,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				Zones: poller.Zones{
 					{
 						Zone:      tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
-						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
+						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
 					},
 				},
 				MobileDevices: []tado.MobileDevice{
@@ -103,7 +103,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{},
+							Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerOFF)},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 						},
 					},
@@ -128,7 +128,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{},
+							Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerOFF)},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 						},
 					},
@@ -152,7 +152,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 				Zones: poller.Zones{
 					{
 						Zone:      tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
-						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
+						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
 					},
 				},
 				MobileDevices: []tado.MobileDevice{
@@ -205,7 +205,7 @@ func TestAutoAwayRule_Evaluate(t *testing.T) {
 			case action.ZoneInAutoMode:
 				assert.NoError(t, e.State.Do(context.Background(), fakeClient{expect: "delete"}))
 			case action.ZoneInOverlayMode:
-				assert.NoError(t, e.State.Do(context.Background(), fakeClient{expect: "set"}))
+				assert.NoError(t, e.State.Do(context.Background(), fakeClient{expect: "set (off)"}))
 			case action.NoAction:
 			default:
 				t.Errorf("unknown state: %s", e.State.Mode().String())

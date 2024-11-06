@@ -36,7 +36,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 				Zones: poller.Zones{
 					{
 						Zone:      tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
-						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
+						ZoneState: tado.ZoneState{Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}}},
 					},
 				},
 			},
@@ -51,7 +51,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}},
+							Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationTimer},
 						},
 					},
@@ -69,7 +69,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{},
+							Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerOFF)},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 						},
 					},
@@ -87,7 +87,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](25.0)}},
+							Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](25.0)}},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 						},
 					},
@@ -105,7 +105,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](25.0)}},
+							Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](25.0)}},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 						},
 					},
@@ -123,7 +123,7 @@ func TestNightTimeRule_Evaluate(t *testing.T) {
 					{
 						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 						ZoneState: tado.ZoneState{
-							Setting: &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](25.0)}},
+							Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](25.0)}},
 							Overlay: &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 						},
 					},

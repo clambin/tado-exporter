@@ -294,7 +294,7 @@ func TestBot_ReportRooms(t *testing.T) {
 			{
 				Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
 				ZoneState: tado.ZoneState{
-					Setting:          &tado.ZoneSetting{Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](18.0)}},
+					Setting:          &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](18.0)}},
 					Overlay:          &tado.ZoneOverlay{Termination: &oapi.TerminationManual},
 					SensorDataPoints: &oapi.SensorDataPoint,
 				},
@@ -308,6 +308,7 @@ func TestBot_ReportRooms(t *testing.T) {
 	assert.Equal(t, "rooms:", attachments[0].Title)
 	assert.Equal(t, "room: 21.0ºC (target: 18.0, MANUAL)", attachments[0].Text)
 
+	b.update.Zones[0].Setting.Power = oapi.VarP(tado.PowerOFF)
 	b.update.Zones[0].Setting.Temperature = nil
 	attachments = b.ReportRooms(context.Background())
 	require.Len(t, attachments, 1)

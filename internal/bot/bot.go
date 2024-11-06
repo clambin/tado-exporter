@@ -179,7 +179,7 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 
 func zoneState(zone poller.Zone) string {
 	targetTemperature := zone.GetTargetTemperature()
-	if targetTemperature <= 5.0 {
+	if targetTemperature < 5.0 {
 		return "off"
 	}
 

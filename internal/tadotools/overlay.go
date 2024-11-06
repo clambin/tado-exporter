@@ -17,13 +17,17 @@ func SetOverlay(ctx context.Context, c TadoClient, homeId tado.HomeId, zoneId ta
 	// possibly set power to "off" if temp <= 5?
 	req := tado.SetZoneOverlayJSONRequestBody{
 		Setting: &tado.ZoneSetting{
-			Power:       oapi.VarP(tado.PowerON),
-			Type:        oapi.VarP(tado.HEATING),
-			Temperature: &tado.Temperature{Celsius: oapi.VarP(temperature)},
+			Type: oapi.VarP(tado.HEATING),
 		},
 		Termination: &tado.ZoneOverlayTermination{
 			Type: oapi.VarP(tado.ZoneOverlayTerminationTypeMANUAL),
 		},
+	}
+	if temperature < 5 {
+		req.Setting.Power = oapi.VarP(tado.PowerOFF)
+	} else {
+		req.Setting.Power = oapi.VarP(tado.PowerON)
+		req.Setting.Temperature = &tado.Temperature{Celsius: oapi.VarP(temperature)}
 	}
 	if duration > 0 {
 		req.Termination.Type = oapi.VarP(tado.ZoneOverlayTerminationTypeTIMER)

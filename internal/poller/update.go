@@ -45,7 +45,7 @@ func (z Zone) GetZoneOverlayTerminationType() tado.ZoneOverlayTerminationType {
 }
 
 func (z Zone) GetTargetTemperature() float32 {
-	if z.ZoneState.Setting.Temperature == nil {
+	if *z.ZoneState.Setting.Power != tado.PowerON {
 		return 0
 	}
 	return *z.ZoneState.Setting.Temperature.Celsius
