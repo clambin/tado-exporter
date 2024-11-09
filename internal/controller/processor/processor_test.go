@@ -6,13 +6,13 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/processor"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
-	"github.com/clambin/tado-exporter/internal/controller/rules/action/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/testutil"
 	"github.com/clambin/tado-exporter/internal/poller"
 	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"io"
 	"log/slog"
 	"sync"
 	"testing"
@@ -20,8 +20,6 @@ import (
 )
 
 func TestProcessor(t *testing.T) {
-	api := mocks.NewTadoSetter(t)
-
 	p := mockPoller.NewPoller(t)
 	updateCh := make(chan poller.Update)
 	p.EXPECT().Subscribe().Return(updateCh)
@@ -34,7 +32,7 @@ func TestProcessor(t *testing.T) {
 		return f, nil
 	})
 
-	proc := processor.New(api, p, s, l, slog.Default())
+	proc := processor.New(nil, p, s, l, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -103,6 +101,45 @@ func TestProcessor(t *testing.T) {
 	cancel()
 	assert.NoError(t, <-errCh)
 
+}
+
+func TestScheduler_processResult(t *testing.T) {
+	p := mockPoller.NewPoller(t)
+	updateCh := make(chan poller.Update)
+	p.EXPECT().Subscribe().Return(updateCh)
+	p.EXPECT().Unsubscribe(updateCh).Return()
+	f := &fakeEvaluator{
+		next: action.Action{
+			Delay:  100 * time.Millisecond,
+			Reason: "test",
+			Label:  "test",
+			State:  testutil.FakeState{ModeValue: action.ZoneInOverlayMode},
+		},
+	}
+	l := processor.RulesLoader(func(update poller.Update) (rules.Evaluator, error) {
+		return f, nil
+	})
+
+	proc := processor.New(nil, p, nil, l, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error)
+	go func() {
+		errCh <- proc.Run(ctx)
+	}()
+
+	updateCh <- poller.Update{}
+	assert.Eventually(t, func() bool {
+		s, ok := proc.ReportTask()
+		return ok && s != ""
+	}, time.Second, time.Millisecond)
+
+	assert.Eventually(t, func() bool {
+		_, ok := proc.ReportTask()
+		return !ok
+	}, time.Second, 100*time.Millisecond)
+
+	cancel()
+	assert.NoError(t, <-errCh)
 }
 
 var _ rules.Evaluator = &fakeEvaluator{}

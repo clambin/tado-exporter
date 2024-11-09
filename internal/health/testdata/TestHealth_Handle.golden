@@ -1,99 +1,252 @@
 {
-  "WeatherInfo": {
-    "outsideTemperature": null,
-    "solarIntensity": {
-      "percentage": 0
-    },
-    "weatherState": {
-      "value": ""
-    }
-  },
-  "Zones": {
-    "1": {
-      "id": 1,
-      "name": "foo",
-      "type": "",
-      "dateCreated": "0001-01-01T00:00:00Z",
-      "deviceTypes": null,
-      "devices": null,
-      "reportAvailable": false,
-      "showScheduleSetup": false,
-      "supportsDazzle": false,
-      "dazzleEnabled": false,
-      "dazzleMode": {
-        "supported": false,
-        "enabled": false
-      },
-      "openWindowDetection": {
-        "supported": false,
-        "enabled": false,
-        "timeoutInSeconds": 0
-      }
-    }
-  },
-  "ZoneInfo": {
-    "1": {
-      "tadoMode": "",
-      "geolocationOverride": false,
-      "geolocationOverrideDisableTime": null,
-      "preparation": null,
-      "setting": {
-        "type": "",
-        "power": "",
-        "temperature": null
-      },
-      "overlayType": "",
-      "overlay": {
-        "type": "",
-        "setting": {
-          "type": "",
-          "power": "",
-          "temperature": null
+  "Homes": [
+    {
+      "presence": "HOME",
+      "presenceLocked": false,
+      "outsideTemperature": {
+        "celsius": 13.15,
+        "fahrenheit": 55.67,
+        "precision": {
+          "celsius": 0.01,
+          "fahrenheit": 0.01
         },
-        "termination": {
-          "type": "",
-          "typeSkillBasedApp": "",
-          "durationInSeconds": 0,
-          "expiry": "0001-01-01T00:00:00Z",
-          "remainingTimeInSeconds": 0,
-          "projectedExpiry": "0001-01-01T00:00:00Z"
+        "timestamp": "2024-10-29T15:50:35.812Z",
+        "type": "TEMPERATURE"
+      },
+      "solarIntensity": {
+        "percentage": 0,
+        "timestamp": "2024-10-29T15:50:35.812Z",
+        "type": "PERCENTAGE"
+      },
+      "weatherState": {
+        "timestamp": "2024-10-29T15:50:35.812Z",
+        "type": "WEATHER_STATE",
+        "value": "DRIZZLE"
+      },
+      "id": 631798,
+      "name": "My Home",
+      "Zones": [
+        {
+          "dateCreated": "2021-01-05T13:04:44.406Z",
+          "dazzleEnabled": true,
+          "dazzleMode": {
+            "enabled": true,
+            "supported": true
+          },
+          "deviceTypes": [
+            "RU02",
+            "VA02",
+            "VA02",
+            "VA02"
+          ],
+          "devices": [
+            {
+              "batteryState": "NORMAL",
+              "characteristics": {
+                "capabilities": [
+                  "INSIDE_TEMPERATURE_MEASUREMENT",
+                  "IDENTIFY"
+                ]
+              },
+              "connectionState": {
+                "timestamp": "2024-10-29T15:48:42.085Z",
+                "value": true
+              },
+              "currentFwVersion": "215.2",
+              "deviceType": "RU02",
+              "duties": [
+                "ZONE_UI",
+                "CIRCUIT_DRIVER",
+                "ZONE_LEADER"
+              ],
+              "serialNo": "RU0123456789",
+              "shortSerialNo": "RU0123456789"
+            },
+            {
+              "batteryState": "NORMAL",
+              "characteristics": {
+                "capabilities": [
+                  "INSIDE_TEMPERATURE_MEASUREMENT",
+                  "IDENTIFY"
+                ]
+              },
+              "childLockEnabled": false,
+              "connectionState": {
+                "timestamp": "2024-10-29T15:45:27.602Z",
+                "value": true
+              },
+              "currentFwVersion": "215.1",
+              "deviceType": "VA02",
+              "duties": [
+                "ZONE_UI",
+                "ZONE_DRIVER"
+              ],
+              "mountingState": {
+                "timestamp": "2024-06-12T15:34:20.01Z",
+                "value": "CALIBRATED"
+              },
+              "mountingStateWithError": "CALIBRATED",
+              "serialNo": "VA0123456789",
+              "shortSerialNo": "VA0123456789"
+            },
+            {
+              "batteryState": "NORMAL",
+              "characteristics": {
+                "capabilities": [
+                  "INSIDE_TEMPERATURE_MEASUREMENT",
+                  "IDENTIFY"
+                ]
+              },
+              "childLockEnabled": false,
+              "connectionState": {
+                "timestamp": "2024-10-29T15:49:11.248Z",
+                "value": true
+              },
+              "currentFwVersion": "215.1",
+              "deviceType": "VA02",
+              "duties": [
+                "ZONE_UI",
+                "ZONE_DRIVER"
+              ],
+              "mountingState": {
+                "timestamp": "2024-06-12T22:53:24.568Z",
+                "value": "CALIBRATED"
+              },
+              "mountingStateWithError": "CALIBRATED",
+              "serialNo": "VA0123456789",
+              "shortSerialNo": "VA0123456789"
+            },
+            {
+              "batteryState": "NORMAL",
+              "characteristics": {
+                "capabilities": [
+                  "INSIDE_TEMPERATURE_MEASUREMENT",
+                  "IDENTIFY"
+                ]
+              },
+              "childLockEnabled": false,
+              "connectionState": {
+                "timestamp": "2024-10-29T15:44:27.864Z",
+                "value": true
+              },
+              "currentFwVersion": "215.1",
+              "deviceType": "VA02",
+              "duties": [
+                "ZONE_UI",
+                "ZONE_DRIVER"
+              ],
+              "mountingState": {
+                "timestamp": "2024-09-13T18:39:50.775Z",
+                "value": "CALIBRATED"
+              },
+              "mountingStateWithError": "CALIBRATED",
+              "serialNo": "VA0123456789",
+              "shortSerialNo": "VA0123456789"
+            }
+          ],
+          "id": 1,
+          "name": "Living room",
+          "openWindowDetection": {
+            "enabled": true,
+            "supported": true,
+            "timeoutInSeconds": 1800
+          },
+          "reportAvailable": false,
+          "showScheduleSetup": false,
+          "supportsDazzle": true,
+          "type": "HEATING",
+          "activityDataPoints": {
+            "heatingPower": {
+              "percentage": 0,
+              "timestamp": "2024-10-29T15:41:54.904Z",
+              "type": "PERCENTAGE"
+            }
+          },
+          "geolocationOverride": false,
+          "geolocationOverrideDisableTime": null,
+          "link": {
+            "state": "ONLINE"
+          },
+          "nextScheduleChange": {
+            "setting": {
+              "power": "ON",
+              "temperature": {
+                "celsius": 21,
+                "fahrenheit": 69.8
+              },
+              "type": "HEATING"
+            },
+            "start": "2024-10-29T16:00:00Z"
+          },
+          "nextTimeBlock": {
+            "start": "2024-10-29T16:00:00Z"
+          },
+          "openWindow": null,
+          "preparation": null,
+          "runningOfflineSchedule": false,
+          "sensorDataPoints": {
+            "humidity": {
+              "percentage": 67.6,
+              "timestamp": "2024-10-29T15:48:42.085Z",
+              "type": "PERCENTAGE"
+            },
+            "insideTemperature": {
+              "celsius": 20.36,
+              "fahrenheit": 68.65,
+              "precision": {
+                "celsius": 0.1,
+                "fahrenheit": 0.1
+              },
+              "timestamp": "2024-10-29T15:48:42.085Z",
+              "type": "TEMPERATURE"
+            }
+          },
+          "setting": {
+            "power": "ON",
+            "temperature": {
+              "celsius": 18,
+              "fahrenheit": 64.4
+            },
+            "type": "HEATING"
+          },
+          "tadoMode": "HOME"
         }
-      },
-      "openwindow": {
-        "detectedTime": "0001-01-01T00:00:00Z",
-        "durationInSeconds": 0,
-        "expiry": "0001-01-01T00:00:00Z",
-        "remainingTimeInSeconds": 0
-      },
-      "nextScheduleChange": {
-        "start": "0001-01-01T00:00:00Z",
-        "setting": {
-          "type": "",
-          "power": "",
-          "temperature": null
+      ],
+      "MobileDevices": [
+        {
+          "deviceMetadata": {
+            "locale": "en",
+            "model": "iPhone13,2",
+            "osVersion": "16.0.3",
+            "platform": "iOS"
+          },
+          "id": 5907047,
+          "location": {
+            "atHome": true,
+            "bearingFromHome": {
+              "degrees": 0,
+              "radians": 0
+            },
+            "relativeDistanceFromHomeFence": 0,
+            "stale": false
+          },
+          "name": "owner",
+          "settings": {
+            "geoTrackingEnabled": true,
+            "onDemandLogRetrievalEnabled": false,
+            "pushNotifications": {
+              "awayModeReminder": true,
+              "energyIqReminder": false,
+              "energySavingsReportReminder": true,
+              "homeModeReminder": true,
+              "incidentDetection": true,
+              "lowBatteryReminder": true,
+              "openWindowReminder": true
+            },
+            "specialOffersEnabled": true
+          }
         }
-      },
-      "nextTimeBlock": {
-        "start": "0001-01-01T00:00:00Z"
-      },
-      "link": {
-        "state": ""
-      },
-      "activityDataPoints": {
-        "heatingPower": {
-          "percentage": 0
-        }
-      },
-      "sensorDataPoints": {
-        "insideTemperature": {
-          "celsius": 22.0
-        },
-        "humidity": {
-          "percentage": 0
-        }
-      }
+      ]
     }
-  },
-  "UserInfo": null,
-  "Home": false
+  ]
 }

@@ -1,7 +1,6 @@
 package action_test
 
 import (
-	"bytes"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/testutil"
 	"github.com/stretchr/testify/assert"
@@ -25,8 +24,7 @@ func TestAction(t *testing.T) {
 			action: action.Action{Reason: "test"},
 			want: want{
 				isAction: assert.False,
-				logValue: `level=INFO msg=action action.action=false action.reason=test
-`,
+				logValue: "[action=false reason=test]",
 				asString: "no action",
 			},
 		},
@@ -35,8 +33,7 @@ func TestAction(t *testing.T) {
 			action: action.Action{State: testutil.FakeState{ModeValue: action.HomeInAwayMode}, Reason: "test", Delay: time.Hour},
 			want: want{
 				isAction: assert.True,
-				logValue: `level=INFO msg=action action.action=true action.reason=test action.delay=1h0m0s action.state.mode=away
-`,
+				logValue: "[action=true reason=test delay=1h0m0s state=away]",
 				asString: "away",
 			},
 		},
@@ -45,8 +42,7 @@ func TestAction(t *testing.T) {
 			action: action.Action{State: testutil.FakeState{ModeValue: action.HomeInAwayMode}, Reason: "test", Delay: time.Hour, Label: "room"},
 			want: want{
 				isAction: assert.True,
-				logValue: `level=INFO msg=action action.action=true action.reason=test action.label=room action.delay=1h0m0s action.state.mode=away
-`,
+				logValue: "[action=true reason=test label=room delay=1h0m0s state=away]",
 				asString: "away",
 			},
 		},
@@ -55,8 +51,7 @@ func TestAction(t *testing.T) {
 			action: action.Action{State: testutil.FakeState{ModeValue: -1}, Reason: "test", Delay: time.Hour, Label: "room"},
 			want: want{
 				isAction: assert.True,
-				logValue: `level=INFO msg=action action.action=true action.reason=test action.label=room action.delay=1h0m0s action.state.mode=unknown
-`,
+				logValue: "[action=true reason=test label=room delay=1h0m0s state=unknown]",
 				asString: "unknown",
 			},
 		},
@@ -64,14 +59,8 @@ func TestAction(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var logOutput bytes.Buffer
-			logger := testutil.NewBufferLogger(&logOutput)
-			logger.Info("action", "action", tt.action)
-
 			tt.want.isAction(t, tt.action.IsAction())
-			assert.Equal(t, tt.want.logValue, logOutput.String())
+			assert.Equal(t, tt.want.logValue, tt.action.LogValue().String())
 			assert.Equal(t, tt.want.asString, tt.action.String())
 		})
 	}

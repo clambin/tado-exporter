@@ -2,12 +2,15 @@ package monitor
 
 import (
 	"context"
-	"github.com/clambin/tado"
+	mocks2 "github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/cmd/monitor/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
+	"github.com/clambin/tado-exporter/internal/oapi"
+	"github.com/clambin/tado/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"log/slog"
 	"net/http"
@@ -90,30 +93,26 @@ func Test_runMonitor(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	client := mocks.NewTadoClient(t)
-	client.EXPECT().GetMobileDevices(ctx).Return([]tado.MobileDevice{{
-		ID:       1,
-		Name:     "foo",
-		Settings: tado.MobileDeviceSettings{GeoTrackingEnabled: true},
-		Location: tado.MobileDeviceLocation{AtHome: true},
-	}}, nil)
-	client.EXPECT().GetWeatherInfo(ctx).Return(tado.WeatherInfo{
-		OutsideTemperature: tado.Temperature{Celsius: 25},
-		SolarIntensity:     tado.Percentage{Percentage: 80},
-		WeatherState:       tado.Value{Value: "SUNNY"},
-	}, nil)
-	client.EXPECT().GetZones(ctx).Return(tado.Zones{{ID: 1, Name: "foo"}}, nil)
-	client.EXPECT().GetZoneInfo(ctx, 1).Return(tado.ZoneInfo{
-		Setting:            tado.ZonePowerSetting{Temperature: tado.Temperature{Celsius: 22}},
-		ActivityDataPoints: tado.ZoneInfoActivityDataPoints{HeatingPower: tado.Percentage{Percentage: 25.0}},
-		SensorDataPoints: tado.ZoneInfoSensorDataPoints{
-			InsideTemperature: tado.Temperature{Celsius: 21},
-			Humidity:          tado.Percentage{Percentage: 55},
-		},
-	}, nil)
-	client.EXPECT().GetHomeState(ctx).Return(tado.HomeState{Presence: "HOME"}, nil)
+	client.EXPECT().GetMeWithResponse(ctx).
+		Return(&tado.GetMeResponse{JSON200: &tado.User{Homes: &[]tado.HomeBase{{Id: oapi.VarP[tado.HomeId](1), Name: oapi.VarP("home")}}}}, nil)
+	client.EXPECT().GetHomeStateWithResponse(ctx, tado.HomeId(1)).
+		Return(&tado.GetHomeStateResponse{JSON200: &tado.HomeState{Presence: oapi.VarP[tado.HomePresence](tado.HOME)}}, nil)
+	client.EXPECT().GetZonesWithResponse(ctx, tado.HomeId(1)).
+		Return(&tado.GetZonesResponse{JSON200: &[]tado.Zone{}}, nil)
+	client.EXPECT().GetMobileDevicesWithResponse(ctx, tado.HomeId(1)).
+		Return(&tado.GetMobileDevicesResponse{JSON200: &[]tado.MobileDevice{}}, nil)
+	client.EXPECT().GetWeatherWithResponse(ctx, tado.HomeId(1)).
+		Return(&tado.GetWeatherResponse{JSON200: &tado.Weather{
+			OutsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP[float32](18.5)},
+			SolarIntensity:     &tado.PercentageDataPoint{Percentage: oapi.VarP[float32](25.0)},
+			WeatherState:       &tado.WeatherStateDataPoint{Value: oapi.VarP(tado.RAIN)},
+		}}, nil)
+	slack := mocks2.NewSlackBot(t)
+	slack.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
+	slack.EXPECT().Run(ctx).Return(nil)
 
 	errCh := make(chan error)
-	go func() { errCh <- runMonitor(ctx, l, v, r, client, "1.0") }()
+	go func() { errCh <- run(ctx, l, v, r, client, slack) }()
 
 	assert.Eventually(t, func() bool {
 		resp, err := http.Get("http://localhost:9090/metrics")

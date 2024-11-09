@@ -1,7 +1,6 @@
 package notifier_test
 
 import (
-	"bytes"
 	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/notifier/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
@@ -10,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"io"
+	"log/slog"
 	"testing"
 	"time"
 )
@@ -68,9 +69,8 @@ func TestNotifiers_Notify(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			b := mocks.NewSlackSender(t)
-			var logOutput bytes.Buffer
 			l := notifier.Notifiers{
-				&notifier.SLogNotifier{Logger: testutil.NewBufferLogger(&logOutput)},
+				&notifier.SLogNotifier{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))},
 				&notifier.SlackNotifier{Slack: b},
 			}
 

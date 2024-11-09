@@ -2,12 +2,12 @@ package controller_test
 
 import (
 	"context"
-	"github.com/clambin/tado"
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
+	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
 	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
-	"github.com/clambin/tado/testutil"
+	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"os"
@@ -20,7 +20,7 @@ func TestController_Run(t *testing.T) {
 	zoneCfg := configuration.Configuration{
 		Home: configuration.HomeConfiguration{
 			AutoAway: configuration.AutoAwayConfiguration{
-				Users: []string{"A", "B"},
+				Users: []string{"A"},
 				Delay: time.Minute,
 			},
 		},
@@ -41,8 +41,7 @@ func TestController_Run(t *testing.T) {
 	})
 	p.EXPECT().Unsubscribe(ch)
 
-	opts := slog.HandlerOptions{Level: slog.LevelDebug}
-	l := slog.New(slog.NewTextHandler(os.Stderr, &opts))
+	l := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})).With("component", "controller")
 
 	m := controller.New(nil, zoneCfg, nil, p, l)
 
@@ -54,20 +53,32 @@ func TestController_Run(t *testing.T) {
 		return subscribers.Load() >= 2
 	}, time.Second, time.Millisecond)
 
-	ch <- poller.Update{
-		Zones:    map[int]tado.Zone{10: {ID: 10, Name: "room"}},
-		ZoneInfo: map[int]tado.ZoneInfo{10: testutil.MakeZoneInfo(testutil.ZoneInfoPermanentOverlay(), testutil.ZoneInfoTemperature(18, 22))},
-		UserInfo: map[int]tado.MobileDevice{
-			100: testutil.MakeMobileDevice(100, "A", testutil.Home(false)),
-			110: testutil.MakeMobileDevice(110, "B", testutil.Home(false)),
+	u := poller.Update{
+		HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
+		HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
+		Zones: poller.Zones{
+			{
+				Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
+				ZoneState: tado.ZoneState{
+					Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}},
+					Overlay: &tado.ZoneOverlay{
+						Termination: &oapi.TerminationManual,
+					},
+				},
+			},
 		},
-		Home: true,
+		MobileDevices: []tado.MobileDevice{
+			{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationHome},
+		},
+	}
+	for range subscribers.Load() {
+		ch <- u
 	}
 
 	assert.Eventually(t, func() bool {
 		tasks := m.ReportTasks()
 		return len(tasks) == 1
-	}, time.Second, 100*time.Millisecond)
+	}, 2*time.Second, 100*time.Millisecond)
 
 	cancel()
 	assert.NoError(t, <-errCh)

@@ -2,8 +2,10 @@ package poller
 
 import (
 	"context"
-	"github.com/clambin/tado"
+	"fmt"
 	"github.com/clambin/tado-exporter/pkg/pubsub"
+	"github.com/clambin/tado/v2"
+	"github.com/clambin/tado/v2/tools"
 	"log/slog"
 	"time"
 )
@@ -14,25 +16,28 @@ type Poller interface {
 	Refresh()
 }
 
-type TadoGetter interface {
-	GetWeatherInfo(context.Context) (tado.WeatherInfo, error)
-	GetMobileDevices(context.Context) ([]tado.MobileDevice, error)
-	GetZones(context.Context) (tado.Zones, error)
-	GetZoneInfo(context.Context, int) (tado.ZoneInfo, error)
-	GetHomeState(ctx context.Context) (homeState tado.HomeState, err error)
+type TadoClient interface {
+	GetMeWithResponse(ctx context.Context, reqEditors ...tado.RequestEditorFn) (*tado.GetMeResponse, error)
+	GetZonesWithResponse(ctx context.Context, homeId tado.HomeId, reqEditors ...tado.RequestEditorFn) (*tado.GetZonesResponse, error)
+	GetZoneStateWithResponse(ctx context.Context, homeId tado.HomeId, zoneId tado.ZoneId, reqEditors ...tado.RequestEditorFn) (*tado.GetZoneStateResponse, error)
+	GetMobileDevicesWithResponse(ctx context.Context, homeId tado.HomeId, reqEditors ...tado.RequestEditorFn) (*tado.GetMobileDevicesResponse, error)
+	GetWeatherWithResponse(ctx context.Context, homeId tado.HomeId, reqEditors ...tado.RequestEditorFn) (*tado.GetWeatherResponse, error)
+	GetHomeStateWithResponse(ctx context.Context, homeId tado.HomeId, reqEditors ...tado.RequestEditorFn) (*tado.GetHomeStateResponse, error)
+	//tado.ClientWithResponsesInterface
 }
 
 var _ Poller = &TadoPoller{}
 
 type TadoPoller struct {
-	TadoClient TadoGetter
+	TadoClient
 	*pubsub.Publisher[Update]
-	interval time.Duration
 	logger   *slog.Logger
 	refresh  chan struct{}
+	interval time.Duration
+	HomeId   tado.HomeId
 }
 
-func New(tadoClient TadoGetter, interval time.Duration, logger *slog.Logger) *TadoPoller {
+func New(tadoClient TadoClient, interval time.Duration, logger *slog.Logger) *TadoPoller {
 	return &TadoPoller{
 		TadoClient: tadoClient,
 		Publisher:  pubsub.New[Update](logger),
@@ -77,67 +82,69 @@ func (p *TadoPoller) poll(ctx context.Context) error {
 	return err
 }
 
-func (p *TadoPoller) update(ctx context.Context) (update Update, err error) {
-	update.UserInfo, err = p.getMobileDevices(ctx)
-	if err == nil {
-		update.WeatherInfo, err = p.TadoClient.GetWeatherInfo(ctx)
+func (p *TadoPoller) update(ctx context.Context) (Update, error) {
+	homes, err := tools.GetHomes(ctx, p.TadoClient)
+	if err != nil {
+		return Update{}, fmt.Errorf("GetHomes: %w", err)
 	}
-	if err == nil {
-		update.Zones, err = p.getZones(ctx)
+	if len(homes) > 1 {
+		return Update{}, fmt.Errorf("only one home supported")
 	}
-	if err == nil {
-		update.ZoneInfo, err = p.getZoneInfos(ctx, update.Zones)
+
+	update := Update{HomeBase: homes[0]}
+	homeId := *update.HomeBase.Id
+	if update.HomeState, err = p.getHomeState(ctx, homeId); err != nil {
+		return Update{}, err
 	}
-	if err == nil {
-		update.Home, err = p.getHomeState(ctx)
+	if update.Zones, err = p.getZones(ctx, homeId); err != nil {
+		return update, err
 	}
-	return update, err
+	if update.MobileDevices, err = p.getMobileDevices(ctx, homeId); err != nil {
+		return Update{}, err
+	}
+	if update.Weather, err = p.getWeather(ctx, homeId); err != nil {
+		return Update{}, err
+	}
+	return update, nil
 }
 
-func (p *TadoPoller) getMobileDevices(ctx context.Context) (map[int]tado.MobileDevice, error) {
-	var deviceMap map[int]tado.MobileDevice
-	devices, err := p.TadoClient.GetMobileDevices(ctx)
-	if err == nil {
-		deviceMap = make(map[int]tado.MobileDevice)
-		for _, device := range devices {
-			//if device.Settings.GeoTrackingEnabled {
-			deviceMap[device.ID] = device
-			//}
-		}
+func (p *TadoPoller) getZones(ctx context.Context, homeId tado.HomeId) ([]Zone, error) {
+	zones, err := p.TadoClient.GetZonesWithResponse(ctx, homeId)
+	if err != nil {
+		return nil, fmt.Errorf("GetZonesWithResponse: %w", err)
 	}
-	return deviceMap, err
-}
+	zoneUpdates := make([]Zone, 0, len(*zones.JSON200))
 
-func (p *TadoPoller) getZones(ctx context.Context) (map[int]tado.Zone, error) {
-	var zoneMap map[int]tado.Zone
-	zones, err := p.TadoClient.GetZones(ctx)
-	if err == nil {
-		zoneMap = make(map[int]tado.Zone)
-		for _, zone := range zones {
-			zoneMap[zone.ID] = zone
-		}
-	}
-	return zoneMap, err
-}
-
-func (p *TadoPoller) getZoneInfos(ctx context.Context, zones map[int]tado.Zone) (map[int]tado.ZoneInfo, error) {
-	zoneInfoMap := make(map[int]tado.ZoneInfo)
-	for zoneID := range zones {
-		zoneInfo, err := p.TadoClient.GetZoneInfo(ctx, zoneID)
+	for _, zone := range *zones.JSON200 {
+		resp, err := p.TadoClient.GetZoneStateWithResponse(ctx, homeId, *zone.Id)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("GetZoneStateWithResponse: %w", err)
 		}
-
-		zoneInfoMap[zoneID] = zoneInfo
+		zoneUpdates = append(zoneUpdates, Zone{Zone: zone, ZoneState: *resp.JSON200})
 	}
-	return zoneInfoMap, nil
+	return zoneUpdates, nil
 }
 
-func (p *TadoPoller) getHomeState(ctx context.Context) (IsHome, error) {
-	var home IsHome
-	homeState, err := p.TadoClient.GetHomeState(ctx)
-	if err == nil {
-		home = homeState.Presence == "HOME"
+func (p *TadoPoller) getMobileDevices(ctx context.Context, homeId tado.HomeId) ([]tado.MobileDevice, error) {
+	resp, err := p.TadoClient.GetMobileDevicesWithResponse(ctx, homeId)
+	if err != nil {
+		return nil, fmt.Errorf("GetMobileDevicesWithResponse: %w", err)
 	}
-	return home, err
+	return *resp.JSON200, nil
+}
+
+func (p *TadoPoller) getWeather(ctx context.Context, homeId tado.HomeId) (tado.Weather, error) {
+	resp, err := p.TadoClient.GetWeatherWithResponse(ctx, homeId)
+	if err != nil {
+		return tado.Weather{}, fmt.Errorf("GetWeatherWithResponse: %w", err)
+	}
+	return *resp.JSON200, nil
+}
+
+func (p *TadoPoller) getHomeState(ctx context.Context, homeId tado.HomeId) (tado.HomeState, error) {
+	resp, err := p.TadoClient.GetHomeStateWithResponse(ctx, homeId)
+	if err != nil {
+		return tado.HomeState{}, fmt.Errorf("GetHomeStateWithResponse: %w", err)
+	}
+	return *resp.JSON200, err
 }

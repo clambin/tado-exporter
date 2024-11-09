@@ -2,17 +2,17 @@ package controller
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/internal/controller/home"
 	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/zone"
+	"github.com/clambin/tado-exporter/internal/controller/rules/home"
+	"github.com/clambin/tado-exporter/internal/controller/rules/zone"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"golang.org/x/sync/errgroup"
 	"log/slog"
 )
 
-// Controller object for tado-controller
+// Controller for tado-controller
 type Controller struct {
 	tasks  []task
 	logger *slog.Logger
@@ -24,7 +24,7 @@ type task interface {
 }
 
 // New creates a new Controller object
-func New(api action.TadoSetter, cfg configuration.Configuration, s notifier.SlackSender, p poller.Poller, logger *slog.Logger) *Controller {
+func New(api action.TadoClient, cfg configuration.Configuration, s notifier.SlackSender, p poller.Poller, logger *slog.Logger) *Controller {
 	c := Controller{logger: logger}
 
 	if cfg.Home.AutoAway.IsActive() {

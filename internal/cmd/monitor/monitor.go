@@ -5,15 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/clambin/go-common/charmer"
+	gchttp "github.com/clambin/go-common/http"
 	"github.com/clambin/go-common/slackbot"
 	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"
-	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/health"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado-exporter/pkg/tadotools"
+	"github.com/clambin/tado-exporter/internal/tadotools"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
@@ -42,13 +42,21 @@ func monitor(cmd *cobra.Command, _ []string) error {
 	prometheus.MustRegister(tadoHTTPClientMetrics)
 
 	api, err := tadotools.GetInstrumentedTadoClient(
-		viper.GetString("tado.username"),
-		viper.GetString("tado.password"),
-		viper.GetString("tado.clientSecret"),
+		cmd.Context(),
+		viper.GetString("tado.username"), viper.GetString("tado.password"),
 		tadoHTTPClientMetrics,
 	)
 	if err != nil {
 		return fmt.Errorf("tado: %w", err)
+	}
+
+	var slack *slackbot.SlackBot
+	if token := viper.GetString("slack.token"); token != "" {
+		slack = slackbot.New(
+			token,
+			slackbot.WithName("tadoBot "+cmd.Root().Version),
+			slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
+		)
 	}
 
 	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
@@ -57,7 +65,7 @@ func monitor(cmd *cobra.Command, _ []string) error {
 	l.Info("tado monitor starting", "version", cmd.Root().Version)
 	defer l.Info("tado monitor stopped")
 
-	return runMonitor(ctx, l, viper.GetViper(), prometheus.DefaultRegisterer, api, cmd.Root().Version)
+	return run(ctx, l, viper.GetViper(), prometheus.DefaultRegisterer, api, slack)
 
 }
 
@@ -77,12 +85,11 @@ func maybeLoadRules(path string) (configuration.Configuration, error) {
 }
 
 type TadoClient interface {
-	poller.TadoGetter
-	bot.TadoSetter
-	action.TadoSetter
+	poller.TadoClient
+	bot.TadoClient
 }
 
-func runMonitor(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheus.Registerer, api TadoClient, version string) error {
+func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheus.Registerer, api TadoClient, slack bot.SlackBot) error {
 	var g errgroup.Group
 
 	// poller
@@ -95,24 +102,18 @@ func runMonitor(ctx context.Context, l *slog.Logger, v *viper.Viper, registry pr
 	g.Go(func() error { return coll.Run(ctx) })
 
 	// exporter
-	go func() {
-		if err := http.ListenAndServe(v.GetString("exporter.addr"), promhttp.Handler()); !errors.Is(err, http.ErrServerClosed) {
-			l.Error("Prometheus server error", "error", err)
-			panic(err)
-		}
-	}()
+	g.Go(func() error {
+		return gchttp.RunServer(ctx, &http.Server{Addr: v.GetString("exporter.addr"), Handler: promhttp.Handler()})
+	})
 
 	// health
 	h := health.New(p, l.With("component", "health"))
-	g.Go(func() error { return h.Run(ctx) })
-	go func() {
+	g.Go(func() error { h.Run(ctx); return nil })
+	g.Go(func() error {
 		r := http.NewServeMux()
 		r.Handle("/health", h)
-		if err := http.ListenAndServe(v.GetString("health.addr"), r); !errors.Is(err, http.ErrServerClosed) {
-			l.Error("Health server error", "error", err)
-			panic(err)
-		}
-	}()
+		return gchttp.RunServer(ctx, &http.Server{Addr: v.GetString("health.addr"), Handler: r})
+	})
 
 	// Do we have zone rules?
 	rules, err := maybeLoadRules(filepath.Join(filepath.Dir(v.ConfigFileUsed()), "rules.yaml"))
@@ -121,25 +122,17 @@ func runMonitor(ctx context.Context, l *slog.Logger, v *viper.Viper, registry pr
 	}
 
 	// Controller
+	var c *controller.Controller
 	if len(rules.Zones) > 0 {
-		// Slackbot
-		var s *slackbot.SlackBot
-		if token := v.GetString("controller.tadoBot.token"); token != "" {
-			s = slackbot.New(
-				token,
-				slackbot.WithName("tadoBot "+version),
-				slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
-			)
-			g.Go(func() error { return s.Run(ctx) })
-		}
-
-		c := controller.New(api, rules, s, p, l.With("component", "controller"))
+		c = controller.New(api, rules, slack, p, l.With("component", "controller"))
 		g.Go(func() error { return c.Run(ctx) })
+	}
 
-		if s != nil && v.GetBool("controller.tadobot.enabled") {
-			b := bot.New(api, s, p, c, l.With(slog.String("component", "tadobot")))
-			g.Go(func() error { return b.Run(ctx) })
-		}
+	// TadoBot
+	var b *bot.Bot
+	if slack != nil {
+		b = bot.New(api, slack, p, c, l.With(slog.String("component", "tadobot")))
+		g.Go(func() error { return b.Run(ctx) })
 	}
 
 	// now that all dependencies have started, start the poller

@@ -13,28 +13,32 @@ import (
 	"sync"
 )
 
+// A Processor receives updated from a Poller and evaluates a set of rules.  If a rule results in an action,
+// Processor schedules a task and manages that task until its completed.
+//
+// The Controller uses this to evaluate rules for a home and its zones.
 type Processor struct {
-	loader       RulesLoader
-	rules        rules.Evaluator
-	task         *Task
-	tadoClient   action.TadoSetter
-	notifiers    notifier.Notifiers
-	poller       poller.Poller
-	logger       *slog.Logger
-	notification chan struct{}
-	lock         sync.RWMutex
+	loader     RulesLoader
+	rules      rules.Evaluator
+	task       *Task
+	tadoClient action.TadoClient
+	notifiers  notifier.Notifiers
+	poller     poller.Poller
+	logger     *slog.Logger
+	taskDone   chan struct{}
+	lock       sync.RWMutex
 }
 
 type RulesLoader func(update poller.Update) (rules.Evaluator, error)
 
-func New(tadoClient action.TadoSetter, p poller.Poller, bot notifier.SlackSender, loader RulesLoader, logger *slog.Logger) *Processor {
+func New(tadoClient action.TadoClient, p poller.Poller, bot notifier.SlackSender, loader RulesLoader, logger *slog.Logger) *Processor {
 	processor := Processor{
-		loader:       loader,
-		tadoClient:   tadoClient,
-		poller:       p,
-		logger:       logger,
-		notifiers:    notifier.Notifiers{&notifier.SLogNotifier{Logger: logger}},
-		notification: make(chan struct{}, 1),
+		loader:     loader,
+		tadoClient: tadoClient,
+		poller:     p,
+		logger:     logger,
+		notifiers:  notifier.Notifiers{&notifier.SLogNotifier{Logger: logger}},
+		taskDone:   make(chan struct{}, 1),
 	}
 
 	if bot != nil {
@@ -60,7 +64,7 @@ func (p *Processor) Run(ctx context.Context) error {
 				break
 			}
 			p.processUpdate(ctx, a)
-		case <-p.notification:
+		case <-p.taskDone:
 			if err := p.processResult(); err != nil {
 				p.logger.Error("failed to set next state", "err", err)
 			}
@@ -90,13 +94,13 @@ func (p *Processor) processUpdate(ctx context.Context, action action.Action) {
 	}
 }
 
-func (p *Processor) scheduleJob(ctx context.Context, action action.Action) {
+func (p *Processor) scheduleJob(ctx context.Context, a action.Action) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
 	// if the same state is already scheduled for an earlier time, don't schedule it again.
 	if p.task != nil {
-		if p.task.action.State.IsEqual(action.State) && p.task.scheduledBefore(action) {
+		if p.task.action.State.IsEqual(a.State) && p.task.scheduledBefore(a) {
 			return
 		}
 
@@ -104,10 +108,10 @@ func (p *Processor) scheduleJob(ctx context.Context, action action.Action) {
 		p.task.job.Cancel()
 	}
 
-	p.task = newTask(ctx, p.tadoClient, action, p.notification)
+	p.task = scheduleTask(ctx, p.tadoClient, a, p.taskDone)
 
-	if action.Delay > 0 {
-		p.notifiers.Notify(notifier.Queued, action)
+	if a.Delay > 0 {
+		p.notifiers.Notify(notifier.Queued, a)
 	}
 }
 

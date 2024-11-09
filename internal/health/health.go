@@ -2,19 +2,16 @@ package health
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"log/slog"
 	"net/http"
-	"sync"
+	"sync/atomic"
 )
 
 type Health struct {
 	poller.Poller
 	logger  *slog.Logger
-	update  poller.Update
-	updated bool
-	lock    sync.RWMutex
+	updated atomic.Bool
 }
 
 func New(p poller.Poller, logger *slog.Logger) *Health {
@@ -24,7 +21,7 @@ func New(p poller.Poller, logger *slog.Logger) *Health {
 	}
 }
 
-func (h *Health) Run(ctx context.Context) error {
+func (h *Health) Run(ctx context.Context) {
 	h.logger.Debug("started")
 	defer h.logger.Debug("stopped")
 
@@ -34,41 +31,17 @@ func (h *Health) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
-		case update := <-ch:
-			h.setUpdate(update)
+			return
+		case <-ch:
+			h.updated.Store(true)
 		}
 	}
 }
 
-func (h *Health) isUpdated() bool {
-	h.lock.RLock()
-	defer h.lock.RUnlock()
-	return h.updated
-}
-
-func (h *Health) setUpdate(update poller.Update) {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-	h.update = update
-	h.updated = true
-}
-
 func (h *Health) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
-	if !h.isUpdated() {
+	if !h.updated.Load() {
 		http.Error(w, "no update yet", http.StatusServiceUnavailable)
 		h.Poller.Refresh()
 		return
-	}
-
-	h.lock.RLock()
-	defer h.lock.RUnlock()
-
-	w.Header().Set("Content-Type", "application/json")
-
-	encoder := json.NewEncoder(w)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(h.update); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

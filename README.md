@@ -1,4 +1,4 @@
-# tado utility
+# Tadoº exporter & controller
 [![release](https://img.shields.io/github/v/tag/clambin/tado-exporter?color=green&label=release&style=plastic)](https://github.com/clambin/tado-exporter/releases)
 [![codecov](https://img.shields.io/codecov/c/gh/clambin/tado-exporter?style=plastic)](https://app.codecov.io/gh/clambin/tado-exporter)
 [![test](https://github.com/clambin/tado-exporter/workflows/test/badge.svg)](https://github.com/clambin/tado-exporter/actions)
@@ -8,33 +8,25 @@
 
 Monitor & control utility Tadoº Smart Thermostat devices.
 
-## Breaking changes in 0.15
-
-### New executable
-
-The binary `tado-monitor` has been renamed to `tado` and now offers multiple subcommands. The Docker image built as part of the release 
-continues to run the exporter/monitoring function. So if you're using the Docker image, this will be transparent to you.
-
-### New rules syntax
-
-With the introduction of "Home" rules, the syntax for zone rules has been reworked.  See the section `Controlling your Tado devices` 
-for details. If you're not using the rules-based controller, this will be transparent to you.
-
 ## Features
 
-tado offers two types of functionality:
+tado retrieves all metrics from your Tadoº devices and makes them available to Prometheus. Additionally, tado can run:
 
-* `tado monitor` runs an exporter to expose metrics to Prometheus and, if configured, a controller to manage the thermostat settings in your home & rooms.
-* `tado config` displays the different zones & mobile devices for your account. 
+- a Slack bot to query and control heating in a room
+- a rule-based controller to set the heating based on current conditions, like:
+  - switching on/off the heating in a room, when designated users are home or away
+  - switching off a manual overlay after a specific amount of time
+  - switching off a manual overlay at a specific time of the day
+  - switching off all heating when all users are away (basic geofencing implementation)
 
 ## Installation
 
-Docker images for `tado monitor` are available on [ghcr.io](https://github.com/clambin/tado-exporter/pkgs/container/tado-monitor).
+Container images for `tado monitor` are available on [ghcr.io](https://github.com/clambin/tado-exporter/pkgs/container/tado-monitor).
 
 ## Running
 ### Command-line options
 
-The following command-line arguments can be passed:
+The following command-line arguments are supported:
 
 ```
 Usage:
@@ -42,13 +34,12 @@ tado [command]
 
 Available Commands:
 completion  Generate the autocompletion script for the specified shell
-config      Show Tado configuration
 help        Help about any command
 monitor     Monitor Tado thermostats
 ```
 
 ### Configuration file
-The  configuration file option specifies a yaml file to control the behaviour:
+The configuration file option specifies a yaml file to control the behaviour:
 
 ```
 # Set to true to enable debug logging
@@ -69,7 +60,6 @@ health:
 tado:
     username: ""
     password: ""
-    clientsecret: ""
 # Section for controller functionality
 controller:
     tadobot:
@@ -79,7 +69,7 @@ controller:
         token: ""
 ```
 
-If the filename is not specified on the command line, the program looks for a file `config.yaml` in the following directories:
+If the filename isn't specified on the command line, the program looks for a file `config.yaml` in the following directories:
 
 ```
 /etc/tado-monitor
@@ -87,34 +77,17 @@ $HOME/.tado-monitor
 .
 ```
 
-Any value in the configuration file may be overriden by setting an environment variable with a prefix `TADO_MONITOR_`. 
-E.g. to avoid setting your Tado credentials in the configuration file, set the following environment variables:
-
+You can override any value in the configuration file by setting an environment variable with a prefix `TADO_MONITOR_`. 
+For example, to avoid setting your Tadoº credentials in the configuration file, set the following environment variables:
+s
 ```
 export TADO_MONITOR_TADO.USERNAME="username@example.com"
 export TADO_MONITOR_TADO.PASSWORD="your-password"
 ```
 
-### Tadoº credentials
-In case you run into authentication problems, you may need to retrieve your `CLIENT_SECRET` and add it to the "tado" configuration section
-(or set it as a environment variable). To get your `CLIENT_SECRET`, log into tado.com and visit [https://my.tado.com/webapp/env.js](https://my.tado.com/webapp/env.js).
-The client secret can be found in the oauth section:
+## Controlling your tadoº devices
 
-```
-var TD = {
-	config: {
-...
-		oauth: {
-...
-			clientSecret: 'verylongclientsecret'
-		}
-	}
-};
-```
-
-## Controlling your Tado devices
-
-`tado monitor` will look for a file `rules.yaml` in the same directory it found the `config.yaml` file described above.
+`tado monitor` looks for a file `rules.yaml` in the same directory as the `config.yaml` file.
 This file defines the rules to apply for your home:
 
 ```
@@ -142,7 +115,7 @@ zones:
         time: "23:30:00"
 ```
 
-If the file does not exist, `tado monitor` will only run as a Prometheus exporter.
+If the file doesn't exist, `tado monitor` only runs as a Prometheus exporter.
 
 ## Prometheus
 
@@ -158,54 +131,19 @@ scrape_configs:
   - targets: [ '<tado host>:<port>' ]
 ```
 
-where <port> is the Prometheus listener port configured in exporter.addr in the configuration file (the default being 9090).
+where `port` is the Prometheus listener port configured in `exporter.addr`.
 
 ### Metrics
 
-tado exposes the following metrics:
-
-#### General metrics
-
-| metric | type | help |
-| --- | --- | --- |
-| tado_outside_temp_celsius | GAUGE | Current outside temperature in degrees celsius |
-| tado_solar_intensity_percentage | GAUGE | Current solar intensity in percentage (0-100) |
-| tado_weather | GAUGE | Current weather. Always one. See label 'tado_weather' |
-
-#### Metrics by Zone
-
-The following metrics are reported for each discovered zone.  The zone name is added as 'zone_name' label.
-
-| metric | type | help |
-| --- | --- | --- |
-| tado_zone_device_battery_status | GAUGE | Tado device battery status |
-| tado_zone_device_connection_status | GAUGE | Tado device connection status |
-| tado_zone_heating_percentage | GAUGE | Current heating percentage in this zone in percentage (0-100) |
-| tado_zone_humidity_percentage | GAUGE | Current humidity percentage in this zone |
-| tado_zone_open_window_duration | GAUGE | Duration of open window event in seconds |
-| tado_zone_open_window_remaining | GAUGE | Remaining duration of open window event in seconds |
-| tado_zone_power_state | GAUGE | Power status of this zone |
-| tado_zone_target_manual_mode | GAUGE | 1 if this zone is in manual temp target mode |
-| tado_zone_target_temp_celsius | GAUGE | Target temperature of this zone in degrees celsius |
-| tado_zone_temperature_celsius | GAUGE | Current temperature of this zone in degrees celsius |
-
-#### Mobile device home/away status metrics
-
-Tado reports the home/away status of registered mobile devices. See device name is added as 'name' label.
-
-| metric | type | help |
-| --- | --- | --- |
-| tado_mobile_device_status | GAUGE | Tado mobile device status. 1 if the device is "home" |
+See [METRICS.md](METRICS.md) for details.
 
 ### Grafana
 
-The repo contains a sample [Grafana dashboard](assets/grafana/dashboards) to visualize the scraped metrics.
-
-Feel free to customize as you see fit.
+The repo contains a sample [Grafana dashboard](assets/grafana/dashboards) that displays the scraped metrics. Feel free to customize as you see fit.
 
 ## Slack bot
 
-`tado monitor` can run a Slack bot that will report on any rules being triggered:
+`tado monitor` can run a Slack bot that reports on any rules being triggered:
 
 ![screenshot](assets/screenshots/tadobot_2.png?raw=true)
 
@@ -213,7 +151,7 @@ Users can also interact with the bot:
 
 ![screenshot](assets/screenshots/tadobot_1.png?raw=true)
 
-TadoBot supports the following commands:
+The tado bot implements the following commands:
 
 * **rules**: show any activated rules
 * **rooms**: show temperature & settings on each room
@@ -225,12 +163,11 @@ TadoBot supports the following commands:
 * **version**: show version
 * **help**: show all available commands
 
-To enable the bot, add a bot to the workspace's Custom Integrations and add the API Token in the configuration file above (*controller.tadobot.token*).
+To enable the bot, add a bot to the Custom Integrations of your Slack workspace and add the API Token in `controller.tadobot.token`.
 
-## Tado Client API
+## Tadoº client implementation 
 
-The Tado Client API implementation can be found in [GitHub](https://github.com/clambin/tado). The API should be fairly stable at this point, 
-so feel free to reuse for your own projects.
+tado uses the Tadoº Go Client found at [GitHub](https://github.com/clambin/tado). Feel free to reuse for your own projects.
 
 ## Authors
 
@@ -238,6 +175,7 @@ so feel free to reuse for your own projects.
 
 ## Acknowledgements
 
+* [tado OpenAPI specification](https://github.com/kritsel/tado-openapispec-v2) by [Kristel](https://github.com/kritsel).
 * Max Rosin for his [Python implementation](https://github.com/ekeih/libtado) of the Tado API
 * [vide/tado-exporter](https://github.com/vide/tado-exporter) for some inspiration
 

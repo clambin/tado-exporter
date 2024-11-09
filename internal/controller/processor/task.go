@@ -8,31 +8,24 @@ import (
 )
 
 type Task struct {
-	api    action.TadoSetter
 	action action.Action
 	job    *scheduler.Job
 }
 
-var _ scheduler.Runnable = &Task{}
-
-func newTask(ctx context.Context, api action.TadoSetter, next action.Action, notification chan struct{}) *Task {
-	task := Task{
-		api:    api,
-		action: next,
+func scheduleTask(ctx context.Context, client action.TadoClient, a action.Action, done chan struct{}) *Task {
+	f := scheduler.RunFunc(func(ctx context.Context) error {
+		return a.State.Do(ctx, client)
+	})
+	return &Task{
+		action: a,
+		job:    scheduler.Schedule(ctx, f, a.Delay, done),
 	}
-	task.job = scheduler.NewWithNotification(ctx, &task, notification)
-	go task.job.Run(next.Delay)
-	return &task
 }
 
-func (t Task) Run(ctx context.Context) error {
-	return t.action.State.Do(ctx, t.api)
-}
-
-func (t Task) scheduledBefore(next action.Action) bool {
-	scheduled := t.job.Due().Round(time.Second)
-	newJob := time.Now().Add(next.Delay).Round(time.Second)
-	return scheduled.Before(newJob) || scheduled.Equal(newJob)
+func (t Task) scheduledBefore(a action.Action) bool {
+	currentActionDue := t.job.Due().Round(time.Second)
+	nextActionDue := time.Now().Add(a.Delay).Round(time.Second)
+	return currentActionDue.Before(nextActionDue) || currentActionDue.Equal(nextActionDue)
 }
 
 func (t Task) Report() string {

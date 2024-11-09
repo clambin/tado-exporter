@@ -2,7 +2,6 @@ package cli
 
 import (
 	"github.com/clambin/go-common/charmer"
-	"github.com/clambin/tado-exporter/internal/cmd/config"
 	"github.com/clambin/tado-exporter/internal/cmd/monitor"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -28,19 +27,17 @@ func init() {
 	RootCmd.PersistentFlags().Bool("debug", false, "Log debug messages")
 	_ = viper.BindPFlag("debug", RootCmd.PersistentFlags().Lookup("debug"))
 
-	RootCmd.AddCommand(&config.Cmd, &monitor.Cmd)
+	RootCmd.AddCommand(&monitor.Cmd)
 }
 
 var args = charmer.Arguments{
-	"debug":                      charmer.Argument{Default: false},
-	"tado.username":              charmer.Argument{Default: ""},
-	"tado.password":              charmer.Argument{Default: ""},
-	"tado.clientSecret":          charmer.Argument{Default: ""},
-	"exporter.addr":              charmer.Argument{Default: ":9090"},
-	"poller.interval":            charmer.Argument{Default: 30 * time.Second},
-	"health.addr":                charmer.Argument{Default: ":8080"},
-	"controller.tadobot.enabled": charmer.Argument{Default: true},
-	"controller.tadobot.token":   charmer.Argument{Default: ""},
+	"debug":           charmer.Argument{Default: false},
+	"tado.username":   charmer.Argument{Default: ""},
+	"tado.password":   charmer.Argument{Default: ""},
+	"exporter.addr":   charmer.Argument{Default: ":9090"},
+	"poller.interval": charmer.Argument{Default: 30 * time.Second},
+	"health.addr":     charmer.Argument{Default: ":8080"},
+	"slack.token":     charmer.Argument{Default: ""},
 }
 
 func initConfig() {
