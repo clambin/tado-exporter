@@ -17,6 +17,39 @@ import (
 	"time"
 )
 
+func TestBot_Run(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	app := mocks.NewSlackApp(t)
+	app.EXPECT().AddSlashCommand(mock.AnythingOfType("string"), mock.Anything)
+	app.EXPECT().Run(ctx).RunAndReturn(func(ctx context.Context) error {
+		<-ctx.Done()
+		return nil
+	}).Once()
+	p := mockPoller.NewPoller(t)
+	ch := make(chan poller.Update)
+	p.EXPECT().Subscribe().Return(ch).Once()
+	p.EXPECT().Unsubscribe(ch).Once()
+
+	b := New(nil, app, p, nil, slog.Default())
+
+	errCh := make(chan error)
+	go func() { errCh <- b.Run(ctx) }()
+
+	_, ok := b.getUpdate()
+	assert.False(t, ok)
+
+	ch <- poller.Update{}
+
+	assert.Eventually(t, func() bool {
+		_, ok = b.getUpdate()
+		return ok
+	}, time.Second, time.Millisecond)
+
+	cancel()
+	assert.NoError(t, <-errCh)
+}
+
 func TestBot_onRules(t *testing.T) {
 	api := mocks.NewTadoClient(t)
 	controller := mocks.NewController(t)
@@ -33,6 +66,10 @@ func TestBot_onRules(t *testing.T) {
 	controller.EXPECT().ReportTasks().Return([]string{"foo"}).Once()
 	attachments = b.onRules(ctx)
 	assert.Equal(t, "foo", attachments.Text)
+
+	b.controller = nil
+	attachments = b.onRules(ctx)
+	assert.Equal(t, "controller isn't running", attachments.Text)
 }
 
 func TestBot_onRooms(t *testing.T) {
@@ -325,4 +362,65 @@ func TestBot_onRefresh(t *testing.T) {
 	app.EXPECT().AddSlashCommand(mock.AnythingOfType("string"), mock.Anything)
 	b := New(nil, app, p, nil, slog.Default())
 	b.onRefresh(context.Background())
+}
+
+func Test_tokenizeText(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{
+			name:  "one word",
+			input: `do`,
+			want:  []string{"do"},
+		},
+		{
+			name:  "multiple words",
+			input: `a b c `,
+			want:  []string{"a", "b", "c"},
+		},
+		{
+			name:  "single-quoted words",
+			input: `a 'b c'`,
+			want:  []string{"a", "b c"},
+		},
+		{
+			name:  "double-quoted words",
+			input: `a "b c"`,
+			want:  []string{"a", "b c"},
+		},
+		{
+			name:  "inverse-quoted words",
+			input: `a “b c"“`,
+			want:  []string{"a", "b c"},
+		},
+		{
+			name:  "empty",
+			input: ``,
+			want:  nil,
+		},
+		{
+			name:  "empty quote",
+			input: `""`,
+			want:  []string{""},
+		},
+		{
+			name:  "mismatched quotes",
+			input: `"foo`,
+			want:  []string{"foo"},
+		},
+		{
+			name:  "empty mismatched quote",
+			input: `"`,
+			want:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tokenizeText(tt.input))
+		})
+	}
 }

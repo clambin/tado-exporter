@@ -11,23 +11,23 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
 	"log/slog"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"unicode"
 )
 
 type Bot struct {
 	TadoClient
 	SlackApp
-	poller.Poller
-	Controller
-	logger  *slog.Logger
-	lock    sync.RWMutex
-	update  poller.Update
-	updated bool
+	poller     poller.Poller
+	controller Controller
+	logger     *slog.Logger
+	update     poller.Update
+	lock       sync.RWMutex
+	updated    bool
 }
 
 type TadoClient interface {
@@ -48,8 +48,8 @@ func New(tadoClient TadoClient, app SlackApp, p poller.Poller, c Controller, log
 	b := Bot{
 		TadoClient: tadoClient,
 		SlackApp:   app,
-		Poller:     p,
-		Controller: c,
+		poller:     p,
+		controller: c,
 		logger:     logger,
 	}
 
@@ -65,19 +65,19 @@ func New(tadoClient TadoClient, app SlackApp, p poller.Poller, c Controller, log
 
 // Run the controller
 func (b *Bot) Run(ctx context.Context) error {
-	b.logger.Debug("slackbot started")
-	defer b.logger.Debug("slackbot stopped")
+	b.logger.Debug("bot started")
+	defer b.logger.Debug("bot stopped")
 	errCh := make(chan error)
 	go func() { errCh <- b.SlackApp.Run(ctx) }()
 
-	ch := b.Poller.Subscribe()
-	defer b.Poller.Unsubscribe(ch)
+	ch := b.poller.Subscribe()
+	defer b.poller.Unsubscribe(ch)
 
 	for {
 		select {
 		case err := <-errCh:
 			if err != nil {
-				return fmt.Errorf("slackbot failed: %w", err)
+				return fmt.Errorf("bot: %w", err)
 			}
 		case <-ctx.Done():
 			return nil
@@ -104,14 +104,14 @@ func (b *Bot) onRules(_ context.Context, _ ...string) slack.Attachment {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.Controller == nil {
+	if b.controller == nil {
 		return slack.Attachment{
 			Color: "bad",
 			Text:  "controller isn't running",
 		}
 	}
 
-	text := b.Controller.ReportTasks()
+	text := b.controller.ReportTasks()
 
 	var slackText, slackTitle string
 	if len(text) > 0 {
@@ -241,7 +241,7 @@ func (b *Bot) onSetRoom(_ context.Context, args ...string) slack.Attachment {
 		}
 	}
 
-	b.Poller.Refresh()
+	b.poller.Refresh()
 
 	var text string
 	if auto {
@@ -329,63 +329,35 @@ func (b *Bot) onSetHome(ctx context.Context, args ...string) slack.Attachment {
 		return slack.Attachment{Color: "bad", Text: "failed: " + err.Error()}
 	}
 
-	b.Poller.Refresh()
+	b.poller.Refresh()
 
 	return slack.Attachment{Color: "good", Text: "set home to " + args[0] + " mode"}
 }
 
 func (b *Bot) onRefresh(_ context.Context, _ ...string) slack.Attachment {
-	b.Poller.Refresh()
+	b.poller.Refresh()
 	return slack.Attachment{Text: "refreshing Tado data"}
 }
 
 func (b *Bot) doAndPost(f func(context.Context, ...string) slack.Attachment) func(cmd slack.SlashCommand, c *socketmode.Client) {
 	return func(cmd slack.SlashCommand, c *socketmode.Client) {
-		args, _ := tokenize(cmd.Text)
-		a := f(context.Background(), args...)
+		a := f(context.Background(), tokenizeText(cmd.Text)...)
 		if _, _, err := c.PostMessage(cmd.ChannelID, slack.MsgOptionAttachments(a)); err != nil {
 			b.logger.Error("failed to post response", "err", err)
 		}
 	}
 }
 
-// tokenize splits a string into words, preserving quoted phrases as single elements
-func tokenize(input string) ([]string, error) {
-	var result []string
-	var currentWord strings.Builder
-	inQuotes := false
-
-	for _, r := range input {
-		switch {
-		case unicode.IsSpace(r) && !inQuotes:
-			// If we're outside quotes and hit a space, finish the current word
-			if currentWord.Len() > 0 {
-				result = append(result, currentWord.String())
-				currentWord.Reset()
-			}
-		case r == '"', r == '\'':
-			// Toggle the inQuotes state
-			inQuotes = !inQuotes
-			if !inQuotes {
-				// If closing a quote, save the quoted word
-				result = append(result, currentWord.String())
-				currentWord.Reset()
-			}
-		default:
-			// Append the character to the current word
-			currentWord.WriteRune(r)
-		}
+func tokenizeText(input string) []string {
+	cleanInput := input
+	for _, quote := range []string{"“", "”", "'"} {
+		cleanInput = strings.ReplaceAll(cleanInput, quote, "\"")
 	}
+	r := regexp.MustCompile(`[^\s"]+|"([^"]*)"`)
+	output := r.FindAllString(cleanInput, -1)
 
-	// Check for unbalanced quotes
-	if inQuotes {
-		return nil, fmt.Errorf("mismatched quotes in input")
+	for index, word := range output {
+		output[index] = strings.Trim(word, "\"")
 	}
-
-	// Add the last word if there is one
-	if currentWord.Len() > 0 {
-		result = append(result, currentWord.String())
-	}
-
-	return result, nil
+	return output
 }

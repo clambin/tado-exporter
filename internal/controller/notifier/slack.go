@@ -1,6 +1,7 @@
 package notifier
 
 import (
+	"fmt"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/slack-go/slack"
 	"log/slog"
@@ -8,15 +9,17 @@ import (
 )
 
 type SlackNotifier struct {
-	Logger slog.Logger
+	Logger *slog.Logger
 	SlackSender
-	channels []slack.Channel
-	lock     sync.Mutex
+	userID string
+	lock   sync.Mutex
 }
 
 type SlackSender interface {
-	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
-	GetConversations(params *slack.GetConversationsParameters) (channels []slack.Channel, nextCursor string, err error)
+	PostMessage(string, ...slack.MsgOption) (string, string, error)
+	GetConversations(*slack.GetConversationsParameters) ([]slack.Channel, string, error)
+	AuthTest() (*slack.AuthTestResponse, error)
+	GetUsersInConversation(params *slack.GetUsersInConversationParameters) ([]string, string, error)
 }
 
 var _ Notifier = &SlackNotifier{}
@@ -28,32 +31,69 @@ func (s *SlackNotifier) Notify(action ScheduleType, state action.Action) {
 		return
 	}
 	for _, channel := range channels {
-		if channel.IsMember {
-			_, _, err = s.SlackSender.PostMessage(channel.ID, slack.MsgOptionAttachments(slack.Attachment{
-				Color: "good",
-				Title: buildMessage(action, state),
-				Text:  state.Reason,
-			}))
-		}
+		s.Logger.Debug("notifying on slack", "channel", channel.Name)
+		_, _, err = s.SlackSender.PostMessage(channel.ID, slack.MsgOptionAttachments(slack.Attachment{
+			Color: "good",
+			Title: buildMessage(action, state),
+			Text:  state.Reason,
+		}))
 	}
 }
 
 func (s *SlackNotifier) getChannels() ([]slack.Channel, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	if s.channels == nil {
-		var cursor string
-		for {
-			channels, nextCursor, err := s.SlackSender.GetConversations(&slack.GetConversationsParameters{Cursor: cursor, Limit: 100})
+
+	if s.userID == "" {
+		authResp, err := s.SlackSender.AuthTest()
+		if err != nil {
+			return nil, fmt.Errorf("AuthTest: %w", err)
+		}
+		s.userID = authResp.UserID
+	}
+
+	var joinedChannels []slack.Channel
+	var cursor string
+	for {
+		channels, nextCursor, err := s.SlackSender.GetConversations(&slack.GetConversationsParameters{Cursor: cursor, Limit: 100})
+		if err != nil {
+			return nil, err
+		}
+		for _, channel := range channels {
+			if channel.IsArchived || !channel.IsMember {
+				continue
+			}
+			invited, err := s.isInvited(channel.ID)
 			if err != nil {
 				return nil, err
 			}
-			s.channels = append(s.channels, channels...)
-			cursor = nextCursor
-			if cursor == "" {
-				break
+			if invited {
+				joinedChannels = append(joinedChannels, channel)
 			}
 		}
+		if cursor = nextCursor; cursor == "" {
+			break
+		}
 	}
-	return s.channels, nil
+	return joinedChannels, nil
+}
+
+func (s *SlackNotifier) isInvited(channelID string) (bool, error) {
+	var cursor string
+	for {
+		users, nextCursor, err := s.SlackSender.GetUsersInConversation(&slack.GetUsersInConversationParameters{ChannelID: channelID, Cursor: cursor})
+		if err != nil {
+			return false, fmt.Errorf("GetUsersInConversation: %w", err)
+		}
+		for _, user := range users {
+			if user == s.userID {
+				return true, nil
+			}
+		}
+
+		if nextCursor == "" {
+			return false, nil
+		}
+		cursor = nextCursor
+	}
 }

@@ -2,7 +2,6 @@ package processor_test
 
 import (
 	"context"
-	mockNotifier "github.com/clambin/tado-exporter/internal/controller/notifier/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/processor"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
@@ -11,7 +10,6 @@ import (
 	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"io"
 	"log/slog"
 	"sync"
@@ -25,14 +23,12 @@ func TestProcessor(t *testing.T) {
 	p.EXPECT().Subscribe().Return(updateCh)
 	p.EXPECT().Unsubscribe(updateCh).Return()
 
-	s := mockNotifier.NewSlackSender(t)
-
 	f := &fakeEvaluator{}
 	l := processor.RulesLoader(func(update poller.Update) (rules.Evaluator, error) {
 		return f, nil
 	})
 
-	proc := processor.New(nil, p, s, l, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	proc := processor.New(nil, p, nil, l, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -83,10 +79,6 @@ func TestProcessor(t *testing.T) {
 	}
 
 	for _, entry := range playbook {
-		if entry.message != nil {
-			s.EXPECT().GetConversations(mock.Anything).Return([]slack.Channel{{IsMember: true, GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "1,"}}}}, "", nil).Maybe()
-			s.EXPECT().PostMessage(mock.Anything, mock.Anything).Return("", "", nil).Once()
-		}
 		f.set(entry.action)
 
 		updateCh <- poller.Update{}

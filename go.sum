@@ -14,8 +14,6 @@ github.com/clambin/go-common/http v0.6.0 h1:3t0PgQ8s+icCxCmWcivzqHjooVV+U9gNyX5/
 github.com/clambin/go-common/http v0.6.0/go.mod h1:hjkBNKFB2ctnqXj+jaHb1pGogE75k0SC7/CrbSgjpXw=
 github.com/clambin/go-common/set v0.4.3 h1:Sm9lkAJsh82j40RDpfQIziHyHjwr07+KsQF6vgCVXm4=
 github.com/clambin/go-common/set v0.4.3/go.mod h1:Q5GpBoM7B7abNV2Wzys+wQMInBHMoHyh/h0Cn2OmY4A=
-github.com/clambin/go-common/slackbot v0.8.1 h1:Vs8TB+XbZHOZL9tnyxqiVereEMIn/x/JmrWDMA3xeng=
-github.com/clambin/go-common/slackbot v0.8.1/go.mod h1:lqJUZZK4rKjX6TVojlkPC6+yswzkiENycLsmy/F+y3A=
 github.com/clambin/go-common/testutils v0.1.0 h1:/nGWaOCIhW+Ew1c2NU7GLY/YPb8dp9SV8+MTgWksAgk=
 github.com/clambin/go-common/testutils v0.1.0/go.mod h1:bV0j8D4zhNkleCeluFKLBeLQ0L/dqkxbaR/joLn8kzg=
 github.com/clambin/slackapp v0.1.1 h1:CRBBMkJkpnPr0qHSddAcZJg8qs+OObRRg2evb4Njn8s=
