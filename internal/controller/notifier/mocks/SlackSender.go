@@ -21,49 +21,145 @@ func (_m *SlackSender) EXPECT() *SlackSender_Expecter {
 	return &SlackSender_Expecter{mock: &_m.Mock}
 }
 
-// Send provides a mock function with given fields: channel, attachments
-func (_m *SlackSender) Send(channel string, attachments []slack.Attachment) error {
-	ret := _m.Called(channel, attachments)
+// GetConversations provides a mock function with given fields: params
+func (_m *SlackSender) GetConversations(params *slack.GetConversationsParameters) ([]slack.Channel, string, error) {
+	ret := _m.Called(params)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Send")
+		panic("no return value specified for GetConversations")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, []slack.Attachment) error); ok {
-		r0 = rf(channel, attachments)
+	var r0 []slack.Channel
+	var r1 string
+	var r2 error
+	if rf, ok := ret.Get(0).(func(*slack.GetConversationsParameters) ([]slack.Channel, string, error)); ok {
+		return rf(params)
+	}
+	if rf, ok := ret.Get(0).(func(*slack.GetConversationsParameters) []slack.Channel); ok {
+		r0 = rf(params)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]slack.Channel)
+		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(*slack.GetConversationsParameters) string); ok {
+		r1 = rf(params)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+
+	if rf, ok := ret.Get(2).(func(*slack.GetConversationsParameters) error); ok {
+		r2 = rf(params)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
-// SlackSender_Send_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Send'
-type SlackSender_Send_Call struct {
+// SlackSender_GetConversations_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetConversations'
+type SlackSender_GetConversations_Call struct {
 	*mock.Call
 }
 
-// Send is a helper method to define mock.On call
-//   - channel string
-//   - attachments []slack.Attachment
-func (_e *SlackSender_Expecter) Send(channel interface{}, attachments interface{}) *SlackSender_Send_Call {
-	return &SlackSender_Send_Call{Call: _e.mock.On("Send", channel, attachments)}
+// GetConversations is a helper method to define mock.On call
+//   - params *slack.GetConversationsParameters
+func (_e *SlackSender_Expecter) GetConversations(params interface{}) *SlackSender_GetConversations_Call {
+	return &SlackSender_GetConversations_Call{Call: _e.mock.On("GetConversations", params)}
 }
 
-func (_c *SlackSender_Send_Call) Run(run func(channel string, attachments []slack.Attachment)) *SlackSender_Send_Call {
+func (_c *SlackSender_GetConversations_Call) Run(run func(params *slack.GetConversationsParameters)) *SlackSender_GetConversations_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].([]slack.Attachment))
+		run(args[0].(*slack.GetConversationsParameters))
 	})
 	return _c
 }
 
-func (_c *SlackSender_Send_Call) Return(_a0 error) *SlackSender_Send_Call {
-	_c.Call.Return(_a0)
+func (_c *SlackSender_GetConversations_Call) Return(channels []slack.Channel, nextCursor string, err error) *SlackSender_GetConversations_Call {
+	_c.Call.Return(channels, nextCursor, err)
 	return _c
 }
 
-func (_c *SlackSender_Send_Call) RunAndReturn(run func(string, []slack.Attachment) error) *SlackSender_Send_Call {
+func (_c *SlackSender_GetConversations_Call) RunAndReturn(run func(*slack.GetConversationsParameters) ([]slack.Channel, string, error)) *SlackSender_GetConversations_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PostMessage provides a mock function with given fields: channelID, options
+func (_m *SlackSender) PostMessage(channelID string, options ...slack.MsgOption) (string, string, error) {
+	_va := make([]interface{}, len(options))
+	for _i := range options {
+		_va[_i] = options[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, channelID)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PostMessage")
+	}
+
+	var r0 string
+	var r1 string
+	var r2 error
+	if rf, ok := ret.Get(0).(func(string, ...slack.MsgOption) (string, string, error)); ok {
+		return rf(channelID, options...)
+	}
+	if rf, ok := ret.Get(0).(func(string, ...slack.MsgOption) string); ok {
+		r0 = rf(channelID, options...)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(string, ...slack.MsgOption) string); ok {
+		r1 = rf(channelID, options...)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+
+	if rf, ok := ret.Get(2).(func(string, ...slack.MsgOption) error); ok {
+		r2 = rf(channelID, options...)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// SlackSender_PostMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PostMessage'
+type SlackSender_PostMessage_Call struct {
+	*mock.Call
+}
+
+// PostMessage is a helper method to define mock.On call
+//   - channelID string
+//   - options ...slack.MsgOption
+func (_e *SlackSender_Expecter) PostMessage(channelID interface{}, options ...interface{}) *SlackSender_PostMessage_Call {
+	return &SlackSender_PostMessage_Call{Call: _e.mock.On("PostMessage",
+		append([]interface{}{channelID}, options...)...)}
+}
+
+func (_c *SlackSender_PostMessage_Call) Run(run func(channelID string, options ...slack.MsgOption)) *SlackSender_PostMessage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]slack.MsgOption, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(slack.MsgOption)
+			}
+		}
+		run(args[0].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *SlackSender_PostMessage_Call) Return(_a0 string, _a1 string, _a2 error) *SlackSender_PostMessage_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *SlackSender_PostMessage_Call) RunAndReturn(run func(string, ...slack.MsgOption) (string, string, error)) *SlackSender_PostMessage_Call {
 	_c.Call.Return(run)
 	return _c
 }

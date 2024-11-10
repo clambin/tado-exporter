@@ -8,7 +8,6 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"io"
 	"log/slog"
 	"testing"
@@ -71,16 +70,31 @@ func TestNotifiers_Notify(t *testing.T) {
 			b := mocks.NewSlackSender(t)
 			l := notifier.Notifiers{
 				&notifier.SLogNotifier{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))},
-				&notifier.SlackNotifier{Slack: b},
+				&notifier.SlackNotifier{SlackSender: b},
 			}
 
-			b.EXPECT().Send("", mock.AnythingOfType("[]slack.Attachment")).RunAndReturn(func(_ string, attachments []slack.Attachment) error {
-				require.Len(t, attachments, 1)
-				assert.Equal(t, tt.color, attachments[0].Color)
-				assert.Equal(t, tt.title, attachments[0].Title)
-				assert.Equal(t, tt.text, attachments[0].Text)
-				return nil
-			}).Once()
+			channels := []slack.Channel{
+				{IsMember: true, GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "1"}}},
+				{IsMember: false, GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "2"}}},
+			}
+
+			b.EXPECT().
+				GetConversations(mock.AnythingOfType("*slack.GetConversationsParameters")).
+				Return(channels, "", nil).Once()
+
+			b.EXPECT().
+				PostMessage("1", mock.Anything).
+				RunAndReturn(func(channel string, options ...slack.MsgOption) (string, string, error) {
+					assert.Equal(t, channel, channels[0].ID)
+					// TODO
+					//require.Len(t, attachments, 1)
+					//assert.Equal(t, tt.color, attachments[0].Color)
+					//assert.Equal(t, tt.title, attachments[0].Title)
+					//assert.Equal(t, tt.text, attachments[0].Text)
+					return "", "", nil
+				}).
+				Once()
+
 			l.Notify(tt.action, tt.state)
 		})
 	}

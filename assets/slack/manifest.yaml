@@ -1,0 +1,41 @@
+display_information:
+  name: Tadoº Bot
+features:
+  bot_user:
+    display_name: tado bot
+    always_online: false
+  slash_commands:
+    - command: /rules
+      description: show active rules
+      should_escape: false
+    - command: /rooms
+      description: show all rooms
+      should_escape: false
+    - command: /users
+      description: show all users
+      should_escape: false
+    - command: /setroom
+      description: control the heating in a room
+      should_escape: false
+    - command: /sethome
+      description: control the home / away setting of the house
+      should_escape: false
+    - command: /refresh
+      description: get latest Tadoº data
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - chat:write
+      - commands
+      - incoming-webhook
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_mention
+  interactivity:
+    is_enabled: true
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false

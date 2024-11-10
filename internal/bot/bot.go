@@ -3,31 +3,31 @@ package bot
 import (
 	"context"
 	"fmt"
-	"github.com/clambin/go-common/slackbot"
-	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/tadotools"
 	"github.com/clambin/tado/v2"
 	"github.com/slack-go/slack"
+	"github.com/slack-go/slack/socketmode"
 	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 )
 
 type Bot struct {
-	Tado       TadoClient
-	slack      SlackBot
-	poller     poller.Poller
-	controller Controller
-	logger     *slog.Logger
-	lock       sync.RWMutex
-	update     poller.Update
-	updated    bool
+	TadoClient
+	SlackApp
+	poller.Poller
+	Controller
+	logger  *slog.Logger
+	lock    sync.RWMutex
+	update  poller.Update
+	updated bool
 }
 
 type TadoClient interface {
@@ -35,34 +35,30 @@ type TadoClient interface {
 	DeletePresenceLockWithResponse(ctx context.Context, homeId tado.HomeId, reqEditors ...tado.RequestEditorFn) (*tado.DeletePresenceLockResponse, error)
 }
 
-type SlackBot interface {
-	Add(commands slackbot.Commands)
-	Run(ctx context.Context) error
-	notifier.SlackSender // TODO: this is added just so we can use the Slackbot interface to build the Controller in internal/monitor/monitor.go. We don't actually need it in this package.
-}
-
 type Controller interface {
 	ReportTasks() []string
 }
 
-func New(tado TadoClient, s SlackBot, p poller.Poller, c Controller, logger *slog.Logger) *Bot {
+type SlackApp interface {
+	AddSlashCommand(string, func(slack.SlashCommand, *socketmode.Client))
+	Run(ctx context.Context) error
+}
+
+func New(tadoClient TadoClient, app SlackApp, p poller.Poller, c Controller, logger *slog.Logger) *Bot {
 	b := Bot{
-		Tado:       tado,
-		slack:      s,
-		poller:     p,
-		controller: c,
+		TadoClient: tadoClient,
+		SlackApp:   app,
+		Poller:     p,
+		Controller: c,
 		logger:     logger,
 	}
-	s.Add(slackbot.Commands{
-		"rules": slackbot.HandlerFunc(b.ReportRules),
-		"rooms": slackbot.HandlerFunc(b.ReportRooms),
-		"set": slackbot.Commands{
-			"room": slackbot.HandlerFunc(b.SetRoom),
-			"home": slackbot.HandlerFunc(b.SetHome),
-		},
-		"refresh": slackbot.HandlerFunc(b.DoRefresh),
-		"users":   slackbot.HandlerFunc(b.ReportUsers),
-	})
+
+	b.SlackApp.AddSlashCommand("/rules", b.doAndPost(b.onRules))
+	b.SlackApp.AddSlashCommand("/rooms", b.doAndPost(b.onRooms))
+	b.SlackApp.AddSlashCommand("/users", b.doAndPost(b.onUsers))
+	b.SlackApp.AddSlashCommand("/setroom", b.doAndPost(b.onSetRoom))
+	b.SlackApp.AddSlashCommand("/sethome", b.doAndPost(b.onSetHome))
+	b.SlackApp.AddSlashCommand("/refresh", b.doAndPost(b.onRefresh))
 
 	return &b
 }
@@ -72,13 +68,11 @@ func (b *Bot) Run(ctx context.Context) error {
 	b.logger.Debug("slackbot started")
 	defer b.logger.Debug("slackbot stopped")
 	errCh := make(chan error)
-	go func() { errCh <- b.slack.Run(ctx) }()
+	go func() { errCh <- b.SlackApp.Run(ctx) }()
 
-	b.logger.Debug("started")
-	defer b.logger.Debug("stopped")
+	ch := b.Poller.Subscribe()
+	defer b.Poller.Unsubscribe(ch)
 
-	ch := b.poller.Subscribe()
-	defer b.poller.Unsubscribe(ch)
 	for {
 		select {
 		case err := <-errCh:
@@ -106,18 +100,18 @@ func (b *Bot) getUpdate() (poller.Update, bool) {
 	return b.update, b.updated
 }
 
-func (b *Bot) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
+func (b *Bot) onRules(_ context.Context, _ ...string) slack.Attachment {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.controller == nil {
-		return []slack.Attachment{{
+	if b.Controller == nil {
+		return slack.Attachment{
 			Color: "bad",
 			Text:  "controller isn't running",
-		}}
+		}
 	}
 
-	text := b.controller.ReportTasks()
+	text := b.Controller.ReportTasks()
 
 	var slackText, slackTitle string
 	if len(text) > 0 {
@@ -128,25 +122,21 @@ func (b *Bot) ReportRules(_ context.Context, _ ...string) []slack.Attachment {
 		slackText = "no rules have been triggered"
 	}
 
-	result := []slack.Attachment{{
+	b.logger.Debug("rules", "title", slackTitle, "text", slackText)
+	return slack.Attachment{
 		Color: "good",
 		Title: slackTitle,
 		Text:  slackText,
-	}}
-
-	b.logger.Debug("rules", "title", result[0].Title, "text", result[0].Text)
-
-	return result
+	}
 }
 
-func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
+func (b *Bot) onRooms(_ context.Context, _ ...string) slack.Attachment {
 	update, ok := b.getUpdate()
-
 	if !ok {
-		return []slack.Attachment{{
+		return slack.Attachment{
 			Color: "bad",
 			Text:  "no updates yet. please check back later",
-		}}
+		}
 	}
 
 	text := make([]string, 0, len(update.Zones))
@@ -170,11 +160,11 @@ func (b *Bot) ReportRooms(_ context.Context, _ ...string) []slack.Attachment {
 		slackText = strings.Join(text, "\n")
 	}
 
-	return []slack.Attachment{{
+	return slack.Attachment{
 		Color: slackColor,
 		Title: slackTitle,
 		Text:  slackText,
-	}}
+	}
 }
 
 func zoneState(zone poller.Zone) string {
@@ -194,13 +184,38 @@ func zoneState(zone poller.Zone) string {
 	}
 }
 
-func (b *Bot) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
+func (b *Bot) onUsers(_ context.Context, _ ...string) slack.Attachment {
+	update, updated := b.getUpdate()
+	if !updated {
+		return slack.Attachment{
+			Color: "bad",
+			Text:  "no update yet. please check back later",
+		}
+	}
+
+	text := make([]string, 0)
+
+	for _, device := range update.MobileDevices {
+		if !*device.Settings.GeoTrackingEnabled {
+			continue
+		}
+		location := map[bool]string{true: "home", false: "away"}[*device.Location.AtHome]
+		text = append(text, *device.Name+": "+location)
+	}
+
+	return slack.Attachment{
+		Title: "users:",
+		Text:  strings.Join(text, "\n"),
+	}
+}
+
+func (b *Bot) onSetRoom(_ context.Context, args ...string) slack.Attachment {
 	update, ok := b.getUpdate()
 	if !ok {
-		return []slack.Attachment{{
+		return slack.Attachment{
 			Color: "bad",
 			Text:  "no updates yet. please check back later",
-		}}
+		}
 	}
 
 	zoneID, zoneName, auto, temperature, duration, err := b.parseSetRoomCommand(args...)
@@ -210,22 +225,23 @@ func (b *Bot) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
 	}
 
 	if err == nil {
+		ctx := context.Background()
 		if auto {
-			_, err = b.Tado.DeleteZoneOverlayWithResponse(ctx, *update.HomeBase.Id, zoneID)
+			_, err = b.TadoClient.DeleteZoneOverlayWithResponse(ctx, *update.HomeBase.Id, zoneID)
 		} else {
-			err = tadotools.SetOverlay(ctx, b.Tado, *update.HomeBase.Id, zoneID, temperature, duration)
+			err = tadotools.SetOverlay(ctx, b.TadoClient, *update.HomeBase.Id, zoneID, temperature, duration)
 		}
 	}
 
 	if err != nil {
-		return []slack.Attachment{{
+		return slack.Attachment{
 			Color: "bad",
 			Title: "",
 			Text:  err.Error(),
-		}}
+		}
 	}
 
-	b.poller.Refresh()
+	b.Poller.Refresh()
 
 	var text string
 	if auto {
@@ -236,11 +252,11 @@ func (b *Bot) SetRoom(ctx context.Context, args ...string) []slack.Attachment {
 			text += " for " + duration.String()
 		}
 	}
-	return []slack.Attachment{{
+	return slack.Attachment{
 		Color: "good",
 		Title: "",
 		Text:  text,
-	}}
+	}
 }
 
 func (b *Bot) parseSetRoomCommand(args ...string) (zoneID int, zoneName string, auto bool, temperature float32, duration time.Duration, err error) {
@@ -256,7 +272,7 @@ func (b *Bot) parseSetRoomCommand(args ...string) (zoneID int, zoneName string, 
 
 	zone, err := b.update.GetZone(zoneName)
 	if err != nil {
-		err = fmt.Errorf("invalid room name")
+		err = fmt.Errorf("invalid room name: %s", zoneName)
 		return
 	}
 	zoneID = *zone.Id
@@ -284,68 +300,92 @@ func (b *Bot) parseSetRoomCommand(args ...string) (zoneID int, zoneName string, 
 	return
 }
 
-func (b *Bot) SetHome(ctx context.Context, args ...string) []slack.Attachment {
+func (b *Bot) onSetHome(ctx context.Context, args ...string) slack.Attachment {
 	if len(args) != 1 {
-		return []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}}
+		return slack.Attachment{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}
 	}
 
 	update, ok := b.getUpdate()
 	if !ok {
-		return []slack.Attachment{{
+		return slack.Attachment{
 			Color: "bad",
 			Text:  "no updates yet. please check back later",
-		}}
+		}
 	}
 
 	var err error
 	switch args[0] {
 	case "home":
-		_, err = b.Tado.SetPresenceLockWithResponse(ctx, *update.HomeBase.Id, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.HOME)})
+		_, err = b.TadoClient.SetPresenceLockWithResponse(ctx, *update.HomeBase.Id, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.HOME)})
 	case "away":
-		_, err = b.Tado.SetPresenceLockWithResponse(ctx, *update.HomeBase.Id, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.AWAY)})
+		_, err = b.TadoClient.SetPresenceLockWithResponse(ctx, *update.HomeBase.Id, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.AWAY)})
 	case "auto":
-		_, err = b.Tado.DeletePresenceLockWithResponse(ctx, *update.HomeBase.Id)
+		_, err = b.TadoClient.DeletePresenceLockWithResponse(ctx, *update.HomeBase.Id)
 	default:
-		return []slack.Attachment{{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}}
+		return slack.Attachment{Color: "bad", Text: "missing parameter\nUsage: set home [home|away|auto]"}
 	}
 
 	if err != nil {
-		return []slack.Attachment{{Color: "bad", Text: "failed: " + err.Error()}}
+		return slack.Attachment{Color: "bad", Text: "failed: " + err.Error()}
 	}
 
-	b.poller.Refresh()
+	b.Poller.Refresh()
 
-	return []slack.Attachment{{Color: "good", Text: "set home to " + args[0] + " mode"}}
+	return slack.Attachment{Color: "good", Text: "set home to " + args[0] + " mode"}
 }
 
-func (b *Bot) DoRefresh(_ context.Context, _ ...string) []slack.Attachment {
-	b.poller.Refresh()
-	return []slack.Attachment{{Text: "refreshing Tado data"}}
+func (b *Bot) onRefresh(_ context.Context, _ ...string) slack.Attachment {
+	b.Poller.Refresh()
+	return slack.Attachment{Text: "refreshing Tado data"}
 }
 
-func (b *Bot) ReportUsers(_ context.Context, _ ...string) []slack.Attachment {
-	update, updated := b.getUpdate()
-	if !updated {
-		return []slack.Attachment{{
-			Color: "bad",
-			Text:  "no update yet. please check back later",
-		}}
-	}
-
-	text := make([]string, 0)
-
-	for _, device := range update.MobileDevices {
-		if !*device.Settings.GeoTrackingEnabled {
-			continue
+func (b *Bot) doAndPost(f func(context.Context, ...string) slack.Attachment) func(cmd slack.SlashCommand, c *socketmode.Client) {
+	return func(cmd slack.SlashCommand, c *socketmode.Client) {
+		args, _ := tokenize(cmd.Text)
+		a := f(context.Background(), args...)
+		if _, _, err := c.PostMessage(cmd.ChannelID, slack.MsgOptionAttachments(a)); err != nil {
+			b.logger.Error("failed to post response", "err", err)
 		}
-		location := map[bool]string{true: "home", false: "away"}[*device.Location.AtHome]
-		text = append(text, *device.Name+": "+location)
+	}
+}
+
+// tokenize splits a string into words, preserving quoted phrases as single elements
+func tokenize(input string) ([]string, error) {
+	var result []string
+	var currentWord strings.Builder
+	inQuotes := false
+
+	for _, r := range input {
+		switch {
+		case unicode.IsSpace(r) && !inQuotes:
+			// If we're outside quotes and hit a space, finish the current word
+			if currentWord.Len() > 0 {
+				result = append(result, currentWord.String())
+				currentWord.Reset()
+			}
+		case r == '"', r == '\'':
+			// Toggle the inQuotes state
+			inQuotes = !inQuotes
+			if !inQuotes {
+				// If closing a quote, save the quoted word
+				result = append(result, currentWord.String())
+				currentWord.Reset()
+			}
+		default:
+			// Append the character to the current word
+			currentWord.WriteRune(r)
+		}
 	}
 
-	return []slack.Attachment{
-		{
-			Title: "users:",
-			Text:  strings.Join(text, "\n"),
-		},
+	// Check for unbalanced quotes
+	if inQuotes {
+		return nil, fmt.Errorf("mismatched quotes in input")
 	}
+
+	// Add the last word if there is one
+	if currentWord.Len() > 0 {
+		result = append(result, currentWord.String())
+	}
+
+	return result, nil
 }

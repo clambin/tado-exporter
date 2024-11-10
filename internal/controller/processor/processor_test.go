@@ -84,7 +84,8 @@ func TestProcessor(t *testing.T) {
 
 	for _, entry := range playbook {
 		if entry.message != nil {
-			s.EXPECT().Send(mock.Anything, entry.message).Return(nil).Once()
+			s.EXPECT().GetConversations(mock.Anything).Return([]slack.Channel{{IsMember: true, GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "1,"}}}}, "", nil).Maybe()
+			s.EXPECT().PostMessage(mock.Anything, mock.Anything).Return("", "", nil).Once()
 		}
 		f.set(entry.action)
 

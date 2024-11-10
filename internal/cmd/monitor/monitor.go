@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/clambin/go-common/charmer"
 	gchttp "github.com/clambin/go-common/http"
-	"github.com/clambin/go-common/slackbot"
+	"github.com/clambin/slackapp"
 	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"
@@ -16,6 +16,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/tadotools"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -50,13 +51,11 @@ func monitor(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("tado: %w", err)
 	}
 
-	var slack *slackbot.SlackBot
-	if token := viper.GetString("slack.token"); token != "" {
-		slack = slackbot.New(
-			token,
-			slackbot.WithName("tadoBot "+cmd.Root().Version),
-			slackbot.WithLogger(l.With(slog.String("component", "slackbot"))),
-		)
+	var sc *slack.Client
+	token := viper.GetString("slack.token")
+	appToken := viper.GetString("slack.app-token")
+	if token != "" && appToken != "" {
+		sc = slack.New(token, slack.OptionAppLevelToken(appToken))
 	}
 
 	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
@@ -65,7 +64,7 @@ func monitor(cmd *cobra.Command, _ []string) error {
 	l.Info("tado monitor starting", "version", cmd.Root().Version)
 	defer l.Info("tado monitor stopped")
 
-	return run(ctx, l, viper.GetViper(), prometheus.DefaultRegisterer, api, slack)
+	return run(ctx, l, viper.GetViper(), prometheus.DefaultRegisterer, api, sc)
 
 }
 
@@ -89,7 +88,7 @@ type TadoClient interface {
 	bot.TadoClient
 }
 
-func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheus.Registerer, api TadoClient, slack bot.SlackBot) error {
+func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheus.Registerer, api TadoClient, sc *slack.Client) error {
 	var g errgroup.Group
 
 	// poller
@@ -124,14 +123,15 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 	// Controller
 	var c *controller.Controller
 	if len(rules.Zones) > 0 {
-		c = controller.New(api, rules, slack, p, l.With("component", "controller"))
+		c = controller.New(api, rules, sc, p, l.With("component", "controller"))
 		g.Go(func() error { return c.Run(ctx) })
 	}
 
 	// TadoBot
 	var b *bot.Bot
-	if slack != nil {
-		b = bot.New(api, slack, p, c, l.With(slog.String("component", "tadobot")))
+	if sc != nil {
+		app := slackapp.NewSlackApp(sc, l.With("component", "slackapp"))
+		b = bot.New(api, app, p, c, l.With(slog.String("component", "tadobot")))
 		g.Go(func() error { return b.Run(ctx) })
 	}
 
