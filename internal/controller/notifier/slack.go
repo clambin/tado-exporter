@@ -60,14 +60,7 @@ func (s *SlackNotifier) getChannels() ([]slack.Channel, error) {
 			return nil, err
 		}
 		for _, channel := range channels {
-			if channel.IsArchived || !channel.IsMember {
-				continue
-			}
-			invited, err := s.isInvited(channel.ID)
-			if err != nil {
-				return nil, err
-			}
-			if invited {
+			if channel.IsMember && !channel.IsArchived {
 				joinedChannels = append(joinedChannels, channel)
 			}
 		}
@@ -76,24 +69,4 @@ func (s *SlackNotifier) getChannels() ([]slack.Channel, error) {
 		}
 	}
 	return joinedChannels, nil
-}
-
-func (s *SlackNotifier) isInvited(channelID string) (bool, error) {
-	var cursor string
-	for {
-		users, nextCursor, err := s.SlackSender.GetUsersInConversation(&slack.GetUsersInConversationParameters{ChannelID: channelID, Cursor: cursor})
-		if err != nil {
-			return false, fmt.Errorf("GetUsersInConversation: %w", err)
-		}
-		for _, user := range users {
-			if user == s.userID {
-				return true, nil
-			}
-		}
-
-		if nextCursor == "" {
-			return false, nil
-		}
-		cursor = nextCursor
-	}
 }

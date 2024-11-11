@@ -85,10 +85,6 @@ func TestNotifiers_Notify(t *testing.T) {
 				GetConversations(mock.AnythingOfType("*slack.GetConversationsParameters")).
 				Return(channels, "", nil)
 			b.EXPECT().
-				GetUsersInConversation(mock.AnythingOfType("*slack.GetUsersInConversationParameters")).
-				Return([]string{"U123456789G"}, "", nil)
-
-			b.EXPECT().
 				PostMessage("1", mock.Anything).
 				RunAndReturn(func(channel string, options ...slack.MsgOption) (string, string, error) {
 					assert.Equal(t, channel, channels[0].ID)

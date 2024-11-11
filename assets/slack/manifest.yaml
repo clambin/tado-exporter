@@ -30,7 +30,6 @@ oauth_config:
       - chat:write
       - commands
       - incoming-webhook
-      - users:read
 settings:
   interactivity:
     is_enabled: true
