@@ -105,9 +105,6 @@ func Test_runMonitor(t *testing.T) {
 			SolarIntensity:     &tado.PercentageDataPoint{Percentage: oapi.VarP[float32](25.0)},
 			WeatherState:       &tado.WeatherStateDataPoint{Value: oapi.VarP(tado.RAIN)},
 		}}, nil)
-	//slack := mocks2.NewSlackApp(t)
-	//slack.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
-	//slack.EXPECT().Run(ctx).Return(nil)
 
 	errCh := make(chan error)
 	go func() { errCh <- run(ctx, l, v, r, client, nil) }()

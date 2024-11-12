@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/clambin/go-common/charmer"
 	gchttp "github.com/clambin/go-common/http"
-	"github.com/clambin/slackapp"
 	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"
@@ -17,9 +16,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/slack-go/slack"
+	"github.com/slack-go/slack/socketmode"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -130,8 +131,13 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 	// TadoBot
 	var b *bot.Bot
 	if sc != nil {
-		app := slackapp.NewSlackApp(sc, l.With("component", "slackapp"))
-		b = bot.New(api, app, p, c, l.With(slog.String("component", "tadobot")))
+		smc := socketmode.New(sc,
+			socketmode.OptionDebug(false),
+			socketmode.OptionLog(log.New(os.Stdout, "socketmode: ", log.Lshortfile|log.LstdFlags)),
+		)
+		handler := socketmode.NewSocketmodeHandler(smc)
+
+		b = bot.New(api, handler, p, c, l.With(slog.String("component", "tadobot")))
 		g.Go(func() error { return b.Run(ctx) })
 	}
 

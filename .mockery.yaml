@@ -13,8 +13,9 @@ packages:
   github.com/clambin/tado-exporter/internal/bot:
     interfaces:
       TadoClient:
-      SlackApp:
       Controller:
+      SocketModeHandler:
+      SlackSender:
   github.com/clambin/tado-exporter/internal/controller/notifier:
     interfaces:
       SlackSender:
