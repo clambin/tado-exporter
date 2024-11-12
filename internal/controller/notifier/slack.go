@@ -37,6 +37,9 @@ func (s *SlackNotifier) Notify(action ScheduleType, state action.Action) {
 			Title: buildMessage(action, state),
 			Text:  state.Reason,
 		}))
+		if err != nil {
+			s.Logger.Error("notifier failed to post message", "err", err)
+		}
 	}
 }
 

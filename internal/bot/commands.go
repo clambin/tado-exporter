@@ -191,7 +191,6 @@ func (b *Bot) setHome(command slack.SlashCommand, client SlackSender) error {
 
 	text := "<@" + command.UserID + "> moves home to " + args[0] + "mode"
 	_, _, err = client.PostMessage(command.ChannelID, slack.MsgOptionText(text, false))
-
 	b.poller.Refresh()
-	return nil
+	return err
 }
