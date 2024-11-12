@@ -9,51 +9,51 @@ import (
 func Test_parseSetRoom(t *testing.T) {
 	tests := []struct {
 		name       string
-		args       []string
+		text       string
 		want       setRoomCommand
 		wantErr    assert.ErrorAssertionFunc
 		errMessage string
 	}{
 		{
 			name:       "Insufficient arguments",
-			args:       []string{"room1"},
+			text:       "room1",
 			wantErr:    assert.Error,
 			errMessage: "missing parameters",
 		},
 		{
 			name:    "Auto mode",
-			args:    []string{"room1", "auto"},
+			text:    "room1 auto",
 			want:    setRoomCommand{zoneName: "room1", mode: "auto"},
 			wantErr: assert.NoError,
 		},
 		{
 			name:    "Valid temperature, no duration",
-			args:    []string{"room1", "22.5"},
+			text:    "room1 22.5",
 			want:    setRoomCommand{zoneName: "room1", mode: "22.5", temperature: 22.5},
 			wantErr: assert.NoError,
 		},
 		{
 			name:       "Invalid temperature",
-			args:       []string{"room1", "not-a-number"},
+			text:       "room1 not-a-number",
 			wantErr:    assert.Error,
 			errMessage: "invalid target temperature",
 		},
 		{
 			name:    "Valid temperature and duration",
-			args:    []string{"room1", "22.5", "2h"},
+			text:    "room1 22.5 2h",
 			want:    setRoomCommand{zoneName: "room1", mode: "22.5", temperature: 22.5, duration: 2 * time.Hour},
 			wantErr: assert.NoError,
 		},
 		{
 			name:       "Invalid duration",
-			args:       []string{"room1", "22.5", "invalid-duration"},
+			text:       "room1 22.5 invalid-duration",
 			wantErr:    assert.Error,
 			errMessage: "invalid duration",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseSetRoom(tt.args...)
+			got, err := parseSetRoom(tt.text)
 			assert.Equal(t, tt.want, got)
 			tt.wantErr(t, err)
 		})

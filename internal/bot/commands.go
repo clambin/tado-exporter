@@ -123,7 +123,7 @@ func (b *Bot) refresh(command slack.SlashCommand, client SlackSender) error {
 }
 
 func (b *Bot) setRoom(command slack.SlashCommand, client SlackSender) error {
-	cmd, err := parseSetRoom(tokenizeText(command.Text)...)
+	cmd, err := parseSetRoom(command.Text)
 	if err != nil {
 		return err
 	}

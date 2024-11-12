@@ -6,7 +6,7 @@ require (
 	github.com/clambin/go-common/charmer v0.2.0
 	github.com/clambin/go-common/http v0.6.0
 	github.com/clambin/go-common/set v0.4.3
-	github.com/clambin/tado/v2 v2.0.2
+	github.com/clambin/tado/v2 v2.1.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/slack-go/slack v0.15.0
 	github.com/spf13/cobra v1.8.1
@@ -50,7 +50,7 @@ require (
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/oauth2 v0.23.0 // indirect
+	golang.org/x/oauth2 v0.24.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect

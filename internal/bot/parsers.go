@@ -15,7 +15,8 @@ type setRoomCommand struct {
 	duration    time.Duration
 }
 
-func parseSetRoom(args ...string) (setRoomCommand, error) {
+func parseSetRoom(text string) (setRoomCommand, error) {
+	args := tokenizeText(text)
 	if len(args) < 2 {
 		return setRoomCommand{}, fmt.Errorf("missing parameters\nUsage: set room <room> [auto|<temperature> [<duration>]")
 	}
@@ -44,12 +45,6 @@ func parseSetRoom(args ...string) (setRoomCommand, error) {
 
 	return cmd, nil
 
-}
-
-type setHomeCommand struct{}
-
-func parseSetHome(args ...string) (setHomeCommand, error) {
-	panic("TODO")
 }
 
 func tokenizeText(input string) []string {
