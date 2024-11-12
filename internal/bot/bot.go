@@ -93,12 +93,10 @@ func (b *Bot) runCommand(f func(command slack.SlashCommand, sender SlackSender) 
 	return func(event *socketmode.Event, client *socketmode.Client) {
 		client.Ack(*event.Request)
 		data := event.Data.(slack.SlashCommand)
-		err := f(data, client)
-		if err != nil {
-			_, err = client.PostEphemeral(data.ChannelID, data.UserID, slack.MsgOptionText("command failed: "+err.Error(), false))
-		}
-		if err == nil {
-			b.logger.Warn("command failed", "cmd", data.Command, "err", err)
+		if err := f(data, client); err != nil {
+			if _, err = client.PostEphemeral(data.ChannelID, data.UserID, slack.MsgOptionText("command failed: "+err.Error(), false)); err != nil {
+				b.logger.Warn("failed to post command output", "cmd", data.Command, "err", err)
+			}
 		}
 	}
 }
