@@ -58,7 +58,6 @@ func filterFirstAction(actions []action.Action) []action.Action {
 func getCombinedReason(actions []action.Action) string {
 	reasons := set.New[string]()
 	for i := range actions {
-		// TODO: a.Reason != "" is an effort to remove "home in HOME mode" where it's not really needed.
 		if actions[i].Reason != "" {
 			reasons.Add(actions[i].Reason)
 		}
