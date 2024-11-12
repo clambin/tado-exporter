@@ -107,6 +107,10 @@ func TestBot_listUsers(t *testing.T) {
 						Name:     oapi.VarP("bar"),
 						Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(false)},
 					},
+					{
+						Name:     oapi.VarP("snafu"),
+						Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)},
+					},
 				},
 			},
 			expect: func(sender *mocks.SlackSender) {

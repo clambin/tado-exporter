@@ -77,10 +77,7 @@ func (b *Bot) listUsers(command slack.SlashCommand, client SlackSender) error {
 
 	text := make([]string, 0)
 
-	for _, device := range update.MobileDevices {
-		if !*device.Settings.GeoTrackingEnabled {
-			continue
-		}
+	for device := range update.MobileDevices.GeoTrackedDevices() {
 		location := map[bool]string{true: "home", false: "away"}[*device.Location.AtHome]
 		text = append(text, *device.Name+": "+location)
 	}

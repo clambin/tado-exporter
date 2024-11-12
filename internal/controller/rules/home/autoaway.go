@@ -40,8 +40,8 @@ func (a AutoAwayRule) Evaluate(update poller.Update) (action.Action, error) {
 	var users, away int
 	homeUsers := make([]string, 0, len(a.usernames))
 	awayUsers := make([]string, 0, len(a.usernames))
-	for _, device := range update.MobileDevices {
-		if *device.Settings.GeoTrackingEnabled && a.usernames.Contains(*device.Name) {
+	for device := range update.MobileDevices.GeoTrackedDevices() {
+		if a.usernames.Contains(*device.Name) {
 			users++
 			if *device.Location.AtHome {
 				homeUsers = append(homeUsers, *device.Name)
