@@ -15,7 +15,7 @@ import (
 	"testing"
 )
 
-func TestBot_listRooms(t *testing.T) {
+func Test_commandRunner_listRooms(t *testing.T) {
 	tests := []struct {
 		name    string
 		update  *poller.Update
@@ -57,9 +57,9 @@ func TestBot_listRooms(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bot{}
+			var r commandRunner
 			if tt.update != nil {
-				b.setUpdate(*tt.update)
+				r.setUpdate(*tt.update)
 			}
 
 			s := mocks.NewSlackSender(t)
@@ -67,13 +67,13 @@ func TestBot_listRooms(t *testing.T) {
 				tt.expect(s)
 			}
 
-			err := b.listRooms(slack.SlashCommand{ChannelID: "1", UserID: "2"}, s)
+			err := r.listRooms(slack.SlashCommand{ChannelID: "1", UserID: "2"}, s)
 			tt.wantErr(t, err)
 		})
 	}
 }
 
-func TestBot_listUsers(t *testing.T) {
+func Test_commandRunner_listUsers(t *testing.T) {
 	tests := []struct {
 		name    string
 		update  *poller.Update
@@ -123,9 +123,9 @@ func TestBot_listUsers(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bot{}
+			var r commandRunner
 			if tt.update != nil {
-				b.setUpdate(*tt.update)
+				r.setUpdate(*tt.update)
 			}
 
 			s := mocks.NewSlackSender(t)
@@ -133,13 +133,13 @@ func TestBot_listUsers(t *testing.T) {
 				tt.expect(s)
 			}
 
-			err := b.listUsers(slack.SlashCommand{ChannelID: "1", UserID: "2"}, s)
+			err := r.listUsers(slack.SlashCommand{ChannelID: "1", UserID: "2"}, s)
 			tt.wantErr(t, err)
 		})
 	}
 }
 
-func TestBot_listRules(t *testing.T) {
+func Test_commandRunner_listRules(t *testing.T) {
 	tests := []struct {
 		name       string
 		controller func(controller *mocks.Controller)
@@ -169,11 +169,11 @@ func TestBot_listRules(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bot{}
+			var r commandRunner
 			if tt.controller != nil {
 				c := mocks.NewController(t)
 				tt.controller(c)
-				b.controller = c
+				r.controller = c
 			}
 
 			s := mocks.NewSlackSender(t)
@@ -181,24 +181,24 @@ func TestBot_listRules(t *testing.T) {
 				tt.expect(s)
 			}
 
-			err := b.listRules(slack.SlashCommand{ChannelID: "1", UserID: "2"}, s)
+			err := r.listRules(slack.SlashCommand{ChannelID: "1", UserID: "2"}, s)
 			tt.wantErr(t, err)
 		})
 	}
 }
 
-func TestBot_refresh(t *testing.T) {
+func Test_commandRunner_refresh(t *testing.T) {
 	p := mocks2.NewPoller(t)
 	p.EXPECT().Refresh()
 
 	s := mocks.NewSlackSender(t)
 	s.EXPECT().PostEphemeral("1", "2", mock.Anything).Return("", nil)
 
-	b := Bot{poller: p}
-	assert.NoError(t, b.refresh(slack.SlashCommand{ChannelID: "1", UserID: "2"}, s))
+	r := commandRunner{poller: p}
+	assert.NoError(t, r.refresh(slack.SlashCommand{ChannelID: "1", UserID: "2"}, s))
 }
 
-func TestBot_setRoom(t *testing.T) {
+func Test_commandRunner_setRoom(t *testing.T) {
 	tests := []struct {
 		name        string
 		cmdline     string
@@ -275,12 +275,12 @@ func TestBot_setRoom(t *testing.T) {
 			}
 			p := mocks2.NewPoller(t)
 			p.EXPECT().Refresh().Maybe()
-			b := Bot{TadoClient: c, poller: p}
+			r := commandRunner{TadoClient: c, poller: p}
 			if tt.update != nil {
-				b.setUpdate(*tt.update)
+				r.setUpdate(*tt.update)
 			}
 
-			err := b.setRoom(slack.SlashCommand{ChannelID: "1", UserID: "2", Text: tt.cmdline}, s)
+			err := r.setRoom(slack.SlashCommand{ChannelID: "1", UserID: "2", Text: tt.cmdline}, s)
 			tt.wantErr(t, err)
 			if err != nil {
 				assert.Equal(t, tt.errMessage, err.Error())
@@ -289,7 +289,7 @@ func TestBot_setRoom(t *testing.T) {
 	}
 }
 
-func TestBot_setHome(t *testing.T) {
+func Test_commandRunner_setHome(t *testing.T) {
 	tests := []struct {
 		name        string
 		cmdline     string
@@ -379,12 +379,12 @@ func TestBot_setHome(t *testing.T) {
 			}
 			p := mocks2.NewPoller(t)
 			p.EXPECT().Refresh().Maybe()
-			b := Bot{TadoClient: c, poller: p}
+			r := commandRunner{TadoClient: c, poller: p}
 			if tt.update != nil {
-				b.setUpdate(*tt.update)
+				r.setUpdate(*tt.update)
 			}
 
-			err := b.setHome(slack.SlashCommand{ChannelID: "1", UserID: "2", Text: tt.cmdline}, s)
+			err := r.setHome(slack.SlashCommand{ChannelID: "1", UserID: "2", Text: tt.cmdline}, s)
 			tt.wantErr(t, err)
 			if err != nil {
 				assert.Equal(t, tt.errMessage, err.Error())

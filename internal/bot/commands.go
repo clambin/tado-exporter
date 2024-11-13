@@ -9,8 +9,10 @@ import (
 	"github.com/clambin/tado-exporter/internal/tadotools"
 	"github.com/clambin/tado/v2"
 	"github.com/slack-go/slack"
+	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -18,8 +20,31 @@ var (
 	ErrNoUpdates = errors.New("no updates yet. please check back later")
 )
 
-func (b *Bot) listRooms(command slack.SlashCommand, client SlackSender) error {
-	update, ok := b.getUpdate()
+type commandRunner struct {
+	TadoClient
+	poller     poller.Poller
+	controller Controller
+	logger     *slog.Logger
+	update     poller.Update
+	lock       sync.RWMutex
+	updated    bool
+}
+
+func (r *commandRunner) setUpdate(update poller.Update) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.update = update
+	r.updated = true
+}
+
+func (r *commandRunner) getUpdate() (poller.Update, bool) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.update, r.updated
+}
+
+func (r *commandRunner) listRooms(command slack.SlashCommand, client SlackSender) error {
+	update, ok := r.getUpdate()
 	if !ok {
 		return ErrNoUpdates
 	}
@@ -65,8 +90,8 @@ func zoneState(zone poller.Zone) string {
 	}
 }
 
-func (b *Bot) listUsers(command slack.SlashCommand, client SlackSender) error {
-	update, ok := b.getUpdate()
+func (r *commandRunner) listUsers(command slack.SlashCommand, client SlackSender) error {
+	update, ok := r.getUpdate()
 	if !ok {
 		return ErrNoUpdates
 	}
@@ -93,15 +118,15 @@ func (b *Bot) listUsers(command slack.SlashCommand, client SlackSender) error {
 	return err
 }
 
-func (b *Bot) listRules(command slack.SlashCommand, client SlackSender) error {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-	if b.controller == nil {
+func (r *commandRunner) listRules(command slack.SlashCommand, client SlackSender) error {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	if r.controller == nil {
 		return errors.New("controller isn't running")
 	}
 
 	text := "no rules have been triggered"
-	if rules := b.controller.ReportTasks(); len(rules) != 0 {
+	if rules := r.controller.ReportTasks(); len(rules) != 0 {
 		text = strings.Join(rules, "\n")
 	}
 	attachment := slack.Attachment{
@@ -113,19 +138,19 @@ func (b *Bot) listRules(command slack.SlashCommand, client SlackSender) error {
 	return err
 }
 
-func (b *Bot) refresh(command slack.SlashCommand, client SlackSender) error {
-	b.poller.Refresh()
+func (r *commandRunner) refresh(command slack.SlashCommand, client SlackSender) error {
+	r.poller.Refresh()
 	_, err := client.PostEphemeral(command.ChannelID, command.UserID, slack.MsgOptionText("refreshing Tadoº data", false))
 	return err
 }
 
-func (b *Bot) setRoom(command slack.SlashCommand, client SlackSender) error {
+func (r *commandRunner) setRoom(command slack.SlashCommand, client SlackSender) error {
 	cmd, err := parseSetRoom(command.Text)
 	if err != nil {
 		return err
 	}
 
-	update, ok := b.getUpdate()
+	update, ok := r.getUpdate()
 	if !ok {
 		return ErrNoUpdates
 	}
@@ -136,9 +161,9 @@ func (b *Bot) setRoom(command slack.SlashCommand, client SlackSender) error {
 
 	ctx := context.Background()
 	if cmd.mode == "auto" {
-		_, err = b.TadoClient.DeleteZoneOverlayWithResponse(ctx, *update.HomeBase.Id, *zone.Id)
+		_, err = r.TadoClient.DeleteZoneOverlayWithResponse(ctx, *update.HomeBase.Id, *zone.Id)
 	} else {
-		err = tadotools.SetOverlay(ctx, b.TadoClient, *update.HomeBase.Id, *zone.Id, float32(cmd.temperature), cmd.duration)
+		err = tadotools.SetOverlay(ctx, r.TadoClient, *update.HomeBase.Id, *zone.Id, float32(cmd.temperature), cmd.duration)
 	}
 
 	if err != nil {
@@ -157,17 +182,17 @@ func (b *Bot) setRoom(command slack.SlashCommand, client SlackSender) error {
 	text = "<@" + command.UserID + "> " + text
 
 	_, _, err = client.PostMessage(command.ChannelID, slack.MsgOptionText(text, false))
-	b.poller.Refresh()
+	r.poller.Refresh()
 	return err
 }
 
-func (b *Bot) setHome(command slack.SlashCommand, client SlackSender) error {
+func (r *commandRunner) setHome(command slack.SlashCommand, client SlackSender) error {
 	args := tokenizeText(command.Text)
 	if len(args) != 1 {
 		return errors.New("missing parameter\nUsage: set home [home|away|auto]")
 	}
 
-	update, ok := b.getUpdate()
+	update, ok := r.getUpdate()
 	if !ok {
 		return ErrNoUpdates
 	}
@@ -176,11 +201,11 @@ func (b *Bot) setHome(command slack.SlashCommand, client SlackSender) error {
 	ctx := context.Background()
 	switch args[0] {
 	case "home":
-		_, err = b.TadoClient.SetPresenceLockWithResponse(ctx, *update.HomeBase.Id, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.HOME)})
+		_, err = r.TadoClient.SetPresenceLockWithResponse(ctx, *update.HomeBase.Id, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.HOME)})
 	case "away":
-		_, err = b.TadoClient.SetPresenceLockWithResponse(ctx, *update.HomeBase.Id, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.AWAY)})
+		_, err = r.TadoClient.SetPresenceLockWithResponse(ctx, *update.HomeBase.Id, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.AWAY)})
 	case "auto":
-		_, err = b.TadoClient.DeletePresenceLockWithResponse(ctx, *update.HomeBase.Id)
+		_, err = r.TadoClient.DeletePresenceLockWithResponse(ctx, *update.HomeBase.Id)
 	default:
 		return errors.New("missing parameter\nUsage: set home [home|away|auto]")
 	}
@@ -191,6 +216,6 @@ func (b *Bot) setHome(command slack.SlashCommand, client SlackSender) error {
 
 	text := "<@" + command.UserID + "> moves home to " + args[0] + "mode"
 	_, _, err = client.PostMessage(command.ChannelID, slack.MsgOptionText(text, false))
-	b.poller.Refresh()
+	r.poller.Refresh()
 	return err
 }
