@@ -1,8 +1,6 @@
 package bot
 
 import (
-	"context"
-	"errors"
 	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -11,7 +9,6 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"net/http"
 	"testing"
 )
 
@@ -198,6 +195,7 @@ func Test_commandRunner_refresh(t *testing.T) {
 	assert.NoError(t, r.refresh(slack.SlashCommand{ChannelID: "1", UserID: "2"}, s))
 }
 
+/*
 func Test_commandRunner_setRoom(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -392,3 +390,4 @@ func Test_commandRunner_setHome(t *testing.T) {
 		})
 	}
 }
+*/

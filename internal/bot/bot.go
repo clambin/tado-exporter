@@ -9,10 +9,12 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
 	"log/slog"
+	"sync"
 )
 
 type Bot struct {
 	commandRunner
+	shortcuts
 	SocketModeHandler
 	poller poller.Poller
 	logger *slog.Logger
@@ -33,6 +35,9 @@ type SocketModeHandler interface {
 type SlackSender interface {
 	PostEphemeral(channelID string, userID string, options ...slack.MsgOption) (string, error)
 	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
+	OpenView(triggerID string, view slack.ModalViewRequest) (*slack.ViewResponse, error)
+	UpdateView(view slack.ModalViewRequest, externalID string, hash string, viewID string) (*slack.ViewResponse, error)
+	Ack(socketmode.Request, ...any)
 }
 
 type Controller interface {
@@ -47,6 +52,18 @@ func New(tadoClient TadoClient, handler SocketModeHandler, p poller.Poller, c Co
 			controller: c,
 			logger:     logger,
 		},
+		shortcuts: shortcuts{
+			handlers: map[string]shortcutHandler{
+				setRoomCallbackID: &setRoomShortcut{
+					TadoClient: tadoClient,
+					logger:     logger.With("shortcut", "setRoom"),
+				},
+				setHomeCallbackID: &setHomeShortcut{
+					TadoClient: tadoClient,
+					logger:     logger.With("shortcut", "setHome"),
+				},
+			},
+		},
 		SocketModeHandler: handler,
 		poller:            p,
 		logger:            logger,
@@ -56,11 +73,11 @@ func New(tadoClient TadoClient, handler SocketModeHandler, p poller.Poller, c Co
 	b.SocketModeHandler.HandleSlashCommand("/users", b.runCommand(b.commandRunner.listUsers))
 	b.SocketModeHandler.HandleSlashCommand("/rules", b.runCommand(b.commandRunner.listRules))
 	b.SocketModeHandler.HandleSlashCommand("/refresh", b.runCommand(b.commandRunner.refresh))
-	b.SocketModeHandler.HandleSlashCommand("/setroom", b.runCommand(b.commandRunner.setRoom))
-	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeShortcut, b.handleShortcut)
-	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeViewSubmission, b.handleShortcutSubmission)
+	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeShortcut, b.runShortcut(b.shortcuts.dispatch))
+	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeBlockActions, b.runShortcut(b.shortcuts.dispatch))
+	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeViewSubmission, b.runShortcut(b.shortcuts.dispatch))
 	b.SocketModeHandler.HandleDefault(func(event *socketmode.Event, _ *socketmode.Client) {
-		logger.Debug("unhandled event received", "type", event.Type)
+		logger.Debug("unhandled event received", "type", event.Type, "data", fmt.Sprintf("%T", event.Data))
 	})
 
 	return &b
@@ -84,17 +101,18 @@ func (r *Bot) Run(ctx context.Context) error {
 			}
 		case <-ctx.Done():
 			return nil
-		case update := <-ch:
-			r.commandRunner.setUpdate(update)
+		case u := <-ch:
+			r.commandRunner.setUpdate(u)
+			r.shortcuts.setUpdate(u)
 		}
 	}
 }
 
-func (r *Bot) runCommand(f func(command slack.SlashCommand, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {
+func (r *Bot) runCommand(cmd func(command slack.SlashCommand, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {
 	return func(event *socketmode.Event, client *socketmode.Client) {
 		client.Ack(*event.Request)
 		data := event.Data.(slack.SlashCommand)
-		if err := f(data, client); err != nil {
+		if err := cmd(data, client); err != nil {
 			if _, err = client.PostEphemeral(data.ChannelID, data.UserID, slack.MsgOptionText("command failed: "+err.Error(), false)); err != nil {
 				r.logger.Warn("failed to post command output", "cmd", data.Command, "err", err)
 			}
@@ -102,31 +120,35 @@ func (r *Bot) runCommand(f func(command slack.SlashCommand, sender SlackSender) 
 	}
 }
 
-func (r *Bot) handleShortcut(event *socketmode.Event, client *socketmode.Client) {
-	data := event.Data.(slack.InteractionCallback)
-	switch data.CallbackID {
-	case setRoomCallbackID:
-		// what to do when we get this event but we don't have an update yet?  we need it to populate the rooms dropdown.
-		client.Ack(*event.Request)
-
-		resp, err := client.OpenView(data.TriggerID, setRoomView())
-		if err != nil {
-			r.logger.Warn("failed to open view", "err", err, "callbackID", data.CallbackID)
+func (r *Bot) runShortcut(shortcut func(data slack.InteractionCallback, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {
+	return func(event *socketmode.Event, client *socketmode.Client) {
+		data := event.Data.(slack.InteractionCallback)
+		if err := shortcut(data, client); err != nil {
+			r.logger.Warn("shortcut failed", "err", err, "type", data.Type)
 			return
 		}
-		r.logger.Debug("opened view", "callbackID", resp.CallbackID)
-	default:
-		r.logger.Warn("received unexpected shortcut CallbackID", "callbackID", data.CallbackID)
+		client.Ack(*event.Request)
 	}
 }
 
-func (r *Bot) handleShortcutSubmission(event *socketmode.Event, client *socketmode.Client) {
-	data := event.Data.(slack.InteractionCallback)
-	switch data.CallbackID {
-	case setRoomCallbackID:
-		client.Ack(*event.Request)
-		r.logger.Info("received shortcut input", "callbackID", data.CallbackID, "input", data.Submission)
-	default:
-		r.logger.Warn("received unexpected shortcut CallbackID", "callbackID", data.CallbackID)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type update struct {
+	update *poller.Update
+	lock   sync.RWMutex
+}
+
+func (r *update) setUpdate(u poller.Update) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.update = &u
+}
+
+func (r *update) getUpdate() (poller.Update, bool) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	if r.update == nil {
+		return poller.Update{}, false
 	}
+	return *r.update, true
 }
