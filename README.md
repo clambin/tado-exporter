@@ -40,7 +40,6 @@ monitor     Monitor Tado thermostats
 
 ### Configuration file
 
-TODO: app-token
 The configuration file option specifies a yaml file to control the behaviour:
 
 ```
@@ -62,13 +61,11 @@ health:
 tado:
     username: ""
     password: ""
-# Section for controller functionality
-controller:
-    tadobot:
-        # When set, the controller will start a slack bot. See below for details
-        enabled: true
-        # Slackbot token value
-        token: ""
+slack:
+    # Slack token. If added, rule events are sent to Slack 
+    token: xoxb-token
+    # Slack App token. If added, the Slack bot is started.  Requires "token".
+    app-token: xapp-token
 ```
 
 If the filename isn't specified on the command line, the program looks for a file `config.yaml` in the following directories:
