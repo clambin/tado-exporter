@@ -119,7 +119,7 @@ func Test_setRoomShortcut_makeView(t *testing.T) {
 					{Zone: tado.Zone{Id: oapi.VarP(20), Name: oapi.VarP("bar")}},
 				},
 			},
-			wantInputBlocks: []string{"zone", "mode", "temperature", "duration", "channel"},
+			wantInputBlocks: []string{"zone", "mode", "temperature", "expiration", "channel"},
 			wantZones:       []string{"foo", "bar"},
 		},
 	}
@@ -194,8 +194,7 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 							"zone":        {"zone": {SelectedOption: slack.OptionBlockObject{Value: "foo"}}},
 							"mode":        {"mode": {SelectedOption: slack.OptionBlockObject{Value: "manual"}}},
 							"temperature": {"temperature": {Value: "21.5"}},
-							//"duration":    {"duration": {SelectedTime: "22:00"}},
-							"channel": {"channel": {SelectedConversation: "C123456789"}},
+							"channel":     {"channel": {SelectedConversation: "C123456789"}},
 						},
 					},
 				},
@@ -229,7 +228,7 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 							"zone":        {"zone": {SelectedOption: slack.OptionBlockObject{Value: "foo"}}},
 							"mode":        {"mode": {SelectedOption: slack.OptionBlockObject{Value: "manual"}}},
 							"temperature": {"temperature": {Value: "21.5"}},
-							"duration":    {"duration": {SelectedTime: "22:00"}},
+							"expiration":  {"expiration": {SelectedTime: "22:00"}},
 							"channel":     {"channel": {SelectedConversation: "C123456789"}},
 						},
 					},
@@ -246,7 +245,7 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 							return nil, fmt.Errorf("termination is wrong: want TIMER, got %q", mode)
 						}
 						if *overlay.Termination.DurationInSeconds == 0 {
-							return nil, fmt.Errorf("duration is not set")
+							return nil, fmt.Errorf("expiration is not set")
 						}
 						return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK}}, nil
 					})

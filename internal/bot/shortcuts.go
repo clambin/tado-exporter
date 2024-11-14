@@ -113,7 +113,7 @@ func (s *setRoomShortcut) setRoom(data slack.InteractionCallback) (string, strin
 	zoneName := data.View.State.Values["zone"]["zone"].SelectedOption.Value
 	mode := data.View.State.Values["mode"]["mode"].SelectedOption.Value
 	temperature := data.View.State.Values["temperature"]["temperature"].Value
-	due := data.View.State.Values["duration"]["duration"].SelectedTime
+	due := data.View.State.Values["expiration"]["expiration"].SelectedTime
 	channel := data.View.State.Values["channel"]["channel"].SelectedConversation
 
 	u, _ := s.getUpdate()
@@ -173,9 +173,9 @@ func (s *setRoomShortcut) makeView(mode string, u poller.Update) slack.ModalView
 
 		// duration
 		// TODO: duration -> expiration
-		durationLabel := slack.NewTextBlockObject(slack.PlainTextType, "Duration:", false, false)
-		durationOptions := slack.NewTimePickerBlockElement("duration")
-		durationBlock := slack.NewInputBlock("duration", durationLabel, nil, durationOptions).WithOptional(true)
+		durationLabel := slack.NewTextBlockObject(slack.PlainTextType, "Expiration:", false, false)
+		durationOptions := slack.NewTimePickerBlockElement("expiration")
+		durationBlock := slack.NewInputBlock("expiration", durationLabel, nil, durationOptions).WithOptional(true)
 
 		blocks.BlockSet = append(blocks.BlockSet, durationBlock)
 	}
