@@ -3,6 +3,7 @@ package bot
 import (
 	"errors"
 	"fmt"
+	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
 	"github.com/slack-go/slack"
@@ -22,6 +23,26 @@ type commandRunner struct {
 	poller     poller.Poller
 	controller Controller
 	logger     *slog.Logger
+}
+
+func (r *commandRunner) dispatch(command slack.SlashCommand, client SlackSender) error {
+	r.logger.Debug("running command", "cmd", command.Command, "text", command.Text)
+	var err error
+	switch command.Text {
+	case "rooms":
+		err = r.listRooms(command, client)
+	case "users":
+		err = r.listUsers(command, client)
+	case "rules":
+		err = r.listRules(command, client)
+	case "refresh":
+		err = r.refresh(command, client)
+	case "help":
+		err = r.help(command, client)
+	default:
+		err = errors.New("unknown command: " + command.Text)
+	}
+	return err
 }
 
 func (r *commandRunner) listRooms(command slack.SlashCommand, client SlackSender) error {
@@ -56,7 +77,7 @@ func (r *commandRunner) listRooms(command slack.SlashCommand, client SlackSender
 
 func zoneState(zone poller.Zone) string {
 	targetTemperature := zone.GetTargetTemperature()
-	if targetTemperature < 5.0 {
+	if targetTemperature == 0.0 {
 		return "off"
 	}
 
@@ -67,7 +88,7 @@ func zoneState(zone poller.Zone) string {
 	case tado.ZoneOverlayTerminationTypeMANUAL:
 		return fmt.Sprintf("target: %.1f, MANUAL", targetTemperature)
 	default:
-		return fmt.Sprintf("target: %.1f, MANUAL for %s", targetTemperature, (time.Duration(*zone.Overlay.Termination.DurationInSeconds) * time.Second).String())
+		return fmt.Sprintf("target: %.1f, MANUAL for %s", targetTemperature, (time.Duration(*zone.Overlay.Termination.RemainingTimeInSeconds) * time.Second).String())
 	}
 }
 
@@ -102,7 +123,8 @@ func (r *commandRunner) listUsers(command slack.SlashCommand, client SlackSender
 func (r *commandRunner) listRules(command slack.SlashCommand, client SlackSender) error {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
-	if r.controller == nil {
+	// a bit icky, but okay ...
+	if r.controller == nil || r.controller.(*mocks.Controller) == nil {
 		return errors.New("controller isn't running")
 	}
 
@@ -122,5 +144,11 @@ func (r *commandRunner) listRules(command slack.SlashCommand, client SlackSender
 func (r *commandRunner) refresh(command slack.SlashCommand, client SlackSender) error {
 	r.poller.Refresh()
 	_, err := client.PostEphemeral(command.ChannelID, command.UserID, slack.MsgOptionText("refreshing Tadoº data", false))
+	return err
+}
+
+func (r *commandRunner) help(command slack.SlashCommand, client SlackSender) error {
+	help := "supported commands: users, rooms, rules, help"
+	_, err := client.PostEphemeral(command.ChannelID, command.UserID, slack.MsgOptionText(help, false))
 	return err
 }

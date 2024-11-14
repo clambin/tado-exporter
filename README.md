@@ -150,12 +150,13 @@ Users can also interact with the bot:
 
 ![screenshot](assets/screenshots/tado_slash.png)
 
-The tado bot implements the following Slash commands:
+The tado bot implements a Slash command `/tado`, with the following options:
 
-* **/rules**: show any activated rules
-* **/rooms**: show temperature & settings on each room
-* **/users**: show the status of each user (home/away)
-* **/refresh**: get the latest Tadoº data
+* **rules**: show any activated rules
+* **rooms**: show temperature & settings on each room
+* **users**: show the status of each user (home/away)
+* **refresh**: get the latest Tadoº data
+* **help**: show all supported options
 
 The bot includes two interactive shortcuts: `Tado Room` controls a room's heating, `Tado Home` controls the house:
 

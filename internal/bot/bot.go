@@ -37,7 +37,7 @@ type SlackSender interface {
 	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
 	OpenView(triggerID string, view slack.ModalViewRequest) (*slack.ViewResponse, error)
 	UpdateView(view slack.ModalViewRequest, externalID string, hash string, viewID string) (*slack.ViewResponse, error)
-	Ack(socketmode.Request, ...any)
+	//Ack(socketmode.Request, ...any)
 }
 
 type Controller interface {
@@ -53,24 +53,15 @@ func New(tadoClient TadoClient, handler SocketModeHandler, p poller.Poller, c Co
 			logger:     logger,
 		},
 		shortcuts: shortcuts{
-			setRoomCallbackID: &setRoomShortcut{
-				TadoClient: tadoClient,
-				logger:     logger.With("shortcut", "setRoom"),
-			},
-			setHomeCallbackID: &setHomeShortcut{
-				TadoClient: tadoClient,
-				logger:     logger.With("shortcut", "setHome"),
-			},
+			setRoomCallbackID: &setRoomShortcut{TadoClient: tadoClient, logger: logger.With("shortcut", "setRoom")},
+			setHomeCallbackID: &setHomeShortcut{TadoClient: tadoClient, logger: logger.With("shortcut", "setHome")},
 		},
 		SocketModeHandler: handler,
 		poller:            p,
 		logger:            logger,
 	}
 
-	b.SocketModeHandler.HandleSlashCommand("/rooms", b.runCommand(b.commandRunner.listRooms))
-	b.SocketModeHandler.HandleSlashCommand("/users", b.runCommand(b.commandRunner.listUsers))
-	b.SocketModeHandler.HandleSlashCommand("/rules", b.runCommand(b.commandRunner.listRules))
-	b.SocketModeHandler.HandleSlashCommand("/refresh", b.runCommand(b.commandRunner.refresh))
+	b.SocketModeHandler.HandleSlashCommand("/tado", b.runCommand(b.commandRunner.dispatch))
 	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeShortcut, b.runShortcut(b.shortcuts.dispatch))
 	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeBlockActions, b.runShortcut(b.shortcuts.dispatch))
 	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeViewSubmission, b.runShortcut(b.shortcuts.dispatch))
@@ -106,6 +97,9 @@ func (r *Bot) Run(ctx context.Context) error {
 	}
 }
 
+// runCommand receives a slackCommand from slack and calls the function that implements it.  Having this as a dedicated
+// function decouples Slack from the business logic (i.e. ack'ing the request), plus it translated a *slack.Client to a
+// SlackSender interface, which makes testing the business logic easier.
 func (r *Bot) runCommand(cmd func(command slack.SlashCommand, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {
 	return func(event *socketmode.Event, client *socketmode.Client) {
 		client.Ack(*event.Request)
@@ -118,6 +112,9 @@ func (r *Bot) runCommand(cmd func(command slack.SlashCommand, sender SlackSender
 	}
 }
 
+// runCommand receives a shortcut request from slack and calls the function that implements it.  Having this as a dedicated
+// function decouples Slack from the business logic (i.e. ack'ing the request), plus it translated a *slack.Client to a
+// SlackSender interface, which makes testing the business logic easier.
 func (r *Bot) runShortcut(shortcut func(data slack.InteractionCallback, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {
 	return func(event *socketmode.Event, client *socketmode.Client) {
 		data := event.Data.(slack.InteractionCallback)
@@ -131,6 +128,7 @@ func (r *Bot) runShortcut(shortcut func(data slack.InteractionCallback, sender S
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// updateStore contains the latest update received from a Poller.
 type updateStore struct {
 	update *poller.Update
 	lock   sync.RWMutex
