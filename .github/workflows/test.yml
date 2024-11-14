@@ -5,6 +5,7 @@ on:
     branches-ignore:
       - master
       - slackapp
+      - interactive
   pull_request_target:
 
 jobs:
