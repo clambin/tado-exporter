@@ -171,8 +171,7 @@ func (s *setRoomShortcut) makeView(mode string, u poller.Update) slack.ModalView
 		temperatureBlock := slack.NewInputBlock("temperature", temperatureLabel, nil, temperatureOptions)
 		blocks.BlockSet = append(blocks.BlockSet, temperatureBlock)
 
-		// duration
-		// TODO: duration -> expiration
+		// expiration
 		durationLabel := slack.NewTextBlockObject(slack.PlainTextType, "Expiration:", false, false)
 		durationOptions := slack.NewTimePickerBlockElement("expiration")
 		durationBlock := slack.NewInputBlock("expiration", durationLabel, nil, durationOptions).WithOptional(true)
@@ -276,7 +275,7 @@ func (s *setHomeShortcut) makeView() slack.ModalViewRequest {
 
 	return slack.ModalViewRequest{
 		Type:          slack.VTModal,
-		Title:         slack.NewTextBlockObject(slack.PlainTextType, "Set Room", false, false),
+		Title:         slack.NewTextBlockObject(slack.PlainTextType, "Set Home", false, false),
 		Blocks:        blocks,
 		Close:         slack.NewTextBlockObject(slack.PlainTextType, "Close", false, false),
 		Submit:        slack.NewTextBlockObject(slack.PlainTextType, "Submit", false, false),

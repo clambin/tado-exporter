@@ -160,13 +160,12 @@ The tado bot implements the following Slash commands:
 * **/users**: show the status of each user (home/away)
 * **/refresh**: get the latest Tadoº data
 
-The `Tado Room` shortcut controls a room's heating:
+The bot includes two interactive shortcuts: `Tado Room` controls a room's heating, `Tado Home` controls the house:
 
-![screenshot](assets/screenshots/tado_room.png)
+| Tado Room                       | Tado Home |
+|---------------------------------|-----------|
+| ![](assets/screenshots/tado_room.png) | ![](assets/screenshots/tado_home.png) |
 
-The `Tado Home` shortcut control's the home:
-
-![screenshot](assets/screenshots/tado_home.png)
 
 To enable the bot, go to You Apps in your workspace and add a Tadoº Bot using the included [manifest.yaml](assets/slack/manifest.yaml).
 Add the App Token and the Bot User OAuth Token in `slack.app-token` and `slack.token` respectively.
