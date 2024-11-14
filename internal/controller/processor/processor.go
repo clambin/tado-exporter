@@ -42,7 +42,7 @@ func New(tadoClient action.TadoClient, p poller.Poller, bot notifier.SlackSender
 	}
 
 	if bot != nil {
-		processor.notifiers = append(processor.notifiers, &notifier.SlackNotifier{Slack: bot})
+		processor.notifiers = append(processor.notifiers, &notifier.SlackNotifier{SlackSender: bot, Logger: logger})
 	}
 	return &processor
 }

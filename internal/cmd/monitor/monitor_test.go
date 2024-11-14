@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"context"
-	mocks2 "github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/cmd/monitor/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
 	"github.com/clambin/tado-exporter/internal/oapi"
@@ -10,7 +9,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"log/slog"
 	"net/http"
@@ -107,12 +105,9 @@ func Test_runMonitor(t *testing.T) {
 			SolarIntensity:     &tado.PercentageDataPoint{Percentage: oapi.VarP[float32](25.0)},
 			WeatherState:       &tado.WeatherStateDataPoint{Value: oapi.VarP(tado.RAIN)},
 		}}, nil)
-	slack := mocks2.NewSlackBot(t)
-	slack.EXPECT().Add(mock.AnythingOfType("slackbot.Commands"))
-	slack.EXPECT().Run(ctx).Return(nil)
 
 	errCh := make(chan error)
-	go func() { errCh <- run(ctx, l, v, r, client, slack) }()
+	go func() { errCh <- run(ctx, l, v, r, client, nil) }()
 
 	assert.Eventually(t, func() bool {
 		resp, err := http.Get("http://localhost:9090/metrics")

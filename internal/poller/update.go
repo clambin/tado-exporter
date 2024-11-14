@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado/v2"
+	"iter"
 	"log/slog"
 )
 
@@ -83,15 +84,25 @@ func (m MobileDevices) GetDeviceState(ids ...tado.MobileDeviceId) ([]string, []s
 	return home, away
 }
 
+func (m MobileDevices) GeoTrackedDevices() iter.Seq[tado.MobileDevice] {
+	return func(yield func(tado.MobileDevice) bool) {
+		for _, device := range m {
+			if *device.Settings.GeoTrackingEnabled && device.Location != nil {
+				if !yield(device) {
+					return
+				}
+			}
+		}
+	}
+}
+
 func (m MobileDevices) LogValue() slog.Value {
 	devices := make([]slog.Attr, 0, len(m))
-	for _, device := range m {
-		deviceAttrs := make([]any, 1, 2)
-		deviceAttrs[0] = slog.Bool("geotracked", *device.Settings.GeoTrackingEnabled)
-		if *device.Settings.GeoTrackingEnabled {
-			deviceAttrs = append(deviceAttrs, slog.Bool("home", *device.Location.AtHome))
-		}
-		devices = append(devices, slog.Group(*device.Name, deviceAttrs...))
+	for device := range m.GeoTrackedDevices() {
+		devices = append(devices, slog.Group(*device.Name,
+			slog.Bool("geotracked", *device.Settings.GeoTrackingEnabled),
+			slog.Bool("home", *device.Location.AtHome),
+		))
 	}
 	return slog.AnyValue(devices)
 }

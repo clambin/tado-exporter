@@ -222,7 +222,7 @@
         "platform": "iOS"
       },
       "id": 1234567,
-      "name": "owner",
+      "name": "not geoEnabled",
       "settings": {
         "geoTrackingEnabled": false,
         "onDemandLogRetrievalEnabled": false,
@@ -256,6 +256,30 @@
         "stale": false
       },
       "name": "owner",
+      "settings": {
+        "geoTrackingEnabled": true,
+        "onDemandLogRetrievalEnabled": false,
+        "pushNotifications": {
+          "awayModeReminder": true,
+          "energyIqReminder": false,
+          "energySavingsReportReminder": true,
+          "homeModeReminder": true,
+          "incidentDetection": true,
+          "lowBatteryReminder": true,
+          "openWindowReminder": true
+        },
+        "specialOffersEnabled": true
+      }
+    },
+    {
+      "deviceMetadata": {
+        "locale": "en",
+        "model": "iPhone13,2",
+        "osVersion": "16.0.3",
+        "platform": "iOS"
+      },
+      "id": 1234568,
+      "name": "geoEnabled but no location",
       "settings": {
         "geoTrackingEnabled": true,
         "onDemandLogRetrievalEnabled": false,

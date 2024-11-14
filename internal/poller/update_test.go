@@ -57,7 +57,7 @@ func TestMobileDevices_LogValue(t *testing.T) {
 				Name:     oapi.VarP("user"),
 				Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(false)},
 			}},
-			want: `[user=[geotracked=false]]`,
+			want: `[]`,
 		},
 	}
 

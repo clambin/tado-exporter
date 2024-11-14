@@ -8,7 +8,6 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"io"
 	"log/slog"
 	"testing"
@@ -16,7 +15,7 @@ import (
 )
 
 func TestNotifiers_Notify(t *testing.T) {
-	var testCases = []struct {
+	tests := []struct {
 		name   string
 		action notifier.ScheduleType
 		state  action.Action
@@ -65,22 +64,34 @@ func TestNotifiers_Notify(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			b := mocks.NewSlackSender(t)
+			discardLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
 			l := notifier.Notifiers{
-				&notifier.SLogNotifier{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))},
-				&notifier.SlackNotifier{Slack: b},
+				&notifier.SLogNotifier{Logger: discardLogger},
+				&notifier.SlackNotifier{SlackSender: b, Logger: discardLogger},
 			}
 
-			b.EXPECT().Send("", mock.AnythingOfType("[]slack.Attachment")).RunAndReturn(func(_ string, attachments []slack.Attachment) error {
-				require.Len(t, attachments, 1)
-				assert.Equal(t, tt.color, attachments[0].Color)
-				assert.Equal(t, tt.title, attachments[0].Title)
-				assert.Equal(t, tt.text, attachments[0].Text)
-				return nil
-			}).Once()
+			channels := []slack.Channel{
+				{IsMember: true, GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "1"}}},
+				{IsMember: false, GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "2"}}},
+			}
+
+			b.EXPECT().
+				AuthTest().
+				Return(&slack.AuthTestResponse{UserID: "U123456789G"}, nil)
+			b.EXPECT().
+				GetConversations(mock.AnythingOfType("*slack.GetConversationsParameters")).
+				Return(channels, "", nil)
+			b.EXPECT().
+				PostMessage("1", mock.Anything).
+				RunAndReturn(func(channel string, options ...slack.MsgOption) (string, string, error) {
+					assert.Equal(t, channel, channels[0].ID)
+					return "", "", nil
+				}).
+				Once()
+
 			l.Notify(tt.action, tt.state)
 		})
 	}

@@ -39,6 +39,8 @@ monitor     Monitor Tado thermostats
 ```
 
 ### Configuration file
+
+TODO: app-token
 The configuration file option specifies a yaml file to control the behaviour:
 
 ```
