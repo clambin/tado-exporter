@@ -53,15 +53,13 @@ func New(tadoClient TadoClient, handler SocketModeHandler, p poller.Poller, c Co
 			logger:     logger,
 		},
 		shortcuts: shortcuts{
-			handlers: map[string]shortcutHandler{
-				setRoomCallbackID: &setRoomShortcut{
-					TadoClient: tadoClient,
-					logger:     logger.With("shortcut", "setRoom"),
-				},
-				setHomeCallbackID: &setHomeShortcut{
-					TadoClient: tadoClient,
-					logger:     logger.With("shortcut", "setHome"),
-				},
+			setRoomCallbackID: &setRoomShortcut{
+				TadoClient: tadoClient,
+				logger:     logger.With("shortcut", "setRoom"),
+			},
+			setHomeCallbackID: &setHomeShortcut{
+				TadoClient: tadoClient,
+				logger:     logger.With("shortcut", "setHome"),
 			},
 		},
 		SocketModeHandler: handler,
@@ -133,18 +131,18 @@ func (r *Bot) runShortcut(shortcut func(data slack.InteractionCallback, sender S
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type update struct {
+type updateStore struct {
 	update *poller.Update
 	lock   sync.RWMutex
 }
 
-func (r *update) setUpdate(u poller.Update) {
+func (r *updateStore) setUpdate(u poller.Update) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	r.update = &u
 }
 
-func (r *update) getUpdate() (poller.Update, bool) {
+func (r *updateStore) getUpdate() (poller.Update, bool) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	if r.update == nil {

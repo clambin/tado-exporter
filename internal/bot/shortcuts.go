@@ -18,9 +18,7 @@ const (
 	setHomeCallbackID = "tado_set_home"
 )
 
-type shortcuts struct {
-	handlers map[string]shortcutHandler
-}
+type shortcuts map[string]shortcutHandler
 
 type shortcutHandler interface {
 	HandleShortcut(slack.InteractionCallback, SlackSender) error
@@ -38,7 +36,7 @@ func (s shortcuts) dispatch(data slack.InteractionCallback, client SlackSender) 
 		callbackID = data.View.CallbackID
 	}
 
-	handler, ok := s.handlers[callbackID]
+	handler, ok := s[callbackID]
 	if !ok {
 		return fmt.Errorf("unknown callbackID: %q", data.CallbackID)
 	}
@@ -55,7 +53,7 @@ func (s shortcuts) dispatch(data slack.InteractionCallback, client SlackSender) 
 }
 
 func (s shortcuts) setUpdate(u poller.Update) {
-	for _, h := range s.handlers {
+	for _, h := range s {
 		h.setUpdate(u)
 	}
 }
@@ -66,8 +64,7 @@ var _ shortcutHandler = &setRoomShortcut{}
 
 type setRoomShortcut struct {
 	TadoClient
-	update
-	poller poller.Poller
+	updateStore
 	logger *slog.Logger
 }
 
@@ -99,6 +96,21 @@ func (s *setRoomShortcut) HandleAction(data slack.InteractionCallback, client Sl
 }
 
 func (s *setRoomShortcut) HandleSubmission(data slack.InteractionCallback, client SlackSender) error {
+	channel, action, err := s.setRoom(data)
+
+	var postErr error
+	if err == nil {
+		_, _, postErr = client.PostMessage(channel, slack.MsgOptionText("<@"+data.User.ID+"> "+action, false))
+	} else {
+		_, postErr = client.PostEphemeral(channel, data.User.ID, slack.MsgOptionText("failed to set room: "+err.Error(), false))
+	}
+	if postErr != nil {
+		s.logger.Warn("failed to post message", "err", postErr)
+	}
+	return err
+}
+
+func (s *setRoomShortcut) setRoom(data slack.InteractionCallback) (string, string, error) {
 	zoneName := data.View.State.Values["zone"]["zone"].SelectedOption.Value
 	mode := data.View.State.Values["mode"]["mode"].SelectedOption.Value
 	temperature := data.View.State.Values["temperature"]["temperature"].Value
@@ -118,7 +130,9 @@ func (s *setRoomShortcut) HandleSubmission(data slack.InteractionCallback, clien
 		temp, _ := strconv.ParseFloat(temperature, 32)
 		action = "set *" + zoneName + "* to " + temperature + "ºC"
 		if due != "" {
-			duration = timeStampToDuration(due)
+			if duration, err = timeStampToDuration(due); err != nil {
+				return "", "", fmt.Errorf("failed to parse due time %q: %w", due, err)
+			}
 			action += " for " + duration.Round(time.Minute).String()
 		}
 		err = tadotools.SetOverlay(ctx, s.TadoClient, homeId, *zone.Id, float32(temp), duration)
@@ -128,16 +142,7 @@ func (s *setRoomShortcut) HandleSubmission(data slack.InteractionCallback, clien
 	default:
 	}
 
-	var postErr error
-	if err == nil {
-		_, _, postErr = client.PostMessage(channel, slack.MsgOptionText("<@"+data.User.ID+"> "+action, false))
-	} else {
-		_, postErr = client.PostEphemeral(channel, data.User.ID, slack.MsgOptionText("failed to set room: "+err.Error(), false))
-	}
-	if postErr != nil {
-		s.logger.Warn("failed to post message", "err", postErr)
-	}
-	return err
+	return channel, action, err
 }
 
 func (s *setRoomShortcut) makeView(mode string, u poller.Update) slack.ModalViewRequest {
@@ -157,8 +162,7 @@ func (s *setRoomShortcut) makeView(mode string, u poller.Update) slack.ModalView
 	// mode
 	modeLabel := slack.NewTextBlockObject(slack.PlainTextType, "Mode:", false, false)
 	modeOptions := slack.NewRadioButtonsBlockElement("mode", createOptionBlockObjects("auto", "manual")...)
-	modeBlock := slack.NewInputBlock("mode", modeLabel, nil, modeOptions)
-	modeBlock.DispatchAction = true
+	modeBlock := slack.NewInputBlock("mode", modeLabel, nil, modeOptions).WithDispatchAction(true)
 	blocks.BlockSet[1] = modeBlock
 
 	if mode == "manual" {
@@ -169,10 +173,10 @@ func (s *setRoomShortcut) makeView(mode string, u poller.Update) slack.ModalView
 		blocks.BlockSet = append(blocks.BlockSet, temperatureBlock)
 
 		// duration
+		// TODO: duration -> expiration
 		durationLabel := slack.NewTextBlockObject(slack.PlainTextType, "Duration:", false, false)
 		durationOptions := slack.NewTimePickerBlockElement("duration")
-		durationBlock := slack.NewInputBlock("duration", durationLabel, nil, durationOptions)
-		durationBlock.Optional = true
+		durationBlock := slack.NewInputBlock("duration", durationLabel, nil, durationOptions).WithOptional(true)
 
 		blocks.BlockSet = append(blocks.BlockSet, durationBlock)
 	}
@@ -203,8 +207,7 @@ var _ shortcutHandler = &setHomeShortcut{}
 
 type setHomeShortcut struct {
 	TadoClient
-	update
-	poller poller.Poller
+	updateStore
 	logger *slog.Logger
 }
 
@@ -222,8 +225,23 @@ func (s *setHomeShortcut) HandleAction(_ slack.InteractionCallback, _ SlackSende
 }
 
 func (s *setHomeShortcut) HandleSubmission(data slack.InteractionCallback, client SlackSender) error {
+	channel, action, err := s.setHome(data)
+	var postErr error
+	if err == nil {
+		_, _, postErr = client.PostMessage(channel, slack.MsgOptionText("<@"+data.User.ID+"> "+action, false))
+	} else {
+		_, postErr = client.PostEphemeral(channel, data.User.ID, slack.MsgOptionText("failed to set home: "+err.Error(), false))
+	}
+	if postErr != nil {
+		s.logger.Warn("failed to post message", "err", postErr)
+	}
+	return err
+}
+
+func (s *setHomeShortcut) setHome(data slack.InteractionCallback) (string, string, error) {
 	mode := data.View.State.Values["mode"]["mode"].SelectedOption.Value
 	channel := data.View.State.Values["channel"]["channel"].SelectedConversation
+	action := "set home to " + mode + " mode"
 
 	u, _ := s.getUpdate()
 	homeId := *u.HomeBase.Id
@@ -238,18 +256,7 @@ func (s *setHomeShortcut) HandleSubmission(data slack.InteractionCallback, clien
 	case "away":
 		_, err = s.TadoClient.SetPresenceLockWithResponse(ctx, homeId, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.AWAY)})
 	}
-
-	action := "set home to " + mode + " mode"
-	var postErr error
-	if err == nil {
-		_, _, postErr = client.PostMessage(channel, slack.MsgOptionText("<@"+data.User.ID+"> "+action, false))
-	} else {
-		_, postErr = client.PostEphemeral(channel, data.User.ID, slack.MsgOptionText("failed to set home: "+err.Error(), false))
-	}
-	if postErr != nil {
-		s.logger.Warn("failed to post message", "err", postErr)
-	}
-	return err
+	return channel, action, err
 }
 
 func (s *setHomeShortcut) makeView() slack.ModalViewRequest {
@@ -291,14 +298,17 @@ func createOptionBlockObjects(options ...string) []*slack.OptionBlockObject {
 	return optionBlockObjects
 }
 
-func timeStampToDuration(targetTime string) time.Duration {
-	now := time.Now()
+var nowFunc = time.Now
+
+func timeStampToDuration(targetTime string) (time.Duration, error) {
+	// allow tests to override current time
+	now := nowFunc()
 	loc := now.Location()
 
 	// Parse the target time
 	parsedTime, err := time.ParseInLocation("15:04", targetTime, loc)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse time: %w", err))
+		return 0, err
 	}
 
 	// Set the target time to today’s date with the parsed hour and minute
@@ -311,5 +321,5 @@ func timeStampToDuration(targetTime string) time.Duration {
 
 	// Calculate the duration until the target time
 	duration := target.Sub(now)
-	return duration
+	return duration, nil
 }

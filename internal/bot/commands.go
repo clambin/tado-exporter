@@ -18,7 +18,7 @@ var (
 
 type commandRunner struct {
 	TadoClient
-	update
+	updateStore
 	poller     poller.Poller
 	controller Controller
 	logger     *slog.Logger
