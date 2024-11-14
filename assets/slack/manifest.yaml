@@ -14,17 +14,8 @@ features:
       callback_id: tado_set_home
       description: set home in auto, home or away mode
   slash_commands:
-    - command: /rules
-      description: show active rules
-      should_escape: false
-    - command: /rooms
-      description: show all rooms
-      should_escape: false
-    - command: /users
-      description: show all users
-      should_escape: false
-    - command: /refresh
-      description: get latest Tadoº data
+    - command: /tado
+      description: run a tado command
       should_escape: false
 oauth_config:
   scopes:
