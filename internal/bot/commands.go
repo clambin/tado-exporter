@@ -123,8 +123,7 @@ func (r *commandRunner) listUsers(command slack.SlashCommand, client SlackSender
 func (r *commandRunner) listRules(command slack.SlashCommand, client SlackSender) error {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
-	// a bit icky, but okay ...
-	if r.controller == nil || r.controller.(*mocks.Controller) == nil {
+	if !r.hasController() {
 		return errors.New("controller isn't running")
 	}
 
@@ -139,6 +138,17 @@ func (r *commandRunner) listRules(command slack.SlashCommand, client SlackSender
 	}
 	_, err := client.PostEphemeral(command.ChannelID, command.UserID, slack.MsgOptionAttachments(attachment))
 	return err
+}
+
+func (r *commandRunner) hasController() bool {
+	if r.controller == nil {
+		return false
+	}
+	// I'm not sure that I understand it, but I'm sure that I don't like it ...
+	if c, ok := r.controller.(*mocks.Controller); ok && c == nil {
+		return false
+	}
+	return true
 }
 
 func (r *commandRunner) refresh(command slack.SlashCommand, client SlackSender) error {
