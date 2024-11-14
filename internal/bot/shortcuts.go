@@ -96,9 +96,8 @@ func (s *setRoomShortcut) HandleAction(data slack.InteractionCallback, client Sl
 }
 
 func (s *setRoomShortcut) HandleSubmission(data slack.InteractionCallback, client SlackSender) error {
-	channel, action, err := s.setRoom(data)
-
 	var postErr error
+	channel, action, err := s.setRoom(data)
 	if err == nil {
 		_, _, postErr = client.PostMessage(channel, slack.MsgOptionText("<@"+data.User.ID+"> "+action, false))
 	} else {
@@ -225,8 +224,8 @@ func (s *setHomeShortcut) HandleAction(_ slack.InteractionCallback, _ SlackSende
 }
 
 func (s *setHomeShortcut) HandleSubmission(data slack.InteractionCallback, client SlackSender) error {
-	channel, action, err := s.setHome(data)
 	var postErr error
+	channel, action, err := s.setHome(data)
 	if err == nil {
 		_, _, postErr = client.PostMessage(channel, slack.MsgOptionText("<@"+data.User.ID+"> "+action, false))
 	} else {

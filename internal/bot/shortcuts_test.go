@@ -13,6 +13,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
@@ -184,7 +185,7 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 			},
 		},
 		{
-			name: "room to manual",
+			name: "room to permanent manual",
 			data: slack.InteractionCallback{
 				Type: slack.InteractionTypeViewSubmission,
 				View: slack.View{
@@ -218,6 +219,44 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 				wantErr: assert.NoError,
 			},
 		},
+		{
+			name: "room to timer manual",
+			data: slack.InteractionCallback{
+				Type: slack.InteractionTypeViewSubmission,
+				View: slack.View{
+					State: &slack.ViewState{
+						Values: map[string]map[string]slack.BlockAction{
+							"zone":        {"zone": {SelectedOption: slack.OptionBlockObject{Value: "foo"}}},
+							"mode":        {"mode": {SelectedOption: slack.OptionBlockObject{Value: "manual"}}},
+							"temperature": {"temperature": {Value: "21.5"}},
+							"duration":    {"duration": {SelectedTime: "22:00"}},
+							"channel":     {"channel": {SelectedConversation: "C123456789"}},
+						},
+					},
+				},
+			},
+			setupTado: func(t *mocks.TadoClient) {
+				t.EXPECT().
+					SetZoneOverlayWithResponse(context.Background(), int64(1), 10, mock.Anything).
+					RunAndReturn(func(_ context.Context, _ int64, _ int, overlay tado.ZoneOverlay, fn ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
+						if temperature := *overlay.Setting.Temperature.Celsius; temperature != 21.5 {
+							return nil, fmt.Errorf("temperature is wrong: want 21.5, got %.1f", temperature)
+						}
+						if mode := *overlay.Termination.Type; mode != tado.ZoneOverlayTerminationTypeTIMER {
+							return nil, fmt.Errorf("termination is wrong: want TIMER, got %q", mode)
+						}
+						if *overlay.Termination.DurationInSeconds == 0 {
+							return nil, fmt.Errorf("duration is not set")
+						}
+						return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK}}, nil
+					})
+			},
+			want: want{
+				channel: "C123456789",
+				action:  "set *foo* to 21.5ºC for ",
+				wantErr: assert.NoError,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -237,7 +276,7 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 
 			channel, action, err := h.setRoom(tt.data)
 			assert.Equal(t, tt.want.channel, channel)
-			assert.Equal(t, tt.want.action, action)
+			assert.True(t, strings.HasPrefix(action, tt.want.action))
 			tt.want.wantErr(t, err)
 		})
 	}
@@ -257,6 +296,120 @@ func Test_setHomeShortcut_makeView(t *testing.T) {
 		}
 	}
 	assert.Equal(t, []string{"mode", "channel"}, inputBlocks)
+}
+
+func Test_setHomeShortcut_setHome(t *testing.T) {
+	type want struct {
+		channel string
+		action  string
+		wantErr assert.ErrorAssertionFunc
+	}
+	tests := []struct {
+		name      string
+		data      slack.InteractionCallback
+		setupTado func(t *mocks.TadoClient)
+		want
+	}{
+		{
+			name: "home to auto",
+			data: slack.InteractionCallback{
+				Type: slack.InteractionTypeViewSubmission,
+				View: slack.View{
+					State: &slack.ViewState{
+						Values: map[string]map[string]slack.BlockAction{
+							"mode":    {"mode": {SelectedOption: slack.OptionBlockObject{Value: "auto"}}},
+							"channel": {"channel": {SelectedConversation: "C123456789"}},
+						},
+					},
+				},
+			},
+			setupTado: func(t *mocks.TadoClient) {
+				t.EXPECT().DeletePresenceLockWithResponse(context.Background(), int64(1)).Return(nil, nil)
+			},
+			want: want{
+				channel: "C123456789",
+				action:  "set home to auto mode",
+				wantErr: assert.NoError,
+			},
+		},
+		{
+			name: "home to home mode",
+			data: slack.InteractionCallback{
+				Type: slack.InteractionTypeViewSubmission,
+				View: slack.View{
+					State: &slack.ViewState{
+						Values: map[string]map[string]slack.BlockAction{
+							"mode":    {"mode": {SelectedOption: slack.OptionBlockObject{Value: "home"}}},
+							"channel": {"channel": {SelectedConversation: "C123456789"}},
+						},
+					},
+				},
+			},
+			setupTado: func(t *mocks.TadoClient) {
+				t.EXPECT().
+					SetPresenceLockWithResponse(context.Background(), int64(1), mock.Anything).
+					RunAndReturn(func(_ context.Context, _ int64, lock tado.PresenceLock, fn ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
+						if *lock.HomePresence != tado.HOME {
+							return nil, fmt.Errorf("home presence is wrong")
+						}
+						return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK}}, nil
+					})
+			},
+			want: want{
+				channel: "C123456789",
+				action:  "set home to home mode",
+				wantErr: assert.NoError,
+			},
+		},
+		{
+			name: "home to away mode",
+			data: slack.InteractionCallback{
+				Type: slack.InteractionTypeViewSubmission,
+				View: slack.View{
+					State: &slack.ViewState{
+						Values: map[string]map[string]slack.BlockAction{
+							"mode":    {"mode": {SelectedOption: slack.OptionBlockObject{Value: "away"}}},
+							"channel": {"channel": {SelectedConversation: "C123456789"}},
+						},
+					},
+				},
+			},
+			setupTado: func(t *mocks.TadoClient) {
+				t.EXPECT().
+					SetPresenceLockWithResponse(context.Background(), int64(1), mock.Anything).
+					RunAndReturn(func(_ context.Context, _ int64, lock tado.PresenceLock, fn ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
+						if *lock.HomePresence != tado.AWAY {
+							return nil, fmt.Errorf("home presence is wrong")
+						}
+						return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK}}, nil
+					})
+			},
+			want: want{
+				channel: "C123456789",
+				action:  "set home to away mode",
+				wantErr: assert.NoError,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tadoClient := mocks.NewTadoClient(t)
+			h := setHomeShortcut{
+				TadoClient:  tadoClient,
+				updateStore: updateStore{update: &poller.Update{HomeBase: tado.HomeBase{Id: oapi.VarP(int64(1))}}},
+				logger:      slog.New(slog.NewTextHandler(io.Discard, nil)),
+			}
+			if tt.setupTado != nil {
+				tt.setupTado(tadoClient)
+			}
+
+			channel, action, err := h.setHome(tt.data)
+			assert.Equal(t, tt.want.channel, channel)
+			assert.Equal(t, tt.want.action, action)
+			tt.want.wantErr(t, err)
+		})
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
