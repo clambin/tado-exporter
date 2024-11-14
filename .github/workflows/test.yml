@@ -4,8 +4,7 @@ on:
   push:
     branches-ignore:
       - master
-      - slackapp
-      - interactive
+      - shortcuts
   pull_request_target:
 
 jobs:
