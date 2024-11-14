@@ -4,6 +4,15 @@ features:
   bot_user:
     display_name: tado bot
     always_online: false
+  shortcuts:
+    - name: Tado Room
+      type: global
+      callback_id: tado_set_room
+      description: control heating of a room
+    - name: Tado Home
+      type: global
+      callback_id: tado_set_home
+      description: set home in auto, home or away mode
   slash_commands:
     - command: /rules
       description: show active rules
@@ -13,12 +22,6 @@ features:
       should_escape: false
     - command: /users
       description: show all users
-      should_escape: false
-    - command: /setroom
-      description: control the heating in a room
-      should_escape: false
-    - command: /sethome
-      description: control the home / away setting of the house
       should_escape: false
     - command: /refresh
       description: get latest Tadoº data
