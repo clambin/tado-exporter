@@ -12,12 +12,12 @@ Monitor & control utility Tadoº Smart Thermostat devices.
 
 tado retrieves all metrics from your Tadoº devices and makes them available to Prometheus. Additionally, tado can run:
 
-- a Slack bot to query and control heating in a room
 - a rule-based controller to set the heating based on current conditions, like:
   - switching on/off the heating in a room, when designated users are home or away
   - switching off a manual overlay after a specific amount of time
   - switching off a manual overlay at a specific time of the day
   - switching off all heating when all users are away (basic geofencing implementation)
+- a Slack bot to query and control heating in a room
 
 ## Installation
 
@@ -40,7 +40,6 @@ monitor     Monitor Tado thermostats
 
 ### Configuration file
 
-TODO: app-token
 The configuration file option specifies a yaml file to control the behaviour:
 
 ```
@@ -62,13 +61,11 @@ health:
 tado:
     username: ""
     password: ""
-# Section for controller functionality
-controller:
-    tadobot:
-        # When set, the controller will start a slack bot. See below for details
-        enabled: true
-        # Slackbot token value
-        token: ""
+slack:
+    # Slack token. If added, rule events are sent to Slack 
+    token: xoxb-token
+    # Slack App token. If added, the Slack bot is started.  Requires "token".
+    app-token: xapp-token
 ```
 
 If the filename isn't specified on the command line, the program looks for a file `config.yaml` in the following directories:
@@ -147,25 +144,29 @@ The repo contains a sample [Grafana dashboard](assets/grafana/dashboards) that d
 
 `tado monitor` can run a Slack bot that reports on any rules being triggered:
 
-![screenshot](assets/screenshots/tadobot_2.png?raw=true)
+![screenshot](assets/screenshots/tado_rules.png)
 
 Users can also interact with the bot:
 
-![screenshot](assets/screenshots/tadobot_1.png?raw=true)
+![screenshot](assets/screenshots/tado_slash.png)
 
-The tado bot implements the following commands:
+The tado bot implements a Slash command `/tado`, with the following options:
 
 * **rules**: show any activated rules
 * **rooms**: show temperature & settings on each room
 * **users**: show the status of each user (home/away)
-* **set**: sets the room's target temperature, optionally for a limited duration:
-  * **set Bathroom 23.5**: sets the bathroom's target temperature to 23.5ºC
-  * **set Bathroom 23.5 1h**: same, but switches back to automatic mode after 1 hour
-  * **set Study auto**: sets the study to automatic temperature control
-* **version**: show version
-* **help**: show all available commands
+* **refresh**: get the latest Tadoº data
+* **help**: show all supported options
 
-To enable the bot, add a bot to the Custom Integrations of your Slack workspace and add the API Token in `controller.tadobot.token`.
+The bot includes two interactive shortcuts: `Tado Room` controls a room's heating, `Tado Home` controls the house:
+
+| Tado Room                       | Tado Home |
+|---------------------------------|-----------|
+| ![](assets/screenshots/tado_room.png) | ![](assets/screenshots/tado_home.png) |
+
+
+To enable the bot, go to You Apps in your workspace and add a Tadoº Bot using the included [manifest.yaml](assets/slack/manifest.yaml).
+Add the App Token and the Bot User OAuth Token in `slack.app-token` and `slack.token` respectively.
 
 ## Tadoº client implementation 
 

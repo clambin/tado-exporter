@@ -13,14 +13,11 @@ import (
 )
 
 type Bot struct {
-	TadoClient
+	commandRunner
+	shortcuts
 	SocketModeHandler
-	poller     poller.Poller
-	controller Controller
-	logger     *slog.Logger
-	update     poller.Update
-	lock       sync.RWMutex
-	updated    bool
+	poller poller.Poller
+	logger *slog.Logger
 }
 
 type TadoClient interface {
@@ -30,6 +27,7 @@ type TadoClient interface {
 
 type SocketModeHandler interface {
 	HandleSlashCommand(command string, f socketmode.SocketmodeHandlerFunc)
+	HandleInteraction(et slack.InteractionType, f socketmode.SocketmodeHandlerFunc)
 	HandleDefault(f socketmode.SocketmodeHandlerFunc)
 	RunEventLoopContext(ctx context.Context) error
 }
@@ -37,6 +35,9 @@ type SocketModeHandler interface {
 type SlackSender interface {
 	PostEphemeral(channelID string, userID string, options ...slack.MsgOption) (string, error)
 	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
+	OpenView(triggerID string, view slack.ModalViewRequest) (*slack.ViewResponse, error)
+	UpdateView(view slack.ModalViewRequest, externalID string, hash string, viewID string) (*slack.ViewResponse, error)
+	//Ack(socketmode.Request, ...any)
 }
 
 type Controller interface {
@@ -45,35 +46,41 @@ type Controller interface {
 
 func New(tadoClient TadoClient, handler SocketModeHandler, p poller.Poller, c Controller, logger *slog.Logger) *Bot {
 	b := Bot{
-		TadoClient:        tadoClient,
+		commandRunner: commandRunner{
+			TadoClient: tadoClient,
+			poller:     p,
+			controller: c,
+			logger:     logger,
+		},
+		shortcuts: shortcuts{
+			setRoomCallbackID: &setRoomShortcut{TadoClient: tadoClient, logger: logger.With("shortcut", "setRoom")},
+			setHomeCallbackID: &setHomeShortcut{TadoClient: tadoClient, logger: logger.With("shortcut", "setHome")},
+		},
 		SocketModeHandler: handler,
 		poller:            p,
-		controller:        c,
 		logger:            logger,
 	}
 
-	b.SocketModeHandler.HandleSlashCommand("/rooms", b.runCommand(b.listRooms))
-	b.SocketModeHandler.HandleSlashCommand("/users", b.runCommand(b.listUsers))
-	b.SocketModeHandler.HandleSlashCommand("/rules", b.runCommand(b.listRules))
-	b.SocketModeHandler.HandleSlashCommand("/refresh", b.runCommand(b.refresh))
-	b.SocketModeHandler.HandleSlashCommand("/setroom", b.runCommand(b.setRoom))
-	b.SocketModeHandler.HandleSlashCommand("/sethome", b.runCommand(b.setHome))
+	b.SocketModeHandler.HandleSlashCommand("/tado", b.runCommand(b.commandRunner.dispatch))
+	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeShortcut, b.runShortcut(b.shortcuts.dispatch))
+	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeBlockActions, b.runShortcut(b.shortcuts.dispatch))
+	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeViewSubmission, b.runShortcut(b.shortcuts.dispatch))
 	b.SocketModeHandler.HandleDefault(func(event *socketmode.Event, _ *socketmode.Client) {
-		logger.Debug("event received", "type", event.Type)
+		logger.Debug("unhandled event received", "type", event.Type, "data", fmt.Sprintf("%T", event.Data))
 	})
 
 	return &b
 }
 
 // Run the controller
-func (b *Bot) Run(ctx context.Context) error {
-	b.logger.Debug("bot started")
-	defer b.logger.Debug("bot stopped")
+func (r *Bot) Run(ctx context.Context) error {
+	r.logger.Debug("bot started")
+	defer r.logger.Debug("bot stopped")
 	errCh := make(chan error)
-	go func() { errCh <- b.SocketModeHandler.RunEventLoopContext(ctx) }()
+	go func() { errCh <- r.SocketModeHandler.RunEventLoopContext(ctx) }()
 
-	ch := b.poller.Subscribe()
-	defer b.poller.Unsubscribe(ch)
+	ch := r.poller.Subscribe()
+	defer r.poller.Unsubscribe(ch)
 
 	for {
 		select {
@@ -83,33 +90,61 @@ func (b *Bot) Run(ctx context.Context) error {
 			}
 		case <-ctx.Done():
 			return nil
-		case update := <-ch:
-			b.setUpdate(update)
+		case u := <-ch:
+			r.commandRunner.setUpdate(u)
+			r.shortcuts.setUpdate(u)
 		}
 	}
 }
 
-func (b *Bot) runCommand(f func(command slack.SlashCommand, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {
+// runCommand receives a slackCommand from slack and calls the function that implements it.  Having this as a dedicated
+// function decouples Slack from the business logic (i.e. ack'ing the request), plus it translated a *slack.Client to a
+// SlackSender interface, which makes testing the business logic easier.
+func (r *Bot) runCommand(cmd func(command slack.SlashCommand, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {
 	return func(event *socketmode.Event, client *socketmode.Client) {
 		client.Ack(*event.Request)
 		data := event.Data.(slack.SlashCommand)
-		if err := f(data, client); err != nil {
+		if err := cmd(data, client); err != nil {
 			if _, err = client.PostEphemeral(data.ChannelID, data.UserID, slack.MsgOptionText("command failed: "+err.Error(), false)); err != nil {
-				b.logger.Warn("failed to post command output", "cmd", data.Command, "err", err)
+				r.logger.Warn("failed to post command output", "cmd", data.Command, "err", err)
 			}
 		}
 	}
 }
 
-func (b *Bot) setUpdate(update poller.Update) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.update = update
-	b.updated = true
+// runCommand receives a shortcut request from slack and calls the function that implements it.  Having this as a dedicated
+// function decouples Slack from the business logic (i.e. ack'ing the request), plus it translated a *slack.Client to a
+// SlackSender interface, which makes testing the business logic easier.
+func (r *Bot) runShortcut(shortcut func(data slack.InteractionCallback, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {
+	return func(event *socketmode.Event, client *socketmode.Client) {
+		data := event.Data.(slack.InteractionCallback)
+		if err := shortcut(data, client); err != nil {
+			r.logger.Warn("shortcut failed", "err", err, "type", data.Type)
+			return
+		}
+		client.Ack(*event.Request)
+	}
 }
 
-func (b *Bot) getUpdate() (poller.Update, bool) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-	return b.update, b.updated
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// updateStore contains the latest update received from a Poller.
+type updateStore struct {
+	update *poller.Update
+	lock   sync.RWMutex
+}
+
+func (r *updateStore) setUpdate(u poller.Update) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.update = &u
+}
+
+func (r *updateStore) getUpdate() (poller.Update, bool) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	if r.update == nil {
+		return poller.Update{}, false
+	}
+	return *r.update, true
 }

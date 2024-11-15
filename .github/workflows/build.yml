@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - slackapp
+      - shortcuts
 
 jobs:
   test:

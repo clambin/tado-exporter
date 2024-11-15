@@ -17,6 +17,7 @@ func TestBot_Run(t *testing.T) {
 
 	h := mocks.NewSocketModeHandler(t)
 	h.EXPECT().HandleSlashCommand(mock.Anything, mock.Anything)
+	h.EXPECT().HandleInteraction(mock.Anything, mock.Anything)
 	h.EXPECT().HandleDefault(mock.Anything).Once()
 	h.EXPECT().RunEventLoopContext(ctx).Return(nil).Once()
 	p := mockPoller.NewPoller(t)

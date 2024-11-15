@@ -93,19 +93,17 @@ func (p *TadoPoller) update(ctx context.Context) (Update, error) {
 
 	update := Update{HomeBase: homes[0]}
 	homeId := *update.HomeBase.Id
-	if update.HomeState, err = p.getHomeState(ctx, homeId); err != nil {
-		return Update{}, err
+	update.HomeState, err = p.getHomeState(ctx, homeId)
+	if err == nil {
+		update.Zones, err = p.getZones(ctx, homeId)
 	}
-	if update.Zones, err = p.getZones(ctx, homeId); err != nil {
-		return update, err
+	if err == nil {
+		update.MobileDevices, err = p.getMobileDevices(ctx, homeId)
 	}
-	if update.MobileDevices, err = p.getMobileDevices(ctx, homeId); err != nil {
-		return Update{}, err
+	if err == nil {
+		update.Weather, err = p.getWeather(ctx, homeId)
 	}
-	if update.Weather, err = p.getWeather(ctx, homeId); err != nil {
-		return Update{}, err
-	}
-	return update, nil
+	return update, err
 }
 
 func (p *TadoPoller) getZones(ctx context.Context, homeId tado.HomeId) ([]Zone, error) {
