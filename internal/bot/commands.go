@@ -3,7 +3,6 @@ package bot
 import (
 	"errors"
 	"fmt"
-	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/slacktools"
 	"github.com/clambin/tado/v2"
@@ -127,10 +126,6 @@ func (r *commandRunner) listRules() (slacktools.Attachment, error) {
 
 func (r *commandRunner) hasController() bool {
 	if r.Controller == nil {
-		return false
-	}
-	// I'm not sure that I understand it, but I'm sure that I don't like it ...
-	if c, ok := r.Controller.(*mocks.Controller); ok && c == nil {
 		return false
 	}
 	return true
