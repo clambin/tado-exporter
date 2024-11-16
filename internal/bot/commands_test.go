@@ -5,253 +5,214 @@ import (
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
 	mocks2 "github.com/clambin/tado-exporter/internal/poller/mocks"
+	"github.com/clambin/tado-exporter/internal/slacktools"
 	"github.com/clambin/tado/v2"
-	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"io"
-	"log/slog"
 	"testing"
 )
 
-func Test_commandRunner_dispatch(t *testing.T) {
+func Test_commandRunner_listRooms(t *testing.T) {
 	tests := []struct {
-		name              string
-		update            *poller.Update
-		expectPoller      func(*mocks2.Poller)
-		expectSlackSender func(*mocks.SlackSender)
-		expectController  func(*mocks.Controller)
-		command           string
-		wantErr           assert.ErrorAssertionFunc
+		name    string
+		update  *poller.Update
+		wantErr assert.ErrorAssertionFunc
+		want    slacktools.Attachment
 	}{
 		{
-			name:    "invalid command",
+			name:    "no update",
 			wantErr: assert.Error,
 		},
 		{
-			name:    "rooms: no update",
-			command: "rooms",
-			wantErr: assert.Error,
-		},
-		{
-			name:    "rooms: no rooms",
+			name:    "no rooms",
 			update:  &poller.Update{},
-			command: "rooms",
-			wantErr: assert.Error,
+			wantErr: assert.NoError,
+			want:    slacktools.Attachment{Header: "Rooms:", Body: []string{"no rooms have been found"}},
 		},
 		{
-			name: "rooms: room found",
+			name: "rooms found",
 			update: &poller.Update{
-				Zones: []poller.Zone{{
-					Zone: tado.Zone{Name: oapi.VarP("room")},
-					ZoneState: tado.ZoneState{
-						Setting: &tado.ZoneSetting{
-							Power:       oapi.VarP(tado.PowerON),
-							Temperature: &tado.Temperature{Celsius: oapi.VarP(float32(17.5))},
+				Zones: []poller.Zone{
+					{
+						Zone: tado.Zone{Id: oapi.VarP(40), Name: oapi.VarP("room D")},
+						ZoneState: tado.ZoneState{
+							Setting:          &tado.ZoneSetting{Power: oapi.VarP(tado.PowerOFF)},
+							SensorDataPoints: &tado.SensorDataPoints{InsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP(float32(20))}},
 						},
-						SensorDataPoints: &tado.SensorDataPoints{
-							InsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP(float32(21))},
+					},
+					{
+						Zone: tado.Zone{Id: oapi.VarP(30), Name: oapi.VarP("room C")},
+						ZoneState: tado.ZoneState{
+							Setting:          &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP(float32(21))}},
+							SensorDataPoints: &tado.SensorDataPoints{InsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP(float32(20))}},
+							Overlay:          &tado.ZoneOverlay{Termination: &tado.ZoneOverlayTermination{Type: oapi.VarP(tado.ZoneOverlayTerminationTypeTIMER), RemainingTimeInSeconds: oapi.VarP(300)}},
 						},
-					}},
+					},
+					{
+						Zone: tado.Zone{Id: oapi.VarP(20), Name: oapi.VarP("room B")},
+						ZoneState: tado.ZoneState{
+							Setting:          &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP(float32(17.5))}},
+							SensorDataPoints: &tado.SensorDataPoints{InsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP(float32(21))}},
+							Overlay:          &tado.ZoneOverlay{Termination: &tado.ZoneOverlayTermination{Type: oapi.VarP(tado.ZoneOverlayTerminationTypeMANUAL)}},
+						},
+					},
+					{
+						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room A")},
+						ZoneState: tado.ZoneState{
+							Setting:          &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP(float32(21))}},
+							SensorDataPoints: &tado.SensorDataPoints{InsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP(float32(20))}},
+						},
+					},
 				},
 			},
-			expectSlackSender: func(sender *mocks.SlackSender) {
-				sender.EXPECT().
-					PostEphemeral("1", "2", mock.Anything).
-					Return("", nil)
-			},
-			command: "rooms",
 			wantErr: assert.NoError,
+			want: slacktools.Attachment{Header: "Rooms:", Body: []string{
+				"*room A*: 20.0ºC (target: 21.0)",
+				"*room B*: 21.0ºC (target: 17.5, MANUAL)",
+				"*room C*: 20.0ºC (target: 21.0, MANUAL for 5m0s)",
+				"*room D*: 20.0ºC (off)",
+			}},
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := commandRunner{}
+			if tt.update != nil {
+				r.setUpdate(*tt.update)
+			}
+
+			got, err := r.listRooms()
+			tt.wantErr(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_commandRunner_listUsers(t *testing.T) {
+	tests := []struct {
+		name    string
+		update  *poller.Update
+		wantErr assert.ErrorAssertionFunc
+		want    slacktools.Attachment
+	}{
 		{
-			name:    "users: no update",
-			command: "users",
+			name:    "no update",
 			wantErr: assert.Error,
 		},
 		{
-			name:    "users: no users found",
+			name:    "no users",
 			update:  &poller.Update{},
-			command: "users",
-			wantErr: assert.Error,
+			wantErr: assert.NoError,
+			want:    slacktools.Attachment{Header: "Users:", Body: []string{"no users have been found"}},
 		},
 		{
 			name: "users found",
 			update: &poller.Update{
 				MobileDevices: []tado.MobileDevice{
 					{
-						Name:     oapi.VarP("foo"),
+						Name:     oapi.VarP("user D"),
 						Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)},
 						Location: &tado.MobileDeviceLocation{AtHome: oapi.VarP(false)},
 					},
 					{
-						Name:     oapi.VarP("bar"),
+						Name:     oapi.VarP("user C"),
 						Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)},
 						Location: &tado.MobileDeviceLocation{AtHome: oapi.VarP(true)},
 					},
 					{
-						Name:     oapi.VarP("bar"),
+						Name:     oapi.VarP("user B"),
 						Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(false)},
 					},
 					{
-						Name:     oapi.VarP("snafu"),
+						Name:     oapi.VarP("user A"),
 						Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)},
 					},
 				},
 			},
-			expectSlackSender: func(sender *mocks.SlackSender) {
-				sender.EXPECT().
-					PostEphemeral("1", "2", mock.Anything).
-					Return("", nil)
-			},
-			command: "users",
 			wantErr: assert.NoError,
-		},
-		{
-			name:    "rules: no controller",
-			command: "rules",
-			wantErr: assert.Error,
-		},
-		{
-			name: "rules: rules found",
-			expectController: func(controller *mocks.Controller) {
-				controller.EXPECT().ReportTasks().Return([]string{"foo", "bar"})
-			},
-			expectSlackSender: func(sender *mocks.SlackSender) {
-				sender.EXPECT().
-					PostEphemeral("1", "2", mock.Anything).
-					Return("", nil)
-			},
-			command: "rules",
-			wantErr: assert.NoError,
-		},
-		{
-			name: "refresh",
-			expectPoller: func(p *mocks2.Poller) {
-				p.EXPECT().Refresh()
-			},
-			expectSlackSender: func(sender *mocks.SlackSender) {
-				sender.EXPECT().PostEphemeral("1", "2", mock.Anything).Return("", nil)
-			},
-			command: "refresh",
-			wantErr: assert.NoError,
-		},
-		{
-			name: "help",
-			expectSlackSender: func(sender *mocks.SlackSender) {
-				sender.EXPECT().PostEphemeral("1", "2", mock.Anything).Return("", nil)
-			},
-			command: "help",
-			wantErr: assert.NoError,
+			want: slacktools.Attachment{Header: "Users:", Body: []string{
+				"*user C*: home",
+				"*user D*: away",
+			}},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var p *mocks2.Poller
-			if tt.expectPoller != nil {
-				p = mocks2.NewPoller(t)
-				tt.expectPoller(p)
-			}
-			var s *mocks.SlackSender
-			if tt.expectSlackSender != nil {
-				s = mocks.NewSlackSender(t)
-				tt.expectSlackSender(s)
-			}
-			var c *mocks.Controller
-			if tt.expectController != nil {
-				c = mocks.NewController(t)
-				tt.expectController(c)
-			}
-
-			r := commandRunner{
-				poller:     p,
-				controller: c,
-				logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
-			}
-
+			r := commandRunner{}
 			if tt.update != nil {
 				r.setUpdate(*tt.update)
 			}
 
-			err := r.dispatch(slack.SlashCommand{ChannelID: "1", UserID: "2", Text: tt.command}, s)
+			got, err := r.listUsers()
 			tt.wantErr(t, err)
-
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func Test_zoneState(t *testing.T) {
+func Test_commandRunner_listRules(t *testing.T) {
 	tests := []struct {
-		name string
-		zone poller.Zone
-		want string
+		name    string
+		setup   func(*mocks.Controller)
+		wantErr assert.ErrorAssertionFunc
+		want    slacktools.Attachment
 	}{
 		{
-			name: "auto",
-			zone: poller.Zone{
-				Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
-				ZoneState: tado.ZoneState{
-					Setting: &tado.ZoneSetting{
-						Power:       oapi.VarP(tado.PowerON),
-						Temperature: &tado.Temperature{Celsius: oapi.VarP(float32(17.5))},
-					},
-				},
-			},
-			want: "target: 17.5",
+			name:    "no update",
+			wantErr: assert.Error,
 		},
 		{
-			name: "off",
-			zone: poller.Zone{
-				Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
-				ZoneState: tado.ZoneState{
-					Setting: &tado.ZoneSetting{
-						Power: oapi.VarP(tado.PowerOFF),
-					},
-				},
+			name: "no rules",
+			setup: func(c *mocks.Controller) {
+				c.EXPECT().ReportTasks().Return(nil).Once()
 			},
-			want: "off",
+			wantErr: assert.NoError,
+			want:    slacktools.Attachment{Header: "Rules:", Body: []string{"no rules have been triggered"}},
 		},
 		{
-			name: "manual - permanent",
-			zone: poller.Zone{
-				Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
-				ZoneState: tado.ZoneState{
-					Setting: &tado.ZoneSetting{
-						Power:       oapi.VarP(tado.PowerON),
-						Temperature: &tado.Temperature{Celsius: oapi.VarP(float32(17.5))},
-					},
-					Overlay: &tado.ZoneOverlay{
-						Termination: &tado.ZoneOverlayTermination{
-							Type: oapi.VarP(tado.ZoneOverlayTerminationTypeMANUAL),
-						},
-					},
-				},
+			name: "rules found",
+			setup: func(c *mocks.Controller) {
+				c.EXPECT().ReportTasks().Return([]string{
+					"room B: bar",
+					"room A: foo",
+				}).Once()
 			},
-			want: "target: 17.5, MANUAL",
-		},
-		{
-			name: "manual - timer",
-			zone: poller.Zone{
-				Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
-				ZoneState: tado.ZoneState{
-					Setting: &tado.ZoneSetting{
-						Power:       oapi.VarP(tado.PowerON),
-						Temperature: &tado.Temperature{Celsius: oapi.VarP(float32(17.5))},
-					},
-					Overlay: &tado.ZoneOverlay{
-						Termination: &tado.ZoneOverlayTermination{
-							Type:                   oapi.VarP(tado.ZoneOverlayTerminationTypeTIMER),
-							RemainingTimeInSeconds: oapi.VarP(300),
-						},
-					},
-				},
-			},
-			want: "target: 17.5, MANUAL for 5m0s",
+			wantErr: assert.NoError,
+			want: slacktools.Attachment{Header: "Rules:", Body: []string{
+				"room A: foo",
+				"room B: bar",
+			}},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, zoneState(tt.zone))
+			r := commandRunner{}
+			if tt.setup != nil {
+				c := mocks.NewController(t)
+				tt.setup(c)
+				r.Controller = c
+			}
+
+			got, err := r.listRules()
+			tt.wantErr(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func Test_commandRunner_refresh(t *testing.T) {
+	p := mocks2.NewPoller(t)
+	p.EXPECT().Refresh().Once()
+	r := commandRunner{Poller: p}
+	_, err := r.refresh()
+	assert.NoError(t, err)
+}
+
+func Test_commandRunner_help(t *testing.T) {
+	var r commandRunner
+	resp, err := r.help()
+	assert.NoError(t, err)
+	assert.Equal(t, slacktools.Attachment{Header: "Supported commands:", Body: []string{"users, rooms, rules, help"}}, resp)
 }

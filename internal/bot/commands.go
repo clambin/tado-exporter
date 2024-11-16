@@ -3,13 +3,12 @@ package bot
 import (
 	"errors"
 	"fmt"
-	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/slacktools"
 	"github.com/clambin/tado/v2"
 	"github.com/slack-go/slack"
 	"log/slog"
 	"slices"
-	"strings"
 	"time"
 )
 
@@ -20,59 +19,56 @@ var (
 type commandRunner struct {
 	TadoClient
 	updateStore
-	poller     poller.Poller
-	controller Controller
-	logger     *slog.Logger
+	poller.Poller
+	Controller
+	logger *slog.Logger
 }
 
 func (r *commandRunner) dispatch(command slack.SlashCommand, client SlackSender) error {
 	r.logger.Debug("running command", "cmd", command.Command, "text", command.Text)
+	var response slacktools.Formatter
 	var err error
 	switch command.Text {
 	case "rooms":
-		err = r.listRooms(command, client)
+		response, err = r.listRooms()
 	case "users":
-		err = r.listUsers(command, client)
+		response, err = r.listUsers()
 	case "rules":
-		err = r.listRules(command, client)
+		response, err = r.listRules()
 	case "refresh":
-		err = r.refresh(command, client)
+		response, err = r.refresh()
 	case "help":
-		err = r.help(command, client)
+		response, err = r.help()
 	default:
 		err = errors.New("unknown command: " + command.Text)
+	}
+	if err == nil && response != nil {
+		_, err = client.PostEphemeral(command.ChannelID, command.UserID, response.Format())
 	}
 	return err
 }
 
-func (r *commandRunner) listRooms(command slack.SlashCommand, client SlackSender) error {
+func (r *commandRunner) listRooms() (slacktools.Attachment, error) {
 	u, ok := r.getUpdate()
 	if !ok {
-		return ErrNoUpdates
+		return slacktools.Attachment{}, ErrNoUpdates
 	}
 
-	text := make([]string, 0, len(u.Zones))
-
-	for _, zone := range u.Zones {
-		text = append(text, fmt.Sprintf("%s: %.1fºC (%s)",
+	lines := make([]string, len(u.Zones))
+	for i, zone := range u.Zones {
+		lines[i] = fmt.Sprintf("*%s*: %.1fºC (%s)",
 			*zone.Name,
 			*zone.SensorDataPoints.InsideTemperature.Celsius,
 			zoneState(zone),
-		))
+		)
+	}
+	slices.Sort(lines)
+
+	if len(lines) == 0 {
+		lines = append(lines, "no rooms have been found")
 	}
 
-	if len(text) == 0 {
-		return errors.New("no rooms found")
-	}
-
-	slices.Sort(text)
-	attachment := slack.Attachment{
-		Color: "good",
-		Title: "rooms",
-		Text:  strings.Join(text, "\n"),
-	}
-	_, err := client.PostEphemeral(command.ChannelID, command.UserID, slack.MsgOptionAttachments(attachment))
-	return err
+	return slacktools.Attachment{Header: "Rooms:", Body: lines}, nil
 }
 
 func zoneState(zone poller.Zone) string {
@@ -92,73 +88,54 @@ func zoneState(zone poller.Zone) string {
 	}
 }
 
-func (r *commandRunner) listUsers(command slack.SlashCommand, client SlackSender) error {
+func (r *commandRunner) listUsers() (slacktools.Attachment, error) {
 	u, ok := r.getUpdate()
 	if !ok {
-		return ErrNoUpdates
+		return slacktools.Attachment{}, ErrNoUpdates
 	}
 
-	if len(u.MobileDevices) == 0 {
-		return errors.New("no users found")
-	}
-
-	text := make([]string, 0)
+	lines := make([]string, 0, len(u.MobileDevices))
 
 	for device := range u.MobileDevices.GeoTrackedDevices() {
 		location := map[bool]string{true: "home", false: "away"}[*device.Location.AtHome]
-		text = append(text, *device.Name+": "+location)
+		lines = append(lines, "*"+*device.Name+"*: "+location)
 	}
-	slices.Sort(text)
+	slices.Sort(lines)
 
-	attachment := slack.Attachment{
-		Color: "good",
-		Title: "users",
-		Text:  strings.Join(text, "\n"),
+	if len(lines) == 0 {
+		lines = append(lines, "no users have been found")
 	}
 
-	_, err := client.PostEphemeral(command.ChannelID, command.UserID, slack.MsgOptionAttachments(attachment))
-	return err
+	return slacktools.Attachment{Header: "Users:", Body: lines}, nil
 }
 
-func (r *commandRunner) listRules(command slack.SlashCommand, client SlackSender) error {
+func (r *commandRunner) listRules() (slacktools.Attachment, error) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	if !r.hasController() {
-		return errors.New("controller isn't running")
+		return slacktools.Attachment{}, errors.New("controller isn't running")
 	}
-
-	text := "no rules have been triggered"
-	if rules := r.controller.ReportTasks(); len(rules) != 0 {
-		text = strings.Join(rules, "\n")
+	rules := r.Controller.ReportTasks()
+	if len(rules) == 0 {
+		rules = []string{"no rules have been triggered"}
+	} else {
+		slices.Sort(rules)
 	}
-	attachment := slack.Attachment{
-		Color: "good",
-		Title: "rules",
-		Text:  text,
-	}
-	_, err := client.PostEphemeral(command.ChannelID, command.UserID, slack.MsgOptionAttachments(attachment))
-	return err
+	return slacktools.Attachment{Header: "Rules:", Body: rules}, nil
 }
 
 func (r *commandRunner) hasController() bool {
-	if r.controller == nil {
-		return false
-	}
-	// I'm not sure that I understand it, but I'm sure that I don't like it ...
-	if c, ok := r.controller.(*mocks.Controller); ok && c == nil {
+	if r.Controller == nil {
 		return false
 	}
 	return true
 }
 
-func (r *commandRunner) refresh(command slack.SlashCommand, client SlackSender) error {
-	r.poller.Refresh()
-	_, err := client.PostEphemeral(command.ChannelID, command.UserID, slack.MsgOptionText("refreshing Tadoº data", false))
-	return err
+func (r *commandRunner) refresh() (slacktools.Attachment, error) {
+	r.Poller.Refresh()
+	return slacktools.Attachment{}, nil
 }
 
-func (r *commandRunner) help(command slack.SlashCommand, client SlackSender) error {
-	help := "supported commands: users, rooms, rules, help"
-	_, err := client.PostEphemeral(command.ChannelID, command.UserID, slack.MsgOptionText(help, false))
-	return err
+func (r *commandRunner) help() (slacktools.Attachment, error) {
+	return slacktools.Attachment{Header: "Supported commands:", Body: []string{"users, rooms, rules, help"}}, nil
 }

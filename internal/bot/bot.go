@@ -48,8 +48,8 @@ func New(tadoClient TadoClient, handler SocketModeHandler, p poller.Poller, c Co
 	b := Bot{
 		commandRunner: commandRunner{
 			TadoClient: tadoClient,
-			poller:     p,
-			controller: c,
+			Poller:     p,
+			Controller: c,
 			logger:     logger,
 		},
 		shortcuts: shortcuts{
@@ -98,7 +98,7 @@ func (r *Bot) Run(ctx context.Context) error {
 }
 
 // runCommand receives a slackCommand from slack and calls the function that implements it.  Having this as a dedicated
-// function decouples Slack from the business logic (i.e. ack'ing the request), plus it translated a *slack.Client to a
+// function decouples Slack from the business logic (i.e. ack'ing the request), plus it translates a *slack.Client to a
 // SlackSender interface, which makes testing the business logic easier.
 func (r *Bot) runCommand(cmd func(command slack.SlashCommand, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {
 	return func(event *socketmode.Event, client *socketmode.Client) {

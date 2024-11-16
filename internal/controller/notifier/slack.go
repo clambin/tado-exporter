@@ -30,14 +30,10 @@ func (s *SlackNotifier) Notify(action ScheduleType, state action.Action) {
 		s.Logger.Error("notifier failed to retrieve channels", "err", err)
 		return
 	}
+	msg := buildMessage(action, state) + "\nReason(s): " + state.Reason
 	for _, channel := range channels {
 		s.Logger.Debug("notifying on slack", "channel", channel.Name)
-		_, _, err = s.SlackSender.PostMessage(channel.ID, slack.MsgOptionAttachments(slack.Attachment{
-			Color: "good",
-			Title: buildMessage(action, state),
-			Text:  state.Reason,
-		}))
-		if err != nil {
+		if _, _, err = s.SlackSender.PostMessage(channel.ID, slack.MsgOptionText(msg, false)); err != nil {
 			s.Logger.Error("notifier failed to post message", "err", err)
 		}
 	}
