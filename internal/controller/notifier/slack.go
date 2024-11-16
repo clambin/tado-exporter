@@ -3,6 +3,7 @@ package notifier
 import (
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/controller/rules/action"
+	"github.com/clambin/tado-exporter/internal/slacktools"
 	"github.com/slack-go/slack"
 	"log/slog"
 	"sync"
@@ -32,11 +33,8 @@ func (s *SlackNotifier) Notify(action ScheduleType, state action.Action) {
 	}
 	for _, channel := range channels {
 		s.Logger.Debug("notifying on slack", "channel", channel.Name)
-		_, _, err = s.SlackSender.PostMessage(channel.ID, slack.MsgOptionAttachments(slack.Attachment{
-			Color: "good",
-			Title: buildMessage(action, state),
-			Text:  state.Reason,
-		}))
+		a := slacktools.Attachment{Header: buildMessage(action, state), Body: []string{state.Reason}}
+		_, _, err = s.SlackSender.PostMessage(channel.ID, a.Format())
 		if err != nil {
 			s.Logger.Error("notifier failed to post message", "err", err)
 		}

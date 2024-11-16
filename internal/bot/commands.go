@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/slacktools"
 	"github.com/clambin/tado/v2"
 	"github.com/slack-go/slack"
 	"log/slog"
@@ -26,7 +27,7 @@ type commandRunner struct {
 
 func (r *commandRunner) dispatch(command slack.SlashCommand, client SlackSender) error {
 	r.logger.Debug("running command", "cmd", command.Command, "text", command.Text)
-	var response slackFormatter
+	var response slacktools.Formatter
 	var err error
 	switch command.Text {
 	case "rooms":
@@ -48,10 +49,10 @@ func (r *commandRunner) dispatch(command slack.SlashCommand, client SlackSender)
 	return err
 }
 
-func (r *commandRunner) listRooms() (textResponse, error) {
+func (r *commandRunner) listRooms() (slacktools.Attachment, error) {
 	u, ok := r.getUpdate()
 	if !ok {
-		return textResponse{}, ErrNoUpdates
+		return slacktools.Attachment{}, ErrNoUpdates
 	}
 
 	lines := make([]string, len(u.Zones))
@@ -68,7 +69,7 @@ func (r *commandRunner) listRooms() (textResponse, error) {
 		lines = append(lines, "no rooms have been found")
 	}
 
-	return textResponse{header: "Rooms:", body: lines}, nil
+	return slacktools.Attachment{Header: "Rooms:", Body: lines}, nil
 }
 
 func zoneState(zone poller.Zone) string {
@@ -88,10 +89,10 @@ func zoneState(zone poller.Zone) string {
 	}
 }
 
-func (r *commandRunner) listUsers() (textResponse, error) {
+func (r *commandRunner) listUsers() (slacktools.Attachment, error) {
 	u, ok := r.getUpdate()
 	if !ok {
-		return textResponse{}, ErrNoUpdates
+		return slacktools.Attachment{}, ErrNoUpdates
 	}
 
 	lines := make([]string, 0, len(u.MobileDevices))
@@ -106,14 +107,14 @@ func (r *commandRunner) listUsers() (textResponse, error) {
 		lines = append(lines, "no users have been found")
 	}
 
-	return textResponse{header: "Users:", body: lines}, nil
+	return slacktools.Attachment{Header: "Users:", Body: lines}, nil
 }
 
-func (r *commandRunner) listRules() (textResponse, error) {
+func (r *commandRunner) listRules() (slacktools.Attachment, error) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	if !r.hasController() {
-		return textResponse{}, errors.New("controller isn't running")
+		return slacktools.Attachment{}, errors.New("controller isn't running")
 	}
 	rules := r.Controller.ReportTasks()
 	if len(rules) == 0 {
@@ -121,7 +122,7 @@ func (r *commandRunner) listRules() (textResponse, error) {
 	} else {
 		slices.Sort(rules)
 	}
-	return textResponse{header: "Rules:", body: rules}, nil
+	return slacktools.Attachment{Header: "Rules:", Body: rules}, nil
 }
 
 func (r *commandRunner) hasController() bool {
@@ -135,38 +136,11 @@ func (r *commandRunner) hasController() bool {
 	return true
 }
 
-func (r *commandRunner) refresh() (textResponse, error) {
+func (r *commandRunner) refresh() (slacktools.Attachment, error) {
 	r.Poller.Refresh()
-	return textResponse{}, nil
+	return slacktools.Attachment{}, nil
 }
 
-func (r *commandRunner) help() (textResponse, error) {
-	return textResponse{header: "Supported commands:", body: []string{"users, rooms, rules, help"}}, nil
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-type slackFormatter interface {
-	Format() slack.MsgOption
-}
-
-var _ slackFormatter = textResponse{}
-
-type textResponse struct {
-	header string
-	body   []string
-}
-
-func (t textResponse) Format() slack.MsgOption {
-	lines := make([]*slack.TextBlockObject, len(t.body))
-	for i, line := range t.body {
-		lines[i] = slack.NewTextBlockObject(slack.MarkdownType, line, false, false)
-	}
-	return slack.MsgOptionBlocks(
-		slack.NewSectionBlock(
-			slack.NewTextBlockObject(slack.MarkdownType, "*"+t.header+"*", false, false),
-			lines,
-			nil,
-		),
-	)
+func (r *commandRunner) help() (slacktools.Attachment, error) {
+	return slacktools.Attachment{Header: "Supported commands:", Body: []string{"users, rooms, rules, help"}}, nil
 }

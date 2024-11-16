@@ -5,6 +5,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
 	mocks2 "github.com/clambin/tado-exporter/internal/poller/mocks"
+	"github.com/clambin/tado-exporter/internal/slacktools"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -15,7 +16,7 @@ func Test_commandRunner_listRooms(t *testing.T) {
 		name    string
 		update  *poller.Update
 		wantErr assert.ErrorAssertionFunc
-		want    textResponse
+		want    slacktools.Attachment
 	}{
 		{
 			name:    "no update",
@@ -25,7 +26,7 @@ func Test_commandRunner_listRooms(t *testing.T) {
 			name:    "no rooms",
 			update:  &poller.Update{},
 			wantErr: assert.NoError,
-			want:    textResponse{header: "Rooms:", body: []string{"no rooms have been found"}},
+			want:    slacktools.Attachment{Header: "Rooms:", Body: []string{"no rooms have been found"}},
 		},
 		{
 			name: "rooms found",
@@ -64,7 +65,7 @@ func Test_commandRunner_listRooms(t *testing.T) {
 				},
 			},
 			wantErr: assert.NoError,
-			want: textResponse{header: "Rooms:", body: []string{
+			want: slacktools.Attachment{Header: "Rooms:", Body: []string{
 				"*room A*: 20.0ºC (target: 21.0)",
 				"*room B*: 21.0ºC (target: 17.5, MANUAL)",
 				"*room C*: 20.0ºC (target: 21.0, MANUAL for 5m0s)",
@@ -92,7 +93,7 @@ func Test_commandRunner_listUsers(t *testing.T) {
 		name    string
 		update  *poller.Update
 		wantErr assert.ErrorAssertionFunc
-		want    textResponse
+		want    slacktools.Attachment
 	}{
 		{
 			name:    "no update",
@@ -102,7 +103,7 @@ func Test_commandRunner_listUsers(t *testing.T) {
 			name:    "no users",
 			update:  &poller.Update{},
 			wantErr: assert.NoError,
-			want:    textResponse{header: "Users:", body: []string{"no users have been found"}},
+			want:    slacktools.Attachment{Header: "Users:", Body: []string{"no users have been found"}},
 		},
 		{
 			name: "users found",
@@ -129,7 +130,7 @@ func Test_commandRunner_listUsers(t *testing.T) {
 				},
 			},
 			wantErr: assert.NoError,
-			want: textResponse{header: "Users:", body: []string{
+			want: slacktools.Attachment{Header: "Users:", Body: []string{
 				"*user C*: home",
 				"*user D*: away",
 			}},
@@ -155,7 +156,7 @@ func Test_commandRunner_listRules(t *testing.T) {
 		name    string
 		setup   func(*mocks.Controller)
 		wantErr assert.ErrorAssertionFunc
-		want    textResponse
+		want    slacktools.Attachment
 	}{
 		{
 			name:    "no update",
@@ -167,7 +168,7 @@ func Test_commandRunner_listRules(t *testing.T) {
 				c.EXPECT().ReportTasks().Return(nil).Once()
 			},
 			wantErr: assert.NoError,
-			want:    textResponse{header: "Rules:", body: []string{"no rules have been triggered"}},
+			want:    slacktools.Attachment{Header: "Rules:", Body: []string{"no rules have been triggered"}},
 		},
 		{
 			name: "rules found",
@@ -178,7 +179,7 @@ func Test_commandRunner_listRules(t *testing.T) {
 				}).Once()
 			},
 			wantErr: assert.NoError,
-			want: textResponse{header: "Rules:", body: []string{
+			want: slacktools.Attachment{Header: "Rules:", Body: []string{
 				"room A: foo",
 				"room B: bar",
 			}},
@@ -213,5 +214,5 @@ func Test_commandRunner_help(t *testing.T) {
 	var r commandRunner
 	resp, err := r.help()
 	assert.NoError(t, err)
-	assert.Equal(t, textResponse{header: "Supported commands:", body: []string{"users, rooms, rules, help"}}, resp)
+	assert.Equal(t, slacktools.Attachment{Header: "Supported commands:", Body: []string{"users, rooms, rules, help"}}, resp)
 }
