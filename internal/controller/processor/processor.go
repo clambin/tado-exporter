@@ -31,7 +31,7 @@ type Processor struct {
 
 type RulesLoader func(update poller.Update) (rules.Evaluator, error)
 
-func New(tadoClient action.TadoClient, p poller.Poller, bot notifier.SlackSender, loader RulesLoader, logger *slog.Logger) *Processor {
+func New(tadoClient action.TadoClient, p poller.Poller, slackClient notifier.SlackSender, loader RulesLoader, logger *slog.Logger) *Processor {
 	processor := Processor{
 		loader:     loader,
 		tadoClient: tadoClient,
@@ -41,8 +41,8 @@ func New(tadoClient action.TadoClient, p poller.Poller, bot notifier.SlackSender
 		taskDone:   make(chan struct{}, 1),
 	}
 
-	if bot != nil {
-		processor.notifiers = append(processor.notifiers, &notifier.SlackNotifier{SlackSender: bot, Logger: logger})
+	if slackClient != nil {
+		processor.notifiers = append(processor.notifiers, &notifier.SlackNotifier{SlackSender: slackClient, Logger: logger})
 	}
 	return &processor
 }
