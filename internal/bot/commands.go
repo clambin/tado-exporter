@@ -112,7 +112,7 @@ func (r *commandRunner) listUsers() (slacktools.Attachment, error) {
 func (r *commandRunner) listRules() (slacktools.Attachment, error) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
-	if !r.hasController() {
+	if r.Controller == nil {
 		return slacktools.Attachment{}, errors.New("controller isn't running")
 	}
 	rules := r.Controller.ReportTasks()
@@ -122,13 +122,6 @@ func (r *commandRunner) listRules() (slacktools.Attachment, error) {
 		slices.Sort(rules)
 	}
 	return slacktools.Attachment{Header: "Rules:", Body: rules}, nil
-}
-
-func (r *commandRunner) hasController() bool {
-	if r.Controller == nil {
-		return false
-	}
-	return true
 }
 
 func (r *commandRunner) refresh() (slacktools.Attachment, error) {
