@@ -3,25 +3,20 @@ filename: "{{.InterfaceName}}.go"
 dir: "{{.InterfaceDir}}/mocks"
 mockname: "{{.InterfaceName}}"
 outpkg: "mocks"
+issue-845-fix: true
 packages:
-  github.com/clambin/tado-exporter/internal/cmd/monitor:
-    interfaces:
-      TadoClient:
-  github.com/clambin/tado-exporter/internal/collector:
-    interfaces:
-      TadoClient:
   github.com/clambin/tado-exporter/internal/bot:
     interfaces:
       TadoClient:
       Controller:
       SocketModeHandler:
       SlackSender:
+  github.com/clambin/tado-exporter/internal/cmd/monitor:
+    interfaces:
+      TadoClient:
   github.com/clambin/tado-exporter/internal/controller/notifier:
     interfaces:
       SlackSender:
-  github.com/clambin/tado-exporter/internal/controller/rules/action:
-    interfaces:
-      TadoClient:
   github.com/clambin/tado-exporter/internal/poller:
     interfaces:
       Poller:

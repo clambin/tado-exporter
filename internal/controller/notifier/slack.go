@@ -2,7 +2,6 @@ package notifier
 
 import (
 	"fmt"
-	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"github.com/slack-go/slack"
 	"log/slog"
 	"sync"
@@ -24,13 +23,12 @@ type SlackSender interface {
 
 var _ Notifier = &SlackNotifier{}
 
-func (s *SlackNotifier) Notify(action ScheduleType, state action.Action) {
+func (s *SlackNotifier) Notify(msg string) {
 	channels, err := s.getChannels()
 	if err != nil {
 		s.Logger.Error("notifier failed to retrieve channels", "err", err)
 		return
 	}
-	msg := buildMessage(action, state) + "\nReason(s): " + state.Reason
 	for _, channel := range channels {
 		s.Logger.Debug("notifying on slack", "channel", channel.Name)
 		if _, _, err = s.SlackSender.PostMessage(channel.ID, slack.MsgOptionText(msg, false)); err != nil {

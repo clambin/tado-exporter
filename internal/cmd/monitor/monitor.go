@@ -9,7 +9,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"
-	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
+	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/health"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/tadotools"
@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
+	"gopkg.in/yaml.v3"
 	"log"
 	"log/slog"
 	"net/http"
@@ -69,19 +70,19 @@ func monitor(cmd *cobra.Command, _ []string) error {
 
 }
 
-func maybeLoadRules(path string) (configuration.Configuration, error) {
+func maybeLoadRules(path string) (controller.Configuration, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			err = nil
 		}
-		return configuration.Configuration{}, err
+		return controller.Configuration{}, err
 	}
-	defer func(f *os.File) {
-		_ = f.Close()
-	}(f)
+	defer func(f *os.File) { _ = f.Close() }(f)
 
-	return configuration.Load(f)
+	var cfg controller.Configuration
+	err = yaml.NewDecoder(f).Decode(&cfg)
+	return cfg, err
 }
 
 type TadoClient interface {
@@ -122,9 +123,16 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 	}
 
 	// Controller
-	var c *controller.Controller
-	if len(rules.Zones) > 0 {
-		c = controller.New(api, rules, sc, p, l.With("component", "controller"))
+	var c *controller.Manager
+	if len(rules.HomeRules) > 0 || len(rules.ZoneRules) > 0 {
+		n := notifier.Notifiers{
+			notifier.SLogNotifier{Logger: l},
+		}
+		if sc != nil {
+			n = append(n, &notifier.SlackNotifier{Logger: l, SlackSender: sc})
+		}
+
+		c, err = controller.NewManager(rules, p, api, n, l.With("component", "controller"))
 		g.Go(func() error { return c.Run(ctx) })
 	}
 

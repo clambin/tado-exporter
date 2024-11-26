@@ -1,7 +1,6 @@
 package notifier
 
 import (
-	"github.com/clambin/tado-exporter/internal/controller/rules/action"
 	"log/slog"
 )
 
@@ -11,6 +10,6 @@ type SLogNotifier struct {
 
 var _ Notifier = &SLogNotifier{}
 
-func (s SLogNotifier) Notify(state ScheduleType, action action.Action) {
-	s.Logger.Info(buildMessage(state, action), "reason", action.Reason)
+func (s SLogNotifier) Notify(msg string) {
+	s.Logger.Info(msg)
 }

@@ -3,7 +3,7 @@ package monitor
 import (
 	"context"
 	"github.com/clambin/tado-exporter/internal/cmd/monitor/mocks"
-	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
+	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado/v2"
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,25 +22,24 @@ func Test_maybeLoadRules(t *testing.T) {
 		name    string
 		content string
 		wantErr assert.ErrorAssertionFunc
-		want    configuration.Configuration
+		want    controller.Configuration
 	}{
 		{
 			name: "valid",
-			content: `zones:
-  - name: "bathroom"
-    rules:
-      limitOverlay:
-        delay: 1h
+			content: `
+zoneRules:
+    bathroom:
+        - name: limitOverlay
+          script:
+            packaged: limitoverlay.lua
 `,
 			wantErr: assert.NoError,
-			want: configuration.Configuration{
-				Zones: []configuration.ZoneConfiguration{
-					{
-						Name: "bathroom",
-						Rules: configuration.ZoneRuleConfiguration{
-							LimitOverlay: configuration.LimitOverlayConfiguration{Delay: time.Hour},
-						},
-					},
+			want: controller.Configuration{
+				ZoneRules: map[string][]controller.RuleConfiguration{
+					"bathroom": {{
+						Name:   "limitOverlay",
+						Script: controller.ScriptConfig{Packaged: "limitoverlay.lua"},
+					}},
 				},
 			},
 		},
@@ -58,8 +57,6 @@ func Test_maybeLoadRules(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			f, err := os.CreateTemp("", "")
 			require.NoError(t, err)
 
