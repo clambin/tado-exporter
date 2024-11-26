@@ -29,14 +29,14 @@ func isInRangeWithNow(now func() time.Time) lua.Function {
 		endHour, _ := l.ToNumber(-2)
 		endMinute, _ := l.ToNumber(-1)
 
-		yyyy, mon, dd := time.Now().Date()
+		currentTime := now().Local()
+		yyyy, mon, dd := currentTime.Date()
 		start := time.Date(yyyy, mon, dd, int(startHour), int(startMinute), 0, 0, time.Local)
 		end := time.Date(yyyy, mon, dd, int(endHour), int(endMinute), 0, 0, time.Local)
 		if end.Before(start) {
 			end = end.Add(24 * time.Hour)
 		}
 
-		currentTime := now()
 		inRange := !(currentTime.Before(start) || currentTime.After(end))
 		l.PushBoolean(inRange)
 		return 1
@@ -50,13 +50,13 @@ func secondsTillWithNow(now func() time.Time) lua.Function {
 	return func(l *lua.State) int {
 		toHour, _ := l.ToNumber(-2)
 		toMinute, _ := l.ToNumber(-1)
-		yyy, mon, dd := time.Now().Date()
+		currentTime := now().Local()
+		yyy, mon, dd := currentTime.Date()
 		to := time.Date(yyy, mon, dd, int(toHour), int(toMinute), 0, 0, time.Local)
-		current := now()
-		if to.Before(current) {
+		if to.Before(currentTime) {
 			to = to.Add(24 * time.Hour)
 		}
-		l.PushInteger(int((to.Sub(current)).Seconds()))
+		l.PushInteger(int((to.Sub(currentTime)).Seconds()))
 		return 1
 	}
 }

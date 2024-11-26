@@ -8,5 +8,5 @@ function Evaluate(_, zone, devices)
         if allAway == false then
                 return zone, 0, "at least one user is home"
         end
-        return "off", 3600, "all users are away"
+        return "off", 900, "all users are away"
 end

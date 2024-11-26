@@ -1,10 +1,16 @@
 package controller
 
 import (
+	"context"
+	"errors"
+	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/luart"
 	"github.com/clambin/tado-exporter/internal/controller/zonerules"
+	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -170,7 +176,7 @@ func TestZoneRule_UseCases(t *testing.T) {
 			name:     "limitOverlay - manual",
 			script:   "limitoverlay.lua",
 			Update:   Update{HomeStateAuto, 1, map[string]ZoneInfo{"foo": {ZoneState: ZoneStateOff}}, Devices{}},
-			zoneWant: zoneWant{ZoneStateAuto, 5 * time.Minute, "manual setting detected", assert.NoError},
+			zoneWant: zoneWant{ZoneStateAuto, time.Hour, "manual setting detected", assert.NoError},
 		},
 		{
 			name:     "autoAway - home",
@@ -182,7 +188,7 @@ func TestZoneRule_UseCases(t *testing.T) {
 			name:     "autoAway - away",
 			script:   "autoaway.lua",
 			Update:   Update{HomeStateAuto, 1, map[string]ZoneInfo{"foo": {ZoneState: ZoneStateAuto}}, Devices{{Name: "user", Home: false}}},
-			zoneWant: zoneWant{ZoneStateOff, time.Hour, "all users are away", assert.NoError},
+			zoneWant: zoneWant{ZoneStateOff, 15 * time.Minute, "all users are away", assert.NoError},
 		},
 	}
 
@@ -249,19 +255,11 @@ func TestZoneRule_UseCases_Nighttime(t *testing.T) {
 	}
 }
 
-/*
 func BenchmarkZoneEvaluator(b *testing.B) {
-	f, err := zonerules.FS.Open("nighttime.lua.tmpl")
+	f, err := zonerules.FS.Open("nighttime.lua")
 	require.NoError(b, err)
 	b.Cleanup(func() { _ = f.Close() })
-	scriptTemplate, _ := io.ReadAll(f)
-	script := strings.Replace(string(scriptTemplate),
-		"<year = YYYY, month = MON, day = DD, hour = HH, min = MIN, sec = 0>",
-		"year = 2024, month = 11, day = 24, hour = 12, min = 0, sec = 0",
-		1,
-	)
-
-	r, err := NewZoneRule("foo", strings.NewReader(script))
+	r, err := NewZoneRule("foo", f)
 	require.NoError(b, err)
 	u := Update{
 		HomeState:  HomeStateAuto,
@@ -276,11 +274,9 @@ func BenchmarkZoneEvaluator(b *testing.B) {
 	}
 }
 
-*/
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func TestZoneAction(t *testing.T) {
+func Test_zoneAction(t *testing.T) {
 	a := zoneAction{
 		zoneState: ZoneStateOff,
 		delay:     5 * time.Minute,
@@ -291,6 +287,93 @@ func TestZoneAction(t *testing.T) {
 	assert.Equal(t, "foo: setting heating to off mode", a.Description(false))
 	assert.Equal(t, "foo: setting heating to off mode in 5m0s", a.Description(true))
 	assert.Equal(t, "[zone=foo mode=off delay=5m0s reason=reasons]", a.LogValue().String())
+}
+
+func Test_zoneAction_Do(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name   string
+		action zoneAction
+		setup  func(*mocks.TadoClient)
+		err    assert.ErrorAssertionFunc
+	}{
+		{
+			name: "auto mode - pass",
+			action: zoneAction{
+				zoneState: ZoneStateAuto,
+				homeId:    1,
+				zoneId:    10,
+			},
+			setup: func(client *mocks.TadoClient) {
+				client.EXPECT().
+					DeleteZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10)).
+					Return(&tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
+					Once()
+			},
+			err: assert.NoError,
+		},
+		{
+			name: "auto mode - fail",
+			action: zoneAction{
+				zoneState: ZoneStateAuto,
+				homeId:    1,
+				zoneId:    10,
+			},
+			setup: func(client *mocks.TadoClient) {
+				client.EXPECT().
+					DeleteZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10)).
+					Return(&tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusUnauthorized}}, nil).
+					Once()
+			},
+			err: assert.Error,
+		},
+		{
+			name: "off mode - pass",
+			action: zoneAction{
+				zoneState: ZoneStateOff,
+				homeId:    1,
+				zoneId:    10,
+			},
+			setup: func(client *mocks.TadoClient) {
+				client.EXPECT().SetZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10), mock.AnythingOfType("tado.ZoneOverlay")).
+					RunAndReturn(func(ctx context.Context, i int64, i2 int, overlay tado.ZoneOverlay, fn ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
+						if *overlay.Setting.Power != tado.PowerOFF {
+							return nil, errors.New("invalid power setting")
+						}
+						if *overlay.Termination.Type != tado.ZoneOverlayTerminationTypeMANUAL {
+							return nil, errors.New("invalid termination type")
+						}
+						return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK}}, nil
+					}).
+					Once()
+			},
+			err: assert.NoError,
+		},
+		{
+			name: "off mode - fail",
+			action: zoneAction{
+				zoneState: ZoneStateOff,
+				homeId:    1,
+				zoneId:    10,
+			},
+			setup: func(client *mocks.TadoClient) {
+				client.EXPECT().SetZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10), mock.AnythingOfType("tado.ZoneOverlay")).
+					Return(&tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusUnauthorized}}, nil).
+					Once()
+			},
+			err: assert.Error,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := mocks.NewTadoClient(t)
+			if tt.setup != nil {
+				tt.setup(client)
+			}
+			tt.err(t, tt.action.Do(ctx, client))
+		})
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

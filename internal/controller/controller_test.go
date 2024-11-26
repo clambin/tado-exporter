@@ -7,6 +7,7 @@ import (
 	"github.com/clambin/tado-exporter/pkg/pubsub"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"log/slog"
 	"os"
@@ -15,7 +16,7 @@ import (
 	"time"
 )
 
-func TestNewManager(t *testing.T) {
+func TestNew(t *testing.T) {
 	cfg := Configuration{
 		HomeRules: []RuleConfiguration{
 			{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"foo"}},
@@ -28,13 +29,13 @@ func TestNewManager(t *testing.T) {
 		},
 	}
 
-	m, err := NewManager(cfg, nil, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	m, err := New(cfg, nil, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 	assert.Len(t, m.controllers, 2)
 }
 
-func TestManager_Run(t *testing.T) {
+func TestController_Run(t *testing.T) {
 	cfg := Configuration{
 		HomeRules: []RuleConfiguration{
 			{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"foo"}},
@@ -50,7 +51,7 @@ func TestManager_Run(t *testing.T) {
 	p := pubsub.New[poller.Update](l)
 	n := fakeNotifier{ch: make(chan string)}
 
-	m, err := NewManager(cfg, p, nil, &n, l)
+	m, err := New(cfg, p, nil, &n, l)
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 	assert.Len(t, m.controllers, 2)
@@ -59,19 +60,21 @@ func TestManager_Run(t *testing.T) {
 	errCh := make(chan error)
 	go func() { errCh <- m.Run(ctx) }()
 
-	// TODO: race condition. how do know that controller has registered with the publisher?
-	time.Sleep(time.Second)
+	require.Eventually(t, func() bool {
+		return p.Subscribers() > 0
+	}, time.Second, time.Millisecond)
 
 	u := testutils.Update(
 		testutils.WithHome(1, "my home", tado.HOME),
 		testutils.WithZone(10, "my room", tado.PowerON, 18, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+		testutils.WithMobileDevice(100, "user A", testutils.WithLocation(true, false)),
 	)
 	go p.Publish(u)
 
-	const want = "my room: setting heating to auto mode in 5m0s"
+	const want = "my room: setting heating to auto mode in "
 	msg := <-n.ch
-	assert.Equal(t, want, msg)
-	assert.Equal(t, want, strings.Join(m.ReportTasks(), ", "))
+	assert.True(t, strings.HasPrefix(msg, want))
+	assert.True(t, strings.HasPrefix(strings.Join(m.ReportTasks(), ", "), want))
 
 	cancel()
 	assert.NoError(t, <-errCh)

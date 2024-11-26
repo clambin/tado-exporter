@@ -11,6 +11,9 @@ packages:
       Controller:
       SocketModeHandler:
       SlackSender:
+  github.com/clambin/tado-exporter/internal/controller:
+    interfaces:
+      TadoClient:
   github.com/clambin/tado-exporter/internal/cmd/monitor:
     interfaces:
       TadoClient:

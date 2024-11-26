@@ -12,6 +12,13 @@ func TestWithHome(t *testing.T) {
 	assert.Equal(t, tado.HomeId(1), *u.HomeBase.Id)
 	assert.Equal(t, "my home", *u.HomeBase.Name)
 	assert.Equal(t, tado.HOME, *u.HomeState.Presence)
+	assert.Nil(t, u.HomeState.PresenceLocked)
+
+	u = Update(WithHome(1, "my home", tado.HOME, WithPresenceLocked(true)))
+	assert.Equal(t, tado.HomeId(1), *u.HomeBase.Id)
+	assert.Equal(t, "my home", *u.HomeBase.Name)
+	assert.Equal(t, tado.HOME, *u.HomeState.Presence)
+	assert.True(t, *u.HomeState.PresenceLocked)
 }
 
 func TestWithZone(t *testing.T) {

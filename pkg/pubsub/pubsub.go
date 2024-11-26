@@ -47,3 +47,10 @@ func (p *Publisher[T]) Publish(info T) {
 		ch <- info
 	}
 }
+
+// Subscribers returns the current number of subscribers
+func (p *Publisher[T]) Subscribers() int {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	return len(p.clients)
+}

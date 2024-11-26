@@ -32,6 +32,7 @@ type ZoneRules struct {
 }
 
 func LoadZoneRules(zoneName string, config []RuleConfiguration) (ZoneRules, error) {
+	// TODO: RuleConfiguration has Users: HomeRule needs to include this and only send those users to the script.
 	zoneRules := ZoneRules{
 		zoneName: zoneName,
 		rules:    make([]Evaluator, 0, len(config)), // Evaluator, not ZoneRule, so we can stub it out during testing

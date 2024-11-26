@@ -3,7 +3,6 @@ package controller
 import (
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
-	"strings"
 )
 
 type Update struct {
@@ -20,8 +19,8 @@ type ZoneInfo struct {
 
 func updateFromPollerUpdate(u poller.Update) Update {
 	h := Update{
-		HomeState: HomeState(strings.ToLower(string(*u.HomeState.Presence))),
 		HomeId:    *u.HomeBase.Id,
+		HomeState: homeStateFromPollerZone(u),
 	}
 
 	h.ZoneStates = make(map[string]ZoneInfo, len(u.Zones))
@@ -44,19 +43,30 @@ func updateFromPollerUpdate(u poller.Update) Update {
 	return h
 }
 
-func zoneStateFromPollerZone(z poller.Zone) ZoneState {
-	switch {
-	case z.ZoneState.Overlay == nil:
-		return ZoneStateAuto
-	case *z.ZoneState.Setting.Power == tado.PowerOFF:
-		return ZoneStateOff
-	case *z.ZoneState.Overlay.Termination.Type == tado.ZoneOverlayTerminationTypeMANUAL:
-		return ZoneStateManual
-	case *z.ZoneState.Overlay.Termination.Type == tado.ZoneOverlayTerminationTypeTIMER:
-		return ZoneStateAuto // we don't handle timer overlays; treat them as auto
-	default:
-		panic("unknown zone state")
+func homeStateFromPollerZone(u poller.Update) HomeState {
+	if u.HomeState.PresenceLocked == nil || *u.HomeState.PresenceLocked == false {
+		return HomeStateAuto
 	}
+	switch *u.HomeState.Presence {
+	case tado.HOME:
+		return HomeStateHome
+	case tado.AWAY:
+		return HomeStateAway
+	default:
+		panic("unknown home state" + *u.HomeState.Presence)
+	}
+}
+
+func zoneStateFromPollerZone(z poller.Zone) ZoneState {
+	if z.ZoneState.Overlay == nil || *z.ZoneState.Overlay.Termination.Type == tado.ZoneOverlayTerminationTypeTIMER {
+		return ZoneStateAuto
+	}
+
+	// the ZoneStateOff state allows us to switch off heating.  But do we need it when reading the update?
+	if *z.ZoneState.Overlay.Setting.Power == tado.PowerOFF {
+		return ZoneStateOff
+	}
+	return ZoneStateManual
 }
 
 func (u Update) GetHomeState() HomeState {

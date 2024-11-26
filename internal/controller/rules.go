@@ -32,7 +32,7 @@ type Evaluator interface {
 	Evaluate(Update) (Action, error)
 }
 
-type GroupEvaluator interface {
+type groupEvaluator interface {
 	Evaluator
 	ParseUpdate(poller.Update) (Action, error)
 }
@@ -46,7 +46,7 @@ func pushDevices(l *lua.State, devices Devices) {
 		l.NewTable()
 		l.PushString(p.Name) // Push the value for "Name"
 		l.SetField(-2, "Name")
-		l.PushBoolean(p.Home) // Push the value for "Age"
+		l.PushBoolean(p.Home) // Push the value for "AtHome"
 		l.SetField(-2, "Home")
 		l.RawSetInt(-2, i+1)
 	}

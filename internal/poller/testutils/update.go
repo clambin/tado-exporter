@@ -16,11 +16,23 @@ func Update(options ...UpdateOption) poller.Update {
 
 type UpdateOption func(*poller.Update)
 
-func WithHome(id tado.HomeId, name string, presence tado.HomePresence) UpdateOption {
+func WithHome(id tado.HomeId, name string, presence tado.HomePresence, options ...HomeOption) UpdateOption {
 	return func(u *poller.Update) {
 		u.HomeBase.Id = &id
 		u.HomeBase.Name = &name
 		u.HomeState.Presence = &presence
+
+		for _, option := range options {
+			option(u)
+		}
+	}
+}
+
+type HomeOption func(update *poller.Update)
+
+func WithPresenceLocked(locked bool) HomeOption {
+	return func(u *poller.Update) {
+		u.HomeState.PresenceLocked = &locked
 	}
 }
 
@@ -49,6 +61,7 @@ func WithZoneOverlay(terminationType tado.ZoneOverlayTerminationType, remaining 
 				Type:                   &terminationType,
 				RemainingTimeInSeconds: &remaining,
 			},
+			Setting: zone.ZoneState.Setting,
 		}
 	}
 }

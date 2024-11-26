@@ -123,7 +123,7 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 	}
 
 	// Controller
-	var c *controller.Manager
+	var c *controller.Controller
 	if len(rules.HomeRules) > 0 || len(rules.ZoneRules) > 0 {
 		n := notifier.Notifiers{
 			notifier.SLogNotifier{Logger: l},
@@ -132,7 +132,7 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 			n = append(n, &notifier.SlackNotifier{Logger: l, SlackSender: sc})
 		}
 
-		c, err = controller.NewManager(rules, p, api, n, l.With("component", "controller"))
+		c, err = controller.New(rules, p, api, n, l.With("component", "controller"))
 		g.Go(func() error { return c.Run(ctx) })
 	}
 

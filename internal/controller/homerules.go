@@ -36,6 +36,7 @@ func (h HomeRules) ParseUpdate(update poller.Update) (Action, error) {
 }
 
 func LoadHomeRules(config []RuleConfiguration) (HomeRules, error) {
+	// TODO: RuleConfiguration has Users: HomeRule needs to include this and only send those users to the script.
 	var rules HomeRules
 	for _, cfg := range config {
 		r, err := loadLuaScript(cfg.Script, homerules.FS)
@@ -158,7 +159,7 @@ func (h homeAction) Do(ctx context.Context, client TadoClient) error {
 		if err != nil {
 			return err
 		}
-		if resp.StatusCode() != http.StatusOK {
+		if resp.StatusCode() != http.StatusNoContent {
 			return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 		}
 		return nil
@@ -175,7 +176,7 @@ func (h homeAction) Do(ctx context.Context, client TadoClient) error {
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode() != http.StatusOK {
+	if resp.StatusCode() != http.StatusNoContent {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 	return nil
