@@ -2,9 +2,9 @@ package bot
 
 import (
 	"github.com/clambin/tado-exporter/internal/bot/mocks"
-	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
 	mocks2 "github.com/clambin/tado-exporter/internal/poller/mocks"
+	"github.com/clambin/tado-exporter/internal/poller/testutils"
 	"github.com/clambin/tado-exporter/internal/slacktools"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +14,7 @@ import (
 func Test_commandRunner_listRooms(t *testing.T) {
 	tests := []struct {
 		name    string
-		update  *poller.Update
+		update  poller.Update
 		wantErr assert.ErrorAssertionFunc
 		want    slacktools.Attachment
 	}{
@@ -23,50 +23,25 @@ func Test_commandRunner_listRooms(t *testing.T) {
 			wantErr: assert.Error,
 		},
 		{
-			name:    "no rooms",
-			update:  &poller.Update{},
+			name: "no rooms",
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+			),
 			wantErr: assert.NoError,
 			want:    slacktools.Attachment{Header: "Rooms:", Body: []string{"no rooms have been found"}},
 		},
 		{
 			name: "rooms found",
-			update: &poller.Update{
-				Zones: []poller.Zone{
-					{
-						Zone: tado.Zone{Id: oapi.VarP(40), Name: oapi.VarP("room D")},
-						ZoneState: tado.ZoneState{
-							Setting:          &tado.ZoneSetting{Power: oapi.VarP(tado.PowerOFF)},
-							SensorDataPoints: &tado.SensorDataPoints{InsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP(float32(20))}},
-						},
-					},
-					{
-						Zone: tado.Zone{Id: oapi.VarP(30), Name: oapi.VarP("room C")},
-						ZoneState: tado.ZoneState{
-							Setting:          &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP(float32(21))}},
-							SensorDataPoints: &tado.SensorDataPoints{InsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP(float32(20))}},
-							Overlay:          &tado.ZoneOverlay{Termination: &tado.ZoneOverlayTermination{Type: oapi.VarP(tado.ZoneOverlayTerminationTypeTIMER), RemainingTimeInSeconds: oapi.VarP(300)}},
-						},
-					},
-					{
-						Zone: tado.Zone{Id: oapi.VarP(20), Name: oapi.VarP("room B")},
-						ZoneState: tado.ZoneState{
-							Setting:          &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP(float32(17.5))}},
-							SensorDataPoints: &tado.SensorDataPoints{InsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP(float32(21))}},
-							Overlay:          &tado.ZoneOverlay{Termination: &tado.ZoneOverlayTermination{Type: oapi.VarP(tado.ZoneOverlayTerminationTypeMANUAL)}},
-						},
-					},
-					{
-						Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room A")},
-						ZoneState: tado.ZoneState{
-							Setting:          &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP(float32(21))}},
-							SensorDataPoints: &tado.SensorDataPoints{InsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP(float32(20))}},
-						},
-					},
-				},
-			},
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithZone(40, "room D", tado.PowerOFF, 0, 20),
+				testutils.WithZone(30, "room C", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeTIMER, 300)),
+				testutils.WithZone(20, "room B", tado.PowerON, 17.5, 21, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+				testutils.WithZone(10, "room A", tado.PowerON, 20, 21),
+			),
 			wantErr: assert.NoError,
 			want: slacktools.Attachment{Header: "Rooms:", Body: []string{
-				"*room A*: 20.0ºC (target: 21.0)",
+				"*room A*: 21.0ºC (target: 20.0)",
 				"*room B*: 21.0ºC (target: 17.5, MANUAL)",
 				"*room C*: 20.0ºC (target: 21.0, MANUAL for 5m0s)",
 				"*room D*: 20.0ºC (off)",
@@ -77,8 +52,8 @@ func Test_commandRunner_listRooms(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := commandRunner{}
-			if tt.update != nil {
-				r.setUpdate(*tt.update)
+			if tt.update.HomeBase.Id != nil {
+				r.setUpdate(tt.update)
 			}
 
 			got, err := r.listRooms()
@@ -91,7 +66,7 @@ func Test_commandRunner_listRooms(t *testing.T) {
 func Test_commandRunner_listUsers(t *testing.T) {
 	tests := []struct {
 		name    string
-		update  *poller.Update
+		update  poller.Update
 		wantErr assert.ErrorAssertionFunc
 		want    slacktools.Attachment
 	}{
@@ -100,35 +75,22 @@ func Test_commandRunner_listUsers(t *testing.T) {
 			wantErr: assert.Error,
 		},
 		{
-			name:    "no users",
-			update:  &poller.Update{},
+			name: "no users",
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+			),
 			wantErr: assert.NoError,
 			want:    slacktools.Attachment{Header: "Users:", Body: []string{"no users have been found"}},
 		},
 		{
 			name: "users found",
-			update: &poller.Update{
-				MobileDevices: []tado.MobileDevice{
-					{
-						Name:     oapi.VarP("user D"),
-						Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)},
-						Location: &tado.MobileDeviceLocation{AtHome: oapi.VarP(false)},
-					},
-					{
-						Name:     oapi.VarP("user C"),
-						Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)},
-						Location: &tado.MobileDeviceLocation{AtHome: oapi.VarP(true)},
-					},
-					{
-						Name:     oapi.VarP("user B"),
-						Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(false)},
-					},
-					{
-						Name:     oapi.VarP("user A"),
-						Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)},
-					},
-				},
-			},
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithMobileDevice(100, "user D", testutils.WithLocation(false, false)),
+				testutils.WithMobileDevice(101, "user C", testutils.WithLocation(true, false)),
+				testutils.WithMobileDevice(102, "user B", testutils.WithGeoTracking()),
+				testutils.WithMobileDevice(103, "user A"),
+			),
 			wantErr: assert.NoError,
 			want: slacktools.Attachment{Header: "Users:", Body: []string{
 				"*user C*: home",
@@ -140,8 +102,8 @@ func Test_commandRunner_listUsers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := commandRunner{}
-			if tt.update != nil {
-				r.setUpdate(*tt.update)
+			if tt.update.HomeBase.Id != nil {
+				r.setUpdate(tt.update)
 			}
 
 			got, err := r.listUsers()

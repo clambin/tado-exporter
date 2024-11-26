@@ -2,8 +2,8 @@ package controller
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/poller/testutils"
 	"github.com/clambin/tado-exporter/pkg/pubsub"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
@@ -62,27 +62,11 @@ func TestManager_Run(t *testing.T) {
 	// TODO: race condition. how do know that controller has registered with the publisher?
 	time.Sleep(time.Second)
 
-	go p.Publish(poller.Update{
-		HomeBase:  tado.HomeBase{Id: oapi.VarP(tado.HomeId(1)), Name: oapi.VarP("my home")},
-		HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
-		Zones: []poller.Zone{
-			{
-				Zone: tado.Zone{Id: oapi.VarP(100), Name: oapi.VarP("my room")},
-				ZoneState: tado.ZoneState{
-					Setting: &tado.ZoneSetting{
-						Power: oapi.VarP(tado.PowerON),
-						Type:  oapi.VarP(tado.HEATING),
-					},
-					Overlay: &tado.ZoneOverlay{
-						Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON)},
-						Termination: &tado.ZoneOverlayTermination{
-							Type: oapi.VarP(tado.ZoneOverlayTerminationTypeMANUAL),
-						},
-					},
-				},
-			},
-		},
-	})
+	u := testutils.Update(
+		testutils.WithHome(1, "my home", tado.HOME),
+		testutils.WithZone(10, "my room", tado.PowerON, 18, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+	)
+	go p.Publish(u)
 
 	const want = "my room: setting heating to auto mode in 5m0s"
 	msg := <-n.ch

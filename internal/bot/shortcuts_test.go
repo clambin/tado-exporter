@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/bot/mocks"
-	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/poller/testutils"
 	"github.com/clambin/tado/v2"
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
@@ -101,24 +101,20 @@ func Test_setRoomShortcut_makeView(t *testing.T) {
 		{
 			name: "auto mode",
 			mode: "auto",
-			update: poller.Update{
-				Zones: []poller.Zone{
-					{Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("foo")}},
-					{Zone: tado.Zone{Id: oapi.VarP(20), Name: oapi.VarP("bar")}},
-				},
-			},
+			update: testutils.Update(
+				testutils.WithZone(10, "foo", tado.PowerON, 18, 18),
+				testutils.WithZone(20, "bar", tado.PowerON, 18, 18),
+			),
 			wantInputBlocks: []string{"zone", "mode", "channel"},
 			wantZones:       []string{"foo", "bar"},
 		},
 		{
 			name: "manual mode",
 			mode: "manual",
-			update: poller.Update{
-				Zones: []poller.Zone{
-					{Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("foo")}},
-					{Zone: tado.Zone{Id: oapi.VarP(20), Name: oapi.VarP("bar")}},
-				},
-			},
+			update: testutils.Update(
+				testutils.WithZone(10, "foo", tado.PowerON, 18, 18),
+				testutils.WithZone(20, "bar", tado.PowerON, 18, 18),
+			),
 			wantInputBlocks: []string{"zone", "mode", "temperature", "expiration", "channel"},
 			wantZones:       []string{"foo", "bar"},
 		},
@@ -261,13 +257,15 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tadoClient := mocks.NewTadoClient(t)
+			u := testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithZone(10, "foo", tado.PowerON, 18, 18),
+			)
+
 			h := setRoomShortcut{
-				TadoClient: tadoClient,
-				updateStore: updateStore{update: &poller.Update{
-					HomeBase: tado.HomeBase{Id: oapi.VarP(int64(1))},
-					Zones:    []poller.Zone{{Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("foo")}}},
-				}},
-				logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+				TadoClient:  tadoClient,
+				updateStore: updateStore{update: &u},
+				logger:      slog.New(slog.NewTextHandler(io.Discard, nil)),
 			}
 			if tt.setupTado != nil {
 				tt.setupTado(tadoClient)
@@ -394,9 +392,12 @@ func Test_setHomeShortcut_setHome(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tadoClient := mocks.NewTadoClient(t)
+			u := testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+			)
 			h := setHomeShortcut{
 				TadoClient:  tadoClient,
-				updateStore: updateStore{update: &poller.Update{HomeBase: tado.HomeBase{Id: oapi.VarP(int64(1))}}},
+				updateStore: updateStore{update: &u},
 				logger:      slog.New(slog.NewTextHandler(io.Discard, nil)),
 			}
 			if tt.setupTado != nil {
