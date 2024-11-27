@@ -290,8 +290,8 @@ func Test_zoneAction(t *testing.T) {
 		zoneName:  "foo",
 	}
 
-	assert.Equal(t, "*foo*: setting heating to off mode", a.Description(false))
-	assert.Equal(t, "*foo*: setting heating to off mode in 5m0s", a.Description(true))
+	assert.Equal(t, "*foo*: switching off heating", a.Description(false))
+	assert.Equal(t, "*foo*: switching off heating in 5m0s", a.Description(true))
 	assert.Equal(t, "[zone=foo mode=off delay=5m0s reason=reasons]", a.LogValue().String())
 }
 
@@ -343,10 +343,13 @@ func Test_zoneAction_Do(t *testing.T) {
 			setup: func(client *mocks.TadoClient) {
 				client.EXPECT().SetZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10), mock.AnythingOfType("tado.ZoneOverlay")).
 					RunAndReturn(func(ctx context.Context, i int64, i2 int, overlay tado.ZoneOverlay, fn ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
+						if *overlay.Setting.Type != tado.HEATING {
+							return nil, errors.New("invalid type setting")
+						}
 						if *overlay.Setting.Power != tado.PowerOFF {
 							return nil, errors.New("invalid power setting")
 						}
-						if *overlay.Termination.Type != tado.ZoneOverlayTerminationTypeMANUAL {
+						if *overlay.Termination.TypeSkillBasedApp != tado.ZoneOverlayTerminationTypeSkillBasedAppNEXTTIMEBLOCK {
 							return nil, errors.New("invalid termination type")
 						}
 						return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK}}, nil

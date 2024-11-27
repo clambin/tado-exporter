@@ -51,7 +51,7 @@ func TestHomeRules_Evaluate(t *testing.T) {
 	}
 
 	rules, err := loadHomeRules([]RuleConfiguration{
-		{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"A"}},
+		{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
 	})
 	assert.NoError(t, err)
 

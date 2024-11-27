@@ -38,12 +38,12 @@ func TestNew(t *testing.T) {
 func TestController_Run(t *testing.T) {
 	cfg := Configuration{
 		HomeRules: []RuleConfiguration{
-			{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"foo"}},
+			{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
 		},
 		ZoneRules: map[string][]RuleConfiguration{
 			"my room": {
-				{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"foo"}},
-				{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay.lua"}, Users: []string{"foo"}},
+				{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"user A"}},
+				{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay.lua"}},
 			},
 		},
 	}
@@ -52,9 +52,9 @@ func TestController_Run(t *testing.T) {
 	n := fakeNotifier{ch: make(chan string)}
 
 	m, err := New(cfg, p, nil, &n, l)
-	assert.NoError(t, err)
-	assert.NotNil(t, m)
-	assert.Len(t, m.controllers, 2)
+	require.NoError(t, err)
+	require.NotNil(t, m)
+	require.Len(t, m.controllers, 2)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
