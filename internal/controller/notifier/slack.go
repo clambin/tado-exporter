@@ -30,7 +30,6 @@ func (s *SlackNotifier) Notify(msg string) {
 		return
 	}
 	for _, channel := range channels {
-		s.Logger.Debug("notifying on slack", "channel", channel.Name)
 		if _, _, err = s.SlackSender.PostMessage(channel.ID, slack.MsgOptionText(msg, false)); err != nil {
 			s.Logger.Error("notifier failed to post message", "err", err)
 		}

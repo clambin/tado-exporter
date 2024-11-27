@@ -81,6 +81,12 @@ func (h homeRules) Evaluate(u update) (action, error) {
 
 		return change[0], nil
 	}
+	reasons := set.New[string]()
+	for _, a := range noChange {
+		reasons.Add(a.GetReason())
+	}
+	noChange[0].reason = strings.Join(reasons.ListOrdered(), ", ")
+
 	return noChange[0], nil
 }
 

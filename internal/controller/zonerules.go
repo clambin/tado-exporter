@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -33,7 +34,6 @@ type zoneRules struct {
 }
 
 func loadZoneRules(zoneName string, config []RuleConfiguration) (zoneRules, error) {
-	// TODO: RuleConfiguration has Users: homeRule needs to include this and only send those users to the script.
 	rules := zoneRules{
 		zoneName: zoneName,
 		rules:    make([]evaluator, 0, len(config)), // evaluator, not zoneRule, so we can stub it out during testing
@@ -96,6 +96,12 @@ func (z zoneRules) Evaluate(u update) (action, error) {
 
 		return change[0], nil
 	}
+	reasons := set.New[string]()
+	for _, a := range noChange {
+		reasons.Add(a.GetReason())
+	}
+	noChange[0].reason = strings.Join(reasons.ListOrdered(), ", ")
+
 	return noChange[0], nil
 }
 
