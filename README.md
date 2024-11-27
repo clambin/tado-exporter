@@ -84,38 +84,6 @@ export TADO_MONITOR_TADO.USERNAME="username@example.com"
 export TADO_MONITOR_TADO.PASSWORD="your-password"
 ```
 
-## Controlling your tadoº devices
-
-`tado monitor` looks for a file `rules.yaml` in the same directory as the `config.yaml` file.
-This file defines the rules to apply for your home:
-
-```
-# Home rules control the state of your home (i.e. "home" or "away").
-home:
-  # autoAway sets the home to "away" mode when all defined users are away from home.
-  autoAway:
-    delay: 1h
-    users: [ "A", "B"]
-# Zone rules control the state of a rooom within your home. Rules will either switch heating off when all users are away,
-# or move the room to automatic mode when the room's been in manual mode for a while (think someone switching the bathroom
-# to a manual temperature setting and then forgetting to switch it back to automatic mode).
-zones:
-  - name: "room 1"
-    rules:
-      # autoAway switches off the heating in a room when all defined users are away from home
-      autoAway:
-        delay: 1h
-        users: ["A"]
-      # limitOverlay removes a manual temperature control after a specified amount of time
-      limitOverlay:
-        delay: 1h
-      # nightTime removes any manual temperature control at a specified time of day
-      nightTime:
-        time: "23:30:00"
-```
-
-If the file doesn't exist, `tado monitor` only runs as a Prometheus exporter.
-
 ## Prometheus
 
 ### Adding tado as a target
@@ -168,7 +136,39 @@ The bot includes two interactive shortcuts: `Tado Room` controls a room's heatin
 To enable the bot, go to You Apps in your workspace and add a Tadoº Bot using the included [manifest.yaml](assets/slack/manifest.yaml).
 Add the App Token and the Bot User OAuth Token in `slack.app-token` and `slack.token` respectively.
 
-## Tadoº client implementation 
+## Controlling your tadoº devices
+
+`tado monitor` looks for a file `rules.yaml` in the same directory as the `config.yaml` file.
+This file defines the rules to apply for your home:
+
+```
+# Home rules control the state of your home (i.e. "home" or "away").
+home:
+  # autoAway sets the home to "away" mode when all defined users are away from home.
+  autoAway:
+    delay: 1h
+    users: [ "A", "B"]
+# Zone rules control the state of a rooom within your home. Rules will either switch heating off when all users are away,
+# or move the room to automatic mode when the room's been in manual mode for a while (think someone switching the bathroom
+# to a manual temperature setting and then forgetting to switch it back to automatic mode).
+zones:
+  - name: "room 1"
+    rules:
+      # autoAway switches off the heating in a room when all defined users are away from home
+      autoAway:
+        delay: 1h
+        users: ["A"]
+      # limitOverlay removes a manual temperature control after a specified amount of time
+      limitOverlay:
+        delay: 1h
+      # nightTime removes any manual temperature control at a specified time of day
+      nightTime:
+        time: "23:30:00"
+```
+
+If the file doesn't exist, `tado monitor` only runs as a Prometheus exporter.
+
+## Tadoº client implementation
 
 tado uses the Tadoº Go Client found at [GitHub](https://github.com/clambin/tado). Feel free to reuse for your own projects.
 

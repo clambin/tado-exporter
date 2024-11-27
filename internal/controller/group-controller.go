@@ -81,16 +81,8 @@ func (c *groupController) scheduleJob(ctx context.Context, action action) {
 	// if a job is scheduled with the same action, but an earlier scheduled time, don't schedule a new job
 	j := c.scheduledJob.Load()
 	if j != nil {
-		if j.GetState() == action.GetState() {
-			// truncate old & new due times up to a minute and only start a new job (canceling the old one) if newDue is after due.
-			// this avoids canceling the current job & immediately scheduling a new one if the old & new due times are very close
-			// (e.g. in case of a rule like nighttime, which targets a specific time of day.
-			due := j.Due().Truncate(time.Minute)
-			newDue := time.Now().Local().Add(action.GetDelay()).Truncate(time.Minute)
-			if !newDue.Before(due) {
-				// c.logger.Debug("job for the same state already scheduled. not scheduling new job", "state", action.GetState(), "reason", action.GetReason())
-				return
-			}
+		if !shouldSchedule(j, action) {
+			return
 		}
 		// scheduling a new job. cancel any old one.
 		c.cancelJob(action)
@@ -114,6 +106,18 @@ func (c *groupController) scheduleJob(ctx context.Context, action action) {
 	if c.Notifier != nil {
 		c.Notifier.Notify(action.Description(true) + "\nReason: " + action.GetReason())
 	}
+}
+
+func shouldSchedule(currentJob *job, newAction action) bool {
+	if currentJob.GetState() != newAction.GetState() {
+		return true
+	}
+	// truncate old & new due times up to a minute and only start a new job (canceling the old one) if newDue is after due.
+	// this avoids canceling the current job & immediately scheduling a new one if the old & new due times are very close
+	// (e.g. in case of a rule like nighttime, which targets a specific time of day.
+	due := currentJob.Due().Truncate(time.Minute)
+	newDue := time.Now().Local().Add(newAction.GetDelay()).Truncate(time.Minute)
+	return newDue.Before(due)
 }
 
 // doAction executes the action and reports the result to the user through a Notifier.

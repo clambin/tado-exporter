@@ -161,12 +161,11 @@ var _ action = zoneAction{}
 
 type zoneAction struct {
 	zoneState zoneState
-	TadoClient
-	delay    time.Duration
-	reason   string
-	homeId   tado.HomeId
-	zoneId   tado.ZoneId
-	zoneName string
+	delay     time.Duration
+	reason    string
+	homeId    tado.HomeId
+	zoneId    tado.ZoneId
+	zoneName  string
 }
 
 func (z zoneAction) GetState() string {
