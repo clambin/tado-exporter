@@ -148,7 +148,7 @@ end
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r, err := newZoneRule("foo", strings.NewReader(tt.script))
+			r, err := newZoneRule("foo", strings.NewReader(tt.script), nil)
 			require.NoError(t, err)
 			a, err := r.Evaluate(tt.update)
 			assert.Equal(t, tt.zoneWant.zoneState, zoneState(a.GetState()))
@@ -190,6 +190,12 @@ func TestZoneRule_UseCases(t *testing.T) {
 			update:   update{HomeStateAuto, 1, map[string]zoneInfo{"foo": {zoneState: ZoneStateAuto}}, devices{{Name: "user", Home: false}}},
 			zoneWant: zoneWant{ZoneStateOff, 15 * time.Minute, "all users are away", assert.NoError},
 		},
+		{
+			name:     "autoAway - no valid users",
+			script:   "autoaway.lua",
+			update:   update{HomeStateAuto, 1, map[string]zoneInfo{"foo": {zoneState: ZoneStateAuto}}, devices{{Name: "bar", Home: false}}},
+			zoneWant: zoneWant{ZoneStateAuto, 0, "no devices found", assert.NoError},
+		},
 	}
 
 	for _, tt := range tests {
@@ -197,7 +203,7 @@ func TestZoneRule_UseCases(t *testing.T) {
 			f, err := zonerules.FS.Open(tt.script)
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = f.Close() })
-			r, err := newZoneRule("foo", f)
+			r, err := newZoneRule("foo", f, []string{"user"})
 			require.NoError(t, err)
 			a, err := r.Evaluate(tt.update)
 			assert.Equal(t, tt.zoneWant.zoneState, zoneState(a.GetState()))
@@ -240,7 +246,7 @@ func TestZoneRule_UseCases_Nighttime(t *testing.T) {
 			f, err := zonerules.FS.Open("nighttime.lua")
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = f.Close() })
-			r, err := newZoneRule("foo", f)
+			r, err := newZoneRule("foo", f, nil)
 			require.NoError(t, err)
 
 			// re-register functions with custom "now" function
@@ -259,7 +265,7 @@ func BenchmarkZoneEvaluator(b *testing.B) {
 	f, err := zonerules.FS.Open("nighttime.lua")
 	require.NoError(b, err)
 	b.Cleanup(func() { _ = f.Close() })
-	r, err := newZoneRule("foo", f)
+	r, err := newZoneRule("foo", f, []string{"user"})
 	require.NoError(b, err)
 	u := update{
 		homeState:  HomeStateAuto,
@@ -284,8 +290,8 @@ func Test_zoneAction(t *testing.T) {
 		zoneName:  "foo",
 	}
 
-	assert.Equal(t, "foo: setting heating to off mode", a.Description(false))
-	assert.Equal(t, "foo: setting heating to off mode in 5m0s", a.Description(true))
+	assert.Equal(t, "*foo*: setting heating to off mode", a.Description(false))
+	assert.Equal(t, "*foo*: setting heating to off mode in 5m0s", a.Description(true))
 	assert.Equal(t, "[zone=foo mode=off delay=5m0s reason=reasons]", a.LogValue().String())
 }
 

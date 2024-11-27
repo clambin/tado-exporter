@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/controller/zonerules"
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -42,7 +43,7 @@ func loadZoneRules(zoneName string, config []RuleConfiguration) (zoneRules, erro
 		if err != nil {
 			return zoneRules{}, fmt.Errorf("failed to load zone rule %q: %w", cfg.Name, err)
 		}
-		rule, err := newZoneRule(zoneName, r)
+		rule, err := newZoneRule(zoneName, r, cfg.Users)
 		_ = r.Close()
 
 		if err != nil {
@@ -104,11 +105,12 @@ var _ evaluator = zoneRule{}
 
 type zoneRule struct {
 	zoneName string
+	devices  set.Set[string]
 	luaScript
 }
 
-func newZoneRule(name string, r io.Reader) (zoneRule, error) {
-	rule := zoneRule{zoneName: name}
+func newZoneRule(name string, r io.Reader, devices []string) (zoneRule, error) {
+	rule := zoneRule{zoneName: name, devices: set.New(devices...)}
 	var err error
 	if rule.luaScript, err = newLuaScript(name, r); err != nil {
 		return zoneRule{}, err
@@ -127,7 +129,7 @@ func (r zoneRule) Evaluate(u update) (action, error) {
 		return zoneAction{}, fmt.Errorf("zone %q not found in update", r.zoneName)
 	}
 	r.PushString(string(state))
-	pushDevices(r.luaScript.State, u.GetDevices())
+	pushDevices(r.luaScript.State, u.GetDevices().filter(r.devices))
 
 	// execute the script
 	if err := r.ProtectedCall(3, 3, 0); err != nil {
@@ -189,9 +191,12 @@ func (z zoneAction) Do(ctx context.Context, client TadoClient) error {
 		return err
 	case ZoneStateOff:
 		resp, err := client.SetZoneOverlayWithResponse(ctx, z.homeId, z.zoneId, tado.SetZoneOverlayJSONRequestBody{
-			Setting:     &tado.ZoneSetting{Power: oapi.VarP(tado.PowerOFF)},
-			Termination: &tado.ZoneOverlayTermination{Type: oapi.VarP(tado.ZoneOverlayTerminationTypeMANUAL)},
-			Type:        nil,
+			Setting: &tado.ZoneSetting{Type: oapi.VarP(tado.HEATING), Power: oapi.VarP(tado.PowerOFF)},
+			Termination: &tado.ZoneOverlayTermination{
+				//Type:              oapi.VarP(tado.ZoneOverlayTerminationTypeTIMER),
+				TypeSkillBasedApp: oapi.VarP(tado.ZoneOverlayTerminationTypeSkillBasedAppNEXTTIMEBLOCK),
+			},
+			Type: nil,
 		})
 		if err == nil && resp.StatusCode() != http.StatusOK {
 			err = fmt.Errorf("unexpected status code %d", resp.StatusCode())
@@ -203,7 +208,12 @@ func (z zoneAction) Do(ctx context.Context, client TadoClient) error {
 }
 
 func (z zoneAction) Description(includeDelay bool) string {
-	text := z.zoneName + ": setting heating to " + string(z.zoneState) + " mode"
+	text := "*" + z.zoneName + "*: "
+	if z.zoneState == ZoneStateOff {
+		text += "switching off heating"
+	} else {
+		text += "setting heating to " + string(z.zoneState) + " mode"
+	}
 	if includeDelay {
 		text += " in " + z.delay.String()
 	}

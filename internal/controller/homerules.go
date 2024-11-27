@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/controller/homerules"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
@@ -36,14 +37,13 @@ func (h homeRules) ParseUpdate(update poller.Update) (action, error) {
 }
 
 func loadHomeRules(config []RuleConfiguration) (homeRules, error) {
-	// TODO: RuleConfiguration has Users: homeRule needs to include this and only send those users to the script.
 	var rules homeRules
 	for _, cfg := range config {
 		r, err := loadLuaScript(cfg.Script, homerules.FS)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load home rule: %w", err)
 		}
-		rule, err := newHomeRule(cfg.Name, r)
+		rule, err := newHomeRule(cfg.Name, r, cfg.Users)
 		_ = r.Close()
 
 		if err != nil {
@@ -89,10 +89,11 @@ var _ evaluator = homeRule{}
 
 type homeRule struct {
 	luaScript
+	devices set.Set[string]
 }
 
-func newHomeRule(name string, r io.Reader) (*homeRule, error) {
-	var rule homeRule
+func newHomeRule(name string, r io.Reader, devices []string) (*homeRule, error) {
+	rule := homeRule{devices: set.New[string](devices...)}
 	var err error
 	if rule.luaScript, err = newLuaScript(name, r); err != nil {
 		return nil, err
@@ -106,7 +107,7 @@ func (r homeRule) Evaluate(u update) (action, error) {
 	}
 	// push arguments
 	r.PushString(string(u.GetHomeState()))
-	pushDevices(r.luaScript.State, u.GetDevices())
+	pushDevices(r.luaScript.State, u.GetDevices().filter(r.devices))
 
 	// execute the script
 	if err := r.ProtectedCall(2, 3, 0); err != nil {

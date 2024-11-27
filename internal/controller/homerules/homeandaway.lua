@@ -22,10 +22,6 @@ end
 function ListDevices(devices)
 	local result = ""
 	for _, obj in ipairs(devices) do
-		local home = "away"
-		if obj.Home then
-			home = "home"
-		end
 		result = result .. obj.Name .. ", "
 	end
 	return result:sub(1, -3)

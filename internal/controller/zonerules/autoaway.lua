@@ -1,4 +1,7 @@
-function Evaluate(_, zone, devices)
+function Evaluate(mode, zone, devices)
+        if #devices == 0 then
+            return mode, 0, "no devices found"
+        end
         local allAway = true
         for _, device in ipairs(devices) do
         	if device.Home then

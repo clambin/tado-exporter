@@ -112,7 +112,7 @@ end
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r, err := newHomeRule(tt.name, strings.NewReader(tt.script))
+			r, err := newHomeRule(tt.name, strings.NewReader(tt.script), nil)
 			require.NoError(t, err)
 			a, err := r.Evaluate(tt.update)
 			tt.homeWant.err(t, err)

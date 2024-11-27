@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"github.com/Shopify/go-lua"
+	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"io"
 	"log/slog"
@@ -14,6 +15,17 @@ import (
 )
 
 type devices []device
+
+func (d devices) filter(name set.Set[string]) devices {
+	filtered := make(devices, 0, len(name))
+	for _, entry := range d {
+		if name.Contains(entry.Name) {
+			filtered = append(filtered, entry)
+		}
+	}
+	return filtered
+}
+
 type device struct {
 	Name string
 	Home bool
