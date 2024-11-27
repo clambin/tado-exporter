@@ -99,7 +99,7 @@ func (c *groupController) scheduleJob(ctx context.Context, action Action) {
 		return
 	}
 
-	// deferred action.
+	// deferred action
 	j := job{
 		TadoClient: c.TadoClient,
 		Action:     action,
@@ -108,8 +108,9 @@ func (c *groupController) scheduleJob(ctx context.Context, action Action) {
 		}), action.GetDelay(), c.jobCompleted),
 	}
 	c.scheduledJob.Store(&j)
-	c.Notifier.Notify(action.Description(true))
-
+	if c.Notifier != nil {
+		c.Notifier.Notify(action.Description(true))
+	}
 }
 
 // doAction executes the action and reports the result to the user through a Notifier.
@@ -120,7 +121,9 @@ func (c *groupController) doAction(ctx context.Context, action Action) error {
 		return err
 	}
 	desc := action.Description(false)
-	c.Notifier.Notify(desc)
+	if c.Notifier != nil {
+		c.Notifier.Notify(desc)
+	}
 	return nil
 }
 
@@ -139,7 +142,9 @@ func (c *groupController) processCompletedJob() {
 			c.logger.Error("scheduled job failed", "err", err)
 			return
 		}
-		c.Notifier.Notify(j.Description(false))
+		if c.Notifier != nil {
+			c.Notifier.Notify(j.Description(false))
+		}
 	}
 }
 
