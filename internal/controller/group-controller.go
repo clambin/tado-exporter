@@ -145,7 +145,7 @@ func (c *groupController) processCompletedJob() {
 
 func (c *groupController) ReportTask() string {
 	if j := c.scheduledJob.Load(); j != nil {
-		return j.Description(false) + " in " + j.Due().Sub(time.Now()).Truncate(time.Second).String()
+		return j.Description(false) + " in " + time.Until(j.Due()).Truncate(time.Second).String()
 	}
 	return ""
 }

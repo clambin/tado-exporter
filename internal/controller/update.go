@@ -44,7 +44,7 @@ func updateFromPollerUpdate(u poller.Update) Update {
 }
 
 func homeStateFromPollerZone(u poller.Update) HomeState {
-	if u.HomeState.PresenceLocked == nil || *u.HomeState.PresenceLocked == false {
+	if u.HomeState.PresenceLocked == nil || !*u.HomeState.PresenceLocked {
 		return HomeStateAuto
 	}
 	switch *u.HomeState.Presence {

@@ -132,7 +132,9 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 			n = append(n, &notifier.SlackNotifier{Logger: l, SlackSender: sc})
 		}
 
-		c, err = controller.New(rules, p, api, n, l.With("component", "controller"))
+		if c, err = controller.New(rules, p, api, n, l.With("component", "controller")); err != nil {
+			return fmt.Errorf("controller: %w", err)
+		}
 		g.Go(func() error { return c.Run(ctx) })
 	}
 
