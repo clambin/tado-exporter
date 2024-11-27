@@ -15,7 +15,7 @@ import (
 )
 
 type homeWant struct {
-	state  HomeState
+	state  homeState
 	delay  time.Duration
 	reason string
 	err    assert.ErrorAssertionFunc
@@ -24,12 +24,12 @@ type homeWant struct {
 func TestHomeRules_Evaluate(t *testing.T) {
 	tests := []struct {
 		name string
-		Update
+		update
 		homeWant
 	}{
 		{
 			name: "at least one user home",
-			Update: Update{HomeStateAway, 1, nil, Devices{
+			update: update{HomeStateAway, 1, nil, devices{
 				{Name: "user A", Home: true},
 				{Name: "user B", Home: false},
 			}},
@@ -37,7 +37,7 @@ func TestHomeRules_Evaluate(t *testing.T) {
 		},
 		{
 			name: "all users are away",
-			Update: Update{HomeStateHome, 1, nil, Devices{
+			update: update{HomeStateHome, 1, nil, devices{
 				{Name: "user A", Home: false},
 				{Name: "user B", Home: false},
 			}},
@@ -45,24 +45,24 @@ func TestHomeRules_Evaluate(t *testing.T) {
 		},
 		{
 			name:     "no devices",
-			Update:   Update{HomeStateAway, 1, nil, Devices{}},
+			update:   update{HomeStateAway, 1, nil, devices{}},
 			homeWant: homeWant{HomeStateAway, 0, "no devices found", assert.NoError},
 		},
 	}
 
-	rules, err := LoadHomeRules([]RuleConfiguration{
+	rules, err := loadHomeRules([]RuleConfiguration{
 		{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"A"}},
 	})
 	assert.NoError(t, err)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a, err := rules.Evaluate(tt.Update)
+			a, err := rules.Evaluate(tt.update)
 			tt.homeWant.err(t, err)
 			if err != nil {
 				return
 			}
-			assert.Equal(t, tt.homeWant.state, HomeState(a.GetState()))
+			assert.Equal(t, tt.homeWant.state, homeState(a.GetState()))
 			assert.Equal(t, tt.homeWant.delay, a.GetDelay())
 			assert.Equal(t, tt.homeWant.reason, a.GetReason())
 		})
@@ -75,7 +75,7 @@ func TestHomeRule_Evaluate(t *testing.T) {
 	tests := []struct {
 		name   string
 		script string
-		Update
+		update
 		homeWant
 	}{
 		{
@@ -85,7 +85,7 @@ function Evaluate(state, devices)
 	return "away", 300, "test"
 end
 `,
-			Update:   Update{HomeStateHome, 1, nil, Devices{{Name: "user", Home: false}}},
+			update:   update{HomeStateHome, 1, nil, devices{{Name: "user", Home: false}}},
 			homeWant: homeWant{HomeStateAway, 5 * time.Minute, "test", assert.NoError},
 		},
 		{
@@ -95,7 +95,7 @@ function Evaluate(state, devices)
 	return "away", nil, "test"
 end
 `,
-			Update:   Update{HomeStateHome, 1, nil, Devices{{Name: "user", Home: false}}},
+			update:   update{HomeStateHome, 1, nil, devices{{Name: "user", Home: false}}},
 			homeWant: homeWant{"", 0, "", assert.Error},
 		},
 		{
@@ -105,21 +105,21 @@ function NotEvaluate(state, devices)
 	return "away", 0, "test"
 end
 `,
-			Update:   Update{HomeStateHome, 1, nil, Devices{{Name: "user", Home: false}}},
+			update:   update{HomeStateHome, 1, nil, devices{{Name: "user", Home: false}}},
 			homeWant: homeWant{"", 0, "", assert.Error},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r, err := NewHomeRule(tt.name, strings.NewReader(tt.script))
+			r, err := newHomeRule(tt.name, strings.NewReader(tt.script))
 			require.NoError(t, err)
-			a, err := r.Evaluate(tt.Update)
+			a, err := r.Evaluate(tt.update)
 			tt.homeWant.err(t, err)
 			if err != nil {
 				return
 			}
-			assert.Equal(t, tt.homeWant.state, HomeState(a.GetState()))
+			assert.Equal(t, tt.homeWant.state, homeState(a.GetState()))
 			assert.Equal(t, tt.homeWant.delay, a.GetDelay())
 			assert.Equal(t, tt.homeWant.reason, a.GetReason())
 		})

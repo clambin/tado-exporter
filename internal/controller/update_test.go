@@ -12,18 +12,18 @@ func Test_updateFromPollerUpdate(t *testing.T) {
 	tests := []struct {
 		name   string
 		update poller.Update
-		want   Update
+		want   update
 	}{
 		{
 			name: "auto",
 			update: testutils.Update(
 				testutils.WithHome(1, "my home", tado.HOME),
 			),
-			want: Update{
+			want: update{
 				HomeId:     1,
-				HomeState:  HomeStateAuto,
-				ZoneStates: map[string]ZoneInfo{},
-				Devices:    Devices{},
+				homeState:  HomeStateAuto,
+				ZoneStates: map[string]zoneInfo{},
+				devices:    devices{},
 			},
 		},
 		{
@@ -31,11 +31,11 @@ func Test_updateFromPollerUpdate(t *testing.T) {
 			update: testutils.Update(
 				testutils.WithHome(1, "my home", tado.HOME, testutils.WithPresenceLocked(false)),
 			),
-			want: Update{
+			want: update{
 				HomeId:     1,
-				HomeState:  HomeStateAuto,
-				ZoneStates: map[string]ZoneInfo{},
-				Devices:    Devices{},
+				homeState:  HomeStateAuto,
+				ZoneStates: map[string]zoneInfo{},
+				devices:    devices{},
 			},
 		},
 		{
@@ -43,11 +43,11 @@ func Test_updateFromPollerUpdate(t *testing.T) {
 			update: testutils.Update(
 				testutils.WithHome(1, "my home", tado.HOME, testutils.WithPresenceLocked(true)),
 			),
-			want: Update{
+			want: update{
 				HomeId:     1,
-				HomeState:  HomeStateHome,
-				ZoneStates: map[string]ZoneInfo{},
-				Devices:    Devices{},
+				homeState:  HomeStateHome,
+				ZoneStates: map[string]zoneInfo{},
+				devices:    devices{},
 			},
 		},
 		{
@@ -59,16 +59,16 @@ func Test_updateFromPollerUpdate(t *testing.T) {
 				testutils.WithZone(3, "zone 3", tado.PowerOFF, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeTIMER, 300)),
 				testutils.WithZone(4, "zone 4", tado.PowerOFF, 0, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 			),
-			want: Update{
+			want: update{
 				HomeId:    1,
-				HomeState: HomeStateAuto,
-				ZoneStates: map[string]ZoneInfo{
+				homeState: HomeStateAuto,
+				ZoneStates: map[string]zoneInfo{
 					"zone 1": {ZoneStateAuto, 1},
 					"zone 2": {ZoneStateManual, 2},
 					"zone 3": {ZoneStateAuto, 3},
 					"zone 4": {ZoneStateOff, 4},
 				},
-				Devices: Devices{},
+				devices: devices{},
 			},
 		},
 		{
@@ -80,13 +80,13 @@ func Test_updateFromPollerUpdate(t *testing.T) {
 				testutils.WithMobileDevice(2, "user 3", testutils.WithLocation(true, false)),
 				testutils.WithMobileDevice(2, "user 4", testutils.WithLocation(false, true)),
 			),
-			want: Update{
+			want: update{
 				HomeId:     1,
-				HomeState:  HomeStateAuto,
-				ZoneStates: map[string]ZoneInfo{},
-				Devices: Devices{
-					Device{"user 3", true},
-					Device{"user 4", false},
+				homeState:  HomeStateAuto,
+				ZoneStates: map[string]zoneInfo{},
+				devices: devices{
+					device{"user 3", true},
+					device{"user 4", false},
 				},
 			},
 		},

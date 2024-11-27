@@ -35,13 +35,13 @@ func newGroupController(rules groupEvaluator, p Publisher[poller.Update], client
 	}
 }
 
-// Run registers with a Poller and evaluates an incoming Update against its rules.
+// Run registers with a Poller and evaluates an incoming update against its rules.
 func (c *groupController) Run(ctx context.Context) error {
 	ch := c.Publisher.Subscribe()
 	defer c.Publisher.Unsubscribe(ch)
 
-	c.logger.Debug("controller starting")
-	defer c.logger.Debug("controller stopping")
+	c.logger.Debug("group controller starting")
+	defer c.logger.Debug("group controller stopping")
 
 	for {
 		select {
@@ -60,8 +60,8 @@ func (c *groupController) Run(ctx context.Context) error {
 }
 
 // processUpdate processes the update, evaluating its rules. If the outcome differs from the current state
-// (as determined by the Update), it returns the action and true. Otherwise, it returns false.
-func (c *groupController) processUpdate(update poller.Update) (Action, bool) {
+// (as determined by the update), it returns the action and true. Otherwise, it returns false.
+func (c *groupController) processUpdate(update poller.Update) (action, bool) {
 	current, err := c.ParseUpdate(update)
 	if err != nil {
 		c.logger.Error("failed to parse update", "err", err)
@@ -75,8 +75,8 @@ func (c *groupController) processUpdate(update poller.Update) (Action, bool) {
 	return a, a.GetState() != current.GetState()
 }
 
-// scheduleJob is called when processUpdate returns a new Action. It executes (or schedules) the required action.
-func (c *groupController) scheduleJob(ctx context.Context, action Action) {
+// scheduleJob is called when processUpdate returns a new action. It executes (or schedules) the required action.
+func (c *groupController) scheduleJob(ctx context.Context, action action) {
 	// if a job is scheduled with the same action, but an earlier scheduled time, don't schedule a new job
 	if c.scheduledJob.Load() != nil && c.scheduledJob.Load().GetState() == action.GetState() {
 		// truncate old & new due times up to a minute and only start a new job (canceling the old one) if newDue is after due.
@@ -102,7 +102,7 @@ func (c *groupController) scheduleJob(ctx context.Context, action Action) {
 	// deferred action
 	j := job{
 		TadoClient: c.TadoClient,
-		Action:     action,
+		action:     action,
 		Job: scheduler.Schedule(ctx, scheduler.RunFunc(func(ctx context.Context) error {
 			return c.doAction(ctx, action)
 		}), action.GetDelay(), c.jobCompleted),
@@ -115,7 +115,7 @@ func (c *groupController) scheduleJob(ctx context.Context, action Action) {
 
 // doAction executes the action and reports the result to the user through a Notifier.
 // This is called either directly from scheduleJob, or from the scheduler once the Delay has passed.
-func (c *groupController) doAction(ctx context.Context, action Action) error {
+func (c *groupController) doAction(ctx context.Context, action action) error {
 	if err := action.Do(ctx, c.TadoClient); err != nil {
 		c.logger.Error("failed to execute action", "action", action, "err", err)
 		return err
@@ -160,11 +160,11 @@ func (c *groupController) ReportTask() string {
 var _ scheduler.Runnable = &job{}
 
 type job struct {
-	Action
+	action
 	TadoClient
 	*scheduler.Job
 }
 
 func (j job) Run(_ context.Context) error {
-	return j.Action.Do(context.Background(), j.TadoClient)
+	return j.action.Do(context.Background(), j.TadoClient)
 }

@@ -16,34 +16,34 @@ import (
 	"time"
 )
 
-type HomeState string
+type homeState string
 
 const (
-	HomeStateAuto = HomeState("auto")
-	HomeStateHome = HomeState("home")
-	HomeStateAway = HomeState("away")
+	HomeStateAuto = homeState("auto")
+	HomeStateHome = homeState("home")
+	HomeStateAway = homeState("away")
 )
 
-var _ Evaluator = HomeRules{}
+var _ evaluator = homeRules{}
 
-type HomeRules []HomeRule
+type homeRules []homeRule
 
-func (h HomeRules) ParseUpdate(update poller.Update) (Action, error) {
+func (h homeRules) ParseUpdate(update poller.Update) (action, error) {
 	return homeAction{
-		state:  HomeState(strings.ToLower(string(*update.Presence))),
+		state:  homeState(strings.ToLower(string(*update.Presence))),
 		homeId: *update.HomeBase.Id,
 	}, nil
 }
 
-func LoadHomeRules(config []RuleConfiguration) (HomeRules, error) {
-	// TODO: RuleConfiguration has Users: HomeRule needs to include this and only send those users to the script.
-	var rules HomeRules
+func loadHomeRules(config []RuleConfiguration) (homeRules, error) {
+	// TODO: RuleConfiguration has Users: homeRule needs to include this and only send those users to the script.
+	var rules homeRules
 	for _, cfg := range config {
 		r, err := loadLuaScript(cfg.Script, homerules.FS)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load home rule: %w", err)
 		}
-		rule, err := NewHomeRule(cfg.Name, r)
+		rule, err := newHomeRule(cfg.Name, r)
 		_ = r.Close()
 
 		if err != nil {
@@ -54,7 +54,7 @@ func LoadHomeRules(config []RuleConfiguration) (HomeRules, error) {
 	return rules, nil
 }
 
-func (h HomeRules) Evaluate(u Update) (Action, error) {
+func (h homeRules) Evaluate(u update) (action, error) {
 	if len(h) == 0 {
 		return nil, errors.New("no rules found")
 	}
@@ -85,14 +85,14 @@ func (h HomeRules) Evaluate(u Update) (Action, error) {
 }
 
 // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-var _ Evaluator = HomeRule{}
+var _ evaluator = homeRule{}
 
-type HomeRule struct {
+type homeRule struct {
 	luaScript
 }
 
-func NewHomeRule(name string, r io.Reader) (*HomeRule, error) {
-	var rule HomeRule
+func newHomeRule(name string, r io.Reader) (*homeRule, error) {
+	var rule homeRule
 	var err error
 	if rule.luaScript, err = newLuaScript(name, r); err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func NewHomeRule(name string, r io.Reader) (*HomeRule, error) {
 	return &rule, nil
 }
 
-func (r HomeRule) Evaluate(u Update) (Action, error) {
+func (r homeRule) Evaluate(u update) (action, error) {
 	if err := r.initEvaluation(); err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (r HomeRule) Evaluate(u Update) (Action, error) {
 	reason, _ := r.ToString(-1)
 
 	return homeAction{
-		state:  HomeState(newState),
+		state:  homeState(newState),
 		delay:  time.Duration(delay) * time.Second,
 		reason: reason,
 		homeId: u.HomeId,
@@ -132,10 +132,10 @@ func (r HomeRule) Evaluate(u Update) (Action, error) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var _ Action = homeAction{}
+var _ action = homeAction{}
 
 type homeAction struct {
-	state  HomeState
+	state  homeState
 	delay  time.Duration
 	reason string
 	homeId tado.HomeId

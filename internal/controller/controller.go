@@ -35,7 +35,7 @@ type Controller struct {
 func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier, l *slog.Logger) (*Controller, error) {
 	m := Controller{logger: l}
 	if len(cfg.HomeRules) > 0 {
-		homeRules, err := LoadHomeRules(cfg.HomeRules)
+		homeRules, err := loadHomeRules(cfg.HomeRules)
 		if err != nil {
 			return nil, fmt.Errorf("could not load home rules: %w", err)
 		}
@@ -48,7 +48,7 @@ func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier
 		if len(zoneCfg) == 0 {
 			continue
 		}
-		zoneRules, err := LoadZoneRules(zoneName, zoneCfg)
+		zoneRules, err := loadZoneRules(zoneName, zoneCfg)
 		if err != nil {
 			return nil, fmt.Errorf("could not load rules for zone %q: %w", zoneName, err)
 		}
@@ -62,8 +62,8 @@ func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier
 
 // Run starts all controllers and waits for them to terminate.
 func (m *Controller) Run(ctx context.Context) error {
-	m.logger.Debug("controller manager starting")
-	defer m.logger.Debug("controller manager stopping")
+	m.logger.Debug("controller starting")
+	defer m.logger.Debug("controller stopping")
 
 	var g errgroup.Group
 	for _, controller := range m.controllers {

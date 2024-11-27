@@ -13,13 +13,13 @@ import (
 	"time"
 )
 
-type Devices []Device
-type Device struct {
+type devices []device
+type device struct {
 	Name string
 	Home bool
 }
 
-type Action interface {
+type action interface {
 	GetState() string
 	GetDelay() time.Duration
 	GetReason() string
@@ -28,19 +28,19 @@ type Action interface {
 	slog.LogValuer
 }
 
-type Evaluator interface {
-	Evaluate(Update) (Action, error)
+type evaluator interface {
+	Evaluate(update) (action, error)
 }
 
 type groupEvaluator interface {
-	Evaluator
-	ParseUpdate(poller.Update) (Action, error)
+	evaluator
+	ParseUpdate(poller.Update) (action, error)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // pushDevices pushes a slice of devices onto Lua's stack as a Table.
-func pushDevices(l *lua.State, devices Devices) {
+func pushDevices(l *lua.State, devices devices) {
 	l.NewTable()
 	for i, p := range devices {
 		l.NewTable()

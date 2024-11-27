@@ -16,44 +16,44 @@ import (
 	"time"
 )
 
-type ZoneState string
+type zoneState string
 
 const (
-	ZoneStateAuto   = ZoneState("auto")
-	ZoneStateManual = ZoneState("manual")
-	ZoneStateOff    = ZoneState("off")
+	ZoneStateAuto   = zoneState("auto")
+	ZoneStateManual = zoneState("manual")
+	ZoneStateOff    = zoneState("off")
 )
 
-var _ Evaluator = ZoneRules{}
+var _ evaluator = zoneRules{}
 
-type ZoneRules struct {
+type zoneRules struct {
 	zoneName string
-	rules    []Evaluator // Evaluator, not ZoneRule, so we can stub them during unit testing
+	rules    []evaluator // evaluator, not zoneRule, so we can stub them during unit testing
 }
 
-func LoadZoneRules(zoneName string, config []RuleConfiguration) (ZoneRules, error) {
-	// TODO: RuleConfiguration has Users: HomeRule needs to include this and only send those users to the script.
-	zoneRules := ZoneRules{
+func loadZoneRules(zoneName string, config []RuleConfiguration) (zoneRules, error) {
+	// TODO: RuleConfiguration has Users: homeRule needs to include this and only send those users to the script.
+	rules := zoneRules{
 		zoneName: zoneName,
-		rules:    make([]Evaluator, 0, len(config)), // Evaluator, not ZoneRule, so we can stub it out during testing
+		rules:    make([]evaluator, 0, len(config)), // evaluator, not zoneRule, so we can stub it out during testing
 	}
 	for _, cfg := range config {
 		r, err := loadLuaScript(cfg.Script, zonerules.FS)
 		if err != nil {
-			return ZoneRules{}, fmt.Errorf("failed to load zone rule %q: %w", cfg.Name, err)
+			return zoneRules{}, fmt.Errorf("failed to load zone rule %q: %w", cfg.Name, err)
 		}
-		rule, err := NewZoneRule(zoneName, r)
+		rule, err := newZoneRule(zoneName, r)
 		_ = r.Close()
 
 		if err != nil {
-			return ZoneRules{}, fmt.Errorf("failed to load zone rule %q: %w", cfg.Name, err)
+			return zoneRules{}, fmt.Errorf("failed to load zone rule %q: %w", cfg.Name, err)
 		}
-		zoneRules.rules = append(zoneRules.rules, rule)
+		rules.rules = append(rules.rules, rule)
 	}
-	return zoneRules, nil
+	return rules, nil
 }
 
-func (z ZoneRules) ParseUpdate(update poller.Update) (Action, error) {
+func (z zoneRules) ParseUpdate(update poller.Update) (action, error) {
 	for _, zone := range update.Zones {
 		if *zone.Name == z.zoneName {
 			return zoneAction{
@@ -65,7 +65,7 @@ func (z ZoneRules) ParseUpdate(update poller.Update) (Action, error) {
 	return nil, errors.New("zone not found in update")
 }
 
-func (z ZoneRules) Evaluate(u Update) (Action, error) {
+func (z zoneRules) Evaluate(u update) (action, error) {
 	if len(z.rules) == 0 {
 		return nil, errors.New("no rules found")
 	}
@@ -100,33 +100,33 @@ func (z ZoneRules) Evaluate(u Update) (Action, error) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var _ Evaluator = ZoneRule{}
+var _ evaluator = zoneRule{}
 
-type ZoneRule struct {
+type zoneRule struct {
 	zoneName string
 	luaScript
 }
 
-func NewZoneRule(name string, r io.Reader) (ZoneRule, error) {
-	rule := ZoneRule{zoneName: name}
+func newZoneRule(name string, r io.Reader) (zoneRule, error) {
+	rule := zoneRule{zoneName: name}
 	var err error
 	if rule.luaScript, err = newLuaScript(name, r); err != nil {
-		return ZoneRule{}, err
+		return zoneRule{}, err
 	}
 	return rule, nil
 }
 
-func (r ZoneRule) Evaluate(u Update) (Action, error) {
+func (r zoneRule) Evaluate(u update) (action, error) {
 	if err := r.initEvaluation(); err != nil {
 		return zoneAction{}, err
 	}
 	// push arguments
 	r.PushString(string(u.GetHomeState()))
-	zoneState, ok := u.GetZoneState(r.zoneName)
+	state, ok := u.GetZoneState(r.zoneName)
 	if !ok {
 		return zoneAction{}, fmt.Errorf("zone %q not found in update", r.zoneName)
 	}
-	r.PushString(string(zoneState))
+	r.PushString(string(state))
 	pushDevices(r.luaScript.State, u.GetDevices())
 
 	// execute the script
@@ -136,7 +136,7 @@ func (r ZoneRule) Evaluate(u Update) (Action, error) {
 
 	// pop the values
 	defer r.Pop(3)
-	newZoneState, _ := r.ToString(-3)
+	newState, _ := r.ToString(-3)
 	delay, ok := r.ToNumber(-2)
 	if !ok {
 		return zoneAction{}, fmt.Errorf("invalid type: delay")
@@ -144,7 +144,7 @@ func (r ZoneRule) Evaluate(u Update) (Action, error) {
 	reason, _ := r.ToString(-1)
 
 	return zoneAction{
-		zoneState: ZoneState(newZoneState),
+		zoneState: zoneState(newState),
 		delay:     time.Duration(delay) * time.Second,
 		reason:    reason,
 		homeId:    u.HomeId,
@@ -155,10 +155,10 @@ func (r ZoneRule) Evaluate(u Update) (Action, error) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var _ Action = zoneAction{}
+var _ action = zoneAction{}
 
 type zoneAction struct {
-	zoneState ZoneState
+	zoneState zoneState
 	TadoClient
 	delay    time.Duration
 	reason   string

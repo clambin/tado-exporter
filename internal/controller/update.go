@@ -5,45 +5,45 @@ import (
 	"github.com/clambin/tado/v2"
 )
 
-type Update struct {
-	HomeState
+type update struct {
+	homeState
 	tado.HomeId
-	ZoneStates map[string]ZoneInfo
-	Devices
+	ZoneStates map[string]zoneInfo
+	devices
 }
 
-type ZoneInfo struct {
-	ZoneState
+type zoneInfo struct {
+	zoneState
 	tado.ZoneId
 }
 
-func updateFromPollerUpdate(u poller.Update) Update {
-	h := Update{
+func updateFromPollerUpdate(u poller.Update) update {
+	h := update{
 		HomeId:    *u.HomeBase.Id,
-		HomeState: homeStateFromPollerZone(u),
+		homeState: homeStateFromPollerZone(u),
 	}
 
-	h.ZoneStates = make(map[string]ZoneInfo, len(u.Zones))
+	h.ZoneStates = make(map[string]zoneInfo, len(u.Zones))
 	for _, zone := range u.Zones {
 		if *zone.ZoneState.Setting.Type != tado.HEATING {
 			continue
 		}
 
-		h.ZoneStates[*zone.Name] = ZoneInfo{
+		h.ZoneStates[*zone.Name] = zoneInfo{
 			ZoneId:    *zone.Id,
-			ZoneState: zoneStateFromPollerZone(zone),
+			zoneState: zoneStateFromPollerZone(zone),
 		}
 	}
 
-	h.Devices = make(Devices, 0, len(u.MobileDevices))
-	for device := range u.GeoTrackedDevices() {
-		h.Devices = append(h.Devices, Device{Name: *device.Name, Home: *device.Location.AtHome})
+	h.devices = make(devices, 0, len(u.MobileDevices))
+	for d := range u.GeoTrackedDevices() {
+		h.devices = append(h.devices, device{Name: *d.Name, Home: *d.Location.AtHome})
 	}
 
 	return h
 }
 
-func homeStateFromPollerZone(u poller.Update) HomeState {
+func homeStateFromPollerZone(u poller.Update) homeState {
 	if u.HomeState.PresenceLocked == nil || !*u.HomeState.PresenceLocked {
 		return HomeStateAuto
 	}
@@ -57,7 +57,7 @@ func homeStateFromPollerZone(u poller.Update) HomeState {
 	}
 }
 
-func zoneStateFromPollerZone(z poller.Zone) ZoneState {
+func zoneStateFromPollerZone(z poller.Zone) zoneState {
 	if z.ZoneState.Overlay == nil || *z.ZoneState.Overlay.Termination.Type == tado.ZoneOverlayTerminationTypeTIMER {
 		return ZoneStateAuto
 	}
@@ -69,15 +69,15 @@ func zoneStateFromPollerZone(z poller.Zone) ZoneState {
 	return ZoneStateManual
 }
 
-func (u Update) GetHomeState() HomeState {
-	return u.HomeState
+func (u update) GetHomeState() homeState {
+	return u.homeState
 }
 
-func (u Update) GetZoneState(name string) (ZoneState, bool) {
+func (u update) GetZoneState(name string) (zoneState, bool) {
 	z, ok := u.ZoneStates[name]
-	return z.ZoneState, ok
+	return z.zoneState, ok
 }
 
-func (u Update) GetDevices() Devices {
-	return u.Devices
+func (u update) GetDevices() devices {
+	return u.devices
 }

@@ -32,7 +32,7 @@ end
 `},
 		},
 	}
-	zoneRules, err := LoadZoneRules("zone", ruleConfig)
+	zoneRules, err := loadZoneRules("zone", ruleConfig)
 	require.NoError(t, err)
 	require.Len(t, zoneRules.rules, 2)
 
