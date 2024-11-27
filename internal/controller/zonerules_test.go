@@ -89,6 +89,19 @@ func TestZoneRules(t *testing.T) {
 			update: update{homeState: HomeStateAuto, ZoneStates: map[string]zoneInfo{"foo": {zoneState: ZoneStateAuto}}, devices: nil},
 			want:   want{ZoneStateAuto, 5 * time.Minute, "manual setting detected", assert.NoError},
 		},
+		{
+			name: "multiple rules with different 'no-change' actions: join the reasons",
+			zoneRules: zoneRules{
+				zoneName: "foo",
+				rules: []evaluator{
+					fakeZoneEvaluator{ZoneStateAuto, 0, "no manual setting detected", nil},
+					fakeZoneEvaluator{ZoneStateAuto, 0, "users are home", nil},
+					fakeZoneEvaluator{ZoneStateAuto, 0, "no manual setting detected", nil},
+				},
+			},
+			update: update{homeState: HomeStateAuto, ZoneStates: map[string]zoneInfo{"foo": {zoneState: ZoneStateAuto}}, devices: nil},
+			want:   want{ZoneStateAuto, 0, "no manual setting detected, users are home", assert.NoError},
+		},
 	}
 
 	for _, tt := range tests {
