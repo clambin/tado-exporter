@@ -34,8 +34,8 @@ type Controller struct {
 // New creates a new Controller, with the home & zone controllers required by the Configuration.
 func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier, l *slog.Logger) (*Controller, error) {
 	m := Controller{logger: l}
-	if len(cfg.HomeRules) > 0 {
-		homeRules, err := loadHomeRules(cfg.HomeRules)
+	if len(cfg.Home) > 0 {
+		homeRules, err := loadHomeRules(cfg.Home)
 		if err != nil {
 			return nil, fmt.Errorf("could not load home rules: %w", err)
 		}
@@ -44,7 +44,7 @@ func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier
 			newGroupController(homeRules, getHomeStateFromUpdate, p, c, n, l.With(slog.String("module", "home controller"))),
 		)
 	}
-	for zoneName, zoneCfg := range cfg.ZoneRules {
+	for zoneName, zoneCfg := range cfg.Zones {
 		if len(zoneCfg) == 0 {
 			continue
 		}

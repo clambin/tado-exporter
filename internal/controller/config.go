@@ -1,8 +1,8 @@
 package controller
 
 type Configuration struct {
-	HomeRules []RuleConfiguration            `yaml:"homeRules"`
-	ZoneRules map[string][]RuleConfiguration `yaml:"zoneRules"`
+	Home  []RuleConfiguration            `yaml:"home"`
+	Zones map[string][]RuleConfiguration `yaml:"zones"`
 }
 
 type RuleConfiguration struct {

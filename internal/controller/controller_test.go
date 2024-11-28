@@ -22,10 +22,10 @@ var (
 
 func TestNew(t *testing.T) {
 	cfg := Configuration{
-		HomeRules: []RuleConfiguration{
+		Home: []RuleConfiguration{
 			{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"foo"}},
 		},
-		ZoneRules: map[string][]RuleConfiguration{
+		Zones: map[string][]RuleConfiguration{
 			"living room": {
 				{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"foo"}},
 				{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay.lua"}, Users: []string{"foo"}},
@@ -41,10 +41,10 @@ func TestNew(t *testing.T) {
 
 func TestController_Run(t *testing.T) {
 	cfg := Configuration{
-		HomeRules: []RuleConfiguration{
+		Home: []RuleConfiguration{
 			{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
 		},
-		ZoneRules: map[string][]RuleConfiguration{
+		Zones: map[string][]RuleConfiguration{
 			"my room": {
 				{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"user A"}},
 				{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay.lua"}},

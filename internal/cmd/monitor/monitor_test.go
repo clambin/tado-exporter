@@ -27,7 +27,7 @@ func Test_maybeLoadRules(t *testing.T) {
 		{
 			name: "valid",
 			content: `
-zoneRules:
+zones:
     bathroom:
         - name: limitOverlay
           script:
@@ -35,7 +35,7 @@ zoneRules:
 `,
 			wantErr: assert.NoError,
 			want: controller.Configuration{
-				ZoneRules: map[string][]controller.RuleConfiguration{
+				Zones: map[string][]controller.RuleConfiguration{
 					"bathroom": {{
 						Name:   "limitOverlay",
 						Script: controller.ScriptConfig{Packaged: "limitoverlay.lua"},

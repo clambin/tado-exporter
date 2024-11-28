@@ -124,7 +124,7 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 
 	// Controller
 	var c *controller.Controller
-	if len(rules.HomeRules) > 0 || len(rules.ZoneRules) > 0 {
+	if len(rules.Home) > 0 || len(rules.Zones) > 0 {
 		n := notifier.Notifiers{
 			notifier.SLogNotifier{
 				Logger: l.With("component", "notifier", "type", "slog"),
