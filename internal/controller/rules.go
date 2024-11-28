@@ -1,17 +1,13 @@
 package controller
 
 import (
-	"context"
 	"embed"
 	"fmt"
 	"github.com/Shopify/go-lua"
 	"github.com/clambin/go-common/set"
-	"github.com/clambin/tado-exporter/internal/poller"
 	"io"
-	"log/slog"
 	"os"
 	"strings"
-	"time"
 )
 
 type devices []device
@@ -31,22 +27,8 @@ type device struct {
 	Home bool
 }
 
-type action interface {
-	GetState() string
-	GetDelay() time.Duration
-	GetReason() string
-	Description(includeDelay bool) string
-	Do(context.Context, TadoClient) error
-	slog.LogValuer
-}
-
 type evaluator interface {
 	Evaluate(update) (action, error)
-}
-
-type groupEvaluator interface {
-	evaluator
-	ParseUpdate(poller.Update) (action, error)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

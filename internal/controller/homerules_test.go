@@ -1,14 +1,8 @@
 package controller
 
 import (
-	"context"
-	"fmt"
-	"github.com/clambin/tado-exporter/internal/controller/mocks"
-	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -122,106 +116,6 @@ end
 			assert.Equal(t, tt.homeWant.state, homeState(a.GetState()))
 			assert.Equal(t, tt.homeWant.delay, a.GetDelay())
 			assert.Equal(t, tt.homeWant.reason, a.GetReason())
-		})
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func Test_homeAction(t *testing.T) {
-	h := homeAction{
-		state:  HomeStateAway,
-		delay:  time.Hour,
-		reason: "reasons",
-	}
-
-	assert.Equal(t, "Setting home to away mode", h.Description(false))
-	assert.Equal(t, "Setting home to away mode in 1h0m0s", h.Description(true))
-	assert.Equal(t, "[action=away delay=1h0m0s reason=reasons]", h.LogValue().String())
-}
-
-func Test_homeAction_Do(t *testing.T) {
-	ctx := context.Background()
-	tests := []struct {
-		name   string
-		action homeAction
-		setup  func(tadoClient *mocks.TadoClient)
-		err    assert.ErrorAssertionFunc
-	}{
-		{
-			name:   "auto mode - pass",
-			action: homeAction{state: HomeStateAuto, homeId: 1},
-			setup: func(tadoClient *mocks.TadoClient) {
-				tadoClient.EXPECT().
-					DeletePresenceLockWithResponse(ctx, tado.HomeId(1)).
-					Return(&tado.DeletePresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
-					Once()
-			},
-			err: assert.NoError,
-		},
-		{
-			name:   "auto mode - fail",
-			action: homeAction{state: HomeStateAuto, homeId: 1},
-			setup: func(tadoClient *mocks.TadoClient) {
-				tadoClient.EXPECT().
-					DeletePresenceLockWithResponse(ctx, tado.HomeId(1)).
-					Return(&tado.DeletePresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusUnauthorized}}, nil).
-					Once()
-			},
-			err: assert.Error,
-		},
-		{
-			name:   "away mode - pass",
-			action: homeAction{state: HomeStateAway, homeId: 1},
-			setup: func(tadoClient *mocks.TadoClient) {
-				tadoClient.EXPECT().
-					SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.AnythingOfType("tado.PresenceLock")).
-					RunAndReturn(func(_ context.Context, _ int64, lock tado.PresenceLock, fn ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
-						if *lock.HomePresence != tado.AWAY {
-							return nil, fmt.Errorf("unexpected home presence")
-						}
-						return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil
-					}).
-					Once()
-			},
-			err: assert.NoError,
-		},
-		{
-			name:   "away mode - fail",
-			action: homeAction{state: HomeStateAway, homeId: 1},
-			setup: func(tadoClient *mocks.TadoClient) {
-				tadoClient.EXPECT().
-					SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.AnythingOfType("tado.PresenceLock")).
-					Return(&tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusUnauthorized}}, nil).
-					Once()
-			},
-			err: assert.Error,
-		},
-		{
-			name:   "home mode - pass",
-			action: homeAction{state: HomeStateHome, homeId: 1},
-			setup: func(tadoClient *mocks.TadoClient) {
-				tadoClient.EXPECT().
-					SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.AnythingOfType("tado.PresenceLock")).
-					RunAndReturn(func(_ context.Context, _ int64, lock tado.PresenceLock, fn ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
-						if *lock.HomePresence != tado.HOME {
-							return nil, fmt.Errorf("unexpected home presence")
-						}
-						return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil
-					}).
-					Once()
-			},
-			err: assert.NoError,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client := mocks.NewTadoClient(t)
-			if tt.setup != nil {
-				tt.setup(client)
-			}
-			tt.err(t, tt.action.Do(ctx, client))
 		})
 	}
 }

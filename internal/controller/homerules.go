@@ -2,16 +2,12 @@ package controller
 
 import (
 	"cmp"
-	"context"
 	"errors"
 	"fmt"
 	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/controller/homerules"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado/v2"
 	"io"
-	"log/slog"
-	"net/http"
 	"slices"
 	"strings"
 	"time"
@@ -25,16 +21,9 @@ const (
 	HomeStateAway = homeState("away")
 )
 
-var _ evaluator = homeRules{}
+var _ groupEvaluator = homeRules{}
 
 type homeRules []homeRule
-
-func (h homeRules) ParseUpdate(update poller.Update) (action, error) {
-	return homeAction{
-		state:  homeState(strings.ToLower(string(*update.Presence))),
-		homeId: *update.HomeBase.Id,
-	}, nil
-}
 
 func loadHomeRules(config []RuleConfiguration) (homeRules, error) {
 	var rules homeRules
@@ -52,6 +41,13 @@ func loadHomeRules(config []RuleConfiguration) (homeRules, error) {
 		rules = append(rules, *rule)
 	}
 	return rules, nil
+}
+
+func (h homeRules) ParseUpdate(update poller.Update) (action, error) {
+	return homeAction{
+		state:  homeState(strings.ToLower(string(*update.Presence))),
+		homeId: *update.HomeBase.Id,
+	}, nil
 }
 
 func (h homeRules) Evaluate(u update) (action, error) {
@@ -78,7 +74,6 @@ func (h homeRules) Evaluate(u update) (action, error) {
 		slices.SortFunc(change, func(a, b homeAction) int {
 			return cmp.Compare(a.GetDelay(), b.GetDelay())
 		})
-
 		return change[0], nil
 	}
 	reasons := set.New[string]()
@@ -135,72 +130,4 @@ func (r homeRule) Evaluate(u update) (action, error) {
 		reason: reason,
 		homeId: u.HomeId,
 	}, nil
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-var _ action = homeAction{}
-
-type homeAction struct {
-	state  homeState
-	delay  time.Duration
-	reason string
-	homeId tado.HomeId
-}
-
-func (h homeAction) GetState() string {
-	return string(h.state)
-}
-
-func (h homeAction) GetDelay() time.Duration {
-	return h.delay
-}
-
-func (h homeAction) GetReason() string {
-	return h.reason
-}
-
-func (h homeAction) Do(ctx context.Context, client TadoClient) error {
-	if h.state == HomeStateAuto {
-		resp, err := client.DeletePresenceLockWithResponse(ctx, h.homeId)
-		if err != nil {
-			return err
-		}
-		if resp.StatusCode() != http.StatusNoContent {
-			return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-		}
-		return nil
-	}
-
-	var homePresence tado.HomePresence
-	switch h.state {
-	case HomeStateHome:
-		homePresence = tado.HOME
-	case HomeStateAway:
-		homePresence = tado.AWAY
-	}
-	resp, err := client.SetPresenceLockWithResponse(ctx, h.homeId, tado.SetPresenceLockJSONRequestBody{HomePresence: &homePresence})
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode() != http.StatusNoContent {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-	return nil
-}
-
-func (h homeAction) Description(includeDelay bool) string {
-	text := "Setting home to " + string(h.state) + " mode"
-	if includeDelay {
-		text += " in " + h.delay.String()
-	}
-	return text
-}
-
-func (h homeAction) LogValue() slog.Value {
-	return slog.GroupValue(
-		slog.String("action", string(h.state)),
-		slog.Duration("delay", h.delay),
-		slog.String("reason", h.reason),
-	)
 }

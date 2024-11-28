@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+type groupEvaluator interface {
+	evaluator
+	ParseUpdate(poller.Update) (action, error)
+}
+
 // A groupController evaluates all rules for a given home or zone. It receives updates from a Poller, evaluates all rules
 // and executes the required action. If the required action has a configured delay, it schedules a job and manages its lifetime.
 //

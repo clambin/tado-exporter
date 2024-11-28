@@ -1,16 +1,10 @@
 package controller
 
 import (
-	"context"
-	"errors"
-	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/controller/luart"
 	"github.com/clambin/tado-exporter/internal/controller/zonerules"
-	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -118,6 +112,85 @@ func TestZoneRules(t *testing.T) {
 	}
 }
 
+func TestZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
+	autoAwayCfg := RuleConfiguration{"", ScriptConfig{Packaged: "autoaway.lua"}, []string{"user"}}
+	limitOverlayCfg := RuleConfiguration{"", ScriptConfig{Packaged: "limitoverlay.lua"}, nil}
+
+	tests := []struct {
+		name   string
+		rules  []RuleConfiguration
+		update update
+		want   zoneAction
+	}{
+		{
+			name:  "user is home: no action",
+			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
+			update: update{
+				homeState:  HomeStateHome,
+				HomeId:     1,
+				ZoneStates: map[string]zoneInfo{"zone": {zoneState: ZoneStateAuto, ZoneId: 1}},
+				devices:    []device{{"user", true}},
+			},
+			want: zoneAction{ZoneStateAuto, 0, "no manual setting detected, one or more users are home: user", 1, 1, "zone"},
+		},
+		{
+			name:  "user is not home: switch heating is off",
+			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
+			update: update{
+				homeState:  HomeStateHome,
+				HomeId:     1,
+				ZoneStates: map[string]zoneInfo{"zone": {ZoneStateAuto, 1}},
+				devices:    []device{{"user", false}},
+			},
+			want: zoneAction{ZoneStateOff, 15 * time.Minute, "all users are away", 1, 1, "zone"},
+		},
+		{
+			name:  "user is not home, heating is off: no action",
+			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
+			update: update{
+				homeState:  HomeStateHome,
+				HomeId:     1,
+				ZoneStates: map[string]zoneInfo{"zone": {ZoneStateOff, 1}},
+				devices:    []device{{"user", false}},
+			},
+			want: zoneAction{ZoneStateOff, 15 * time.Minute, "all users are away", 1, 1, "zone"},
+		},
+		{
+			name:  "user is home, heating is off: move heating to auto mode",
+			rules: []RuleConfiguration{limitOverlayCfg, autoAwayCfg},
+			update: update{
+				homeState:  HomeStateHome,
+				HomeId:     1,
+				ZoneStates: map[string]zoneInfo{"zone": {ZoneStateOff, 1}},
+				devices:    []device{{"user", true}},
+			},
+			want: zoneAction{ZoneStateAuto, 0, "one or more users are home: user", 1, 1, "zone"},
+		},
+		{
+			name:  "user is home, zone in manual mode: schedule auto mode",
+			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
+			update: update{
+				homeState:  HomeStateHome,
+				HomeId:     1,
+				ZoneStates: map[string]zoneInfo{"zone": {zoneState: ZoneStateManual, ZoneId: 1}},
+				devices:    []device{{"user", true}},
+			},
+			want: zoneAction{ZoneStateAuto, time.Hour, "manual setting detected", 1, 1, "zone"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			zr, err := loadZoneRules("zone", tt.rules)
+			require.NoError(t, err)
+
+			a, err := zr.Evaluate(tt.update)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, a)
+		})
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func TestZoneRule_Evaluate(t *testing.T) {
@@ -195,7 +268,7 @@ func TestZoneRule_UseCases(t *testing.T) {
 			name:     "autoAway - home",
 			script:   "autoaway.lua",
 			update:   update{HomeStateAuto, 1, map[string]zoneInfo{"foo": {zoneState: ZoneStateAuto}}, devices{{Name: "user", Home: true}}},
-			zoneWant: zoneWant{ZoneStateAuto, 0, "at least one user is home", assert.NoError},
+			zoneWant: zoneWant{ZoneStateAuto, 0, "one or more users are home: user", assert.NoError},
 		},
 		{
 			name:     "autoAway - away",
@@ -290,111 +363,6 @@ func BenchmarkZoneEvaluator(b *testing.B) {
 		if _, err := r.Evaluate(u); err != nil {
 			b.Fatal(err)
 		}
-	}
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func Test_zoneAction(t *testing.T) {
-	a := zoneAction{
-		zoneState: ZoneStateOff,
-		delay:     5 * time.Minute,
-		reason:    "reasons",
-		zoneName:  "foo",
-	}
-
-	assert.Equal(t, "*foo*: switching off heating", a.Description(false))
-	assert.Equal(t, "*foo*: switching off heating in 5m0s", a.Description(true))
-	assert.Equal(t, "[zone=foo mode=off delay=5m0s reason=reasons]", a.LogValue().String())
-}
-
-func Test_zoneAction_Do(t *testing.T) {
-	ctx := context.Background()
-	tests := []struct {
-		name   string
-		action zoneAction
-		setup  func(*mocks.TadoClient)
-		err    assert.ErrorAssertionFunc
-	}{
-		{
-			name: "auto mode - pass",
-			action: zoneAction{
-				zoneState: ZoneStateAuto,
-				homeId:    1,
-				zoneId:    10,
-			},
-			setup: func(client *mocks.TadoClient) {
-				client.EXPECT().
-					DeleteZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10)).
-					Return(&tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
-					Once()
-			},
-			err: assert.NoError,
-		},
-		{
-			name: "auto mode - fail",
-			action: zoneAction{
-				zoneState: ZoneStateAuto,
-				homeId:    1,
-				zoneId:    10,
-			},
-			setup: func(client *mocks.TadoClient) {
-				client.EXPECT().
-					DeleteZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10)).
-					Return(&tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusUnauthorized}}, nil).
-					Once()
-			},
-			err: assert.Error,
-		},
-		{
-			name: "off mode - pass",
-			action: zoneAction{
-				zoneState: ZoneStateOff,
-				homeId:    1,
-				zoneId:    10,
-			},
-			setup: func(client *mocks.TadoClient) {
-				client.EXPECT().SetZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10), mock.AnythingOfType("tado.ZoneOverlay")).
-					RunAndReturn(func(ctx context.Context, i int64, i2 int, overlay tado.ZoneOverlay, fn ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
-						if *overlay.Setting.Type != tado.HEATING {
-							return nil, errors.New("invalid type setting")
-						}
-						if *overlay.Setting.Power != tado.PowerOFF {
-							return nil, errors.New("invalid power setting")
-						}
-						if *overlay.Termination.TypeSkillBasedApp != tado.ZoneOverlayTerminationTypeSkillBasedAppNEXTTIMEBLOCK {
-							return nil, errors.New("invalid termination type")
-						}
-						return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK}}, nil
-					}).
-					Once()
-			},
-			err: assert.NoError,
-		},
-		{
-			name: "off mode - fail",
-			action: zoneAction{
-				zoneState: ZoneStateOff,
-				homeId:    1,
-				zoneId:    10,
-			},
-			setup: func(client *mocks.TadoClient) {
-				client.EXPECT().SetZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10), mock.AnythingOfType("tado.ZoneOverlay")).
-					Return(&tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusUnauthorized}}, nil).
-					Once()
-			},
-			err: assert.Error,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client := mocks.NewTadoClient(t)
-			if tt.setup != nil {
-				tt.setup(client)
-			}
-			tt.err(t, tt.action.Do(ctx, client))
-		})
 	}
 }
 
