@@ -22,6 +22,7 @@ func TestGroupController(t *testing.T) {
 			Name:   "autoAway",
 			Script: ScriptConfig{Packaged: `autoaway.lua`},
 			Users:  []string{"user A"},
+			Args:   Args{"foo": "bar"},
 		},
 		{
 			Name: "limitOverlay",
@@ -37,6 +38,10 @@ end
 	zoneRules, err := loadZoneRules("zone", ruleConfig)
 	require.NoError(t, err)
 	require.Len(t, zoneRules, 2)
+
+	rule, ok := zoneRules[0].(zoneRule)
+	require.True(t, ok)
+	assert.Equal(t, "bar", rule.args["foo"])
 
 	l := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	tadoClient := mocks.NewTadoClient(t)
@@ -244,8 +249,8 @@ func TestGroupController_ZoneRules(t *testing.T) {
 }
 
 func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
-	autoAwayCfg := RuleConfiguration{"", ScriptConfig{Packaged: "autoaway.lua"}, []string{"user"}}
-	limitOverlayCfg := RuleConfiguration{"", ScriptConfig{Packaged: "limitoverlay.lua"}, nil}
+	autoAwayCfg := RuleConfiguration{"", ScriptConfig{Packaged: "autoaway.lua"}, []string{"user"}, nil}
+	limitOverlayCfg := RuleConfiguration{"", ScriptConfig{Packaged: "limitoverlay.lua"}, nil, nil}
 
 	tests := []struct {
 		name   string

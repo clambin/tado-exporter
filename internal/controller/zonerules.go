@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"github.com/clambin/go-common/set"
+	"github.com/clambin/tado-exporter/internal/controller/luart"
 	"github.com/clambin/tado-exporter/internal/controller/zonerules"
 	"io"
 	"time"
@@ -23,7 +24,7 @@ func loadZoneRules(zoneName string, config []RuleConfiguration) ([]evaluator, er
 		if err != nil {
 			return nil, fmt.Errorf("failed to load zone rule %q: %w", cfg.Name, err)
 		}
-		rules[i], err = newZoneRule(zoneName, r, cfg.Users)
+		rules[i], err = newZoneRule(zoneName, r, cfg.Users, cfg.Args)
 		_ = r.Close()
 
 		if err != nil {
@@ -50,11 +51,12 @@ var _ evaluator = zoneRule{}
 type zoneRule struct {
 	zoneName string
 	devices  set.Set[string]
+	args     Args
 	luaScript
 }
 
-func newZoneRule(name string, r io.Reader, devices []string) (zoneRule, error) {
-	rule := zoneRule{zoneName: name, devices: set.New(devices...)}
+func newZoneRule(name string, r io.Reader, devices []string, args Args) (zoneRule, error) {
+	rule := zoneRule{zoneName: name, devices: set.New(devices...), args: args}
 	var err error
 	if rule.luaScript, err = newLuaScript(name, r); err != nil {
 		return zoneRule{}, err
@@ -76,9 +78,10 @@ func (r zoneRule) Evaluate(u update) (action, error) {
 	}
 	r.PushString(string(state))
 	pushDevices(r.luaScript.State, u.GetDevices().filter(r.devices))
+	luart.PushMap(r.State, r.args)
 
 	// execute the script
-	if err := r.ProtectedCall(3, 3, 0); err != nil {
+	if err := r.ProtectedCall(4, 3, 0); err != nil {
 		return nil, fmt.Errorf("lua script failed: %w", err)
 	}
 

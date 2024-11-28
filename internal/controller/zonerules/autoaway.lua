@@ -1,4 +1,4 @@
-function Evaluate(_, mode, devices)
+function Evaluate(_, mode, devices, _)
         if #devices == 0 then
             return mode, 0, "no devices found"
         end

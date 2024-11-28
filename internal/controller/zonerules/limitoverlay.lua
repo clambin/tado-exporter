@@ -1,4 +1,4 @@
-function Evaluate(_, zone, _)
+function Evaluate(_, zone, _, _)
 	if zone == "auto" then
 		return "auto", 0, "no manual setting detected"
 	end

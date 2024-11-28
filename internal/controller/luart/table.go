@@ -2,6 +2,34 @@ package luart
 
 import "github.com/Shopify/go-lua"
 
+func PushMap(l *lua.State, m map[string]any) {
+	l.NewTable() // Create a new table on the Lua stack
+
+	for key, value := range m {
+		// Push the key
+		l.PushString(key)
+
+		// Push the value based on its type
+		switch v := value.(type) {
+		case string:
+			l.PushString(v)
+		case float64: // Lua treats numbers as float64
+			l.PushNumber(v)
+		case int: // Convert int to float64 for Lua compatibility
+			l.PushNumber(float64(v))
+		case bool:
+			l.PushBoolean(v)
+		case map[string]any: // Recursively push nested maps
+			PushMap(l, v)
+		default:
+			l.PushNil() // Unsupported types become nil
+		}
+
+		// Set the key-value pair in the table
+		l.SetTable(-3)
+	}
+}
+
 func TableToSlice(l *lua.State, index int) []any {
 	var values []any
 

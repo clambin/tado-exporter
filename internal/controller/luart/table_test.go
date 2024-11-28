@@ -60,3 +60,50 @@ end
 		true,
 	}, values)
 }
+
+func TestPushTable(t *testing.T) {
+	const script = `
+function foo(args) 
+	return args.String, args.Int, args.Bool, args.Float
+end
+`
+
+	args := map[string]any{
+		"String": "foo",
+		"Int":    10,
+		"Bool":   true,
+		"Float":  3.14159,
+	}
+
+	argCount := len(args)
+
+	l, err := Compile(t.Name(), strings.NewReader(script))
+	require.NoError(t, err)
+
+	l.Global("foo")
+	require.NotNil(t, l.IsNil(-1))
+	PushMap(l, args)
+	l.Call(1, argCount)
+
+	for i, key := range []string{"String", "Int", "Bool", "Float"} {
+		var value any
+		var ok bool
+		switch args[key].(type) {
+		case string:
+			value, ok = l.ToString(-argCount + i)
+		case int:
+			value, ok = l.ToInteger(-argCount + i)
+		case bool:
+			value = l.ToBoolean(-argCount + i)
+			ok = true
+		case float64:
+			value, ok = l.ToNumber(-argCount + i)
+		default:
+			t.Fatal("unsupported type")
+		}
+		assert.True(t, ok)
+		assert.Equal(t, value, args[key])
+	}
+
+	l.Pop(len(args))
+}
