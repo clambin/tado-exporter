@@ -295,3 +295,61 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 		})
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func Test_shouldSchedule(t *testing.T) {
+	tests := []struct {
+		name    string
+		action  action
+		job     scheduledJob
+		isNewer assert.BoolAssertionFunc
+	}{
+		{
+			name:    "action is different: schedule",
+			action:  &zoneAction{zoneState: ZoneStateAuto, delay: time.Hour},
+			job:     fakeScheduledJob{state: string(ZoneStateOff), due: time.Now()},
+			isNewer: assert.True,
+		},
+		{
+			name:    "action is earlier: schedule",
+			action:  &zoneAction{zoneState: ZoneStateAuto, delay: 0},
+			job:     fakeScheduledJob{state: string(ZoneStateAuto), due: time.Now().Add(time.Hour)},
+			isNewer: assert.True,
+		},
+		{
+			name:    "action is later: don't schedule",
+			action:  &zoneAction{zoneState: ZoneStateAuto, delay: time.Hour},
+			job:     fakeScheduledJob{state: string(ZoneStateAuto), due: time.Now()},
+			isNewer: assert.False,
+		},
+		{
+			name:   "due date is rounded to minutes",
+			action: &zoneAction{zoneState: ZoneStateAuto, delay: 15 * time.Second},
+			job:    fakeScheduledJob{state: string(ZoneStateAuto), due: time.Now()},
+
+			isNewer: assert.False,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.isNewer(t, shouldSchedule(tt.job, tt.action))
+		})
+	}
+}
+
+var _ scheduledJob = fakeScheduledJob{}
+
+type fakeScheduledJob struct {
+	state string
+	due   time.Time
+}
+
+func (f fakeScheduledJob) GetState() string {
+	return f.state
+}
+
+func (f fakeScheduledJob) Due() time.Time {
+	return f.due
+}

@@ -15,11 +15,6 @@ import (
 	"time"
 )
 
-type groupEvaluator interface {
-	evaluator
-	ParseUpdate(poller.Update) (action, error)
-}
-
 // A groupController evaluates all rules for a given home or zone. It receives updates from a Poller, evaluates all rules
 // and executes the required action. If the required action has a configured delay, it schedules a job and manages its lifetime.
 //
@@ -163,7 +158,9 @@ func (c *groupController) scheduleJob(ctx context.Context, action action) {
 	}
 }
 
-func shouldSchedule(currentJob *job, newAction action) bool {
+// shouldSchedule returns true if the newAction should be scheduled, i.e. either the action is different than the scheduled action,
+// or newAction should run before the scheduled action.
+func shouldSchedule(currentJob scheduledJob, newAction action) bool {
 	if currentJob.GetState() != newAction.GetState() {
 		return true
 	}
@@ -217,9 +214,15 @@ func (c *groupController) ReportTask() string {
 	return ""
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+// //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 var _ scheduler.Runnable = &job{}
+
+var _ scheduledJob = &job{}
+
+type scheduledJob interface {
+	Due() time.Time
+	GetState() string
+}
 
 type job struct {
 	action
