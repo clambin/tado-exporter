@@ -54,6 +54,16 @@ end
 			update:   update{HomeStateAuto, 1, map[string]zoneInfo{"foo": {zoneState: ZoneStateOff}}, devices{{Name: "user", Home: true}}},
 			zoneWant: zoneWant{"", 0, "", assert.Error},
 		},
+		{
+			name: "missing zone in update",
+			script: `
+function Evaluate(home, zone, devices)
+	return zone, 300, "test"
+end
+`,
+			update:   update{HomeStateAuto, 1, nil, nil},
+			zoneWant: zoneWant{"", 0, "", assert.Error},
+		},
 	}
 
 	for _, tt := range tests {

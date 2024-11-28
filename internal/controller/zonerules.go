@@ -63,9 +63,11 @@ func newZoneRule(name string, r io.Reader, devices []string) (zoneRule, error) {
 }
 
 func (r zoneRule) Evaluate(u update) (action, error) {
+	// set up Evaluate call
 	if err := r.initEvaluation(); err != nil {
 		return nil, err
 	}
+
 	// push arguments
 	r.PushString(string(u.GetHomeState()))
 	state, ok := u.GetZoneState(r.zoneName)

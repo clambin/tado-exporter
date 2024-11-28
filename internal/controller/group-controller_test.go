@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"github.com/clambin/tado-exporter/internal/controller/mocks"
+	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/poller/testutils"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
@@ -10,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -36,42 +38,69 @@ end
 	require.NoError(t, err)
 	require.Len(t, zoneRules, 2)
 
-	ctx := context.Background()
-	//f := fakeNotifier{ch: make(chan string)}
 	l := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	tadoClient := mocks.NewTadoClient(t)
-	g := newGroupController(zoneRules, getZoneStateFromUpdate("zone"), nil, tadoClient, nil, l)
+	p := fakePublisher{}
 
-	u := testutils.Update(
+	errCh := make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	g := newGroupController(zoneRules, getZoneStateFromUpdate("zone"), &p, tadoClient, nil, l)
+	go func() { errCh <- g.Run(ctx) }()
+
+	require.Eventually(t, func() bool {
+		return p.subacribed.Load()
+	}, 1*time.Second, 10*time.Millisecond)
+
+	// trigger a deferred action
+	p.ch <- testutils.Update(
 		testutils.WithHome(1, "my home", tado.HOME),
 		testutils.WithZone(1, "zone", tado.PowerON, 21, 18),
 		testutils.WithMobileDevice(1, "user A", testutils.WithLocation(false, true)),
 	)
 
-	a, ok := g.processUpdate(u)
-	assert.True(t, ok)
-	assert.Equal(t, 15*time.Minute, a.GetDelay())
+	var j *job
+	require.Eventually(t, func() bool {
+		j = g.scheduledJob.Load()
+		return j != nil
+	}, time.Second, 10*time.Millisecond)
 
-	g.scheduleJob(ctx, a)
-	j := g.scheduledJob.Load()
-	require.NotNil(t, j)
 	assert.Equal(t, 15*time.Minute, j.GetDelay().Round(time.Minute))
 
-	u = testutils.Update(
+	// trigger an immediate action
+	tadoClient.EXPECT().
+		DeleteZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(1)).
+		Return(&tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
+		Once()
+	p.ch <- testutils.Update(
 		testutils.WithHome(1, "my home", tado.HOME),
 		testutils.WithZone(1, "zone", tado.PowerON, 21, 18, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 		testutils.WithMobileDevice(1, "user A", testutils.WithLocation(false, true)),
 	)
 
-	a, ok = g.processUpdate(u)
-	assert.True(t, ok)
-	assert.Equal(t, time.Duration(0), a.GetDelay())
+	require.Eventually(t, func() bool {
+		return g.scheduledJob.Load() == nil
+	}, time.Second, 10*time.Millisecond)
 
-	tadoClient.EXPECT().
-		DeleteZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(1)).
-		Return(&tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
-		Once()
-	g.scheduleJob(ctx, a)
+	cancel()
+	assert.NoError(t, <-errCh)
+}
+
+var _ Publisher[poller.Update] = &fakePublisher{}
+
+type fakePublisher struct {
+	ch         chan poller.Update
+	subacribed atomic.Bool
+}
+
+func (f *fakePublisher) Subscribe() chan poller.Update {
+	f.ch = make(chan poller.Update)
+	f.subacribed.Store(true)
+	return f.ch
+}
+
+func (f *fakePublisher) Unsubscribe(_ chan poller.Update) {
+	f.subacribed.Store(false)
+	f.ch = nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
