@@ -3,7 +3,8 @@ package main
 import (
 	"github.com/clambin/tado-exporter/internal/cmd/cli"
 	"log/slog"
-	//_ "net/http/pprof"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 )
 
@@ -13,7 +14,7 @@ var (
 )
 
 func main() {
-	//go func() { _ = http.ListenAndServe(":6060", nil) }()
+	go func() { _ = http.ListenAndServe(":6000", nil) }()
 
 	cli.RootCmd.Version = version
 	if err := cli.RootCmd.Execute(); err != nil {

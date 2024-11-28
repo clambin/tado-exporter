@@ -41,7 +41,7 @@ func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier
 		}
 		m.controllers = append(
 			m.controllers,
-			newGroupController(homeRules, p, c, n, l.With(slog.String("module", "home controller"))),
+			newGroupController(homeRules, getHomeStateFromUpdate, p, c, n, l.With(slog.String("module", "home controller"))),
 		)
 	}
 	for zoneName, zoneCfg := range cfg.ZoneRules {
@@ -54,7 +54,7 @@ func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier
 		}
 		m.controllers = append(
 			m.controllers,
-			newGroupController(zoneRules, p, c, n, l.With(slog.String("module", "zone controller"), slog.String("zone", zoneName))),
+			newGroupController(zoneRules, getZoneStateFromUpdate(zoneName), p, c, n, l.With(slog.String("module", "zone controller"), slog.String("zone", zoneName))),
 		)
 	}
 	return &m, nil

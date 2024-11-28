@@ -2,6 +2,9 @@ function Evaluate(state, devices)
 	if #devices == 0 then
 	 	return state, 0, "no devices found"
 	end
+	if state == "auto" then
+	    return state, 0, "home is in auto mode"
+	end
 	local homeUsers = GetDevicesByState(devices, true)
 	if #homeUsers == 0 then
 		return "away", 300, "all users are away"

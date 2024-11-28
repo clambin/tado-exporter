@@ -15,56 +15,6 @@ type homeWant struct {
 	err    assert.ErrorAssertionFunc
 }
 
-func TestHomeRules_Evaluate(t *testing.T) {
-	tests := []struct {
-		name string
-		update
-		homeWant
-	}{
-		{
-			name: "at least one user home",
-			update: update{HomeStateAway, 1, nil, devices{
-				{Name: "user A", Home: true},
-				{Name: "user B", Home: false},
-			}},
-			homeWant: homeWant{HomeStateHome, 0, "one or more users are home: user A", assert.NoError},
-		},
-		{
-			name: "all users are away",
-			update: update{HomeStateHome, 1, nil, devices{
-				{Name: "user A", Home: false},
-				{Name: "user B", Home: false},
-			}},
-			homeWant: homeWant{HomeStateAway, 5 * time.Minute, "all users are away", assert.NoError},
-		},
-		{
-			name:     "no devices",
-			update:   update{HomeStateAway, 1, nil, devices{}},
-			homeWant: homeWant{HomeStateAway, 0, "no devices found", assert.NoError},
-		},
-	}
-
-	rules, err := loadHomeRules([]RuleConfiguration{
-		{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
-	})
-	assert.NoError(t, err)
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a, err := rules.Evaluate(tt.update)
-			tt.homeWant.err(t, err)
-			if err != nil {
-				return
-			}
-			assert.Equal(t, tt.homeWant.state, homeState(a.GetState()))
-			assert.Equal(t, tt.homeWant.delay, a.GetDelay())
-			assert.Equal(t, tt.homeWant.reason, a.GetReason())
-		})
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 func TestHomeRule_Evaluate(t *testing.T) {
 	tests := []struct {
 		name   string

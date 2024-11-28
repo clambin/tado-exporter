@@ -1,11 +1,16 @@
 package controller
 
 import (
+	"cmp"
 	"context"
 	"errors"
+	"fmt"
+	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"log/slog"
+	"slices"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -20,24 +25,35 @@ type groupEvaluator interface {
 //
 // groupController uses a Notifier (which may be a list of Notifiers) to inform the user.
 type groupController struct {
-	groupEvaluator
 	Publisher[poller.Update]
 	TadoClient
 	Notifier
 	logger       *slog.Logger
 	jobCompleted chan struct{}
 	scheduledJob atomic.Pointer[job]
+
+	rules    []evaluator
+	getState func(update) (action, error)
 }
 
 // newGroupController creates a new controller for the provided rules.
-func newGroupController(rules groupEvaluator, p Publisher[poller.Update], client TadoClient, notifier Notifier, l *slog.Logger) *groupController {
+func newGroupController(
+	rules []evaluator,
+	getState func(update) (action, error),
+	p Publisher[poller.Update],
+	client TadoClient,
+	notifier Notifier,
+	l *slog.Logger,
+) *groupController {
 	return &groupController{
-		groupEvaluator: rules,
-		Publisher:      p,
-		TadoClient:     client,
-		Notifier:       notifier,
-		logger:         l,
-		jobCompleted:   make(chan struct{}),
+		Publisher:    p,
+		TadoClient:   client,
+		Notifier:     notifier,
+		logger:       l,
+		jobCompleted: make(chan struct{}),
+
+		rules:    rules,
+		getState: getState,
 	}
 }
 
@@ -68,17 +84,51 @@ func (c *groupController) Run(ctx context.Context) error {
 // processUpdate processes the update, evaluating its rules. If the outcome differs from the current state
 // (as determined by the update), it returns the action and true. Otherwise, it returns false.
 func (c *groupController) processUpdate(update poller.Update) (action, bool) {
-	current, err := c.ParseUpdate(update)
+	u := updateFromPollerUpdate(update)
+	current, err := c.getState(u)
 	if err != nil {
 		c.logger.Error("failed to parse update", "err", err)
 		return nil, false
 	}
-	a, err := c.Evaluate(updateFromPollerUpdate(update))
+	a, change, err := c.evaluate(u, current)
 	if err != nil {
 		c.logger.Error("failed to evaluate zone rules", "err", err)
 		return nil, false
 	}
-	return a, a.GetState() != current.GetState()
+	return a, change
+}
+
+func (c *groupController) evaluate(u update, current action) (action, bool, error) {
+	if len(c.rules) == 0 {
+		return nil, false, errors.New("no rules found")
+	}
+
+	noChange := make([]action, 0, len(c.rules))
+	change := make([]action, 0, len(c.rules))
+	for i := range c.rules {
+		a, err := c.rules[i].Evaluate(u)
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to evaluate rule %d: %w", i+1, err)
+		}
+		if a.GetState() == current.GetState() && a.GetDelay() == 0 {
+			noChange = append(noChange, a)
+		} else {
+			change = append(change, a)
+		}
+	}
+	if len(change) > 0 {
+		slices.SortFunc(change, func(a, b action) int {
+			return cmp.Compare(a.GetDelay(), b.GetDelay())
+		})
+		return change[0], true, nil
+	}
+	reasons := set.New[string]()
+	for _, a := range noChange {
+		reasons.Add(a.GetReason())
+	}
+	noChange[0].setReason(strings.Join(reasons.ListOrdered(), ", "))
+
+	return noChange[0], false, nil
 }
 
 // scheduleJob is called when processUpdate returns a new action. It executes (or schedules) the required action.

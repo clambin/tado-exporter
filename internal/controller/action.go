@@ -14,6 +14,7 @@ type action interface {
 	GetState() string
 	GetDelay() time.Duration
 	GetReason() string
+	setReason(string)
 	Description(includeDelay bool) string
 	Do(context.Context, TadoClient) error
 	slog.LogValuer
@@ -21,7 +22,7 @@ type action interface {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var _ action = homeAction{}
+var _ action = &homeAction{}
 
 type homeAction struct {
 	state  homeState
@@ -30,19 +31,23 @@ type homeAction struct {
 	homeId tado.HomeId
 }
 
-func (h homeAction) GetState() string {
+func (h *homeAction) GetState() string {
 	return string(h.state)
 }
 
-func (h homeAction) GetDelay() time.Duration {
+func (h *homeAction) GetDelay() time.Duration {
 	return h.delay
 }
 
-func (h homeAction) GetReason() string {
+func (h *homeAction) GetReason() string {
 	return h.reason
 }
 
-func (h homeAction) Do(ctx context.Context, client TadoClient) error {
+func (h *homeAction) setReason(reason string) {
+	h.reason = reason
+}
+
+func (h *homeAction) Do(ctx context.Context, client TadoClient) error {
 	if h.state == HomeStateAuto {
 		resp, err := client.DeletePresenceLockWithResponse(ctx, h.homeId)
 		if err != nil {
@@ -71,7 +76,7 @@ func (h homeAction) Do(ctx context.Context, client TadoClient) error {
 	return nil
 }
 
-func (h homeAction) Description(includeDelay bool) string {
+func (h *homeAction) Description(includeDelay bool) string {
 	text := "Setting home to " + string(h.state) + " mode"
 	if includeDelay {
 		text += " in " + h.delay.String()
@@ -79,7 +84,7 @@ func (h homeAction) Description(includeDelay bool) string {
 	return text
 }
 
-func (h homeAction) LogValue() slog.Value {
+func (h *homeAction) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("action", string(h.state)),
 		slog.Duration("delay", h.delay),
@@ -89,7 +94,7 @@ func (h homeAction) LogValue() slog.Value {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var _ action = zoneAction{}
+var _ action = &zoneAction{}
 
 type zoneAction struct {
 	zoneState zoneState
@@ -100,19 +105,23 @@ type zoneAction struct {
 	zoneName  string
 }
 
-func (z zoneAction) GetState() string {
+func (z *zoneAction) GetState() string {
 	return string(z.zoneState)
 }
 
-func (z zoneAction) GetDelay() time.Duration {
+func (z *zoneAction) GetDelay() time.Duration {
 	return z.delay
 }
 
-func (z zoneAction) GetReason() string {
+func (z *zoneAction) GetReason() string {
 	return z.reason
 }
 
-func (z zoneAction) Do(ctx context.Context, client TadoClient) error {
+func (z *zoneAction) setReason(reason string) {
+	z.reason = reason
+}
+
+func (z *zoneAction) Do(ctx context.Context, client TadoClient) error {
 	switch z.zoneState {
 	case ZoneStateAuto:
 		resp, err := client.DeleteZoneOverlayWithResponse(ctx, z.homeId, z.zoneId)
@@ -138,7 +147,7 @@ func (z zoneAction) Do(ctx context.Context, client TadoClient) error {
 	}
 }
 
-func (z zoneAction) Description(includeDelay bool) string {
+func (z *zoneAction) Description(includeDelay bool) string {
 	text := "*" + z.zoneName + "*: "
 	if z.zoneState == ZoneStateOff {
 		text += "switching off heating"
@@ -151,7 +160,7 @@ func (z zoneAction) Description(includeDelay bool) string {
 	return text
 }
 
-func (z zoneAction) LogValue() slog.Value {
+func (z *zoneAction) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("zone", z.zoneName),
 		slog.String("mode", string(z.zoneState)),

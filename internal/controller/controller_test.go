@@ -16,6 +16,10 @@ import (
 	"time"
 )
 
+var (
+	discardLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
+)
+
 func TestNew(t *testing.T) {
 	cfg := Configuration{
 		HomeRules: []RuleConfiguration{
@@ -54,7 +58,7 @@ func TestController_Run(t *testing.T) {
 	m, err := New(cfg, p, nil, &n, l)
 	require.NoError(t, err)
 	require.NotNil(t, m)
-	require.Len(t, m.controllers, 2)
+	assert.Len(t, m.controllers, 2)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
