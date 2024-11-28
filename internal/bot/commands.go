@@ -42,7 +42,7 @@ func (r *commandRunner) dispatch(command slack.SlashCommand, client SlackSender)
 	default:
 		err = errors.New("unknown command: " + command.Text)
 	}
-	if err == nil && response != nil {
+	if err == nil && response != nil && !response.IsZero() {
 		_, err = client.PostEphemeral(command.ChannelID, command.UserID, response.Format())
 	}
 	return err
