@@ -2,14 +2,14 @@ function Evaluate(_, mode, devices, _)
         if #devices == 0 then
             return mode, 0, "no devices found"
         end
-        if mode ~= "auto" and mode ~= "off" then
-            return mode, 0, "no action required"
-        end
+        --- if mode ~= "auto" and mode ~= "off" then
+        ---    return mode, 0, "no action required"
+        --- end
         local homeUsers = FilterDevices(devices, true)
         if #homeUsers ~= 0 then
-                return "auto", 0, "one or more users are home: " .. ListDevices(homeUsers)
+            return { Heating = true, Manual = true }, 0, "one or more users are home: " .. ListDevices(homeUsers)
         end
-        return "off", 900, "all users are away"
+    return { Heating = false, Manual = true }, 900, "all users are away"
 end
 
 function FilterDevices(devices, state)

@@ -1,6 +1,7 @@
 function Evaluate(_, zone, _, _)
-	if zone == "auto" then
-		return "auto", 0, "no manual setting detected"
+	if not zone.Manual then
+		return zone, 0, "no manual setting detected"
 	end
-	return "auto", 3600, "manual setting detected"
+	zone.Manual = false
+	return zone, 3600, "manual setting detected"
 end

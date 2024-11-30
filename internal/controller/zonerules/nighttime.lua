@@ -1,14 +1,14 @@
 function Evaluate(_, zone, _, args)
-		if zone == "auto" then
-			return "auto", 0, "no manual setting detected"
+		if not zone.Manual  then
+			return zone, 0, "no manual setting detected"
 		end
-        if #args == 0 then
+		zone.Manual = false
+        if args == nil then
             args = { StartHour = 23, StartMin = 30, EndHour = 6, EndMin = 0 }
         end
-		local nightMode = IsInRange(args.StartHour, args.StartMin, args.EndHour, args.EndMin)
 		local delay  = 0
-		if not nightMode == true then
+		if not IsInRange(args.StartHour, args.StartMin, args.EndHour, args.EndMin) then
 			delay = SecondsTill(args.StartHour, args.StartMin)
 		end
-		return "auto", delay, "manual setting detected"
+		return zone, delay, "manual setting detected"
 end

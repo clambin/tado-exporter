@@ -1,4 +1,4 @@
-package controller
+package tmp
 
 import (
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -21,7 +21,7 @@ func Test_updateFromPollerUpdate(t *testing.T) {
 			),
 			want: update{
 				HomeId:     1,
-				homeState:  HomeStateAuto,
+				homeState:  homeState{true, false},
 				ZoneStates: map[string]zoneInfo{},
 				devices:    devices{},
 			},
@@ -33,19 +33,31 @@ func Test_updateFromPollerUpdate(t *testing.T) {
 			),
 			want: update{
 				HomeId:     1,
-				homeState:  HomeStateAuto,
+				homeState:  homeState{true, false},
 				ZoneStates: map[string]zoneInfo{},
 				devices:    devices{},
 			},
 		},
 		{
-			name: "home",
+			name: "manual - home",
 			update: testutils.Update(
 				testutils.WithHome(1, "my home", tado.HOME, testutils.WithPresenceLocked(true)),
 			),
 			want: update{
 				HomeId:     1,
-				homeState:  HomeStateHome,
+				homeState:  homeState{true, true},
+				ZoneStates: map[string]zoneInfo{},
+				devices:    devices{},
+			},
+		},
+		{
+			name: "manual - away",
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.AWAY, testutils.WithPresenceLocked(true)),
+			),
+			want: update{
+				HomeId:     1,
+				homeState:  homeState{false, true},
 				ZoneStates: map[string]zoneInfo{},
 				devices:    devices{},
 			},
@@ -61,12 +73,12 @@ func Test_updateFromPollerUpdate(t *testing.T) {
 			),
 			want: update{
 				HomeId:    1,
-				homeState: HomeStateAuto,
+				homeState: homeState{true, false},
 				ZoneStates: map[string]zoneInfo{
-					"zone 1": {ZoneStateAuto, 1},
-					"zone 2": {ZoneStateManual, 2},
-					"zone 3": {ZoneStateAuto, 3},
-					"zone 4": {ZoneStateOff, 4},
+					"zone 1": {1, zoneState{true, false}},
+					"zone 2": {2, zoneState{true, true}},
+					"zone 3": {3, zoneState{false, false}},
+					"zone 4": {4, zoneState{false, true}},
 				},
 				devices: devices{},
 			},
@@ -82,7 +94,7 @@ func Test_updateFromPollerUpdate(t *testing.T) {
 			),
 			want: update{
 				HomeId:     1,
-				homeState:  HomeStateAuto,
+				homeState:  homeState{true, false},
 				ZoneStates: map[string]zoneInfo{},
 				devices: devices{
 					device{"user 3", true},

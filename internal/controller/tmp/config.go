@@ -1,15 +1,15 @@
-package controller
+package tmp
 
 type Configuration struct {
-	Home  []RuleConfiguration            `yaml:"home"`
 	Zones map[string][]RuleConfiguration `yaml:"zones"`
+	Home  []RuleConfiguration            `yaml:"home"`
 }
 
 type RuleConfiguration struct {
-	Name   string       `yaml:"name"`
-	Script ScriptConfig `yaml:"script"`
-	Users  []string     `yaml:"users,omitempty"`
 	Args   Args         `yaml:"args,omitempty"`
+	Script ScriptConfig `yaml:"script"`
+	Name   string       `yaml:"name"`
+	Users  []string     `yaml:"users,omitempty"`
 }
 
 type Args map[string]any
