@@ -3,7 +3,6 @@ package scheduler
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 )
@@ -15,9 +14,6 @@ const (
 	stateCanceled
 	stateCompleted
 )
-
-// ErrCanceled is returned by [Job.Result] if the scheduled job has been canceled.
-var ErrCanceled = errors.New("job canceled")
 
 // Job represents a scheduled job.
 type Job struct {
@@ -60,7 +56,7 @@ func Schedule(ctx context.Context, runner Runnable, delay time.Duration, ch chan
 func (j *Job) run(ctx context.Context, waitTime time.Duration) {
 	select {
 	case <-ctx.Done():
-		j.markCanceled()
+		j.markCanceled(ctx)
 	case <-time.After(waitTime):
 		err := j.runner.Run(ctx)
 		j.markCompleted(err)
@@ -92,11 +88,11 @@ func (j *Job) markCompleted(err error) {
 	j.err = err
 }
 
-func (j *Job) markCanceled() {
+func (j *Job) markCanceled(ctx context.Context) {
 	j.lock.Lock()
 	defer j.lock.Unlock()
 	j.state = stateCanceled
-	j.err = ErrCanceled
+	j.err = ctx.Err()
 }
 
 func (j *Job) getState() (state, error, time.Time) {

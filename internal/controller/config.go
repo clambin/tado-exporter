@@ -1,4 +1,4 @@
-package tmp
+package controller
 
 type Configuration struct {
 	Zones map[string][]RuleConfiguration `yaml:"zones"`

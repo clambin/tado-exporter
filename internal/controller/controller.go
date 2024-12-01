@@ -9,6 +9,13 @@ import (
 	"log/slog"
 )
 
+type TadoClient interface {
+	SetPresenceLockWithResponse(ctx context.Context, homeId tado.HomeId, body tado.SetPresenceLockJSONRequestBody, reqEditors ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error)
+	DeletePresenceLockWithResponse(ctx context.Context, homeId tado.HomeId, reqEditors ...tado.RequestEditorFn) (*tado.DeletePresenceLockResponse, error)
+	SetZoneOverlayWithResponse(ctx context.Context, homeId tado.HomeId, zoneId tado.ZoneId, body tado.SetZoneOverlayJSONRequestBody, reqEditors ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error)
+	DeleteZoneOverlayWithResponse(ctx context.Context, homeId tado.HomeId, zoneId tado.ZoneId, reqEditors ...tado.RequestEditorFn) (*tado.DeleteZoneOverlayResponse, error)
+}
+
 type Publisher[T any] interface {
 	Subscribe() chan T
 	Unsubscribe(chan T)
@@ -18,16 +25,9 @@ type Notifier interface {
 	Notify(string)
 }
 
-type TadoClient interface {
-	SetPresenceLockWithResponse(ctx context.Context, homeId tado.HomeId, body tado.SetPresenceLockJSONRequestBody, reqEditors ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error)
-	DeletePresenceLockWithResponse(ctx context.Context, homeId tado.HomeId, reqEditors ...tado.RequestEditorFn) (*tado.DeletePresenceLockResponse, error)
-	SetZoneOverlayWithResponse(ctx context.Context, homeId tado.HomeId, zoneId tado.ZoneId, body tado.SetZoneOverlayJSONRequestBody, reqEditors ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error)
-	DeleteZoneOverlayWithResponse(ctx context.Context, homeId tado.HomeId, zoneId tado.ZoneId, reqEditors ...tado.RequestEditorFn) (*tado.DeleteZoneOverlayResponse, error)
-}
-
 // A Controller creates and runs the required home & zone controllers for a Configuration.
 type Controller struct {
-	controllers []*groupController
+	controllers []*groupEvaluator
 	logger      *slog.Logger
 }
 
@@ -41,7 +41,7 @@ func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier
 		}
 		m.controllers = append(
 			m.controllers,
-			newGroupController(homeRules, getHomeStateFromUpdate, p, c, n, l.With(slog.String("module", "home controller"))),
+			newGroupEvaluator(homeRules, getHomeStateFromUpdate, p, c, n, l.With(slog.String("module", "home controller"))),
 		)
 	}
 	for zoneName, zoneCfg := range cfg.Zones {
@@ -54,7 +54,7 @@ func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier
 		}
 		m.controllers = append(
 			m.controllers,
-			newGroupController(zoneRules, getZoneStateFromUpdate(zoneName), p, c, n, l.With(slog.String("module", "zone controller"), slog.String("zone", zoneName))),
+			newGroupEvaluator(zoneRules, getZoneStateFromUpdate(zoneName), p, c, n, l.With(slog.String("module", "zone controller"), slog.String("zone", zoneName))),
 		)
 	}
 	return &m, nil

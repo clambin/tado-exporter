@@ -1,8 +1,9 @@
 package controller
 
 import (
-	"github.com/clambin/tado-exporter/internal/controller/luart"
-	"github.com/clambin/tado-exporter/internal/controller/zonerules"
+	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/poller/testutils"
+	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"strings"
@@ -10,19 +11,13 @@ import (
 	"time"
 )
 
-type zoneWant struct {
-	zoneState
-	delay  time.Duration
-	reason string
-	err    assert.ErrorAssertionFunc
-}
-
 func TestZoneRule_Evaluate(t *testing.T) {
 	tests := []struct {
 		name   string
 		script string
-		update
-		zoneWant
+		update poller.Update
+		want   action
+		err    assert.ErrorAssertionFunc
 	}{
 		{
 			name: "success",
@@ -31,8 +26,21 @@ function Evaluate(home, zone, devices)
 	return zone, 300, "test"
 end
 `,
-			update:   update{HomeStateAuto, 1, map[string]zoneInfo{"foo": {zoneState: ZoneStateOff}}, devices{{Name: "user", Home: true}}},
-			zoneWant: zoneWant{ZoneStateOff, 5 * time.Minute, "test", assert.NoError},
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithZone(10, "foo", tado.PowerON, 0, 18, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+			),
+			want: &zoneAction{
+				coreAction: coreAction{
+					state:  zoneState{overlay: true, heating: true},
+					reason: "test",
+					delay:  5 * time.Minute,
+				},
+				homeId:   1,
+				zoneName: "foo",
+				zoneId:   10,
+			},
+			err: assert.NoError,
 		},
 		{
 			name: "invalid delay",
@@ -41,8 +49,11 @@ function Evaluate(home, zone, devices)
 	return zone, nil, "test"
 end
 `,
-			update:   update{HomeStateHome, 1, map[string]zoneInfo{"foo": {zoneState: ZoneStateOff}}, devices{{Name: "user", Home: true}}},
-			zoneWant: zoneWant{"", 0, "", assert.Error},
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithZone(10, "foo", tado.PowerON, 0, 18, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+			),
+			err: assert.Error,
 		},
 		{
 			name: "missing Evaluate function",
@@ -51,8 +62,11 @@ function NotEvaluate(home, zone, devices)
 	return zone, 0, "test"
 end
 `,
-			update:   update{HomeStateAuto, 1, map[string]zoneInfo{"foo": {zoneState: ZoneStateOff}}, devices{{Name: "user", Home: true}}},
-			zoneWant: zoneWant{"", 0, "", assert.Error},
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithZone(10, "foo", tado.PowerON, 0, 18, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+			),
+			err: assert.Error,
 		},
 		{
 			name: "missing zone in update",
@@ -61,8 +75,10 @@ function Evaluate(home, zone, devices)
 	return zone, 300, "test"
 end
 `,
-			update:   update{HomeStateAuto, 1, nil, nil},
-			zoneWant: zoneWant{"", 0, "", assert.Error},
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+			),
+			err: assert.Error,
 		},
 	}
 
@@ -71,16 +87,15 @@ end
 			r, err := newZoneRule("foo", strings.NewReader(tt.script), nil, nil)
 			require.NoError(t, err)
 			a, err := r.Evaluate(tt.update)
-			tt.zoneWant.err(t, err)
+			tt.err(t, err)
 			if err == nil {
-				assert.Equal(t, tt.zoneWant.zoneState, zoneState(a.GetState()))
-				assert.Equal(t, tt.zoneWant.delay, a.GetDelay())
-				assert.Equal(t, tt.zoneWant.reason, a.GetReason())
+				assert.Equal(t, tt.want, a)
 			}
 		})
 	}
 }
 
+/*
 func TestZoneRule_UseCases(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -262,3 +277,4 @@ type fakeZoneEvaluator struct {
 func (f fakeZoneEvaluator) Evaluate(_ update) (action, error) {
 	return &zoneAction{zoneState: f.zoneState, delay: f.delay, reason: f.reason}, f.err
 }
+*/

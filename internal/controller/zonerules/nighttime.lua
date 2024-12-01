@@ -1,8 +1,8 @@
 function Evaluate(_, zone, _, args)
-		if not zone.Manual  then
+		if not zone.Overlay  then
 			return zone, 0, "no manual setting detected"
 		end
-		zone.Manual = false
+		zone.Overlay = false
         if args == nil then
             args = { StartHour = 23, StartMin = 30, EndHour = 6, EndMin = 0 }
         end

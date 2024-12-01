@@ -2,9 +2,8 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/clambin/tado-exporter/internal/controller/mocks"
+	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -13,205 +12,180 @@ import (
 	"time"
 )
 
-func Test_homeAction(t *testing.T) {
-	h := homeAction{
-		state:  HomeStateAway,
-		delay:  time.Hour,
-		reason: "reasons",
-	}
-
-	assert.Equal(t, "Setting home to away mode", h.Description(false))
-	assert.Equal(t, "Setting home to away mode in 1h0m0s", h.Description(true))
-	assert.Equal(t, "[action=away delay=1h0m0s reason=reasons]", h.LogValue().String())
-}
-
-func Test_homeAction_Do(t *testing.T) {
+func TestHomeAction_Do(t *testing.T) {
+	tadoClient := mocks.NewTadoClient(t)
 	ctx := context.Background()
-	tests := []struct {
-		name   string
-		action homeAction
-		setup  func(tadoClient *mocks.TadoClient)
-		err    assert.ErrorAssertionFunc
-	}{
-		{
-			name:   "auto mode - pass",
-			action: homeAction{state: HomeStateAuto, homeId: 1},
-			setup: func(tadoClient *mocks.TadoClient) {
-				tadoClient.EXPECT().
-					DeletePresenceLockWithResponse(ctx, tado.HomeId(1)).
-					Return(&tado.DeletePresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
-					Once()
-			},
-			err: assert.NoError,
-		},
-		{
-			name:   "auto mode - fail",
-			action: homeAction{state: HomeStateAuto, homeId: 1},
-			setup: func(tadoClient *mocks.TadoClient) {
-				tadoClient.EXPECT().
-					DeletePresenceLockWithResponse(ctx, tado.HomeId(1)).
-					Return(&tado.DeletePresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusUnauthorized}}, nil).
-					Once()
-			},
-			err: assert.Error,
-		},
-		{
-			name:   "away mode - pass",
-			action: homeAction{state: HomeStateAway, homeId: 1},
-			setup: func(tadoClient *mocks.TadoClient) {
-				tadoClient.EXPECT().
-					SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.AnythingOfType("tado.PresenceLock")).
-					RunAndReturn(func(_ context.Context, _ int64, lock tado.PresenceLock, fn ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
-						if *lock.HomePresence != tado.AWAY {
-							return nil, fmt.Errorf("unexpected home presence")
-						}
-						return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil
-					}).
-					Once()
-			},
-			err: assert.NoError,
-		},
-		{
-			name:   "away mode - fail",
-			action: homeAction{state: HomeStateAway, homeId: 1},
-			setup: func(tadoClient *mocks.TadoClient) {
-				tadoClient.EXPECT().
-					SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.AnythingOfType("tado.PresenceLock")).
-					Return(&tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusUnauthorized}}, nil).
-					Once()
-			},
-			err: assert.Error,
-		},
-		{
-			name:   "home mode - pass",
-			action: homeAction{state: HomeStateHome, homeId: 1},
-			setup: func(tadoClient *mocks.TadoClient) {
-				tadoClient.EXPECT().
-					SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.AnythingOfType("tado.PresenceLock")).
-					RunAndReturn(func(_ context.Context, _ int64, lock tado.PresenceLock, fn ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
-						if *lock.HomePresence != tado.HOME {
-							return nil, fmt.Errorf("unexpected home presence")
-						}
-						return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil
-					}).
-					Once()
-			},
-			err: assert.NoError,
-		},
-	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client := mocks.NewTadoClient(t)
-			if tt.setup != nil {
-				tt.setup(client)
+	a := homeAction{coreAction{homeState{true, true}, "test", 15 * time.Minute}, 1}
+	tadoClient.EXPECT().
+		SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.AnythingOfType("tado.PresenceLock")).
+		RunAndReturn(func(_ context.Context, _ int64, lock tado.PresenceLock, _ ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
+			if lock.HomePresence == nil {
+				return nil, fmt.Errorf("missing home presence")
 			}
-			tt.err(t, tt.action.Do(ctx, client))
-		})
-	}
+			if *lock.HomePresence != tado.HOME {
+				return nil, fmt.Errorf("wrong home presence: wanted %v, got %v", tado.HOME, *lock.HomePresence)
+			}
+			return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil
+		}).
+		Once()
+	assert.NoError(t, a.Do(ctx, tadoClient))
+
+	a = homeAction{coreAction{homeState{true, false}, "test", 15 * time.Minute}, 1}
+	tadoClient.EXPECT().
+		SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.AnythingOfType("tado.PresenceLock")).
+		RunAndReturn(func(_ context.Context, _ int64, lock tado.PresenceLock, _ ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
+			if lock.HomePresence == nil {
+				return nil, fmt.Errorf("missing home presence")
+			}
+			if *lock.HomePresence != tado.AWAY {
+				return nil, fmt.Errorf("wrong home presence: got %v, wanted %v", *lock.HomePresence, tado.AWAY)
+			}
+			return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil
+		}).
+		Once()
+	assert.NoError(t, a.Do(ctx, tadoClient))
+
+	a = homeAction{coreAction{homeState{false, true}, "test", 15 * time.Minute}, 1}
+	tadoClient.EXPECT().
+		DeletePresenceLockWithResponse(ctx, tado.HomeId(1)).
+		Return(&tado.DeletePresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
+		Once()
+	assert.NoError(t, a.Do(ctx, tadoClient))
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func Test_zoneAction(t *testing.T) {
-	a := zoneAction{
-		zoneState: ZoneStateOff,
-		delay:     5 * time.Minute,
-		reason:    "reasons",
-		zoneName:  "foo",
-	}
-
-	assert.Equal(t, "*foo*: switching off heating", a.Description(false))
-	assert.Equal(t, "*foo*: switching off heating in 5m0s", a.Description(true))
-	assert.Equal(t, "[zone=foo mode=off delay=5m0s reason=reasons]", a.LogValue().String())
-}
-
-func Test_zoneAction_Do(t *testing.T) {
+func TestZoneAction_Do(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name   string
-		action zoneAction
-		setup  func(*mocks.TadoClient)
-		err    assert.ErrorAssertionFunc
+		name       string
+		tadoClient func(t *testing.T) *mocks.TadoClient
+		action     coreAction
+		err        assert.ErrorAssertionFunc
 	}{
 		{
-			name: "auto mode - pass",
-			action: zoneAction{
-				zoneState: ZoneStateAuto,
-				homeId:    1,
-				zoneId:    10,
-			},
-			setup: func(client *mocks.TadoClient) {
-				client.EXPECT().
+			name: "move to auto mode",
+			tadoClient: func(t *testing.T) *mocks.TadoClient {
+				c := mocks.NewTadoClient(t)
+				c.EXPECT().
 					DeleteZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10)).
 					Return(&tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
 					Once()
+				return c
 			},
-			err: assert.NoError,
+			action: coreAction{state: zoneState{false, true}},
+			err:    assert.NoError,
 		},
 		{
-			name: "auto mode - fail",
-			action: zoneAction{
-				zoneState: ZoneStateAuto,
-				homeId:    1,
-				zoneId:    10,
-			},
-			setup: func(client *mocks.TadoClient) {
-				client.EXPECT().
-					DeleteZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10)).
-					Return(&tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusUnauthorized}}, nil).
-					Once()
-			},
-			err: assert.Error,
-		},
-		{
-			name: "off mode - pass",
-			action: zoneAction{
-				zoneState: ZoneStateOff,
-				homeId:    1,
-				zoneId:    10,
-			},
-			setup: func(client *mocks.TadoClient) {
-				client.EXPECT().SetZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10), mock.AnythingOfType("tado.ZoneOverlay")).
-					RunAndReturn(func(ctx context.Context, i int64, i2 int, overlay tado.ZoneOverlay, fn ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
-						if *overlay.Setting.Type != tado.HEATING {
-							return nil, errors.New("invalid type setting")
-						}
-						if *overlay.Setting.Power != tado.PowerOFF {
-							return nil, errors.New("invalid power setting")
+			name: "switch heating off",
+			tadoClient: func(t *testing.T) *mocks.TadoClient {
+				c := mocks.NewTadoClient(t)
+				c.EXPECT().
+					SetZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10), mock.AnythingOfType("tado.ZoneOverlay")).
+					RunAndReturn(func(_ context.Context, _ int64, _ int, overlay tado.ZoneOverlay, _ ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
+						if *overlay.Setting.Type != tado.HEATING || *overlay.Setting.Power != tado.PowerOFF {
+							return nil, fmt.Errorf("wrong settings")
 						}
 						if *overlay.Termination.TypeSkillBasedApp != tado.ZoneOverlayTerminationTypeSkillBasedAppNEXTTIMEBLOCK {
-							return nil, errors.New("invalid termination type")
+							return nil, fmt.Errorf("wrong termination type")
 						}
 						return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK}}, nil
 					}).
 					Once()
+				return c
 			},
-			err: assert.NoError,
+			action: coreAction{state: zoneState{true, false}},
+			err:    assert.NoError,
 		},
 		{
-			name: "off mode - fail",
-			action: zoneAction{
-				zoneState: ZoneStateOff,
-				homeId:    1,
-				zoneId:    10,
-			},
-			setup: func(client *mocks.TadoClient) {
-				client.EXPECT().SetZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10), mock.AnythingOfType("tado.ZoneOverlay")).
-					Return(&tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusUnauthorized}}, nil).
+			name: "switch heating on",
+			tadoClient: func(t *testing.T) *mocks.TadoClient {
+				c := mocks.NewTadoClient(t)
+				c.EXPECT().
+					SetZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10), mock.AnythingOfType("tado.ZoneOverlay")).
+					RunAndReturn(func(_ context.Context, _ int64, _ int, overlay tado.ZoneOverlay, _ ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error) {
+						if *overlay.Setting.Type != tado.HEATING || *overlay.Setting.Power != tado.PowerON {
+							return nil, fmt.Errorf("wrong settings")
+						}
+						if *overlay.Termination.TypeSkillBasedApp != tado.ZoneOverlayTerminationTypeSkillBasedAppNEXTTIMEBLOCK {
+							return nil, fmt.Errorf("wrong termination type")
+						}
+						return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK}}, nil
+					}).
 					Once()
+				return c
 			},
-			err: assert.Error,
+			action: coreAction{state: zoneState{true, true}},
+			err:    assert.NoError,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := mocks.NewTadoClient(t)
-			if tt.setup != nil {
-				tt.setup(client)
-			}
-			tt.err(t, tt.action.Do(ctx, client))
+			a := zoneAction{tt.action, "foo", 1, 10}
+			tt.err(t, a.Do(context.Background(), tt.tadoClient(t)))
+		})
+	}
+
+}
+
+func TestCoreAction(t *testing.T) {
+	type want struct {
+		description    string
+		descriptionDue string
+		logValue       string
+	}
+	tests := []struct {
+		name string
+		coreAction
+		want
+	}{
+		{
+			name:       "home: away",
+			coreAction: coreAction{homeState{false, false}, "test", 15 * time.Minute},
+			want:       want{"AWAY mode", "AWAY mode in 15m0s", "[state=[overlay=false home=false] delay=15m0s reason=test]"},
+		},
+		{
+			name:       "home: home",
+			coreAction: coreAction{homeState{false, true}, "test", 15 * time.Minute},
+			want:       want{"HOME mode", "HOME mode in 15m0s", "[state=[overlay=false home=true] delay=15m0s reason=test]"},
+		},
+		{
+			name:       "home: manual away",
+			coreAction: coreAction{homeState{true, false}, "test", 15 * time.Minute},
+			want:       want{"AWAY mode (manual)", "AWAY mode (manual) in 15m0s", "[state=[overlay=true home=false] delay=15m0s reason=test]"},
+		},
+		{
+			name:       "home: manual home",
+			coreAction: coreAction{homeState{true, true}, "test", 15 * time.Minute},
+			want:       want{"HOME mode (manual)", "HOME mode (manual) in 15m0s", "[state=[overlay=true home=true] delay=15m0s reason=test]"},
+		},
+		{
+			name:       "zone: heating off",
+			coreAction: coreAction{zoneState{false, false}, "test", 15 * time.Minute},
+			want:       want{"off", "off in 15m0s", "[state=[overlay=false heating=false] delay=15m0s reason=test]"},
+		},
+		{
+			name:       "home: heating on",
+			coreAction: coreAction{zoneState{false, true}, "test", 15 * time.Minute},
+			want:       want{"on", "on in 15m0s", "[state=[overlay=false heating=true] delay=15m0s reason=test]"},
+		},
+		{
+			name:       "home: heating off (manual)",
+			coreAction: coreAction{zoneState{true, false}, "test", 15 * time.Minute},
+			want:       want{"off (manual)", "off (manual) in 15m0s", "[state=[overlay=true heating=false] delay=15m0s reason=test]"},
+		},
+		{
+			name:       "home: heating on (manual)",
+			coreAction: coreAction{zoneState{true, true}, "test", 15 * time.Minute},
+			want:       want{"on (manual)", "on (manual) in 15m0s", "[state=[overlay=true heating=true] delay=15m0s reason=test]"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want.description, tt.coreAction.Description(false))
+			assert.Equal(t, tt.want.descriptionDue, tt.coreAction.Description(true))
+			assert.Equal(t, tt.want.logValue, tt.coreAction.LogValue().String())
 		})
 	}
 }

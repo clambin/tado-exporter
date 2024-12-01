@@ -1,6 +1,9 @@
-package tmp
+package controller
 
 import (
+	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/poller/testutils"
+	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"strings"
@@ -12,20 +15,23 @@ func TestHomeRule_Evaluate(t *testing.T) {
 	tests := []struct {
 		name   string
 		script string
-		update
-		want action
-		err  assert.ErrorAssertionFunc
+		update poller.Update
+		want   action
+		err    assert.ErrorAssertionFunc
 	}{
 		{
 			name: "success",
 			script: `
 function Evaluate(state, devices)
-	return { Home = state.Home, Manual = state.Manual}, 300, "test"
+	return { Overlay = state.Overlay, Home = state.Home}, 300, "test"
 end
 `,
-			update: update{nil, devices{{Name: "user", Home: false}}, 1, homeState{true, false}},
-			want:   &homeAction{coreAction{homeState{true, false}, "test", 5 * time.Minute}, 1},
-			err:    assert.NoError,
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, true)),
+			),
+			want: &homeAction{coreAction{homeState{false, true}, "test", 5 * time.Minute}, 1},
+			err:  assert.NoError,
 		},
 		{
 			name: "invalid state",
@@ -34,8 +40,11 @@ end
 				return "foo", nil, "test"
 			end
 			`,
-			update: update{nil, devices{{Name: "user", Home: false}}, 1, homeState{true, false}},
-			err:    assert.Error,
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, true)),
+			),
+			err: assert.Error,
 		},
 		{
 			name: "invalid delay",
@@ -44,8 +53,11 @@ end
 				return state, nil, "test"
 			end
 			`,
-			update: update{nil, devices{{Name: "user", Home: false}}, 1, homeState{true, false}},
-			err:    assert.Error,
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, true)),
+			),
+			err: assert.Error,
 		},
 		{
 			name: "missing Evaluate function",
@@ -54,8 +66,11 @@ end
 				return state, 0, "test"
 			end
 			`,
-			update: update{nil, devices{{Name: "user", Home: false}}, 1, homeState{true, false}},
-			err:    assert.Error,
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, true)),
+			),
+			err: assert.Error,
 		},
 	}
 
@@ -75,24 +90,24 @@ end
 
 func TestHomeRule_Evaluate_AutoAway(t *testing.T) {
 	tests := []struct {
-		name  string
-		users []string
-		update
-		want action
-		err  assert.ErrorAssertionFunc
+		name   string
+		users  []string
+		update poller.Update
+		want   action
+		err    assert.ErrorAssertionFunc
 	}{
 		{
 			name:  "home mode, at least one user home",
 			users: []string{"user A", "user B"},
-			update: update{
-				homeState: homeState{true, false},
-				HomeId:    1,
-				devices:   devices{{Name: "user A", Home: true}, {Name: "user B", Home: false}},
-			},
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithMobileDevice(100, "user A", testutils.WithLocation(true, false)),
+				testutils.WithMobileDevice(101, "user B", testutils.WithLocation(false, false)),
+			),
 			want: &homeAction{
 				coreAction: coreAction{
-					state:  homeState{true, true},
-					reason: "one or more users are home: user A",
+					state:  homeState{false, true},
+					reason: "no action needed",
 					delay:  0,
 				},
 				homeId: 1,
@@ -102,14 +117,14 @@ func TestHomeRule_Evaluate_AutoAway(t *testing.T) {
 		{
 			name:  "home mode, all users away",
 			users: []string{"user A", "user B"},
-			update: update{
-				homeState: homeState{true, false},
-				HomeId:    1,
-				devices:   devices{{Name: "user A", Home: false}, {Name: "user B", Home: false}},
-			},
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithMobileDevice(100, "user A", testutils.WithLocation(false, false)),
+				testutils.WithMobileDevice(101, "user B", testutils.WithLocation(false, false)),
+			),
 			want: &homeAction{
 				coreAction: coreAction{
-					state:  homeState{false, true},
+					state:  homeState{true, false},
 					reason: "all users are away: user A, user B",
 					delay:  5 * time.Minute,
 				},
@@ -120,14 +135,14 @@ func TestHomeRule_Evaluate_AutoAway(t *testing.T) {
 		{
 			name:  "only consider selected users",
 			users: []string{"user A"},
-			update: update{
-				homeState: homeState{true, false},
-				HomeId:    1,
-				devices:   devices{{Name: "user A", Home: false}, {Name: "user B", Home: true}},
-			},
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithMobileDevice(100, "user A", testutils.WithLocation(false, false)),
+				testutils.WithMobileDevice(101, "user B", testutils.WithLocation(true, false)),
+			),
 			want: &homeAction{
 				coreAction: coreAction{
-					state:  homeState{false, true},
+					state:  homeState{true, false},
 					reason: "all users are away: user A",
 					delay:  5 * time.Minute,
 				},

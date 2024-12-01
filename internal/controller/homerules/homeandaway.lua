@@ -4,14 +4,13 @@ function Evaluate(state, devices, _)
 	end
 	local homeUsers = GetDevicesByState(devices, true)
 	local wantHomeState = #homeUsers > 0
-	local delay = 300
 	if state.Home == wantHomeState then
-        delay = 0
+	    return state, 0, "no action needed"
 	end
     if wantHomeState then
-        return { Home = true, Manual = true }, 0, "one or more users are home: " .. ListDevices(homeUsers)
+        return { Overlay = true, Home = true }, 0, "one or more users are home: " .. ListDevices(homeUsers)
     end
-    return { Home = false, Manual = true }, delay, "all users are away: " .. ListDevices(devices)
+    return { Overlay = true, Home = false }, 300, "all users are away: " .. ListDevices(devices)
 end
 
 function GetDevicesByState(list, state)

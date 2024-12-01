@@ -1,7 +1,6 @@
 package poller
 
 import (
-	"fmt"
 	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado/v2"
 	"iter"
@@ -27,13 +26,13 @@ type Zone struct {
 
 type Zones []Zone
 
-func (z Zones) GetZone(name string) (Zone, error) {
+func (z Zones) GetZone(name string) (Zone, bool) {
 	for _, zone := range z {
 		if *zone.Name == name {
-			return zone, nil
+			return zone, true
 		}
 	}
-	return Zone{}, fmt.Errorf("invalid zone: %q", name)
+	return Zone{}, false
 }
 
 const ZoneOverlayTerminationTypeNONE = tado.ZoneOverlayTerminationType("NONE")

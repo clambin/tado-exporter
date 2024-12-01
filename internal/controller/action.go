@@ -11,9 +11,9 @@ import (
 )
 
 type action interface {
-	GetState() string
-	GetDelay() time.Duration
-	GetReason() string
+	State() state
+	Delay() time.Duration
+	Reason() string
 	setReason(string)
 	Description(includeDelay bool) string
 	Do(context.Context, TadoClient) error
@@ -25,30 +25,17 @@ type action interface {
 var _ action = &homeAction{}
 
 type homeAction struct {
-	state  homeState
-	delay  time.Duration
-	reason string
+	coreAction
 	homeId tado.HomeId
 }
 
-func (h *homeAction) GetState() string {
-	return string(h.state)
-}
-
-func (h *homeAction) GetDelay() time.Duration {
-	return h.delay
-}
-
-func (h *homeAction) GetReason() string {
-	return h.reason
-}
-
-func (h *homeAction) setReason(reason string) {
-	h.reason = reason
+var homePresences = map[bool]tado.HomePresence{
+	false: tado.AWAY,
+	true:  tado.HOME,
 }
 
 func (h *homeAction) Do(ctx context.Context, client TadoClient) error {
-	if h.state == HomeStateAuto {
+	if !h.Overlay() {
 		resp, err := client.DeletePresenceLockWithResponse(ctx, h.homeId)
 		if err != nil {
 			return err
@@ -57,39 +44,25 @@ func (h *homeAction) Do(ctx context.Context, client TadoClient) error {
 			return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 		}
 		return nil
+	} else {
+		homePresence := homePresences[h.Mode()]
+		resp, err := client.SetPresenceLockWithResponse(ctx, h.homeId, tado.SetPresenceLockJSONRequestBody{HomePresence: &homePresence})
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode() != http.StatusNoContent {
+			return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+		}
+		return nil
 	}
-
-	var homePresence tado.HomePresence
-	switch h.state {
-	case HomeStateHome:
-		homePresence = tado.HOME
-	case HomeStateAway:
-		homePresence = tado.AWAY
-	}
-	resp, err := client.SetPresenceLockWithResponse(ctx, h.homeId, tado.SetPresenceLockJSONRequestBody{HomePresence: &homePresence})
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode() != http.StatusNoContent {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-	return nil
 }
 
 func (h *homeAction) Description(includeDelay bool) string {
-	text := "Setting home to " + string(h.state) + " mode"
-	if includeDelay {
-		text += " in " + h.delay.String()
-	}
-	return text
+	return "setting home to " + h.coreAction.Description(includeDelay)
 }
 
-func (h *homeAction) LogValue() slog.Value {
-	return slog.GroupValue(
-		slog.String("action", string(h.state)),
-		slog.Duration("delay", h.delay),
-		slog.String("reason", h.reason),
-	)
+func (h *homeAction) State() state {
+	return h.coreAction.state
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,41 +70,28 @@ func (h *homeAction) LogValue() slog.Value {
 var _ action = &zoneAction{}
 
 type zoneAction struct {
-	zoneState zoneState
-	delay     time.Duration
-	reason    string
-	homeId    tado.HomeId
-	zoneId    tado.ZoneId
-	zoneName  string
+	coreAction
+	zoneName string
+	homeId   tado.HomeId
+	zoneId   tado.ZoneId
 }
 
-func (z *zoneAction) GetState() string {
-	return string(z.zoneState)
-}
-
-func (z *zoneAction) GetDelay() time.Duration {
-	return z.delay
-}
-
-func (z *zoneAction) GetReason() string {
-	return z.reason
-}
-
-func (z *zoneAction) setReason(reason string) {
-	z.reason = reason
+var powerMode = map[bool]tado.Power{
+	true:  tado.PowerON,
+	false: tado.PowerOFF,
 }
 
 func (z *zoneAction) Do(ctx context.Context, client TadoClient) error {
-	switch z.zoneState {
-	case ZoneStateAuto:
+	if !z.State().Overlay() {
 		resp, err := client.DeleteZoneOverlayWithResponse(ctx, z.homeId, z.zoneId)
 		if err == nil && resp.StatusCode() != http.StatusNoContent {
 			err = fmt.Errorf("unexpected status code %d", resp.StatusCode())
 		}
 		return err
-	case ZoneStateOff:
+	} else {
+		mode := powerMode[z.State().Mode()]
 		resp, err := client.SetZoneOverlayWithResponse(ctx, z.homeId, z.zoneId, tado.SetZoneOverlayJSONRequestBody{
-			Setting: &tado.ZoneSetting{Type: oapi.VarP(tado.HEATING), Power: oapi.VarP(tado.PowerOFF)},
+			Setting: &tado.ZoneSetting{Type: oapi.VarP(tado.HEATING), Power: &mode},
 			Termination: &tado.ZoneOverlayTermination{
 				//Type:              oapi.VarP(tado.ZoneOverlayTerminationTypeTIMER),
 				TypeSkillBasedApp: oapi.VarP(tado.ZoneOverlayTerminationTypeSkillBasedAppNEXTTIMEBLOCK),
@@ -142,29 +102,53 @@ func (z *zoneAction) Do(ctx context.Context, client TadoClient) error {
 			err = fmt.Errorf("unexpected status code %d", resp.StatusCode())
 		}
 		return err
-	default:
-		return fmt.Errorf("invalid zone state: %q", z.zoneState)
 	}
 }
 
 func (z *zoneAction) Description(includeDelay bool) string {
-	text := "*" + z.zoneName + "*: "
-	if z.zoneState == ZoneStateOff {
-		text += "switching off heating"
-	} else {
-		text += "setting heating to " + string(z.zoneState) + " mode"
-	}
-	if includeDelay {
-		text += " in " + z.delay.String()
-	}
-	return text
+	return "*" + z.zoneName + "*: switching heating " + z.coreAction.Description(includeDelay)
 }
 
 func (z *zoneAction) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("zone", z.zoneName),
-		slog.String("mode", string(z.zoneState)),
-		slog.Duration("delay", z.delay),
-		slog.String("reason", z.reason),
+		slog.Any("action", z.coreAction.LogValue()),
+	)
+}
+func (h *zoneAction) State() state {
+	return h.coreAction.state
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type coreAction struct {
+	state
+	reason string
+	delay  time.Duration
+}
+
+func (a *coreAction) Delay() time.Duration {
+	return a.delay
+}
+
+func (a *coreAction) Reason() string {
+	return a.reason
+}
+func (a *coreAction) setReason(reason string) {
+	a.reason = reason
+}
+func (a *coreAction) Description(includeDelay bool) string {
+	text := a.state.String()
+	if includeDelay {
+		text += " in " + a.delay.String()
+	}
+	return text
+}
+
+func (a *coreAction) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Any("state", a.state.LogValue()),
+		slog.Duration("delay", a.delay),
+		slog.String("reason", a.reason),
 	)
 }

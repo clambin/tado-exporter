@@ -1,10 +1,11 @@
-package tmp
+package controller
 
 import (
 	"fmt"
 	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/controller/homerules"
 	"github.com/clambin/tado-exporter/internal/controller/luart"
+	"github.com/clambin/tado-exporter/internal/poller"
 	"io"
 	"time"
 )
@@ -30,8 +31,12 @@ func loadHomeRule(config RuleConfiguration) (evaluator, error) {
 	return newHomeRule(config.Name, r, config.Users, config.Args)
 }
 
-func getHomeStateFromUpdate(u update) (state, error) {
-	return u.homeState, nil
+func getHomeStateFromUpdate(u poller.Update) (state, error) {
+	s := homeState{
+		overlay: u.HomeState.PresenceLocked != nil && *u.HomeState.PresenceLocked,
+		home:    u.Home(),
+	}
+	return s, nil
 }
 
 // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -52,13 +57,13 @@ func newHomeRule(name string, r io.Reader, devices []string, args Args) (*homeRu
 	return &homeRule{luaScript: script, devices: set.New[string](devices...), args: args}, nil
 }
 
-func (r homeRule) Evaluate(u update) (action, error) {
+func (r homeRule) Evaluate(u poller.Update) (action, error) {
 	if err := r.initEvaluation(); err != nil {
 		return nil, err
 	}
 	// push arguments
-	u.GetHomeState().ToLua(r.luaScript.State)
-	u.GetDevices().filter(r.devices).toLua(r.luaScript.State)
+	pushHomeState(r.luaScript.State, u)
+	pushDevices(r.luaScript.State, u, r.devices)
 	luart.PushMap(r.luaScript.State, r.args)
 
 	// execute the script
@@ -68,7 +73,7 @@ func (r homeRule) Evaluate(u update) (action, error) {
 
 	// pop the values
 	defer r.Pop(3)
-	s, err := toHomeState(r.luaScript.State, -3)
+	s, err := getHomeState(r.luaScript.State, -3)
 	if err != nil {
 		return nil, err
 	}
@@ -79,10 +84,11 @@ func (r homeRule) Evaluate(u update) (action, error) {
 	reason, _ := r.ToString(-1)
 
 	return &homeAction{
-		coreAction: coreAction{state: s,
+		coreAction: coreAction{
+			state:  s,
 			delay:  time.Duration(delay) * time.Second,
 			reason: reason,
 		},
-		homeId: u.HomeId,
+		homeId: *u.HomeBase.Id,
 	}, nil
 }

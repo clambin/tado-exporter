@@ -1,15 +1,16 @@
-function Evaluate(_, mode, devices, _)
+function Evaluate(_, state, devices, _)
         if #devices == 0 then
-            return mode, 0, "no devices found"
+            return state, 0, "no devices found"
         end
-        --- if mode ~= "auto" and mode ~= "off" then
-        ---    return mode, 0, "no action required"
-        --- end
         local homeUsers = FilterDevices(devices, true)
-        if #homeUsers ~= 0 then
-            return { Heating = true, Manual = true }, 0, "one or more users are home: " .. ListDevices(homeUsers)
+        if #homeUsers == 0 then
+            return { Overlay = true, Heating = false }, 900, "all users are away"
         end
-    return { Heating = false, Manual = true }, 900, "all users are away"
+        if state.Heating then
+            --- we didn't end the fire
+            return state, 0, "one or more users are home: " .. ListDevices(homeUsers)
+        end
+        return { Overlay = false, Heating = true }, 0, "one or more users are home: " .. ListDevices(homeUsers)
 end
 
 function FilterDevices(devices, state)
