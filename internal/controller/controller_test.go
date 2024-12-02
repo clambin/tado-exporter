@@ -75,7 +75,7 @@ func TestController_Run(t *testing.T) {
 	)
 	go p.Publish(u)
 
-	const want = "*my room*: switching heating on in 1h0m0s\nReason: manual setting detected"
+	const want = "*my room*: switching heating to auto mode in 1h0m0s\nReason: manual setting detected"
 	msg := <-n.ch
 	assert.Equal(t, want, msg)
 	assert.Equal(t, want, strings.Join(m.ReportTasks(), ", "))

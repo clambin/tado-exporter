@@ -40,6 +40,9 @@ func (s homeState) Mode() bool {
 }
 
 func (s homeState) String() string {
+	if s.overlay == false {
+		return "AUTO mode"
+	}
 	description := homeStateString[s.home] + " mode"
 	if s.overlay {
 		description += " (manual)"
@@ -82,6 +85,9 @@ var zoneStateString = map[bool]string{
 }
 
 func (s zoneState) String() string {
+	if s.overlay == false {
+		return "to auto mode"
+	}
 	description := zoneStateString[s.heating]
 	if s.overlay {
 		description += " (manual)"
