@@ -41,7 +41,7 @@ func TestGroupEvaluator(t *testing.T) {
 
 	// wait for group evaluator to process the update. should result in scheduled job
 	require.Eventually(t, func() bool { return e.ReportTask() != "" }, time.Second, time.Millisecond)
-	assert.Equal(t, "setting home to AWAY mode (manual) in 5m0s\nReason: all users are away: user A", e.ReportTask())
+	assert.Equal(t, "setting home to AWAY mode in 5m0s\nReason: all users are away: user A", e.ReportTask())
 
 	// user comes home -> action should be canceled
 	p.ch <- testutils.Update(

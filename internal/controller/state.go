@@ -43,11 +43,7 @@ func (s homeState) String() string {
 	if s.overlay == false {
 		return "AUTO mode"
 	}
-	description := homeStateString[s.home] + " mode"
-	if s.overlay {
-		description += " (manual)"
-	}
-	return description
+	return homeStateString[s.home] + " mode"
 }
 
 func (s homeState) LogValue() slog.Value {
@@ -88,11 +84,7 @@ func (s zoneState) String() string {
 	if s.overlay == false {
 		return "to auto mode"
 	}
-	description := zoneStateString[s.heating]
-	if s.overlay {
-		description += " (manual)"
-	}
-	return description
+	return zoneStateString[s.heating]
 }
 
 func (s zoneState) LogValue() slog.Value {

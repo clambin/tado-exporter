@@ -152,12 +152,12 @@ func TestCoreAction(t *testing.T) {
 		{
 			name:       "home: manual away",
 			coreAction: coreAction{homeState{true, false}, "test", 15 * time.Minute},
-			want:       want{"AWAY mode (manual)", "AWAY mode (manual) in 15m0s", "[state=[overlay=true home=false] delay=15m0s reason=test]"},
+			want:       want{"AWAY mode", "AWAY mode in 15m0s", "[state=[overlay=true home=false] delay=15m0s reason=test]"},
 		},
 		{
 			name:       "home: manual home",
 			coreAction: coreAction{homeState{true, true}, "test", 15 * time.Minute},
-			want:       want{"HOME mode (manual)", "HOME mode (manual) in 15m0s", "[state=[overlay=true home=true] delay=15m0s reason=test]"},
+			want:       want{"HOME mode", "HOME mode in 15m0s", "[state=[overlay=true home=true] delay=15m0s reason=test]"},
 		},
 		{
 			name:       "zone: auto mode",
@@ -170,14 +170,14 @@ func TestCoreAction(t *testing.T) {
 			want:       want{"to auto mode", "to auto mode in 15m0s", "[state=[overlay=false heating=true] delay=15m0s reason=test]"},
 		},
 		{
-			name:       "zone: heating off (manual)",
+			name:       "zone: heating off",
 			coreAction: coreAction{zoneState{true, false}, "test", 15 * time.Minute},
-			want:       want{"off (manual)", "off (manual) in 15m0s", "[state=[overlay=true heating=false] delay=15m0s reason=test]"},
+			want:       want{"off", "off in 15m0s", "[state=[overlay=true heating=false] delay=15m0s reason=test]"},
 		},
 		{
-			name:       "zone: heating on (manual)",
+			name:       "zone: heating on",
 			coreAction: coreAction{zoneState{true, true}, "test", 15 * time.Minute},
-			want:       want{"on (manual)", "on (manual) in 15m0s", "[state=[overlay=true heating=true] delay=15m0s reason=test]"},
+			want:       want{"on", "on in 15m0s", "[state=[overlay=true heating=true] delay=15m0s reason=test]"},
 		},
 	}
 
