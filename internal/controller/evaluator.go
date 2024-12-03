@@ -155,6 +155,7 @@ func (g *groupEvaluator) scheduleJob(ctx context.Context, action action) {
 		Job: scheduler.Schedule(ctx, scheduler.RunFunc(func(ctx context.Context) error {
 			return g.doAction(ctx, action)
 		}), action.Delay(), g.jobCompleted),
+		logger: g.logger,
 	}
 	g.scheduledJob.Store(j)
 	if g.Notifier != nil {
@@ -179,7 +180,7 @@ func shouldSchedule(currentJob scheduledJob, newAction action) bool {
 // doAction executes the action and reports the result to the user through a Notifier.
 // This is called either directly from scheduleJob, or from the scheduler once the Delay has passed.
 func (g *groupEvaluator) doAction(ctx context.Context, action action) error {
-	if err := action.Do(ctx, g.TadoClient); err != nil {
+	if err := action.Do(ctx, g.TadoClient, g.logger); err != nil {
 		g.logger.Error("failed to execute action", "action", action, "err", err)
 		return err
 	}
@@ -230,8 +231,9 @@ type job struct {
 	action
 	TadoClient
 	*scheduler.Job
+	logger *slog.Logger
 }
 
 func (j job) Run(_ context.Context) error {
-	return j.action.Do(context.Background(), j.TadoClient)
+	return j.action.Do(context.Background(), j.TadoClient, j.logger)
 }

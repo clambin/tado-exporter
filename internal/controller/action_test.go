@@ -29,7 +29,7 @@ func TestHomeAction_Do(t *testing.T) {
 			return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil
 		}).
 		Once()
-	assert.NoError(t, a.Do(ctx, tadoClient))
+	assert.NoError(t, a.Do(ctx, tadoClient, discardLogger))
 
 	a = homeAction{coreAction{homeState{true, false}, "test", 15 * time.Minute}, 1}
 	tadoClient.EXPECT().
@@ -44,14 +44,14 @@ func TestHomeAction_Do(t *testing.T) {
 			return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil
 		}).
 		Once()
-	assert.NoError(t, a.Do(ctx, tadoClient))
+	assert.NoError(t, a.Do(ctx, tadoClient, discardLogger))
 
 	a = homeAction{coreAction{homeState{false, true}, "test", 15 * time.Minute}, 1}
 	tadoClient.EXPECT().
 		DeletePresenceLockWithResponse(ctx, tado.HomeId(1)).
 		Return(&tado.DeletePresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
 		Once()
-	assert.NoError(t, a.Do(ctx, tadoClient))
+	assert.NoError(t, a.Do(ctx, tadoClient, discardLogger))
 }
 
 func TestZoneAction_Do(t *testing.T) {
@@ -122,10 +122,9 @@ func TestZoneAction_Do(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := zoneAction{tt.action, "foo", 1, 10}
-			tt.err(t, a.Do(context.Background(), tt.tadoClient(t)))
+			tt.err(t, a.Do(context.Background(), tt.tadoClient(t), discardLogger))
 		})
 	}
-
 }
 
 func TestCoreAction(t *testing.T) {

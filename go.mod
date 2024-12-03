@@ -3,10 +3,11 @@ module github.com/clambin/tado-exporter
 go 1.23
 
 require (
+	github.com/Shopify/go-lua v0.0.0-20240527182111-9ab1540f3f5f
 	github.com/clambin/go-common/charmer v0.2.0
 	github.com/clambin/go-common/http v0.6.0
 	github.com/clambin/go-common/set v0.4.3
-	github.com/clambin/tado/v2 v2.1.0
+	github.com/clambin/tado/v2 v2.2.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/slack-go/slack v0.15.0
 	github.com/spf13/cobra v1.8.1
@@ -17,7 +18,6 @@ require (
 )
 
 require (
-	github.com/Shopify/go-lua v0.0.0-20240527182111-9ab1540f3f5f // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

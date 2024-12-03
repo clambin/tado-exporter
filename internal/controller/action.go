@@ -16,7 +16,7 @@ type action interface {
 	Reason() string
 	setReason(string)
 	Description(includeDelay bool) string
-	Do(context.Context, TadoClient) error
+	Do(context.Context, TadoClient, *slog.Logger) error
 	slog.LogValuer
 }
 
@@ -34,8 +34,9 @@ var homePresences = map[bool]tado.HomePresence{
 	true:  tado.HOME,
 }
 
-func (h *homeAction) Do(ctx context.Context, client TadoClient) error {
+func (h *homeAction) Do(ctx context.Context, client TadoClient, l *slog.Logger) error {
 	if !h.Overlay() {
+		l.Debug("removing presenceLock")
 		resp, err := client.DeletePresenceLockWithResponse(ctx, h.homeId)
 		if err != nil {
 			return err
@@ -46,6 +47,7 @@ func (h *homeAction) Do(ctx context.Context, client TadoClient) error {
 		return nil
 	} else {
 		homePresence := homePresences[h.Mode()]
+		l.Debug("setting presenceLock", "lock", string(homePresence))
 		resp, err := client.SetPresenceLockWithResponse(ctx, h.homeId, tado.SetPresenceLockJSONRequestBody{HomePresence: &homePresence})
 		if err != nil {
 			return err
@@ -81,8 +83,9 @@ var powerMode = map[bool]tado.Power{
 	false: tado.PowerOFF,
 }
 
-func (z *zoneAction) Do(ctx context.Context, client TadoClient) error {
+func (z *zoneAction) Do(ctx context.Context, client TadoClient, l *slog.Logger) error {
 	if !z.State().Overlay() {
+		l.Debug("removing overlay")
 		resp, err := client.DeleteZoneOverlayWithResponse(ctx, z.homeId, z.zoneId)
 		if err == nil && resp.StatusCode() != http.StatusNoContent {
 			err = fmt.Errorf("unexpected status code %d", resp.StatusCode())
@@ -90,6 +93,7 @@ func (z *zoneAction) Do(ctx context.Context, client TadoClient) error {
 		return err
 	} else {
 		mode := powerMode[z.State().Mode()]
+		l.Debug("setting overlay", "mode", string(mode))
 		resp, err := client.SetZoneOverlayWithResponse(ctx, z.homeId, z.zoneId, tado.SetZoneOverlayJSONRequestBody{
 			Setting: &tado.ZoneSetting{Type: oapi.VarP(tado.HEATING), Power: &mode},
 			Termination: &tado.ZoneOverlayTermination{
