@@ -32,7 +32,6 @@ function Evaluate(state, devices)
 end
 `,
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, true)),
 			),
 			want: &homeAction{coreAction{homeState{false, true}, "test", 5 * time.Minute}, 1},
@@ -46,7 +45,6 @@ end
 			end
 			`,
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, true)),
 			),
 			err: assert.Error,
@@ -59,7 +57,6 @@ end
 			end
 			`,
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, true)),
 			),
 			err: assert.Error,
@@ -72,7 +69,6 @@ end
 			end
 			`,
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, true)),
 			),
 			err: assert.Error,
@@ -105,7 +101,6 @@ func TestHomeRule_Evaluate_AutoAway(t *testing.T) {
 			name:  "home mode, at least one user home",
 			users: []string{"user A", "user B"},
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithMobileDevice(100, "user A", testutils.WithLocation(true, false)),
 				testutils.WithMobileDevice(101, "user B", testutils.WithLocation(false, false)),
 			),
@@ -123,7 +118,6 @@ func TestHomeRule_Evaluate_AutoAway(t *testing.T) {
 			name:  "home mode, all users away",
 			users: []string{"user A", "user B"},
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithMobileDevice(100, "user A", testutils.WithLocation(false, false)),
 				testutils.WithMobileDevice(101, "user B", testutils.WithLocation(false, false)),
 			),
@@ -141,7 +135,6 @@ func TestHomeRule_Evaluate_AutoAway(t *testing.T) {
 			name:  "only consider selected users",
 			users: []string{"user A"},
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithMobileDevice(100, "user A", testutils.WithLocation(false, false)),
 				testutils.WithMobileDevice(101, "user B", testutils.WithLocation(true, false)),
 			),

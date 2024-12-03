@@ -69,7 +69,6 @@ func TestController_Run(t *testing.T) {
 	}, time.Second, time.Millisecond)
 
 	u := testutils.Update(
-		testutils.WithHome(1, "my home", tado.HOME),
 		testutils.WithZone(10, "my room", tado.PowerON, 18, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 		testutils.WithMobileDevice(100, "user A", testutils.WithLocation(true, false)),
 	)

@@ -23,17 +23,14 @@ func Test_commandRunner_listRooms(t *testing.T) {
 			wantErr: assert.Error,
 		},
 		{
-			name: "no rooms",
-			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
-			),
+			name:    "no rooms",
+			update:  testutils.Update(),
 			wantErr: assert.NoError,
 			want:    slacktools.Attachment{Header: "Rooms:", Body: []string{"no rooms have been found"}},
 		},
 		{
 			name: "rooms found",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(40, "room D", tado.PowerOFF, 0, 20),
 				testutils.WithZone(30, "room C", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeTIMER, 300)),
 				testutils.WithZone(20, "room B", tado.PowerON, 17.5, 21, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
@@ -75,17 +72,14 @@ func Test_commandRunner_listUsers(t *testing.T) {
 			wantErr: assert.Error,
 		},
 		{
-			name: "no users",
-			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
-			),
+			name:    "no users",
+			update:  testutils.Update(),
 			wantErr: assert.NoError,
 			want:    slacktools.Attachment{Header: "Users:", Body: []string{"no users have been found"}},
 		},
 		{
 			name: "users found",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithMobileDevice(100, "user D", testutils.WithLocation(false, false)),
 				testutils.WithMobileDevice(101, "user C", testutils.WithLocation(true, false)),
 				testutils.WithMobileDevice(102, "user B", testutils.WithGeoTracking()),

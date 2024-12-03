@@ -258,7 +258,6 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tadoClient := mocks.NewTadoClient(t)
 			u := testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "foo", tado.PowerON, 18, 18),
 			)
 
@@ -392,9 +391,7 @@ func Test_setHomeShortcut_setHome(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tadoClient := mocks.NewTadoClient(t)
-			u := testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
-			)
+			u := testutils.Update()
 			h := setHomeShortcut{
 				TadoClient:  tadoClient,
 				updateStore: updateStore{update: &u},

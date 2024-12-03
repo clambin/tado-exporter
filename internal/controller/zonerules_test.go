@@ -33,7 +33,6 @@ function Evaluate(home, zone, devices)
 end
 `,
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "foo", tado.PowerON, 0, 18, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 			),
 			want: &zoneAction{
@@ -56,7 +55,6 @@ function Evaluate(home, zone, devices)
 end
 `,
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "foo", tado.PowerON, 0, 18, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 			),
 			err: assert.Error,
@@ -69,7 +67,6 @@ function NotEvaluate(home, zone, devices)
 end
 `,
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "foo", tado.PowerON, 0, 18, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 			),
 			err: assert.Error,
@@ -81,10 +78,8 @@ function Evaluate(home, zone, devices)
 	return zone, 300, "test"
 end
 `,
-			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
-			),
-			err: assert.Error,
+			update: testutils.Update(),
+			err:    assert.Error,
 		},
 	}
 
@@ -111,7 +106,6 @@ func TestZoneRule_Evaluate_LimitOverlay(t *testing.T) {
 		{
 			name: "zone auto -> no action",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 20),
 			),
 			err: assert.NoError,
@@ -125,7 +119,6 @@ func TestZoneRule_Evaluate_LimitOverlay(t *testing.T) {
 		{
 			name: "zone manual -> delete overlay",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 			),
 			err: assert.NoError,
@@ -139,7 +132,6 @@ func TestZoneRule_Evaluate_LimitOverlay(t *testing.T) {
 		{
 			name: "zone off -> no action",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerOFF, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 			),
 			err: assert.NoError,
@@ -179,7 +171,6 @@ func TestZoneRule_Evaluate_AutoAway(t *testing.T) {
 		{
 			name: "zone auto, user home -> heating in auto",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 20),
 				testutils.WithMobileDevice(100, "user A", testutils.WithLocation(true, false)),
 			),
@@ -198,7 +189,6 @@ func TestZoneRule_Evaluate_AutoAway(t *testing.T) {
 		{
 			name: "zone auto, user away -> heating off",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 20),
 				testutils.WithMobileDevice(100, "user A", testutils.WithLocation(false, false)),
 			),
@@ -213,7 +203,6 @@ func TestZoneRule_Evaluate_AutoAway(t *testing.T) {
 		{
 			name: "zone off, user away -> heating off",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerOFF, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 				testutils.WithMobileDevice(100, "user A", testutils.WithLocation(false, false)),
 			),
@@ -228,7 +217,6 @@ func TestZoneRule_Evaluate_AutoAway(t *testing.T) {
 		{
 			name: "zone off, user home -> zone to auto",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerOFF, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 				testutils.WithMobileDevice(100, "user A", testutils.WithLocation(true, false)),
 			),
@@ -270,7 +258,6 @@ func TestZoneAction_Evaluate_NightTime(t *testing.T) {
 		{
 			name: "zone auto -> no action",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 20),
 			),
 			err: assert.NoError,
@@ -288,7 +275,6 @@ func TestZoneAction_Evaluate_NightTime(t *testing.T) {
 		{
 			name: "zone in manual mode, before range -> schedule moving to auto mode",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 			),
 			now: time.Date(2024, time.December, 3, 18, 0, 0, 0, time.Local),
@@ -307,7 +293,6 @@ func TestZoneAction_Evaluate_NightTime(t *testing.T) {
 		{
 			name: "zone in manual mode, during range, before midnight -> immediately move to auto mode",
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 			),
 			now: time.Date(2024, time.December, 3, 23, 30, 0, 0, time.Local),
@@ -328,7 +313,6 @@ func TestZoneAction_Evaluate_NightTime(t *testing.T) {
 				// TODO: fix bug in IsInRange where it doesn't detect that a timestamp after midnight is still in range
 				name: "zone in manual mode, during range, after midnight -> immediately move to auto mode",
 				update: testutils.Update(
-					testutils.WithHome(1, "my home", tado.HOME),
 					testutils.WithZone(10, "zone", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 				),
 				now: time.Date(2024, time.December, 4, 1, 0, 0, 0, time.Local),
@@ -461,7 +445,6 @@ func BenchmarkZoneAction_Evaluate(b *testing.B) {
 	r, err := loadZoneRule("foo", RuleConfiguration{Script: ScriptConfig{Packaged: "nighttime.lua"}})
 	require.NoError(b, err)
 	u := testutils.Update(
-		testutils.WithHome(1, "my home", tado.HOME),
 		testutils.WithZone(10, "foo", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 	)
 	b.ResetTimer()

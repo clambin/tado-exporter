@@ -8,7 +8,7 @@ import (
 )
 
 func TestWithHome(t *testing.T) {
-	u := Update(WithHome(1, "my home", tado.HOME))
+	u := Update()
 	assert.Equal(t, tado.HomeId(1), *u.HomeBase.Id)
 	assert.Equal(t, "my home", *u.HomeBase.Name)
 	assert.Equal(t, tado.HOME, *u.HomeState.Presence)

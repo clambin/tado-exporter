@@ -38,7 +38,6 @@ func TestGroupEvaluator_ScheduleAndCancel(t *testing.T) {
 	// zone is in overlay
 	go func() {
 		p.ch <- testutils.Update(
-			testutils.WithHome(1, "my home", tado.HOME),
 			testutils.WithZone(10, "zone", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 		)
 	}()
@@ -50,12 +49,10 @@ func TestGroupEvaluator_ScheduleAndCancel(t *testing.T) {
 	go func() {
 		// same update: don't schedule a new job
 		p.ch <- testutils.Update(
-			testutils.WithHome(1, "my home", tado.HOME),
 			testutils.WithZone(10, "zone", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 		)
 		// zone is back in auto mode
 		p.ch <- testutils.Update(
-			testutils.WithHome(1, "my home", tado.HOME),
 			testutils.WithZone(10, "zone", tado.PowerON, 21, 20),
 		)
 	}()
@@ -95,7 +92,6 @@ func TestGroupEvaluator_Do(t *testing.T) {
 	// zone is off but user is home: remove overlay immediately
 	go func() {
 		p.ch <- testutils.Update(
-			testutils.WithHome(1, "my home", tado.HOME),
 			testutils.WithZone(10, "zone", tado.PowerOFF, 0, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 			testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, false)),
 		)
@@ -186,7 +182,6 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 			name:  "user is home: no action",
 			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 21),
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, false)),
 			),
@@ -206,7 +201,6 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 			name:  "user is not home, heating is on: switch heating is off",
 			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 21),
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(false, false)),
 			),
@@ -226,7 +220,6 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 			name:  "user is not home, heating is off: no action",
 			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerOFF, 21, 21, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(false, false)),
 			),
@@ -246,7 +239,6 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 			name:  "user is home, heating is off: move heating to auto mode",
 			rules: []RuleConfiguration{limitOverlayCfg, autoAwayCfg},
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerOFF, 21, 21, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, false)),
 			),
@@ -266,7 +258,6 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 			name:  "user is home, zone in manual mode: schedule auto mode",
 			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
 			update: testutils.Update(
-				testutils.WithHome(1, "my home", tado.HOME),
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 21, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 			),
 			isChange: assert.True,

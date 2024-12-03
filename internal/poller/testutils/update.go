@@ -8,6 +8,7 @@ import (
 
 func Update(options ...UpdateOption) poller.Update {
 	var u poller.Update
+	WithHome(1, "my home", tado.HOME)(&u)
 	for _, option := range options {
 		option(&u)
 	}
