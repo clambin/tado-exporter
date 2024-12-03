@@ -66,10 +66,10 @@ func getHomeState(l *lua.State, index int) (homeState, error) {
 	obj := luart.TableToMap(l, l.AbsIndex(index))
 	var s homeState
 	var err error
-	if s.overlay, err = getAttribute[bool](obj, "Overlay"); err != nil {
+	if s.overlay, err = getTableAttribute[bool](obj, "Overlay"); err != nil {
 		return homeState{}, &errLuaInvalidResponse{fmt.Errorf("homeState.Overlay: %w", err)}
 	}
-	if s.home, err = getAttribute[bool](obj, "Home"); err != nil {
+	if s.home, err = getTableAttribute[bool](obj, "Home"); err != nil {
 		return homeState{}, &errLuaInvalidResponse{err: fmt.Errorf("homeState.Home: %w", err)}
 	}
 	return s, nil
@@ -91,10 +91,10 @@ func getZoneState(l *lua.State, index int) (zoneState, error) {
 	obj := luart.TableToMap(l, l.AbsIndex(index))
 	var s zoneState
 	var err error
-	if s.overlay, err = getAttribute[bool](obj, "Overlay"); err != nil {
+	if s.overlay, err = getTableAttribute[bool](obj, "Overlay"); err != nil {
 		return zoneState{}, &errLuaInvalidResponse{fmt.Errorf("zoneState.Overlay: %w", err)}
 	}
-	if s.heating, err = getAttribute[bool](obj, "Heating"); err != nil {
+	if s.heating, err = getTableAttribute[bool](obj, "Heating"); err != nil {
 		return zoneState{}, &errLuaInvalidResponse{fmt.Errorf("zoneState.Heating: %w", err)}
 	}
 	return s, nil
@@ -117,7 +117,7 @@ func pushDevices(l *lua.State, u poller.Update, users set.Set[string]) {
 	}
 }
 
-func getAttribute[T any](obj map[string]any, name string) (T, error) {
+func getTableAttribute[T any](obj map[string]any, name string) (T, error) {
 	var v T
 	attrib, ok := obj[name]
 	if !ok {

@@ -15,19 +15,19 @@ import (
 	"time"
 )
 
-func loadZoneRules(zoneName string, config []RuleConfiguration) ([]evaluator, error) {
-	rules := make([]evaluator, len(config))
+func loadZoneRules(zoneName string, config []RuleConfiguration) (rules, error) {
+	r := make(rules, len(config))
 	for i, cfg := range config {
 		var err error
-		rules[i], err = loadZoneRule(zoneName, cfg)
+		r[i], err = loadZoneRule(zoneName, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load zone rule %q: %w", cfg.Name, err)
 		}
 	}
-	return rules, nil
+	return r, nil
 }
 
-func loadZoneRule(zoneName string, config RuleConfiguration) (evaluator, error) {
+func loadZoneRule(zoneName string, config RuleConfiguration) (rule, error) {
 	r, err := loadLuaScript(config.Script, zonerules.FS)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load zone rule: %w", err)
@@ -53,7 +53,7 @@ func getZoneStateFromUpdate(zoneName string) func(poller.Update) (state, error) 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var _ evaluator = zoneRule{}
+var _ rule = zoneRule{}
 
 type zoneRule struct {
 	luaScript

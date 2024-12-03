@@ -4,12 +4,16 @@ import (
 	"github.com/Shopify/go-lua"
 	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/controller/luart"
+	"github.com/clambin/tado-exporter/internal/controller/zonerules"
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/poller/testutils"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -58,6 +62,54 @@ func Test_lua_homeState(t *testing.T) {
 			s, err := getHomeState(l, -1)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, s)
+		})
+	}
+}
+
+func Test_lua_getHomeState_errors(t *testing.T) {
+	tests := []struct {
+		name   string
+		object map[string]any
+		want   string
+	}{
+		{
+			name: "nothing returned",
+			want: "invalid lua response: no table found at index -1",
+		},
+		{
+			name: "missing overlay",
+			object: map[string]any{
+				"Home": true,
+			},
+			want: "invalid lua response: homeState.Overlay: not found",
+		},
+		{
+			name: "missing heating",
+			object: map[string]any{
+				"Overlay": true,
+			},
+			want: "invalid lua response: homeState.Home: not found",
+		},
+		{
+			name: "invalid type",
+			object: map[string]any{
+				"Overlay": true,
+				"Home":    "true",
+			},
+			want: "invalid lua response: homeState.Home: invalid type: string",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := lua.NewState()
+			if tt.object != nil {
+				luart.PushMap(l, tt.object)
+			}
+			_, err := getHomeState(l, -1)
+			require.Error(t, err)
+			assert.Equal(t, tt.want, err.Error())
+			t.Log(err)
 		})
 	}
 }
@@ -118,7 +170,54 @@ func Test_lua_zoneState(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
 
+func Test_lua_getZoneState_errors(t *testing.T) {
+	tests := []struct {
+		name   string
+		object map[string]any
+		want   string
+	}{
+		{
+			name: "nothing returned",
+			want: "invalid lua response: no table found at index -1",
+		},
+		{
+			name: "missing overlay",
+			object: map[string]any{
+				"Heating": true,
+			},
+			want: "invalid lua response: zoneState.Overlay: not found",
+		},
+		{
+			name: "missing heating",
+			object: map[string]any{
+				"Overlay": true,
+			},
+			want: "invalid lua response: zoneState.Heating: not found",
+		},
+		{
+			name: "invalid type",
+			object: map[string]any{
+				"Overlay": true,
+				"Heating": "true",
+			},
+			want: "invalid lua response: zoneState.Heating: invalid type: string",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := lua.NewState()
+			if tt.object != nil {
+				luart.PushMap(l, tt.object)
+			}
+			_, err := getZoneState(l, -1)
+			require.Error(t, err)
+			assert.Equal(t, tt.want, err.Error())
+			t.Log(err)
+		})
+	}
 }
 
 func Test_lua_devices(t *testing.T) {
@@ -155,4 +254,26 @@ func Test_lua_devices(t *testing.T) {
 			assert.Len(t, got, len(tt.want))
 		})
 	}
+}
+
+func Test_loadLuaScript(t *testing.T) {
+	const script = `hello world`
+	r, err := loadLuaScript(ScriptConfig{Text: script}, zonerules.FS)
+	require.NoError(t, err)
+	body, err := io.ReadAll(r)
+	t.Cleanup(func() { _ = r.Close() })
+	require.NoError(t, err)
+	assert.Equal(t, script, string(body))
+
+	tmpDir := t.TempDir()
+	sp := filepath.Join(tmpDir, "tado.lua")
+	err = os.WriteFile(sp, []byte(script), 0644)
+	require.NoError(t, err)
+
+	r, err = loadLuaScript(ScriptConfig{Path: sp}, zonerules.FS)
+	require.NoError(t, err)
+	body, err = io.ReadAll(r)
+	t.Cleanup(func() { _ = r.Close() })
+	require.NoError(t, err)
+	assert.Equal(t, script, string(body))
 }

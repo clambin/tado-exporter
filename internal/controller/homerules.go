@@ -14,19 +14,19 @@ import (
 	"time"
 )
 
-func loadHomeRules(config []RuleConfiguration) ([]evaluator, error) {
-	rules := make([]evaluator, len(config))
+func loadHomeRules(config []RuleConfiguration) (rules, error) {
+	r := make(rules, len(config))
 	for i, cfg := range config {
 		var err error
-		rules[i], err = loadHomeRule(cfg)
+		r[i], err = loadHomeRule(cfg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load home rule: %w", err)
 		}
 	}
-	return rules, nil
+	return r, nil
 }
 
-func loadHomeRule(config RuleConfiguration) (evaluator, error) {
+func loadHomeRule(config RuleConfiguration) (rule, error) {
 	r, err := loadLuaScript(config.Script, homerules.FS)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load home rule: %w", err)
@@ -45,7 +45,7 @@ func getHomeStateFromUpdate(u poller.Update) (state, error) {
 
 // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var _ evaluator = homeRule{}
+var _ rule = homeRule{}
 
 type homeRule struct {
 	luaScript

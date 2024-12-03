@@ -32,7 +32,7 @@ func TestGroupEvaluator_ScheduleAndCancel(t *testing.T) {
 	errCh := make(chan error)
 	go func() { errCh <- e.Run(ctx) }()
 
-	// wait for the group evaluator to subscribe to the publishes
+	// wait for the group rule to subscribe to the publishes
 	assert.Eventually(t, func() bool { return p.subscribed.Load() }, time.Second, time.Millisecond)
 
 	// zone is in overlay
@@ -86,7 +86,7 @@ func TestGroupEvaluator_Do(t *testing.T) {
 	errCh := make(chan error)
 	go func() { errCh <- e.Run(ctx) }()
 
-	// wait for the group evaluator to subscribe to the publishes
+	// wait for the group rule to subscribe to the publishes
 	assert.Eventually(t, func() bool { return p.subscribed.Load() }, time.Second, time.Millisecond)
 
 	// zone is off but user is home: remove overlay immediately
@@ -117,7 +117,7 @@ func TestGroupEvaluator(t *testing.T) {
 	errCh := make(chan error)
 	go func() { errCh <- e.Run(ctx) }()
 
-	// wait for the group evaluator to subscribe to the publishes
+	// wait for the group rule to subscribe to the publishes
 	assert.Eventually(t, func() bool { return p.subscribed.Load() }, time.Second, time.Millisecond)
 
 	// all users away -> schedule moving home to AWAY mode
@@ -126,7 +126,7 @@ func TestGroupEvaluator(t *testing.T) {
 		testutils.WithMobileDevice(100, "user A", testutils.WithLocation(false, false)),
 	)
 
-	// wait for group evaluator to process the update. should result in scheduled job
+	// wait for group rule to process the update. should result in scheduled job
 	require.Eventually(t, func() bool { return e.ReportTask() != "" }, time.Second, time.Millisecond)
 	assert.Equal(t, "setting home to AWAY mode in 5m0s\nReason: all users are away: user A", e.ReportTask())
 
@@ -280,8 +280,7 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 			require.NoError(t, err)
 			e := newGroupEvaluator(zr, getZoneStateFromUpdate("zone"), nil, nil, nil, discardLogger)
 
-			a, change, err := e.evaluate(tt.update)
-			require.NoError(t, err)
+			a, change := e.processUpdate(tt.update)
 			tt.isChange(t, change)
 			assert.Equal(t, tt.want, a)
 		})
