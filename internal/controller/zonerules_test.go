@@ -308,27 +308,24 @@ func TestZoneAction_Evaluate_NightTime(t *testing.T) {
 				zoneName: "zone",
 			},
 		},
-		/*
-			{
-				// TODO: fix bug in IsInRange where it doesn't detect that a timestamp after midnight is still in range
-				name: "zone in manual mode, during range, after midnight -> immediately move to auto mode",
-				update: testutils.Update(
-					testutils.WithZone(10, "zone", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
-				),
-				now: time.Date(2024, time.December, 4, 1, 0, 0, 0, time.Local),
-				err: assert.NoError,
-				want: &zoneAction{
-					coreAction: coreAction{
-						state:  zoneState{overlay: false, heating: true},
-						reason: "manual setting detected",
-						delay:  0,
-					},
-					homeId:   1,
-					zoneId:   10,
-					zoneName: "zone",
+		{
+			name: "zone in manual mode, during range, after midnight -> immediately move to auto mode",
+			update: testutils.Update(
+				testutils.WithZone(10, "zone", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+			),
+			now: time.Date(2024, time.December, 4, 1, 0, 0, 0, time.Local),
+			err: assert.NoError,
+			want: &zoneAction{
+				coreAction: coreAction{
+					state:  zoneState{overlay: false, heating: true},
+					reason: "manual setting detected",
+					delay:  0,
 				},
+				homeId:   1,
+				zoneId:   10,
+				zoneName: "zone",
 			},
-		*/
+		},
 	}
 
 	for _, tt := range tests {

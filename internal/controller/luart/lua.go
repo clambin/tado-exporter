@@ -24,20 +24,28 @@ func Register(l *lua.State, now func() time.Time) {
 
 func isInRangeWithNow(now func() time.Time) lua.Function {
 	return func(l *lua.State) int {
-		startHour, _ := l.ToNumber(-4)
-		startMinute, _ := l.ToNumber(-3)
-		endHour, _ := l.ToNumber(-2)
-		endMinute, _ := l.ToNumber(-1)
+		startHour, _ := l.ToInteger(-4)
+		startMinute, _ := l.ToInteger(-3)
+		endHour, _ := l.ToInteger(-2)
+		endMinute, _ := l.ToInteger(-1)
 
-		currentTime := now().Local()
-		yyyy, mon, dd := currentTime.Date()
-		start := time.Date(yyyy, mon, dd, int(startHour), int(startMinute), 0, 0, time.Local)
-		end := time.Date(yyyy, mon, dd, int(endHour), int(endMinute), 0, 0, time.Local)
-		if end.Before(start) {
-			end = end.Add(24 * time.Hour)
+		// Get the time's hour and minute
+		current := now().Local()
+		hour, minute := current.Hour(), current.Minute()
+
+		// Convert hours and minutes to "minutes since midnight" for easy comparison
+		currentMinutes := hour*60 + minute
+		startMinutes := startHour*60 + startMinute
+		endMinutes := endHour*60 + endMinute
+
+		var inRange bool
+		if startMinutes <= endMinutes {
+			// Range does not cross midnight
+			inRange = currentMinutes >= startMinutes && currentMinutes <= endMinutes
+		} else {
+			// Range crosses midnight
+			inRange = currentMinutes >= startMinutes || currentMinutes <= endMinutes
 		}
-
-		inRange := !(currentTime.Before(start) || currentTime.After(end))
 		l.PushBoolean(inRange)
 		return 1
 	}

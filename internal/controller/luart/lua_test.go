@@ -22,24 +22,6 @@ func TestInRange(t *testing.T) {
 		want assert.BoolAssertionFunc
 	}{
 		{
-			name: "in range",
-			args: args{
-				startHour: 22, startMin: 30,
-				endHour: 23, endMin: 30,
-				currentTime: time.Date(2024, time.November, 26, 23, 0, 0, 0, time.Local),
-			},
-			want: assert.True,
-		},
-		{
-			name: "in range with overlap",
-			args: args{
-				startHour: 22, startMin: 30,
-				endHour: 01, endMin: 30,
-				currentTime: time.Date(2024, time.November, 26, 23, 0, 0, 0, time.Local),
-			},
-			want: assert.True,
-		},
-		{
 			name: "not in range - before",
 			args: args{
 				startHour: 22, startMin: 30,
@@ -49,13 +31,40 @@ func TestInRange(t *testing.T) {
 			want: assert.False,
 		},
 		{
+			name: "in range",
+			args: args{
+				startHour: 22, startMin: 30,
+				endHour: 23, endMin: 30,
+				currentTime: time.Date(2024, time.November, 26, 23, 0, 0, 0, time.Local),
+			},
+			want: assert.True,
+		},
+		{
 			name: "not in range - after",
 			args: args{
 				startHour: 22, startMin: 30,
-				endHour: 01, endMin: 30,
-				currentTime: time.Date(2024, time.November, 26, 2, 0, 0, 0, time.Local),
+				endHour: 23, endMin: 30,
+				currentTime: time.Date(2024, time.November, 26, 23, 45, 0, 0, time.Local),
 			},
 			want: assert.False,
+		},
+		{
+			name: "multi day, in range, before midnight",
+			args: args{
+				startHour: 23, startMin: 00,
+				endHour: 06, endMin: 00,
+				currentTime: time.Date(2024, time.November, 26, 23, 30, 0, 0, time.Local),
+			},
+			want: assert.True,
+		},
+		{
+			name: "multi day, in range, after midnight",
+			args: args{
+				startHour: 23, startMin: 00,
+				endHour: 06, endMin: 00,
+				currentTime: time.Date(2024, time.November, 26, 1, 00, 0, 0, time.Local),
+			},
+			want: assert.True,
 		},
 	}
 
