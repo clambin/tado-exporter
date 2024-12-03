@@ -34,7 +34,7 @@ func TestTableToMap(t *testing.T) {
 	const returnValues = 3
 	l, err := Compile(t.Name(), strings.NewReader(`
 function foo()
-	return true, { Name = "foo", Age = 24, Address = { City = "Huldenberg" } }, true
+	return true, { Name = "foo", Age = 24, Address = { City = "Huldenberg" }, Home = true }, true
 end
 `))
 	require.NoError(t, err)
@@ -56,6 +56,7 @@ end
 			"Address": map[string]any{
 				"City": "Huldenberg",
 			},
+			"Home": true,
 		},
 		true,
 	}, values)

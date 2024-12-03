@@ -82,8 +82,8 @@ func TableToSlice(l *lua.State, index int) []any {
 		case l.IsString(-1): // String value
 			v, _ := l.ToString(-1)
 			values = append(values, v)
-		case l.IsTable(-1):
-			values = append(values, TableToSlice(l, l.AbsIndex(-1)))
+		//case l.IsTable(-1):
+		//	values = append(values, TableToSlice(l, l.AbsIndex(-1)))
 		default:
 			v := l.ToValue(-1)
 			values = append(values, v)

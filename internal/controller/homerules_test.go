@@ -1,11 +1,16 @@
 package controller
 
 import (
+	"context"
+	"fmt"
+	"github.com/clambin/tado-exporter/internal/controller/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/poller/testutils"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -170,4 +175,56 @@ func TestHomeRule_Evaluate_AutoAway(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func TestHomeAction_Do(t *testing.T) {
+	tadoClient := mocks.NewTadoClient(t)
+	ctx := context.Background()
+
+	a := homeAction{coreAction{homeState{true, true}, "test", 15 * time.Minute}, 1}
+	tadoClient.EXPECT().
+		SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.AnythingOfType("tado.PresenceLock")).
+		RunAndReturn(func(_ context.Context, _ int64, lock tado.PresenceLock, _ ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
+			if lock.HomePresence == nil {
+				return nil, fmt.Errorf("missing home presence")
+			}
+			if *lock.HomePresence != tado.HOME {
+				return nil, fmt.Errorf("wrong home presence: wanted %v, got %v", tado.HOME, *lock.HomePresence)
+			}
+			return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil
+		}).
+		Once()
+	assert.NoError(t, a.Do(ctx, tadoClient, discardLogger))
+
+	a = homeAction{coreAction{homeState{true, false}, "test", 15 * time.Minute}, 1}
+	tadoClient.EXPECT().
+		SetPresenceLockWithResponse(ctx, tado.HomeId(1), mock.AnythingOfType("tado.PresenceLock")).
+		RunAndReturn(func(_ context.Context, _ int64, lock tado.PresenceLock, _ ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error) {
+			if lock.HomePresence == nil {
+				return nil, fmt.Errorf("missing home presence")
+			}
+			if *lock.HomePresence != tado.AWAY {
+				return nil, fmt.Errorf("wrong home presence: got %v, wanted %v", *lock.HomePresence, tado.AWAY)
+			}
+			return &tado.SetPresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil
+		}).
+		Once()
+	assert.NoError(t, a.Do(ctx, tadoClient, discardLogger))
+
+	a = homeAction{coreAction{homeState{false, true}, "test", 15 * time.Minute}, 1}
+	tadoClient.EXPECT().
+		DeletePresenceLockWithResponse(ctx, tado.HomeId(1)).
+		Return(&tado.DeletePresenceLockResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
+		Once()
+	assert.NoError(t, a.Do(ctx, tadoClient, discardLogger))
+}
+
+func TestHomeAction_LogValue(t *testing.T) {
+	h := homeAction{
+		coreAction: coreAction{zoneState{true, true}, "foo", 5 * time.Minute},
+		homeId:     1,
+	}
+	assert.Equal(t, `[action=[state=[overlay=true heating=true] delay=5m0s reason=foo]]`, h.LogValue().String())
 }

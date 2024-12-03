@@ -1,13 +1,17 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/controller/luart"
 	"github.com/clambin/tado-exporter/internal/controller/zonerules"
+	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
 	"io"
+	"log/slog"
+	"net/http"
 	"time"
 )
 
@@ -114,3 +118,57 @@ func (r zoneRule) Evaluate(u poller.Update) (action, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var _ action = &zoneAction{}
+
+type zoneAction struct {
+	coreAction
+	zoneName string
+	homeId   tado.HomeId
+	zoneId   tado.ZoneId
+}
+
+var powerMode = map[bool]tado.Power{
+	true:  tado.PowerON,
+	false: tado.PowerOFF,
+}
+
+func (z *zoneAction) Do(ctx context.Context, client TadoClient, l *slog.Logger) error {
+	if !z.State().Overlay() {
+		l.Debug("removing overlay")
+		resp, err := client.DeleteZoneOverlayWithResponse(ctx, z.homeId, z.zoneId)
+		if err == nil && resp.StatusCode() != http.StatusNoContent {
+			err = fmt.Errorf("unexpected status code %d", resp.StatusCode())
+		}
+		return err
+	} else {
+		mode := powerMode[z.State().Mode()]
+		l.Debug("setting overlay", "mode", string(mode))
+		resp, err := client.SetZoneOverlayWithResponse(ctx, z.homeId, z.zoneId, tado.SetZoneOverlayJSONRequestBody{
+			Setting: &tado.ZoneSetting{Type: oapi.VarP(tado.HEATING), Power: &mode},
+			Termination: &tado.ZoneOverlayTermination{
+				Type: oapi.VarP(tado.ZoneOverlayTerminationTypeMANUAL),
+			},
+			Type: nil,
+		})
+		if err == nil && resp.StatusCode() != http.StatusOK {
+			err = fmt.Errorf("unexpected status code %d", resp.StatusCode())
+		}
+		return err
+	}
+}
+
+func (z *zoneAction) Description(includeDelay bool) string {
+	return "*" + z.zoneName + "*: switching heating " + z.coreAction.Description(includeDelay)
+}
+
+func (z *zoneAction) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("zone", z.zoneName),
+		slog.Any("action", z.coreAction.LogValue()),
+	)
+}
+
+func (h *zoneAction) State() state {
+	return h.coreAction.state
+}

@@ -1,12 +1,16 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/controller/homerules"
 	"github.com/clambin/tado-exporter/internal/controller/luart"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado/v2"
 	"io"
+	"log/slog"
+	"net/http"
 	"time"
 )
 
@@ -91,4 +95,57 @@ func (r homeRule) Evaluate(u poller.Update) (action, error) {
 		},
 		homeId: *u.HomeBase.Id,
 	}, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var _ action = &homeAction{}
+
+type homeAction struct {
+	coreAction
+	homeId tado.HomeId
+}
+
+var homePresences = map[bool]tado.HomePresence{
+	false: tado.AWAY,
+	true:  tado.HOME,
+}
+
+func (h *homeAction) Do(ctx context.Context, client TadoClient, l *slog.Logger) error {
+	if !h.Overlay() {
+		l.Debug("removing presenceLock")
+		resp, err := client.DeletePresenceLockWithResponse(ctx, h.homeId)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode() != http.StatusNoContent {
+			return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+		}
+		return nil
+	} else {
+		homePresence := homePresences[h.Mode()]
+		l.Debug("setting presenceLock", "lock", string(homePresence))
+		resp, err := client.SetPresenceLockWithResponse(ctx, h.homeId, tado.SetPresenceLockJSONRequestBody{HomePresence: &homePresence})
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode() != http.StatusNoContent {
+			return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+		}
+		return nil
+	}
+}
+
+func (h *homeAction) Description(includeDelay bool) string {
+	return "setting home to " + h.coreAction.Description(includeDelay)
+}
+
+func (h *homeAction) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Any("action", h.coreAction.LogValue()),
+	)
+}
+
+func (h *homeAction) State() state {
+	return h.coreAction.state
 }
