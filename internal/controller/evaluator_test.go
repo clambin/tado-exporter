@@ -223,8 +223,6 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 			},
 		},
 		{
-			// TODO: this only works because autoAway fires after 15 min and limitOverlay after 1h,
-			// so the "right" action is chosen.
 			name:  "user is not home, heating is off: no action",
 			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
 			update: testutils.Update(
@@ -232,12 +230,12 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				testutils.WithZone(10, "zone", tado.PowerOFF, 21, 21, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(false, false)),
 			),
-			isChange: assert.True,
+			isChange: assert.False,
 			want: &zoneAction{
 				coreAction: coreAction{
 					state:  zoneState{true, false},
-					delay:  15 * time.Minute,
-					reason: "all users are away",
+					delay:  0,
+					reason: "all users are away, heating is off",
 				},
 				zoneName: "zone",
 				homeId:   1,
