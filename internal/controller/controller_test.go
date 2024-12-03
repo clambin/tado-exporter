@@ -83,13 +83,3 @@ func TestController_Run(t *testing.T) {
 	cancel()
 	assert.NoError(t, <-errCh)
 }
-
-var _ Notifier = fakeNotifier{}
-
-type fakeNotifier struct {
-	ch chan string
-}
-
-func (f fakeNotifier) Notify(s string) {
-	f.ch <- s
-}

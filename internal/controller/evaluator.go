@@ -119,7 +119,6 @@ func (g *groupEvaluator) evaluate(update poller.Update) (action, bool, error) {
 		slices.SortFunc(change, func(a, b action) int {
 			return cmp.Compare(a.Delay(), b.Delay())
 		})
-		g.logger.Debug("rules requested a change", "current", current, "change", change[0])
 		return change[0], true, nil
 	}
 	reasons := set.New[string]()
@@ -195,7 +194,7 @@ func (g *groupEvaluator) cancelJob(a action) {
 	if j := g.scheduledJob.Load(); j != nil {
 		j.Cancel()
 		if g.Notifier != nil {
-			g.Notifier.Notify(j.Description(true) + " canceled\nReason: " + a.Reason())
+			g.Notifier.Notify(j.Description(false) + " canceled\nReason: " + a.Reason())
 		}
 	}
 }

@@ -15,6 +15,97 @@ import (
 	"time"
 )
 
+func TestGroupEvaluator_ScheduleAndCancel(t *testing.T) {
+	rules, err := loadZoneRules(
+		"zone",
+		[]RuleConfiguration{
+			{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay.lua"}},
+		},
+	)
+	require.NoError(t, err)
+
+	var p fakePublisher
+	n := fakeNotifier{ch: make(chan string)}
+	e := newGroupEvaluator(rules, getZoneStateFromUpdate("zone"), &p, nil, &n, discardLogger)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error)
+	go func() { errCh <- e.Run(ctx) }()
+
+	// wait for the group evaluator to subscribe to the publishes
+	assert.Eventually(t, func() bool { return p.subscribed.Load() }, time.Second, time.Millisecond)
+
+	// zone is in overlay
+	go func() {
+		p.ch <- testutils.Update(
+			testutils.WithHome(1, "my home", tado.HOME),
+			testutils.WithZone(10, "zone", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+		)
+	}()
+
+	const want = "*zone*: switching heating to auto mode in 1h0m0s\nReason: manual setting detected"
+	assert.Equal(t, want, <-n.ch)
+	assert.Equal(t, want, e.ReportTask())
+
+	go func() {
+		// same update: don't schedule a new job
+		p.ch <- testutils.Update(
+			testutils.WithHome(1, "my home", tado.HOME),
+			testutils.WithZone(10, "zone", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+		)
+		// zone is back in auto mode
+		p.ch <- testutils.Update(
+			testutils.WithHome(1, "my home", tado.HOME),
+			testutils.WithZone(10, "zone", tado.PowerON, 21, 20),
+		)
+	}()
+	assert.Equal(t, "*zone*: switching heating to auto mode canceled\nReason: no manual setting detected", <-n.ch)
+	assert.Eventually(t, func() bool { return e.ReportTask() == "" }, time.Second, time.Millisecond)
+
+	cancel()
+	assert.NoError(t, <-errCh)
+}
+
+func TestGroupEvaluator_Do(t *testing.T) {
+	rules, err := loadZoneRules(
+		"zone",
+		[]RuleConfiguration{
+			{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway.lua"}},
+		},
+	)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var p fakePublisher
+	tadoClient := mocks.NewTadoClient(t)
+	tadoClient.EXPECT().
+		DeleteZoneOverlayWithResponse(ctx, tado.HomeId(1), tado.ZoneId(10)).
+		Return(&tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
+		Once()
+	n := fakeNotifier{ch: make(chan string)}
+	e := newGroupEvaluator(rules, getZoneStateFromUpdate("zone"), &p, tadoClient, &n, discardLogger)
+
+	errCh := make(chan error)
+	go func() { errCh <- e.Run(ctx) }()
+
+	// wait for the group evaluator to subscribe to the publishes
+	assert.Eventually(t, func() bool { return p.subscribed.Load() }, time.Second, time.Millisecond)
+
+	// zone is off but user is home: remove overlay immediately
+	go func() {
+		p.ch <- testutils.Update(
+			testutils.WithHome(1, "my home", tado.HOME),
+			testutils.WithZone(10, "zone", tado.PowerOFF, 0, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+			testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, false)),
+		)
+	}()
+	assert.Equal(t, "*zone*: switching heating to auto mode\nReason: one or more users are home: user", <-n.ch)
+
+	cancel()
+	assert.NoError(t, <-errCh)
+}
+
 func TestGroupEvaluator(t *testing.T) {
 	rules, err := loadHomeRules([]RuleConfiguration{
 		{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
@@ -249,6 +340,20 @@ func Test_shouldSchedule(t *testing.T) {
 		})
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var _ Notifier = &fakeNotifier{}
+
+type fakeNotifier struct {
+	ch chan string
+}
+
+func (f fakeNotifier) Notify(s string) {
+	f.ch <- s
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var _ scheduledJob = fakeScheduledJob{}
 
