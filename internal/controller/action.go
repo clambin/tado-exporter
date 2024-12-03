@@ -97,8 +97,7 @@ func (z *zoneAction) Do(ctx context.Context, client TadoClient, l *slog.Logger) 
 		resp, err := client.SetZoneOverlayWithResponse(ctx, z.homeId, z.zoneId, tado.SetZoneOverlayJSONRequestBody{
 			Setting: &tado.ZoneSetting{Type: oapi.VarP(tado.HEATING), Power: &mode},
 			Termination: &tado.ZoneOverlayTermination{
-				//Type:              oapi.VarP(tado.ZoneOverlayTerminationTypeTIMER),
-				TypeSkillBasedApp: oapi.VarP(tado.ZoneOverlayTerminationTypeSkillBasedAppNEXTTIMEBLOCK),
+				Type: oapi.VarP(tado.ZoneOverlayTerminationTypeMANUAL),
 			},
 			Type: nil,
 		})

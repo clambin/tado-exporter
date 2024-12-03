@@ -85,7 +85,7 @@ func TestZoneAction_Do(t *testing.T) {
 						if *overlay.Setting.Type != tado.HEATING || *overlay.Setting.Power != tado.PowerOFF {
 							return nil, fmt.Errorf("wrong settings")
 						}
-						if *overlay.Termination.TypeSkillBasedApp != tado.ZoneOverlayTerminationTypeSkillBasedAppNEXTTIMEBLOCK {
+						if *overlay.Termination.Type != tado.ZoneOverlayTerminationTypeMANUAL {
 							return nil, fmt.Errorf("wrong termination type")
 						}
 						return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK}}, nil
@@ -106,7 +106,7 @@ func TestZoneAction_Do(t *testing.T) {
 						if *overlay.Setting.Type != tado.HEATING || *overlay.Setting.Power != tado.PowerON {
 							return nil, fmt.Errorf("wrong settings")
 						}
-						if *overlay.Termination.TypeSkillBasedApp != tado.ZoneOverlayTerminationTypeSkillBasedAppNEXTTIMEBLOCK {
+						if *overlay.Termination.Type != tado.ZoneOverlayTerminationTypeMANUAL {
 							return nil, fmt.Errorf("wrong termination type")
 						}
 						return &tado.SetZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK}}, nil

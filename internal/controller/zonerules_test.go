@@ -95,7 +95,73 @@ end
 	}
 }
 
-func TestZoneRule_LimitOverlay(t *testing.T) {}
+func TestZoneRule_LimitOverlay(t *testing.T) {
+	tests := []struct {
+		name   string
+		update poller.Update
+		err    assert.ErrorAssertionFunc
+		want   action
+	}{
+		{
+			name: "zone auto -> no action",
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithZone(10, "zone", tado.PowerON, 21, 20),
+			),
+			err: assert.NoError,
+			want: &zoneAction{
+				coreAction: coreAction{state: zoneState{overlay: false, heating: true}, reason: "no manual setting detected", delay: 0},
+				homeId:     1,
+				zoneId:     10,
+				zoneName:   "zone",
+			},
+		},
+		{
+			name: "zone manual -> delete overlay",
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithZone(10, "zone", tado.PowerON, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+			),
+			err: assert.NoError,
+			want: &zoneAction{
+				coreAction: coreAction{state: zoneState{overlay: false, heating: true}, reason: "manual setting detected", delay: time.Hour},
+				homeId:     1,
+				zoneId:     10,
+				zoneName:   "zone",
+			},
+		},
+		{
+			name: "zone off -> no action",
+			update: testutils.Update(
+				testutils.WithHome(1, "my home", tado.HOME),
+				testutils.WithZone(10, "zone", tado.PowerOFF, 21, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+			),
+			err: assert.NoError,
+			want: &zoneAction{
+				coreAction: coreAction{state: zoneState{overlay: true, heating: false}, reason: "heating is off", delay: 0},
+				homeId:     1,
+				zoneId:     10,
+				zoneName:   "zone",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r, err := loadZoneRule(
+				"zone",
+				RuleConfiguration{Script: ScriptConfig{Packaged: "limitoverlay.lua"}},
+			)
+			require.NoError(t, err)
+
+			a, err := r.Evaluate(tt.update)
+			tt.err(t, err)
+			if err == nil {
+				assert.Equal(t, tt.want, a)
+			}
+		})
+	}
+}
 
 func TestZoneRule_AutoAway(t *testing.T) {
 	tests := []struct {
@@ -174,10 +240,8 @@ func TestZoneRule_AutoAway(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r, err := loadZoneRule(
 				"zone",
-				RuleConfiguration{
-					Script: ScriptConfig{Packaged: "autoaway.lua"},
-					Users:  []string{"user A"},
-				})
+				RuleConfiguration{Script: ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"user A"}},
+			)
 			require.NoError(t, err)
 
 			a, err := r.Evaluate(tt.update)
