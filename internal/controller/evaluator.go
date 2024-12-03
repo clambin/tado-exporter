@@ -57,55 +57,55 @@ func newGroupEvaluator(
 }
 
 // Run registers with a Poller and evaluates an incoming update against its rules.
-func (c *groupEvaluator) Run(ctx context.Context) error {
-	ch := c.Publisher.Subscribe()
-	defer c.Publisher.Unsubscribe(ch)
+func (g *groupEvaluator) Run(ctx context.Context) error {
+	ch := g.Publisher.Subscribe()
+	defer g.Publisher.Unsubscribe(ch)
 
-	c.logger.Debug("group controller starting")
-	defer c.logger.Debug("group controller stopping")
+	g.logger.Debug("group controller starting")
+	defer g.logger.Debug("group controller stopping")
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case u := <-ch:
-			if a, ok := c.processUpdate(u); ok {
-				c.scheduleJob(ctx, a)
+			if a, ok := g.processUpdate(u); ok {
+				g.scheduleJob(ctx, a)
 			} else {
-				c.cancelJob(a)
+				g.cancelJob(a)
 			}
-		case <-c.jobCompleted:
-			c.processCompletedJob()
+		case <-g.jobCompleted:
+			g.processCompletedJob()
 		}
 	}
 }
 
 // processUpdate processes the update, evaluating its rules. If the outcome differs from the current state
 // (as determined by the update), it returns the action and true. Otherwise, it returns false.
-func (c *groupEvaluator) processUpdate(update poller.Update) (action, bool) {
-	a, change, err := c.evaluate(update)
+func (g *groupEvaluator) processUpdate(update poller.Update) (action, bool) {
+	a, change, err := g.evaluate(update)
 	if err != nil {
-		c.logger.Error("failed to evaluate zone rules", "err", err)
+		g.logger.Error("failed to evaluate zone rules", "err", err)
 		return nil, false
 	}
 	return a, change
 }
 
-func (c *groupEvaluator) evaluate(update poller.Update) (action, bool, error) {
-	if len(c.rules) == 0 {
+func (g *groupEvaluator) evaluate(update poller.Update) (action, bool, error) {
+	if len(g.rules) == 0 {
 		return nil, false, errors.New("no rules found")
 	}
 
-	current, err := c.getState(update)
+	current, err := g.getState(update)
 	if err != nil {
-		c.logger.Error("failed to parse update", "err", err)
+		g.logger.Error("failed to parse update", "err", err)
 		return nil, false, fmt.Errorf("failed to determine current state: %w", err)
 	}
 
-	noChange := make([]action, 0, len(c.rules))
-	change := make([]action, 0, len(c.rules))
-	for i := range c.rules {
-		a, err := c.rules[i].Evaluate(update)
+	noChange := make([]action, 0, len(g.rules))
+	change := make([]action, 0, len(g.rules))
+	for i := range g.rules {
+		a, err := g.rules[i].Evaluate(update)
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to evaluate rule %d: %w", i+1, err)
 		}
@@ -119,6 +119,7 @@ func (c *groupEvaluator) evaluate(update poller.Update) (action, bool, error) {
 		slices.SortFunc(change, func(a, b action) int {
 			return cmp.Compare(a.Delay(), b.Delay())
 		})
+		g.logger.Debug("rules requested a change", "current", current, "change", change[0])
 		return change[0], true, nil
 	}
 	reasons := set.New[string]()
@@ -131,34 +132,34 @@ func (c *groupEvaluator) evaluate(update poller.Update) (action, bool, error) {
 }
 
 // scheduleJob is called when processUpdate returns a new action. It executes (or schedules) the required action.
-func (c *groupEvaluator) scheduleJob(ctx context.Context, action action) {
+func (g *groupEvaluator) scheduleJob(ctx context.Context, action action) {
 	// if a job is scheduled with the same action, but an earlier scheduled time, don't schedule a new job
-	j := c.scheduledJob.Load()
+	j := g.scheduledJob.Load()
 	if j != nil {
 		if !shouldSchedule(j, action) {
 			return
 		}
 		// scheduling a new job. cancel any old one.
-		c.cancelJob(action)
+		g.cancelJob(action)
 	}
 
 	// immediate action
 	if action.Delay() == 0 {
-		_ = c.doAction(ctx, action)
+		_ = g.doAction(ctx, action)
 		return
 	}
 
 	// deferred action
 	j = &job{
-		TadoClient: c.TadoClient,
+		TadoClient: g.TadoClient,
 		action:     action,
 		Job: scheduler.Schedule(ctx, scheduler.RunFunc(func(ctx context.Context) error {
-			return c.doAction(ctx, action)
-		}), action.Delay(), c.jobCompleted),
+			return g.doAction(ctx, action)
+		}), action.Delay(), g.jobCompleted),
 	}
-	c.scheduledJob.Store(j)
-	if c.Notifier != nil {
-		c.Notifier.Notify(action.Description(true) + "\nReason: " + action.Reason())
+	g.scheduledJob.Store(j)
+	if g.Notifier != nil {
+		g.Notifier.Notify(action.Description(true) + "\nReason: " + action.Reason())
 	}
 }
 
@@ -178,41 +179,39 @@ func shouldSchedule(currentJob scheduledJob, newAction action) bool {
 
 // doAction executes the action and reports the result to the user through a Notifier.
 // This is called either directly from scheduleJob, or from the scheduler once the Delay has passed.
-func (c *groupEvaluator) doAction(ctx context.Context, action action) error {
-	if err := action.Do(ctx, c.TadoClient); err != nil {
-		c.logger.Error("failed to execute action", "action", action, "err", err)
+func (g *groupEvaluator) doAction(ctx context.Context, action action) error {
+	if err := action.Do(ctx, g.TadoClient); err != nil {
+		g.logger.Error("failed to execute action", "action", action, "err", err)
 		return err
 	}
-	if c.Notifier != nil {
-		c.Notifier.Notify(action.Description(false) + "\nReason: " + action.Reason())
+	if g.Notifier != nil {
+		g.Notifier.Notify(action.Description(false) + "\nReason: " + action.Reason())
 	}
 	return nil
 }
 
 // cancelJob cancels any scheduled job.
-func (c *groupEvaluator) cancelJob(a action) {
-	if j := c.scheduledJob.Load(); j != nil {
+func (g *groupEvaluator) cancelJob(a action) {
+	if j := g.scheduledJob.Load(); j != nil {
 		j.Cancel()
-		if c.Notifier != nil {
-			c.Notifier.Notify(j.Description(true) + " canceled\nReason: " + a.Reason())
+		if g.Notifier != nil {
+			g.Notifier.Notify(j.Description(true) + " canceled\nReason: " + a.Reason())
 		}
 	}
 }
 
 // processCompletedJob is notified by the scheduler once the job has completed and informs the user through a Notifier.
-func (c *groupEvaluator) processCompletedJob() {
-	if j := c.scheduledJob.Load(); j != nil {
-		defer c.scheduledJob.Store(nil)
-		_, err := j.Result()
-		if err != nil && !errors.Is(err, context.Canceled) {
-			c.logger.Error("scheduled job failed", "err", err)
-			return
+func (g *groupEvaluator) processCompletedJob() {
+	if j := g.scheduledJob.Load(); j != nil {
+		defer g.scheduledJob.Store(nil)
+		if _, err := j.Result(); err != nil && !errors.Is(err, context.Canceled) {
+			g.logger.Error("scheduled job failed", "err", err)
 		}
 	}
 }
 
-func (c *groupEvaluator) ReportTask() string {
-	if j := c.scheduledJob.Load(); j != nil {
+func (g *groupEvaluator) ReportTask() string {
+	if j := g.scheduledJob.Load(); j != nil {
 		return j.Description(false) + " in " + time.Until(j.Due()).Round(time.Second).String() + "\nReason: " + j.Reason()
 	}
 	return ""
