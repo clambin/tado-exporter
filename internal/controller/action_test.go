@@ -127,6 +127,24 @@ func TestZoneAction_Do(t *testing.T) {
 	}
 }
 
+func TestHomeAction_LogValue(t *testing.T) {
+	h := homeAction{
+		coreAction: coreAction{zoneState{true, true}, "foo", 5 * time.Minute},
+		homeId:     1,
+	}
+	assert.Equal(t, `[action=[state=[overlay=true heating=true] delay=5m0s reason=foo]]`, h.LogValue().String())
+}
+
+func TestZoneAction_LogValue(t *testing.T) {
+	z := zoneAction{
+		coreAction: coreAction{zoneState{true, true}, "foo", 5 * time.Minute},
+		zoneName:   "zone",
+		homeId:     1,
+		zoneId:     10,
+	}
+	assert.Equal(t, `[zone=zone action=[state=[overlay=true heating=true] delay=5m0s reason=foo]]`, z.LogValue().String())
+}
+
 func TestCoreAction(t *testing.T) {
 	type want struct {
 		description    string

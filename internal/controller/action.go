@@ -63,6 +63,12 @@ func (h *homeAction) Description(includeDelay bool) string {
 	return "setting home to " + h.coreAction.Description(includeDelay)
 }
 
+func (h *homeAction) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Any("action", h.coreAction.LogValue()),
+	)
+}
+
 func (h *homeAction) State() state {
 	return h.coreAction.state
 }
@@ -118,6 +124,7 @@ func (z *zoneAction) LogValue() slog.Value {
 		slog.Any("action", z.coreAction.LogValue()),
 	)
 }
+
 func (h *zoneAction) State() state {
 	return h.coreAction.state
 }

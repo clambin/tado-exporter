@@ -4,19 +4,16 @@ function Evaluate(_, state, devices, _)
         end
         local homeUsers = FilterDevices(devices, true)
         local wantHeating = #homeUsers > 0
-        if #homeUsers > 0 then
+        local reason = "all users are away: " .. ListDevices(devices)
+        local delay = 900
+        if wantHeating then
             reason = "one or more users are home: " .. ListDevices(homeUsers)
-        else
-            reason = "all users are away"
+            delay = 0
         end
         if state.Heating == wantHeating then
             return state, 0, reason
         end
-
-        if #homeUsers == 0 then
-            return { Overlay = true, Heating = false }, 900, reason
-        end
-        return { Overlay = false, Heating = true }, 0, reason
+        return { Overlay = not wantHeating, Heating = wantHeating }, delay, reason
 end
 
 function FilterDevices(devices, state)

@@ -215,7 +215,7 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				coreAction: coreAction{
 					state:  zoneState{true, false},
 					delay:  15 * time.Minute,
-					reason: "all users are away",
+					reason: "all users are away: user",
 				},
 				zoneName: "zone",
 				homeId:   1,
@@ -235,7 +235,7 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				coreAction: coreAction{
 					state:  zoneState{true, false},
 					delay:  0,
-					reason: "all users are away, heating is off",
+					reason: "all users are away: user, heating is off",
 				},
 				zoneName: "zone",
 				homeId:   1,

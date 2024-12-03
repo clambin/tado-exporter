@@ -107,7 +107,7 @@ func TestHomeRule_Evaluate_AutoAway(t *testing.T) {
 			want: &homeAction{
 				coreAction: coreAction{
 					state:  homeState{false, true},
-					reason: "no action needed",
+					reason: "one or more users are home: user A",
 					delay:  0,
 				},
 				homeId: 1,

@@ -198,7 +198,7 @@ func TestZoneRule_AutoAway(t *testing.T) {
 			),
 			err: assert.NoError,
 			want: &zoneAction{
-				coreAction: coreAction{state: zoneState{overlay: true, heating: false}, reason: "all users are away", delay: 15 * time.Minute},
+				coreAction: coreAction{state: zoneState{overlay: true, heating: false}, reason: "all users are away: user A", delay: 15 * time.Minute},
 				homeId:     1,
 				zoneId:     10,
 				zoneName:   "zone",
@@ -213,7 +213,7 @@ func TestZoneRule_AutoAway(t *testing.T) {
 			),
 			err: assert.NoError,
 			want: &zoneAction{
-				coreAction: coreAction{state: zoneState{overlay: true, heating: false}, reason: "all users are away", delay: 0},
+				coreAction: coreAction{state: zoneState{overlay: true, heating: false}, reason: "all users are away: user A", delay: 0},
 				homeId:     1,
 				zoneId:     10,
 				zoneName:   "zone",

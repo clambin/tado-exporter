@@ -2,20 +2,23 @@ function Evaluate(state, devices, _)
 	if #devices == 0 then
 	 	return state, 0, "no devices found"
 	end
-	local homeUsers = GetDevicesByState(devices, true)
+	local homeUsers = FilterDevices(devices, true)
 	local wantHomeState = #homeUsers > 0
-	if state.Home == wantHomeState then
-	    return state, 0, "no action needed"
+	local reason = "all users are away: " .. ListDevices(devices)
+	local delay = 300
+	if wantHomeState then
+	    reason = "one or more users are home: " .. ListDevices(homeUsers)
+	    delay = 0
 	end
-    if wantHomeState then
-        return { Overlay = true, Home = true }, 0, "one or more users are home: " .. ListDevices(homeUsers)
-    end
-    return { Overlay = true, Home = false }, 300, "all users are away: " .. ListDevices(devices)
+	if state.Home == wantHomeState then
+	    return state, 0, reason
+	end
+    return { Overlay = true, Home = wantHomeState }, delay, reason
 end
 
-function GetDevicesByState(list, state)
+function FilterDevices(devices, state)
     local result = {}
-    for _, obj in ipairs(list) do
+    for _, obj in ipairs(devices) do
         if obj.Home == state then
 			table.insert(result, obj)
         end
