@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - lua
+      - refactor
 
 jobs:
   test:

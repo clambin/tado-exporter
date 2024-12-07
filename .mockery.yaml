@@ -5,21 +5,21 @@ mockname: "{{.InterfaceName}}"
 outpkg: "mocks"
 issue-845-fix: true
 packages:
+  github.com/clambin/tado-exporter/cmd/monitor:
+    interfaces:
+      TadoClient:
   github.com/clambin/tado-exporter/internal/bot:
     interfaces:
       TadoClient:
       Controller:
       SocketModeHandler:
       SlackSender:
-  github.com/clambin/tado-exporter/internal/controller:
-    interfaces:
-      TadoClient:
-  github.com/clambin/tado-exporter/internal/cmd/monitor:
-    interfaces:
-      TadoClient:
   github.com/clambin/tado-exporter/internal/controller/notifier:
     interfaces:
       SlackSender:
   github.com/clambin/tado-exporter/internal/poller:
     interfaces:
       Poller:
+  github.com/clambin/tado-exporter/rules:
+    interfaces:
+      TadoClient:

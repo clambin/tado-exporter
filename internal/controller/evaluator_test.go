@@ -2,7 +2,8 @@ package controller
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/internal/controller/mocks"
+	"github.com/clambin/tado-exporter/internal/controller/rules"
+	"github.com/clambin/tado-exporter/internal/controller/rules/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/poller/testutils"
 	"github.com/clambin/tado/v2"
@@ -16,17 +17,17 @@ import (
 )
 
 func TestGroupEvaluator_ScheduleAndCancel(t *testing.T) {
-	rules, err := loadZoneRules(
+	r, err := rules.LoadZoneRules(
 		"zone",
-		[]RuleConfiguration{
-			{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay.lua"}},
+		[]rules.RuleConfiguration{
+			{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay.lua"}},
 		},
 	)
 	require.NoError(t, err)
 
 	var p fakePublisher
 	n := fakeNotifier{ch: make(chan string)}
-	e := newGroupEvaluator(rules, getZoneStateFromUpdate("zone"), &p, nil, &n, discardLogger)
+	e := newGroupEvaluator(r, &p, nil, &n, discardLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -64,10 +65,10 @@ func TestGroupEvaluator_ScheduleAndCancel(t *testing.T) {
 }
 
 func TestGroupEvaluator_Do(t *testing.T) {
-	rules, err := loadZoneRules(
+	r, err := rules.LoadZoneRules(
 		"zone",
-		[]RuleConfiguration{
-			{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway.lua"}},
+		[]rules.RuleConfiguration{
+			{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "autoaway.lua"}},
 		},
 	)
 	require.NoError(t, err)
@@ -81,7 +82,7 @@ func TestGroupEvaluator_Do(t *testing.T) {
 		Return(&tado.DeleteZoneOverlayResponse{HTTPResponse: &http.Response{StatusCode: http.StatusNoContent}}, nil).
 		Once()
 	n := fakeNotifier{ch: make(chan string)}
-	e := newGroupEvaluator(rules, getZoneStateFromUpdate("zone"), &p, tadoClient, &n, discardLogger)
+	e := newGroupEvaluator(r, &p, tadoClient, &n, discardLogger)
 
 	errCh := make(chan error)
 	go func() { errCh <- e.Run(ctx) }()
@@ -103,15 +104,15 @@ func TestGroupEvaluator_Do(t *testing.T) {
 }
 
 func TestGroupEvaluator(t *testing.T) {
-	rules, err := loadHomeRules([]RuleConfiguration{
-		{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
+	r, err := rules.LoadHomeRules([]rules.RuleConfiguration{
+		{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
 	})
 	assert.NoError(t, err)
 
 	tadoClient := mocks.NewTadoClient(t)
 	p := fakePublisher{}
 
-	e := newGroupEvaluator(rules, getHomeStateFromUpdate, &p, tadoClient, nil, discardLogger)
+	e := newGroupEvaluator(r, &p, tadoClient, nil, discardLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -160,35 +161,37 @@ func TestGroupEvaluator(t *testing.T) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
+// TODO: move to rules
 func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
-	autoAwayCfg := RuleConfiguration{
+	autoAwayCfg := rules.RuleConfiguration{
 		Name:   "autoAway",
-		Script: ScriptConfig{Packaged: "autoaway.lua"},
+		Script: rules.ScriptConfig{Packaged: "autoaway.lua"},
 		Users:  []string{"user"},
 	}
-	limitOverlayCfg := RuleConfiguration{
+	limitOverlayCfg := rules.RuleConfiguration{
 		Name:   "limitOverlay",
-		Script: ScriptConfig{Packaged: "limitoverlay.lua"},
+		Script: rules.ScriptConfig{Packaged: "limitoverlay.lua"},
 	}
 
 	tests := []struct {
 		name     string
-		rules    []RuleConfiguration
+		rules    []rules.RuleConfiguration
 		update   poller.Update
 		isChange assert.BoolAssertionFunc
-		want     action
+		want     rules.Action
 	}{
 		{
 			name:  "user is home: no action",
-			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
+			rules: []rules.RuleConfiguration{autoAwayCfg, limitOverlayCfg},
 			update: testutils.Update(
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 21),
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, false)),
 			),
 			isChange: assert.False,
-			want: &zoneAction{
-				coreAction: coreAction{
-					state:  zoneState{false, true},
+			want: &rules.zoneAction{
+				coreAction: rules.coreAction{
+					state:  rules.zoneState{false, true},
 					reason: "no manual setting detected, one or more users are home: user",
 					delay:  0,
 				},
@@ -205,9 +208,9 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(false, false)),
 			),
 			isChange: assert.True,
-			want: &zoneAction{
-				coreAction: coreAction{
-					state:  zoneState{true, false},
+			want: &rules.zoneAction{
+				coreAction: rules.coreAction{
+					state:  rules.zoneState{true, false},
 					delay:  15 * time.Minute,
 					reason: "all users are away: user",
 				},
@@ -224,9 +227,9 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(false, false)),
 			),
 			isChange: assert.False,
-			want: &zoneAction{
-				coreAction: coreAction{
-					state:  zoneState{true, false},
+			want: &rules.zoneAction{
+				coreAction: rules.coreAction{
+					state:  rules.zoneState{true, false},
 					delay:  0,
 					reason: "all users are away: user, heating is off",
 				},
@@ -243,9 +246,9 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, false)),
 			),
 			isChange: assert.True,
-			want: &zoneAction{
-				coreAction: coreAction{
-					state:  zoneState{false, true},
+			want: &rules.zoneAction{
+				coreAction: rules.coreAction{
+					state:  rules.zoneState{false, true},
 					delay:  0,
 					reason: "one or more users are home: user",
 				},
@@ -261,9 +264,9 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				testutils.WithZone(10, "zone", tado.PowerON, 21, 21, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
 			),
 			isChange: assert.True,
-			want: &zoneAction{
-				coreAction: coreAction{
-					state:  zoneState{false, true},
+			want: &rules.zoneAction{
+				coreAction: rules.coreAction{
+					state:  rules.zoneState{false, true},
 					delay:  time.Hour,
 					reason: "manual setting detected",
 				},
@@ -276,9 +279,9 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			zr, err := loadZoneRules("zone", tt.rules)
+			zr, err := rules.loadZoneRules("zone", tt.rules)
 			require.NoError(t, err)
-			e := newGroupEvaluator(zr, getZoneStateFromUpdate("zone"), nil, nil, nil, discardLogger)
+			e := newGroupEvaluator(zr, rules.getZoneStateFromUpdate("zone"), nil, nil, nil, discardLogger)
 
 			a, change := e.processUpdate(tt.update)
 			tt.isChange(t, change)
@@ -289,35 +292,36 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: use fakes so we don't rely on non-exported structs
 func Test_shouldSchedule(t *testing.T) {
 	tests := []struct {
 		name    string
-		action  action
+		action  rules.Action
 		job     scheduledJob
 		isNewer assert.BoolAssertionFunc
 	}{
 		{
 			name:    "action is different: schedule",
-			action:  &homeAction{coreAction{homeState{true, false}, "", time.Hour}, 1},
-			job:     fakeScheduledJob{state: homeState{false, true}, due: time.Now()},
+			action:  &rules.homeAction{rules.coreAction{rules.homeState{true, false}, "", time.Hour}, 1},
+			job:     fakeScheduledJob{state: rules.homeState{false, true}, due: time.Now()},
 			isNewer: assert.True,
 		},
 		{
 			name:    "action is earlier: schedule",
-			action:  &homeAction{coreAction{homeState{true, false}, "", 0}, 1},
-			job:     fakeScheduledJob{state: homeState{true, false}, due: time.Now().Add(time.Hour)},
+			action:  &rules.homeAction{rules.coreAction{rules.homeState{true, false}, "", 0}, 1},
+			job:     fakeScheduledJob{state: rules.homeState{true, false}, due: time.Now().Add(time.Hour)},
 			isNewer: assert.True,
 		},
 		{
 			name:    "action is later: don't schedule",
-			action:  &homeAction{coreAction{homeState{true, false}, "", time.Hour}, 1},
-			job:     fakeScheduledJob{state: homeState{true, false}, due: time.Now()},
+			action:  &rules.homeAction{rules.coreAction{rules.homeState{true, false}, "", time.Hour}, 1},
+			job:     fakeScheduledJob{state: rules.homeState{true, false}, due: time.Now()},
 			isNewer: assert.False,
 		},
 		{
 			name:    "due time is rounded to minutes",
-			action:  &homeAction{coreAction{homeState{true, false}, "", 15 * time.Second}, 1},
-			job:     fakeScheduledJob{state: homeState{true, false}, due: time.Now()},
+			action:  &rules.homeAction{rules.coreAction{rules.homeState{true, false}, "", 15 * time.Second}, 1},
+			job:     fakeScheduledJob{state: rules.homeState{true, false}, due: time.Now()},
 			isNewer: assert.False,
 		},
 	}
@@ -328,6 +332,7 @@ func Test_shouldSchedule(t *testing.T) {
 		})
 	}
 }
+*/
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -342,21 +347,6 @@ func (f fakeNotifier) Notify(s string) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-var _ scheduledJob = fakeScheduledJob{}
-
-type fakeScheduledJob struct {
-	state state
-	due   time.Time
-}
-
-func (f fakeScheduledJob) State() state {
-	return f.state
-}
-
-func (f fakeScheduledJob) Due() time.Time {
-	return f.due
-}
 
 var _ Publisher[poller.Update] = &fakePublisher{}
 

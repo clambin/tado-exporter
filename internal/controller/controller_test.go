@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/poller/testutils"
 	"github.com/clambin/tado-exporter/pkg/pubsub"
@@ -22,13 +23,13 @@ var (
 
 func TestNew(t *testing.T) {
 	cfg := Configuration{
-		Home: []RuleConfiguration{
-			{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"foo"}},
+		Home: []rules.RuleConfiguration{
+			{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"foo"}},
 		},
-		Zones: map[string][]RuleConfiguration{
+		Zones: map[string][]rules.RuleConfiguration{
 			"living room": {
-				{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"foo"}},
-				{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay.lua"}, Users: []string{"foo"}},
+				{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"foo"}},
+				{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay.lua"}, Users: []string{"foo"}},
 			},
 		},
 	}
@@ -41,13 +42,13 @@ func TestNew(t *testing.T) {
 
 func TestController_Run(t *testing.T) {
 	cfg := Configuration{
-		Home: []RuleConfiguration{
-			{Name: "autoAway", Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
+		Home: []rules.RuleConfiguration{
+			{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
 		},
-		Zones: map[string][]RuleConfiguration{
+		Zones: map[string][]rules.RuleConfiguration{
 			"my room": {
-				{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"user A"}},
-				{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay.lua"}},
+				{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"user A"}},
+				{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay.lua"}},
 			},
 		},
 	}

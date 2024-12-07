@@ -1,8 +1,9 @@
-package cli
+package cmd
 
 import (
 	"github.com/clambin/go-common/charmer"
-	"github.com/clambin/tado-exporter/internal/cmd/monitor"
+	"github.com/clambin/tado-exporter/cmd/eval"
+	"github.com/clambin/tado-exporter/cmd/monitor"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log/slog"
@@ -27,7 +28,7 @@ func init() {
 	RootCmd.PersistentFlags().Bool("debug", false, "Log debug messages")
 	_ = viper.BindPFlag("debug", RootCmd.PersistentFlags().Lookup("debug"))
 
-	RootCmd.AddCommand(&monitor.Cmd)
+	RootCmd.AddCommand(&monitor.Cmd, &eval.Cmd)
 }
 
 var args = charmer.Arguments{

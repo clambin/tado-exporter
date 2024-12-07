@@ -2,8 +2,9 @@ package monitor
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/internal/cmd/monitor/mocks"
+	"github.com/clambin/tado-exporter/cmd/monitor/mocks"
 	"github.com/clambin/tado-exporter/internal/controller"
+	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado/v2"
 	"github.com/prometheus/client_golang/prometheus"
@@ -35,10 +36,10 @@ zones:
 `,
 			wantErr: assert.NoError,
 			want: controller.Configuration{
-				Zones: map[string][]controller.RuleConfiguration{
+				Zones: map[string][]rules.RuleConfiguration{
 					"bathroom": {{
 						Name:   "limitOverlay",
-						Script: controller.ScriptConfig{Packaged: "limitoverlay.lua"},
+						Script: rules.ScriptConfig{Packaged: "limitoverlay.lua"},
 					}},
 				},
 			},

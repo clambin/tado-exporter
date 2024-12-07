@@ -102,9 +102,9 @@ func (j *Job) getState() (state, error, time.Time) {
 }
 
 // Due returns when the job will be run. It returns a zero time if the job has completed.
-func (j *Job) Due() time.Time {
+func (j *Job) Due() time.Duration {
 	if s, _, when := j.getState(); s == stateScheduled {
-		return when
+		return time.Until(when)
 	}
-	return time.Time{}
+	return 0
 }

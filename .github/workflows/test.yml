@@ -5,6 +5,7 @@ on:
     branches-ignore:
       - master
       - lua
+      - refactor
   pull_request_target:
 
 jobs:

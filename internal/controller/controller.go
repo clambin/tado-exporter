@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
 	"golang.org/x/sync/errgroup"
@@ -25,36 +26,41 @@ type Notifier interface {
 	Notify(string)
 }
 
-// A Controller creates and runs the required home & zone controllers for a Configuration.
+// A Controller creates and runs the required home and zone evaluators for a Configuration.
 type Controller struct {
 	controllers []*groupEvaluator
 	logger      *slog.Logger
+}
+
+type Configuration struct {
+	Zones map[string][]rules.RuleConfiguration `yaml:"zones"`
+	Home  []rules.RuleConfiguration            `yaml:"home"`
 }
 
 // New creates a new Controller, with the home & zone controllers required by the Configuration.
 func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier, l *slog.Logger) (*Controller, error) {
 	m := Controller{logger: l}
 	if len(cfg.Home) > 0 {
-		homeRules, err := loadHomeRules(cfg.Home)
+		homeRules, err := rules.LoadHomeRules(cfg.Home)
 		if err != nil {
 			return nil, fmt.Errorf("could not load home rules: %w", err)
 		}
 		m.controllers = append(
 			m.controllers,
-			newGroupEvaluator(homeRules, getHomeStateFromUpdate, p, c, n, l.With(slog.String("module", "home controller"))),
+			newGroupEvaluator(homeRules, p, c, n, l.With(slog.String("module", "home controller"))),
 		)
 	}
 	for zoneName, zoneCfg := range cfg.Zones {
 		if len(zoneCfg) == 0 {
 			continue
 		}
-		zoneRules, err := loadZoneRules(zoneName, zoneCfg)
+		zoneRules, err := rules.LoadZoneRules(zoneName, zoneCfg)
 		if err != nil {
 			return nil, fmt.Errorf("could not load rules for zone %q: %w", zoneName, err)
 		}
 		m.controllers = append(
 			m.controllers,
-			newGroupEvaluator(zoneRules, getZoneStateFromUpdate(zoneName), p, c, n, l.With(slog.String("module", "zone controller"), slog.String("zone", zoneName))),
+			newGroupEvaluator(zoneRules, p, c, n, l.With(slog.String("module", "zone controller"), slog.String("zone", zoneName))),
 		)
 	}
 	return &m, nil
