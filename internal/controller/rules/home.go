@@ -49,9 +49,9 @@ type homeRule struct {
 func LoadHomeRule(cfg RuleConfiguration) (Rule, error) {
 	s, err := loadLuaScript(cfg.Name, cfg.Script, &homerules.FS)
 	if err != nil {
-		return homeRule{}, &errLua{err: err}
+		return nil, &errLua{err: err}
 	}
-	return homeRule{luaScript: s, devices: set.New[string](cfg.Users...), args: cfg.Args}, nil
+	return homeRule{luaScript: s, devices: set.New(cfg.Users...), args: cfg.Args}, nil
 }
 
 func (r homeRule) Evaluate(currentState State) (Action, error) {

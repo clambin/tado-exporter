@@ -24,17 +24,20 @@ type Rule interface {
 	Evaluate(State) (Action, error)
 }
 
-// Rules takes the current update, determines the next Action for each rule and returns the first Action required.
-// If no rules require an action, it returns an Action for that current state, with the Reason listing all reasons why an action isn't required.
+// Rules groups a set of rules for a zone or home. The Rules' Evaluate method runs through all contained rules and determines
+// the required action, given the current State.
+// The GetState function takes a poller.Update and returns the current State.
 type Rules struct {
-	rules    []Rule
 	GetState func(update poller.Update) (State, error)
+	rules    []Rule
 }
 
 func (r Rules) Count() int {
 	return len(r.rules)
 }
 
+// Evaluate takes the current update, determines the next Action for each rule and returns the first Action required.
+// If no rules require an action, it returns an Action for that current state, with the Reason listing all reasons why an action isn't required.
 func (r Rules) Evaluate(currentState State) (Action, error) {
 	actions := make([]Action, 0, len(r.rules))
 	noActions := make([]Action, 0, len(r.rules))

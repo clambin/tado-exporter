@@ -28,8 +28,8 @@ type Notifier interface {
 
 // A Controller creates and runs the required home and zone evaluators for a Configuration.
 type Controller struct {
-	controllers []*groupEvaluator
 	logger      *slog.Logger
+	controllers []*groupEvaluator
 }
 
 type Configuration struct {

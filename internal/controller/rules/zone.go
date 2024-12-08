@@ -55,18 +55,18 @@ func GetZoneState(zoneName string) func(u poller.Update) (State, error) {
 var _ Rule = zoneRule{}
 
 type zoneRule struct {
-	zoneName string
 	luaScript
-	devices set.Set[string]
-	args    Args
+	devices  set.Set[string]
+	args     Args
+	zoneName string
 }
 
 func LoadZoneRule(zoneName string, cfg RuleConfiguration) (Rule, error) {
 	s, err := loadLuaScript(cfg.Name, cfg.Script, &zonerules.FS)
 	if err != nil {
-		return zoneRule{}, &errLua{err: err}
+		return nil, &errLua{err: err}
 	}
-	return zoneRule{zoneName: zoneName, luaScript: s, devices: set.New[string](cfg.Users...), args: cfg.Args}, nil
+	return zoneRule{zoneName: zoneName, luaScript: s, devices: set.New(cfg.Users...), args: cfg.Args}, nil
 }
 
 func (r zoneRule) Evaluate(currentState State) (Action, error) {
