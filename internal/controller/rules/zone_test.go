@@ -13,9 +13,9 @@ import (
 
 func TestLoadZoneRules(t *testing.T) {
 	r, err := LoadZoneRules("foo", []RuleConfiguration{
-		{Script: ScriptConfig{Packaged: "limitoverlay.lua"}},
-		{Script: ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"user A"}},
-		{Script: ScriptConfig{Packaged: "nighttime.lua"}},
+		{Script: ScriptConfig{Packaged: "limitoverlay"}},
+		{Script: ScriptConfig{Packaged: "autoaway"}, Users: []string{"user A"}},
+		{Script: ScriptConfig{Packaged: "nighttime"}},
 	})
 	require.NoError(t, err)
 	require.Equal(t, 3, r.Count())
@@ -156,7 +156,7 @@ func TestZoneRule_Evaluate_LimitOverlay(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testZoneRule(t, "limitoverlay.lua", tt)
+			testZoneRule(t, "limitoverlay", tt)
 		})
 	}
 }
@@ -206,7 +206,7 @@ func TestZoneRule_Evaluate_AutoAway(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testZoneRule(t, "autoaway.lua", tt)
+		testZoneRule(t, "autoaway", tt)
 	}
 }
 
@@ -255,7 +255,7 @@ func TestZoneRule_Evaluate_NightTime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testZoneRule(t, "nighttime.lua", tt)
+			testZoneRule(t, "nighttime", tt)
 		})
 	}
 }

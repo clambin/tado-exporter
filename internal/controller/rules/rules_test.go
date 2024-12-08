@@ -17,9 +17,9 @@ var discardLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 func TestRules_zoneRules(t *testing.T) {
 	r, err := LoadZoneRules("zone", []RuleConfiguration{
-		{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"user"}},
-		{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay.lua"}},
-		{Name: "nighttime.lua", Script: ScriptConfig{Packaged: "nighttime.lua"}, Args: map[string]any{"StartHour": 23, "StartMin": 0, "EndHour": 6, "EndMin": 0}},
+		{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway"}, Users: []string{"user"}},
+		{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay"}},
+		{Name: "nightTime", Script: ScriptConfig{Packaged: "nighttime"}, Args: map[string]any{"StartHour": 23, "StartMin": 0, "EndHour": 6, "EndMin": 0}},
 	})
 	require.NoError(t, err)
 	require.Len(t, r.rules, 3)

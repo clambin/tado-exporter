@@ -28,7 +28,7 @@ func (s ScriptConfig) script(embedFS *embed.FS) (io.ReadCloser, error) {
 	case s.Text != "":
 		return io.NopCloser(strings.NewReader(s.Text)), nil
 	case s.Packaged != "":
-		return embedFS.Open(s.Packaged)
+		return embedFS.Open(s.Packaged + ".lua")
 	case s.Path != "":
 		return os.Open(s.Path)
 	default:

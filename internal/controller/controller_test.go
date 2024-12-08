@@ -24,12 +24,12 @@ var (
 func TestNew(t *testing.T) {
 	cfg := Configuration{
 		Home: []rules.RuleConfiguration{
-			{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"foo"}},
+			{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "homeandaway"}, Users: []string{"foo"}},
 		},
 		Zones: map[string][]rules.RuleConfiguration{
 			"living room": {
-				{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"foo"}},
-				{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay.lua"}, Users: []string{"foo"}},
+				{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "autoaway"}, Users: []string{"foo"}},
+				{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay"}, Users: []string{"foo"}},
 			},
 		},
 	}
@@ -43,12 +43,13 @@ func TestNew(t *testing.T) {
 func TestController_Run(t *testing.T) {
 	cfg := Configuration{
 		Home: []rules.RuleConfiguration{
-			{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
+			{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "homeandaway"}, Users: []string{"user A"}},
 		},
 		Zones: map[string][]rules.RuleConfiguration{
 			"my room": {
-				{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "autoaway.lua"}, Users: []string{"user A"}},
-				{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay.lua"}},
+				{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "autoaway"}, Users: []string{"user A"}},
+				{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay"}},
+				{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay"}},
 			},
 		},
 	}

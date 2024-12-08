@@ -12,7 +12,7 @@ import (
 
 func TestLoadHomeRules(t *testing.T) {
 	r, err := LoadHomeRules([]RuleConfiguration{
-		{Script: ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
+		{Script: ScriptConfig{Packaged: "homeandaway"}, Users: []string{"user A"}},
 	})
 	require.NoError(t, err)
 	require.Equal(t, 1, r.Count())
@@ -156,7 +156,7 @@ func TestHomeRule_Evaluate_AutoAway(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := RuleConfiguration{
 				Name:   "test",
-				Script: ScriptConfig{Packaged: "homeandaway.lua"},
+				Script: ScriptConfig{Packaged: "homeandaway"},
 				Users:  tt.users,
 			}
 			r, err := LoadHomeRule(cfg)

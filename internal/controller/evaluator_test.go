@@ -20,7 +20,7 @@ func TestGroupEvaluator_ScheduleAndCancel(t *testing.T) {
 	r, err := rules.LoadZoneRules(
 		"zone",
 		[]rules.RuleConfiguration{
-			{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay.lua"}},
+			{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay"}},
 		},
 	)
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func TestGroupEvaluator_Do(t *testing.T) {
 	r, err := rules.LoadZoneRules(
 		"zone",
 		[]rules.RuleConfiguration{
-			{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "autoaway.lua"}},
+			{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "autoaway"}},
 		},
 	)
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestGroupEvaluator_Do(t *testing.T) {
 
 func TestGroupEvaluator(t *testing.T) {
 	r, err := rules.LoadHomeRules([]rules.RuleConfiguration{
-		{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "homeandaway.lua"}, Users: []string{"user A"}},
+		{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "homeandaway"}, Users: []string{"user A"}},
 	})
 	assert.NoError(t, err)
 
@@ -166,12 +166,12 @@ func TestGroupEvaluator(t *testing.T) {
 func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 	autoAwayCfg := rules.RuleConfiguration{
 		Name:   "autoAway",
-		Script: rules.ScriptConfig{Packaged: "autoaway.lua"},
+		Script: rules.ScriptConfig{Packaged: "autoaway"},
 		Users:  []string{"user"},
 	}
 	limitOverlayCfg := rules.RuleConfiguration{
 		Name:   "limitOverlay",
-		Script: rules.ScriptConfig{Packaged: "limitoverlay.lua"},
+		Script: rules.ScriptConfig{Packaged: "limitoverlay"},
 	}
 
 	tests := []struct {
