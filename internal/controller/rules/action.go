@@ -18,8 +18,6 @@ type Action interface {
 	setReason(reason string)
 	Description(includeDelay bool) string
 	Do(context.Context, TadoClient, *slog.Logger) error
-	// TODO
-	//slog.LogValuer
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

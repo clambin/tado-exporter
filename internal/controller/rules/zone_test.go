@@ -259,3 +259,124 @@ func TestZoneRule_Evaluate_NightTime(t *testing.T) {
 		})
 	}
 }
+
+func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
+	autoAwayCfg := RuleConfiguration{
+		Name:   "autoAway",
+		Script: ScriptConfig{Packaged: "autoaway"},
+		Users:  []string{"user"},
+	}
+	limitOverlayCfg := RuleConfiguration{
+		Name:   "limitOverlay",
+		Script: ScriptConfig{Packaged: "limitoverlay"},
+	}
+
+	tests := []struct {
+		name         string
+		rules        []RuleConfiguration
+		currentState State
+		want         Action
+	}{
+		{
+			name:  "user is home: no action",
+			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
+			currentState: State{
+				ZoneState: ZoneState{false, true},
+				Devices:   Devices{{"user", true}},
+				HomeId:    1,
+				ZoneId:    10,
+			},
+			want: &zoneAction{
+				ZoneState: ZoneState{false, true},
+				reason:    "no manual setting detected, one or more users are home: user",
+				delay:     0,
+				zoneName:  "zone",
+				HomeId:    1,
+				ZoneId:    10,
+			},
+		},
+		{
+			name:  "user is not home, heating is on: switch heating is off",
+			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
+			currentState: State{
+				ZoneState: ZoneState{false, true},
+				Devices:   Devices{{"user", false}},
+				HomeId:    1,
+				ZoneId:    10,
+			},
+			want: &zoneAction{
+				ZoneState: ZoneState{true, false},
+				delay:     15 * time.Minute,
+				reason:    "all users are away: user",
+				zoneName:  "zone",
+				HomeId:    1,
+				ZoneId:    10,
+			},
+		},
+		{
+			name:  "user is not home, heating is off: no action",
+			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
+			currentState: State{
+				ZoneState: ZoneState{true, false},
+				Devices:   Devices{{"user", false}},
+				HomeId:    1,
+				ZoneId:    10,
+			},
+			want: &zoneAction{
+				ZoneState: ZoneState{true, false},
+				delay:     0,
+				reason:    "all users are away: user, heating is off",
+				zoneName:  "zone",
+				HomeId:    1,
+				ZoneId:    10,
+			},
+		},
+		{
+			name:  "user is home, heating is off: move heating to auto mode",
+			rules: []RuleConfiguration{limitOverlayCfg, autoAwayCfg},
+			currentState: State{
+				ZoneState: ZoneState{true, false},
+				Devices:   Devices{{"user", true}},
+				HomeId:    1,
+				ZoneId:    10,
+			},
+			want: &zoneAction{
+				ZoneState: ZoneState{false, true},
+				delay:     0,
+				reason:    "one or more users are home: user",
+				zoneName:  "zone",
+				HomeId:    1,
+				ZoneId:    10,
+			},
+		},
+		{
+			name:  "user is home, zone in manual mode: schedule auto mode",
+			rules: []RuleConfiguration{autoAwayCfg, limitOverlayCfg},
+			currentState: State{
+				ZoneState: ZoneState{true, true},
+				Devices:   Devices{{"user", true}},
+				HomeId:    1,
+				ZoneId:    10,
+			},
+			want: &zoneAction{
+				ZoneState: ZoneState{false, true},
+				delay:     time.Hour,
+				reason:    "manual setting detected",
+				zoneName:  "zone",
+				HomeId:    1,
+				ZoneId:    10,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			zr, err := LoadZoneRules("zone", tt.rules)
+			require.NoError(t, err)
+
+			a, err := zr.Evaluate(tt.currentState)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, a)
+		})
+	}
+}

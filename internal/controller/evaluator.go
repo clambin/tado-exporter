@@ -86,7 +86,6 @@ func (g *groupEvaluator) processUpdate(update poller.Update) (rules.Action, bool
 		return nil, false
 	}
 
-	// TODO: should rules return true/false?
 	return action, !action.IsState(current)
 }
 
