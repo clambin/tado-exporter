@@ -4,6 +4,7 @@ import "github.com/slack-go/slack"
 
 type Formatter interface {
 	Format() slack.MsgOption
+	IsZero() bool
 }
 
 var _ Formatter = Attachment{}
@@ -27,4 +28,8 @@ func (t Attachment) build() *slack.SectionBlock {
 		lines,
 		nil,
 	)
+}
+
+func (t Attachment) IsZero() bool {
+	return t.Header == "" && len(t.Body) == 0
 }

@@ -58,7 +58,6 @@ func (p *TadoPoller) Run(ctx context.Context) error {
 		if err := p.poll(ctx); err != nil {
 			p.logger.Error("failed to get tado metrics", slog.Any("err", err))
 		}
-
 		select {
 		case <-ctx.Done():
 			return nil
@@ -73,11 +72,11 @@ func (p *TadoPoller) Refresh() {
 }
 
 func (p *TadoPoller) poll(ctx context.Context) error {
-	start := time.Now()
+	//start := time.Now()
 	update, err := p.update(ctx)
 	if err == nil {
 		p.Publisher.Publish(update)
-		p.logger.Debug("poll completed", slog.Duration("duration", time.Since(start)))
+		//p.logger.Debug("poll completed", slog.Duration("duration", time.Since(start)))
 	}
 	return err
 }

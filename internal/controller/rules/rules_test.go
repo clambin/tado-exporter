@@ -1,127 +1,78 @@
 package rules
 
 import (
-	"github.com/clambin/tado-exporter/internal/controller/rules/action"
-	"github.com/clambin/tado-exporter/internal/controller/testutil"
+	"github.com/clambin/tado-exporter/internal/controller/rules/luart"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado-exporter/internal/poller/testutils"
+	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io"
+	"log/slog"
 	"testing"
 	"time"
 )
 
-func TestRules_Evaluate(t *testing.T) {
-	type want struct {
-		action string
-		reason string
-		delay  time.Duration
-	}
-	testCases := []struct {
-		name  string
-		input Rules
-		want
+var discardLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
+
+func TestRules_zoneRules(t *testing.T) {
+	r, err := LoadZoneRules("zone", []RuleConfiguration{
+		{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway"}, Users: []string{"user"}},
+		{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay"}},
+		{Name: "nightTime", Script: ScriptConfig{Packaged: "nighttime"}, Args: map[string]any{"StartHour": 23, "StartMin": 0, "EndHour": 6, "EndMin": 0}},
+	})
+	require.NoError(t, err)
+	require.Len(t, r.rules, 3)
+	zr, ok := r.rules[2].(zoneRule)
+	require.True(t, ok)
+	luart.Register(zr.luaScript.State, func() time.Time {
+		return time.Date(2024, time.December, 6, 13, 0, 0, 0, time.Local)
+	})
+
+	tests := []struct {
+		name            string
+		update          poller.Update
+		wantReason      string
+		wantDescription string
 	}{
 		{
 			name: "no action",
-			input: Rules{
-				stubbedEvaluator{value: action.Action{Reason: "foo"}},
-				stubbedEvaluator{value: action.Action{Reason: "bar"}},
-			},
-			want: want{
-				action: "no action",
-				reason: "bar, foo",
-			},
+			update: testutils.Update(
+				testutils.WithZone(10, "zone", tado.PowerON, 21, 19),
+				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, false)),
+			),
+			wantReason:      "no manual setting detected, one or more users are home: user",
+			wantDescription: "*zone*: switching heating to auto mode in 0s",
 		},
 		{
-			name: "single action",
-			input: Rules{
-				stubbedEvaluator{value: action.Action{Delay: time.Hour, Reason: "foo", State: testutil.FakeState{ModeValue: 1}}},
-			},
-			want: want{
-				action: "home",
-				reason: "foo",
-				delay:  time.Hour,
-			},
+			name: "user away",
+			update: testutils.Update(
+				testutils.WithZone(10, "zone", tado.PowerON, 21, 19),
+				testutils.WithMobileDevice(100, "user", testutils.WithLocation(false, false)),
+			),
+			wantReason:      "all users are away: user",
+			wantDescription: "*zone*: switching heating off in 15m0s",
 		},
 		{
-			name: "multiple actions",
-			input: Rules{
-				stubbedEvaluator{value: action.Action{Delay: time.Hour, Reason: "foo", State: testutil.FakeState{ModeValue: 1}}},
-				stubbedEvaluator{value: action.Action{Delay: time.Hour, Reason: "bar", State: testutil.FakeState{ModeValue: 1}}},
-			},
-			want: want{
-				action: "home",
-				reason: "bar, foo",
-				delay:  time.Hour,
-			},
-		},
-		{
-			name: "duplicates",
-			input: Rules{
-				stubbedEvaluator{value: action.Action{Delay: time.Hour, Reason: "foo", State: testutil.FakeState{ModeValue: 1}}},
-				stubbedEvaluator{value: action.Action{Delay: time.Hour, Reason: "bar", State: testutil.FakeState{ModeValue: 1}}},
-				stubbedEvaluator{value: action.Action{Delay: time.Hour, Reason: "foo", State: testutil.FakeState{ModeValue: 1}}},
-			},
-			want: want{
-				action: "home",
-				reason: "bar, foo",
-				delay:  time.Hour,
-			},
-		},
-		{
-			name: "first action only",
-			input: Rules{
-				stubbedEvaluator{value: action.Action{Delay: time.Minute, Reason: "foo", State: testutil.FakeState{ModeValue: 1}}},
-				stubbedEvaluator{value: action.Action{Delay: time.Hour, Reason: "bar", State: testutil.FakeState{ModeValue: 2}}},
-				stubbedEvaluator{value: action.Action{Delay: time.Hour, Reason: "foo", State: testutil.FakeState{ModeValue: 1}}},
-			},
-			want: want{
-				action: "home",
-				reason: "foo",
-				delay:  time.Minute,
-			},
+			name: "zone in manual mode",
+			update: testutils.Update(
+				testutils.WithZone(10, "zone", tado.PowerON, 21, 19, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+				testutils.WithMobileDevice(100, "user", testutils.WithLocation(true, false)),
+			),
+			wantReason:      "manual setting detected",
+			wantDescription: "*zone*: switching heating to auto mode in 1h0m0s",
 		},
 	}
 
-	for _, tt := range testCases {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a, err := tt.input.Evaluate(poller.Update{})
+			state, err := r.GetState(tt.update)
 			require.NoError(t, err)
-			assert.Equal(t, tt.want.action, a.String())
-			assert.Equal(t, tt.want.reason, a.Reason)
-			assert.Equal(t, tt.want.delay, a.Delay)
+
+			a, err := r.Evaluate(state)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantReason, a.Reason())
+			assert.Equal(t, tt.wantDescription, a.Description(true))
 		})
 	}
-}
-
-func BenchmarkRules_Evaluate(b *testing.B) {
-	var r Rules
-	for range 10 {
-		r = append(r, stubbedEvaluator{})
-	}
-	b.ResetTimer()
-	for range b.N {
-		_, err := r.Evaluate(poller.Update{})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func Benchmark_getCombinedReasons(b *testing.B) {
-	actions := make([]action.Action, 5)
-
-	for range b.N {
-		_ = getCombinedReason(actions)
-	}
-}
-
-var _ Evaluator = stubbedEvaluator{}
-
-type stubbedEvaluator struct {
-	value action.Action
-}
-
-func (s stubbedEvaluator) Evaluate(_ poller.Update) (action.Action, error) {
-	return s.value, nil
 }

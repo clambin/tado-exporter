@@ -1,7 +1,6 @@
 # Tadoº exporter & controller
 [![release](https://img.shields.io/github/v/tag/clambin/tado-exporter?color=green&label=release&style=plastic)](https://github.com/clambin/tado-exporter/releases)
 [![codecov](https://img.shields.io/codecov/c/gh/clambin/tado-exporter?style=plastic)](https://app.codecov.io/gh/clambin/tado-exporter)
-[![test](https://github.com/clambin/tado-exporter/workflows/test/badge.svg)](https://github.com/clambin/tado-exporter/actions)
 [![build](https://github.com/clambin/tado-exporter/workflows/build/badge.svg)](https://github.com/clambin/tado-exporter/actions)
 [![report card](https://goreportcard.com/badge/github.com/clambin/tado-exporter)](https://goreportcard.com/report/github.com/clambin/tado-exporter)
 [![license](https://img.shields.io/github/license/clambin/tado-exporter?style=plastic)](LICENSE.md)
@@ -84,38 +83,6 @@ export TADO_MONITOR_TADO.USERNAME="username@example.com"
 export TADO_MONITOR_TADO.PASSWORD="your-password"
 ```
 
-## Controlling your tadoº devices
-
-`tado monitor` looks for a file `rules.yaml` in the same directory as the `config.yaml` file.
-This file defines the rules to apply for your home:
-
-```
-# Home rules control the state of your home (i.e. "home" or "away").
-home:
-  # autoAway sets the home to "away" mode when all defined users are away from home.
-  autoAway:
-    delay: 1h
-    users: [ "A", "B"]
-# Zone rules control the state of a rooom within your home. Rules will either switch heating off when all users are away,
-# or move the room to automatic mode when the room's been in manual mode for a while (think someone switching the bathroom
-# to a manual temperature setting and then forgetting to switch it back to automatic mode).
-zones:
-  - name: "room 1"
-    rules:
-      # autoAway switches off the heating in a room when all defined users are away from home
-      autoAway:
-        delay: 1h
-        users: ["A"]
-      # limitOverlay removes a manual temperature control after a specified amount of time
-      limitOverlay:
-        delay: 1h
-      # nightTime removes any manual temperature control at a specified time of day
-      nightTime:
-        time: "23:30:00"
-```
-
-If the file doesn't exist, `tado monitor` only runs as a Prometheus exporter.
-
 ## Prometheus
 
 ### Adding tado as a target
@@ -168,7 +135,110 @@ The bot includes two interactive shortcuts: `Tado Room` controls a room's heatin
 To enable the bot, go to You Apps in your workspace and add a Tadoº Bot using the included [manifest.yaml](assets/slack/manifest.yaml).
 Add the App Token and the Bot User OAuth Token in `slack.app-token` and `slack.token` respectively.
 
-## Tadoº client implementation 
+## Controlling your tadoº devices
+
+`tado monitor` implements a rule-based system to control the heating devices in your home. It supports two types of rules: home rules and zone rules.
+
+### Home rules
+Home rules control the state of the home itself, i.e. automatic, home or away.  One packaged rules are included:
+- `homeandaway` switches the home to HOME or AWAY depending on whether any users are home (using a user's geotracked device to determine of they're home).
+
+### Zone rules
+Zone rules control the state of the devices in a Tadoº zone, i.e. automatic (controlled by a schedule), on or off. Three rules are included:
+
+- `limitoverlay` switches the heating to auto mode after one hour.
+- `nighttime` switches the heating to auto mode during a period of the day.
+- `autoaway` switches the heating of a zone off if its users are away, giving you more granular control than a home rule
+
+### Configuration
+`tado monitor` looks for a file `rules.yaml` in the same directory as the `config.yaml` file.
+This file defines the rules to apply for your home:
+
+```
+home:
+  - name: autoAway:
+    script:
+      packaged: homeandaway
+      users: [ "user A", "user B"]
+zones:
+  Study:
+    - name: autoAway
+      script:
+        packaged: autoaway
+      users: [ user ]
+  Bathroom:
+    - name: limitOverlay
+      script:
+        packaged: limitoverlay
+```
+
+If the file doesn't exist, `tado monitor` only runs as a Prometheus exporter.
+
+### Custom rules
+`tado monitor`'s rule system can be extended by creating new rules as Lua scripts. 
+
+#### Custom home rules
+Create a Lua script that has the following function:
+
+```
+function Evaluate(state, devices, args)
+  --- determine the desired state, based on the home state, devices and args
+    return state, delay, reason
+end
+```
+
+Refer to [homerules](internal/controller/rules/homerules) as an example.
+
+To use your custom rule, configure it in `rules.yaml`. Either save the script directly in the rules file:
+
+```
+- name: "my customer rule"
+  script:
+    text: |
+      function Evaluate(state, devices, args)
+        --- your rule
+        return state, delay, reason
+      end
+```
+
+Alternatively, save the script to a file and reference it in the rules file:
+
+```
+- name: "my customer rule"
+  script:
+    path: myscript.lua
+```
+
+You can evaluate your custom rule by running `tado eval home <your script>`:
+
+```aiignore
+$ tado eval home --action-only my-script.lua 
+INPUT                                                                                      CHANGE REASON                                   ACTION
+home(overlay:false,home:false) user(home:true)                                             true   one or more users are home: user         setting home to HOME mode in 0s
+home(overlay:false,home:true) user(home:false)                                             true   all users are away: user                 setting home to AWAY mode in 5m0s
+home(overlay:true,home:false) user(home:true)                                              true   one or more users are home: user         setting home to HOME mode in 0s
+home(overlay:true,home:true) user(home:false)                                              true   all users are away: user                 setting home to AWAY mode in 5m0s
+```
+
+This runs through all possible combination of the home state & devices and shows the response. By adding `--action-only`, 
+the tool only lists the combinations that result in a state change (i.e. an "action").
+
+
+##### Custom zone rules
+Creating a zone rule is similar to creating a home rule, except for the function signature:
+
+```
+function Evaluate(homestate, zonestate, devices, args)
+  --- your rule
+  return zonestate, delay, reason
+end
+```
+
+Use `tado eval zone <your script>` to test your custom rule.
+
+See [zonerules](internal/controller/rules/zonerules) for examples.
+
+## Tadoº client implementation
 
 tado uses the Tadoº Go Client found at [GitHub](https://github.com/clambin/tado). Feel free to reuse for your own projects.
 

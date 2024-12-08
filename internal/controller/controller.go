@@ -2,63 +2,88 @@ package controller
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/internal/controller/notifier"
-	"github.com/clambin/tado-exporter/internal/controller/rules/action"
-	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
-	"github.com/clambin/tado-exporter/internal/controller/rules/home"
-	"github.com/clambin/tado-exporter/internal/controller/rules/zone"
+	"fmt"
+	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado/v2"
 	"golang.org/x/sync/errgroup"
 	"log/slog"
 )
 
-// Controller for tado-controller
+type TadoClient interface {
+	SetPresenceLockWithResponse(ctx context.Context, homeId tado.HomeId, body tado.SetPresenceLockJSONRequestBody, reqEditors ...tado.RequestEditorFn) (*tado.SetPresenceLockResponse, error)
+	DeletePresenceLockWithResponse(ctx context.Context, homeId tado.HomeId, reqEditors ...tado.RequestEditorFn) (*tado.DeletePresenceLockResponse, error)
+	SetZoneOverlayWithResponse(ctx context.Context, homeId tado.HomeId, zoneId tado.ZoneId, body tado.SetZoneOverlayJSONRequestBody, reqEditors ...tado.RequestEditorFn) (*tado.SetZoneOverlayResponse, error)
+	DeleteZoneOverlayWithResponse(ctx context.Context, homeId tado.HomeId, zoneId tado.ZoneId, reqEditors ...tado.RequestEditorFn) (*tado.DeleteZoneOverlayResponse, error)
+}
+
+type Publisher[T any] interface {
+	Subscribe() chan T
+	Unsubscribe(chan T)
+}
+
+type Notifier interface {
+	Notify(string)
+}
+
+// A Controller creates and runs the required home and zone evaluators for a Configuration.
 type Controller struct {
-	tasks  []task
-	logger *slog.Logger
+	logger      *slog.Logger
+	controllers []*groupEvaluator
 }
 
-type task interface {
-	Run(ctx context.Context) error
-	ReportTask() (string, bool)
+type Configuration struct {
+	Zones map[string][]rules.RuleConfiguration `yaml:"zones"`
+	Home  []rules.RuleConfiguration            `yaml:"home"`
 }
 
-// New creates a new Controller object
-func New(api action.TadoClient, cfg configuration.Configuration, s notifier.SlackSender, p poller.Poller, logger *slog.Logger) *Controller {
-	c := Controller{logger: logger}
-
-	if cfg.Home.AutoAway.IsActive() {
-		h := home.New(api, p, s, cfg.Home, logger.With("type", "home"))
-		c.tasks = append(c.tasks, h)
+// New creates a new Controller, with the home & zone controllers required by the Configuration.
+func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier, l *slog.Logger) (*Controller, error) {
+	m := Controller{logger: l}
+	if len(cfg.Home) > 0 {
+		homeRules, err := rules.LoadHomeRules(cfg.Home)
+		if err != nil {
+			return nil, fmt.Errorf("could not load home rules: %w", err)
+		}
+		m.controllers = append(
+			m.controllers,
+			newGroupEvaluator(homeRules, p, c, n, l.With(slog.String("module", "home controller"))),
+		)
 	}
-
-	for _, zoneCfg := range cfg.Zones {
-		z := zone.New(api, p, s, zoneCfg, logger.With("type", "zone", "zone", zoneCfg.Name))
-		c.tasks = append(c.tasks, z)
+	for zoneName, zoneCfg := range cfg.Zones {
+		if len(zoneCfg) == 0 {
+			continue
+		}
+		zoneRules, err := rules.LoadZoneRules(zoneName, zoneCfg)
+		if err != nil {
+			return nil, fmt.Errorf("could not load rules for zone %q: %w", zoneName, err)
+		}
+		m.controllers = append(
+			m.controllers,
+			newGroupEvaluator(zoneRules, p, c, n, l.With(slog.String("module", "zone controller"), slog.String("zone", zoneName))),
+		)
 	}
-
-	return &c
+	return &m, nil
 }
 
-// Run the controller
-func (c *Controller) Run(ctx context.Context) error {
-	c.logger.Debug("started")
-	defer c.logger.Debug("stopped")
+// Run starts all controllers and waits for them to terminate.
+func (m *Controller) Run(ctx context.Context) error {
+	m.logger.Debug("controller starting")
+	defer m.logger.Debug("controller stopping")
 
 	var g errgroup.Group
-	for _, t := range c.tasks {
-		g.Go(func() error { return t.Run(ctx) })
+	for _, controller := range m.controllers {
+		g.Go(func() error { return controller.Run(ctx) })
 	}
-
 	return g.Wait()
 }
 
-func (c *Controller) ReportTasks() []string {
-	reports := make([]string, 0, len(c.tasks))
-	for _, t := range c.tasks {
-		if report, ok := t.ReportTask(); ok {
-			reports = append(reports, report)
+func (m *Controller) ReportTasks() []string {
+	tasks := make([]string, 0, len(m.controllers))
+	for _, c := range m.controllers {
+		if task := c.ReportTask(); task != "" {
+			tasks = append(tasks, task)
 		}
 	}
-	return reports
+	return tasks
 }

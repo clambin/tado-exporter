@@ -1,84 +1,85 @@
-package controller_test
+package controller
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/internal/controller"
-	"github.com/clambin/tado-exporter/internal/controller/rules/configuration"
-	"github.com/clambin/tado-exporter/internal/oapi"
+	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
-	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
+	"github.com/clambin/tado-exporter/internal/poller/testutils"
+	"github.com/clambin/tado-exporter/pkg/pubsub"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"io"
 	"log/slog"
 	"os"
-	"sync/atomic"
+	"strings"
 	"testing"
 	"time"
 )
 
-func TestController_Run(t *testing.T) {
-	zoneCfg := configuration.Configuration{
-		Home: configuration.HomeConfiguration{
-			AutoAway: configuration.AutoAwayConfiguration{
-				Users: []string{"A"},
-				Delay: time.Minute,
+var (
+	discardLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
+)
+
+func TestNew(t *testing.T) {
+	cfg := Configuration{
+		Home: []rules.RuleConfiguration{
+			{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "homeandaway"}, Users: []string{"foo"}},
+		},
+		Zones: map[string][]rules.RuleConfiguration{
+			"living room": {
+				{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "autoaway"}, Users: []string{"foo"}},
+				{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay"}, Users: []string{"foo"}},
 			},
 		},
-		Zones: []configuration.ZoneConfiguration{{
-			Name: "room",
-			Rules: configuration.ZoneRuleConfiguration{
-				LimitOverlay: configuration.LimitOverlayConfiguration{Delay: time.Hour},
-			},
-		}},
 	}
 
-	p := mockPoller.NewPoller(t)
-	ch := make(chan poller.Update, 1)
-	var subscribers atomic.Int32
-	p.EXPECT().Subscribe().RunAndReturn(func() chan poller.Update {
-		subscribers.Add(1)
-		return ch
-	})
-	p.EXPECT().Unsubscribe(ch)
+	m, err := New(cfg, nil, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	assert.NoError(t, err)
+	assert.NotNil(t, m)
+	assert.Len(t, m.controllers, 2)
+}
 
-	l := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})).With("component", "controller")
+func TestController_Run(t *testing.T) {
+	cfg := Configuration{
+		Home: []rules.RuleConfiguration{
+			{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "homeandaway"}, Users: []string{"user A"}},
+		},
+		Zones: map[string][]rules.RuleConfiguration{
+			"my room": {
+				{Name: "autoAway", Script: rules.ScriptConfig{Packaged: "autoaway"}, Users: []string{"user A"}},
+				{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay"}},
+				{Name: "limitOverlay", Script: rules.ScriptConfig{Packaged: "limitoverlay"}},
+			},
+		},
+	}
+	l := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	p := pubsub.New[poller.Update](l)
+	n := fakeNotifier{ch: make(chan string)}
 
-	m := controller.New(nil, zoneCfg, nil, p, l)
+	m, err := New(cfg, p, nil, &n, l)
+	require.NoError(t, err)
+	require.NotNil(t, m)
+	assert.Len(t, m.controllers, 2)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() { errCh <- m.Run(ctx) }()
 
-	assert.Eventually(t, func() bool {
-		return subscribers.Load() >= 2
+	require.Eventually(t, func() bool {
+		return p.Subscribers() > 0
 	}, time.Second, time.Millisecond)
 
-	u := poller.Update{
-		HomeBase:  tado.HomeBase{Id: oapi.VarP[tado.HomeId](1)},
-		HomeState: tado.HomeState{Presence: oapi.VarP(tado.HOME)},
-		Zones: poller.Zones{
-			{
-				Zone: tado.Zone{Id: oapi.VarP(10), Name: oapi.VarP("room")},
-				ZoneState: tado.ZoneState{
-					Setting: &tado.ZoneSetting{Power: oapi.VarP(tado.PowerON), Temperature: &tado.Temperature{Celsius: oapi.VarP[float32](22.0)}},
-					Overlay: &tado.ZoneOverlay{
-						Termination: &oapi.TerminationManual,
-					},
-				},
-			},
-		},
-		MobileDevices: []tado.MobileDevice{
-			{Id: oapi.VarP[tado.MobileDeviceId](100), Name: oapi.VarP("A"), Settings: &tado.MobileDeviceSettings{GeoTrackingEnabled: oapi.VarP(true)}, Location: &oapi.LocationHome},
-		},
-	}
-	for range subscribers.Load() {
-		ch <- u
-	}
+	u := testutils.Update(
+		testutils.WithZone(10, "my room", tado.PowerON, 18, 20, testutils.WithZoneOverlay(tado.ZoneOverlayTerminationTypeMANUAL, 0)),
+		testutils.WithMobileDevice(100, "user A", testutils.WithLocation(true, false)),
+	)
+	go p.Publish(u)
 
-	assert.Eventually(t, func() bool {
-		tasks := m.ReportTasks()
-		return len(tasks) == 1
-	}, 2*time.Second, 100*time.Millisecond)
+	const want = "*my room*: switching heating to auto mode in 1h0m0s\nReason: manual setting detected"
+	msg := <-n.ch
+	assert.Equal(t, want, msg)
+	assert.Equal(t, want, strings.Join(m.ReportTasks(), ", "))
 
 	cancel()
 	assert.NoError(t, <-errCh)

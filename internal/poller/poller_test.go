@@ -6,6 +6,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"log/slog"
 	"testing"
 	"time"
@@ -28,8 +29,8 @@ func TestTadoPoller_Run(t *testing.T) {
 	assert.Equal(t, tado.HomeId(1), *update.HomeBase.Id)
 	assert.True(t, update.Home())
 
-	zone, err := update.GetZone("room")
-	assert.NoError(t, err)
+	zone, ok := update.GetZone("room")
+	require.True(t, ok)
 	assert.Equal(t, 10, *zone.Id)
 
 	device, ok := update.GetMobileDevice("A")

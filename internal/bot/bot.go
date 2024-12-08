@@ -3,7 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
-	"github.com/clambin/tado-exporter/internal/controller/rules/action"
+	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
 	"github.com/slack-go/slack"
@@ -21,7 +21,7 @@ type Bot struct {
 }
 
 type TadoClient interface {
-	action.TadoClient
+	controller.TadoClient
 	DeletePresenceLockWithResponse(ctx context.Context, homeId tado.HomeId, reqEditors ...tado.RequestEditorFn) (*tado.DeletePresenceLockResponse, error)
 }
 

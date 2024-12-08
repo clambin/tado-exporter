@@ -1,7 +1,6 @@
-package pubsub_test
+package pubsub
 
 import (
-	"github.com/clambin/tado-exporter/pkg/pubsub"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"sync"
@@ -9,13 +8,14 @@ import (
 )
 
 func TestPublisher(t *testing.T) {
-	p := pubsub.New[int](slog.Default())
+	p := New[int](slog.Default())
 
 	const clients = 10
 	var chs []chan int
 	for range clients {
 		chs = append(chs, p.Subscribe())
 	}
+	assert.Equal(t, clients, p.Subscribers())
 
 	go p.Publish(123)
 

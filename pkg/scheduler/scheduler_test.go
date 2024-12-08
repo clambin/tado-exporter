@@ -61,7 +61,7 @@ func TestJob_Cancel(t *testing.T) {
 	<-ch
 	completed, err := job.Result()
 	assert.True(t, completed)
-	assert.ErrorIs(t, err, scheduler.ErrCanceled)
+	assert.ErrorIs(t, err, context.Canceled)
 }
 
 func TestJob_Cancel_Chained(t *testing.T) {
@@ -74,14 +74,14 @@ func TestJob_Cancel_Chained(t *testing.T) {
 	<-ch
 	completed, err := job.Result()
 	assert.True(t, completed)
-	assert.ErrorIs(t, err, scheduler.ErrCanceled)
+	assert.ErrorIs(t, err, context.Canceled)
 }
 
 func TestJob_Due(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	f := scheduler.RunFunc(func(_ context.Context) error { return nil })
 	job := scheduler.Schedule(ctx, f, time.Hour, nil)
-	assert.Equal(t, 60*time.Minute, time.Until(job.Due()).Round(time.Minute))
+	assert.Equal(t, 60*time.Minute, job.Due().Round(time.Minute))
 
 	cancel()
 }
