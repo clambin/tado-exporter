@@ -142,7 +142,7 @@ func TestAction_IsActionState(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.isEqual(t, tt.action.IsActionState(tt.other))
+			tt.isEqual(t, tt.action.IsAction(tt.other))
 		})
 	}
 }

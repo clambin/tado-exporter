@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/pkg/scheduler"
@@ -18,7 +19,7 @@ import (
 type groupEvaluator struct {
 	Publisher[poller.Update]
 	TadoClient
-	Notifier
+	notifier.Notifier
 	logger       *slog.Logger
 	jobCompleted chan struct{}
 	scheduledJob atomic.Pointer[job]
@@ -30,7 +31,7 @@ func newGroupEvaluator(
 	rules rules.Rules,
 	p Publisher[poller.Update],
 	client TadoClient,
-	notifier Notifier,
+	notifier notifier.Notifier,
 	l *slog.Logger,
 ) *groupEvaluator {
 	return &groupEvaluator{
@@ -74,19 +75,19 @@ func (g *groupEvaluator) processUpdate(update poller.Update) (rules.Action, bool
 		return nil, false
 	}
 
-	current, err := g.Rules.GetState(update)
+	currentState, err := g.Rules.GetState(update)
 	if err != nil {
 		g.logger.Error("failed to parse update", "err", err)
 		return nil, false
 	}
 
-	action, err := g.Rules.Evaluate(current)
+	action, err := g.Rules.Evaluate(currentState)
 	if err != nil {
 		g.logger.Error("failed to evaluate zone rules", "err", err)
 		return nil, false
 	}
 
-	return action, !action.IsState(current)
+	return action, !action.IsState(currentState)
 }
 
 // scheduleJob is called when processUpdate returns a new action. It executes (or schedules) the required action.
@@ -124,8 +125,8 @@ func (g *groupEvaluator) scheduleJob(ctx context.Context, action rules.Action) {
 
 // shouldSchedule returns true if the newAction should be scheduled, i.e. either the action is different from the scheduled action,
 // or newAction should run before the scheduled action.
-func shouldSchedule(currentJob scheduledJob, newAction rules.Action) bool {
-	if !currentJob.IsActionState(newAction) {
+func shouldSchedule(currentJob *job, newAction rules.Action) bool {
+	if !currentJob.IsAction(newAction) {
 		return true
 	}
 	// truncate old & new due times up to a minute and only start a new job (canceling the old one) if newDue is after due.
@@ -178,13 +179,6 @@ func (g *groupEvaluator) ReportTask() string {
 
 // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 var _ scheduler.Runnable = &job{}
-
-var _ scheduledJob = &job{}
-
-type scheduledJob interface {
-	Due() time.Duration
-	IsActionState(rules.Action) bool
-}
 
 type job struct {
 	rules.Action

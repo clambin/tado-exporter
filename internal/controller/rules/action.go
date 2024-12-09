@@ -12,7 +12,7 @@ import (
 
 type Action interface {
 	IsState(state State) bool
-	IsActionState(action Action) bool
+	IsAction(action Action) bool
 	Delay() time.Duration
 	Reason() string
 	setReason(reason string)
@@ -35,7 +35,7 @@ func (h *homeAction) IsState(state State) bool {
 	return state.HomeState == h.HomeState
 }
 
-func (h *homeAction) IsActionState(action Action) bool {
+func (h *homeAction) IsAction(action Action) bool {
 	o, ok := action.(*homeAction)
 	return ok && o.HomeState == h.HomeState
 }
@@ -107,7 +107,7 @@ func (z *zoneAction) IsState(state State) bool {
 	return z.ZoneState == state.ZoneState
 }
 
-func (z *zoneAction) IsActionState(action Action) bool {
+func (z *zoneAction) IsAction(action Action) bool {
 	o, ok := action.(*zoneAction)
 	return ok && o.ZoneState == z.ZoneState
 }

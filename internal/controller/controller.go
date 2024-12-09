@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
@@ -22,10 +23,6 @@ type Publisher[T any] interface {
 	Unsubscribe(chan T)
 }
 
-type Notifier interface {
-	Notify(string)
-}
-
 // A Controller creates and runs the required home and zone evaluators for a Configuration.
 type Controller struct {
 	logger      *slog.Logger
@@ -38,7 +35,7 @@ type Configuration struct {
 }
 
 // New creates a new Controller, with the home & zone controllers required by the Configuration.
-func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n Notifier, l *slog.Logger) (*Controller, error) {
+func New(cfg Configuration, p Publisher[poller.Update], c TadoClient, n notifier.Notifier, l *slog.Logger) (*Controller, error) {
 	m := Controller{logger: l}
 	if len(cfg.Home) > 0 {
 		homeRules, err := rules.LoadHomeRules(cfg.Home)

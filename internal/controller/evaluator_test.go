@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/controller/rules/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -205,7 +206,7 @@ func Test_shouldSchedule(t *testing.T) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var _ Notifier = &fakeNotifier{}
+var _ notifier.Notifier = &fakeNotifier{}
 
 type fakeNotifier struct {
 	ch chan string
