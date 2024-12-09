@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/clambin/tado-exporter/cmd"
+	"github.com/clambin/tado-exporter/internal/cmd"
 	"log/slog"
 	//_ "net/http/pprof"
 	"os"

@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"github.com/clambin/go-common/charmer"
-	"github.com/clambin/tado-exporter/cmd/eval"
-	"github.com/clambin/tado-exporter/cmd/monitor"
+	"github.com/clambin/tado-exporter/internal/cmd/eval"
+	"github.com/clambin/tado-exporter/internal/cmd/monitor"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log/slog"

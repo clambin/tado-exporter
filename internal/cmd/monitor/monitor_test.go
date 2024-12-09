@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/cmd/monitor/mocks"
+	"github.com/clambin/tado-exporter/internal/cmd/monitor/mocks"
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/oapi"
