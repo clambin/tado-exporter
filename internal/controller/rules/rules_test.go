@@ -25,9 +25,9 @@ func TestRules_zoneRules(t *testing.T) {
 	require.Len(t, r.rules, 3)
 	zr, ok := r.rules[2].(zoneRule)
 	require.True(t, ok)
-	luart.Register(zr.luaScript.State, func() time.Time {
+	luart.LoadTadoModule(func() time.Time {
 		return time.Date(2024, time.December, 6, 13, 0, 0, 0, time.Local)
-	})
+	})(zr.luaScript.State)
 
 	tests := []struct {
 		name            string

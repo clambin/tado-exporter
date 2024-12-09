@@ -111,7 +111,9 @@ func testZoneRule(t *testing.T, script string, tt zoneTest) {
 	r, err := LoadZoneRule(tt.zoneName, RuleConfiguration{Name: tt.name, Script: ScriptConfig{Packaged: script}})
 	require.NoError(t, err)
 	if !tt.now.IsZero() {
-		luart.Register(r.(zoneRule).luaScript.State, func() time.Time { return tt.now })
+		luart.LoadTadoModule(func() time.Time {
+			return tt.now
+		})(r.(zoneRule).luaScript.State)
 	}
 	s, err := GetZoneState(tt.zoneName)(tt.update)
 	require.NoError(t, err)
@@ -378,5 +380,25 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, a)
 		})
+	}
+}
+
+// With shopify/go-lua:
+// BenchmarkZoneRule_Evaluate_NightTime-16           320155              3559 ns/op            2408 B/op         41 allocs/op
+func BenchmarkZoneRule_Evaluate_NightTime(b *testing.B) {
+	r, err := LoadZoneRule("zone", RuleConfiguration{Name: "nighttime", Script: ScriptConfig{Packaged: "nighttime"}})
+	require.NoError(b, err)
+	s := State{
+		ZoneState: ZoneState{true, true},
+	}
+
+	for range b.N {
+		a, err := r.Evaluate(s)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if !a.IsState(State{ZoneState: ZoneState{false, true}}) {
+			b.Fatal("unexpected result")
+		}
 	}
 }

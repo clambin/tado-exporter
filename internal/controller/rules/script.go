@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Shopify/go-lua"
-	luart2 "github.com/clambin/tado-exporter/internal/controller/rules/luart"
+	"github.com/clambin/tado-exporter/internal/controller/rules/luart"
 	"iter"
 )
 
@@ -21,7 +21,7 @@ func loadLuaScript(name string, cfg ScriptConfig, fs *embed.FS) (luaScript, erro
 	defer func() { _ = r.Close() }()
 
 	var s luaScript
-	s.State, err = luart2.Compile(name, r)
+	s.State, err = luart.Compile(name, r)
 	return s, err
 }
 
@@ -30,7 +30,7 @@ func (l luaScript) pushHomeState(homeState HomeState) {
 		"Overlay": homeState.Overlay,
 		"Home":    homeState.Home,
 	}
-	luart2.PushMap(l.State, luaObject)
+	luart.PushMap(l.State, luaObject)
 }
 
 func (l luaScript) getHomeState(index int) (HomeState, error) {
@@ -38,7 +38,7 @@ func (l luaScript) getHomeState(index int) (HomeState, error) {
 		return HomeState{}, &errLuaInvalidResponse{fmt.Errorf("no table found at index %d", index)}
 	}
 	// more idiomatic for TableToMap to push these on the stack and then pop them with ToBoolean?
-	obj := luart2.TableToMap(l.State, l.State.AbsIndex(index))
+	obj := luart.TableToMap(l.State, l.State.AbsIndex(index))
 	var hs HomeState
 	var err error
 	if hs.Overlay, err = getTableAttribute[bool](obj, "Overlay"); err != nil {
@@ -55,7 +55,7 @@ func (l luaScript) pushZoneState(zoneState ZoneState) {
 		"Overlay": zoneState.Overlay,
 		"Heating": zoneState.Heating,
 	}
-	luart2.PushMap(l.State, luaObject)
+	luart.PushMap(l.State, luaObject)
 }
 
 func (l luaScript) getZoneState(index int) (ZoneState, error) {
@@ -63,7 +63,7 @@ func (l luaScript) getZoneState(index int) (ZoneState, error) {
 		return ZoneState{}, &errLuaInvalidResponse{fmt.Errorf("no table found at index %d", index)}
 	}
 	// more idiomatic for TableToMap to push these on the stack and then pop them with ToBoolean?
-	obj := luart2.TableToMap(l.State, l.State.AbsIndex(index))
+	obj := luart.TableToMap(l.State, l.State.AbsIndex(index))
 	var zs ZoneState
 	var err error
 	if zs.Overlay, err = getTableAttribute[bool](obj, "Overlay"); err != nil {

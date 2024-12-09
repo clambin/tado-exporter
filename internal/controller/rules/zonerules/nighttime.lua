@@ -7,8 +7,8 @@ function Evaluate(_, zone, _, args)
         args = { StartHour = 23, StartMin = 30, EndHour = 6, EndMin = 0 }
     end
     local delay = 0
-    if not IsInRange(args.StartHour, args.StartMin, args.EndHour, args.EndMin) then
-        delay = SecondsTill(args.StartHour, args.StartMin)
+    if not tado.isInRange(args.StartHour, args.StartMin, args.EndHour, args.EndMin) then
+        delay = tado.secondsTill(args.StartHour, args.StartMin)
     end
     return zone, delay, "manual setting detected"
 end
