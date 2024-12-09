@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/clambin/go-common/set"
-	"github.com/clambin/tado-exporter/internal/controller/rules/luart"
 	"github.com/clambin/tado-exporter/internal/controller/rules/zonerules"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
@@ -73,14 +72,14 @@ func (r zoneRule) Evaluate(currentState State) (Action, error) {
 	// set up evaluation call
 	r.luaScript.State.Global("Evaluate")
 	if r.luaScript.State.IsNil(-1) {
-		return nil, &errLua{err: errors.New("script does not contain a global Evaluate function")}
+		return nil, &errLua{err: errors.New("script does not contain an Evaluate function")}
 	}
 
 	// push arguments
 	r.luaScript.pushHomeState(currentState.HomeState)
 	r.luaScript.pushZoneState(currentState.ZoneState)
 	r.luaScript.pushDevices(currentState.Devices.filter(r.devices))
-	luart.PushMap(r.State, r.args)
+	r.luaScript.pushArgs(r.args)
 
 	// execute the script
 	if err := r.ProtectedCall(4, 3, 0); err != nil {

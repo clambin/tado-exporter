@@ -55,9 +55,6 @@ func isInRangeWithNow(now func() time.Time) lua.Function {
 }
 
 func secondsTillWithNow(now func() time.Time) lua.Function {
-	if now == nil {
-		now = time.Now
-	}
 	return func(l *lua.State) int {
 		toHour, _ := l.ToNumber(-2)
 		toMinute, _ := l.ToNumber(-1)

@@ -2,7 +2,6 @@ package rules
 
 import (
 	"embed"
-	"errors"
 	"fmt"
 	"github.com/Shopify/go-lua"
 	"github.com/clambin/tado-exporter/internal/controller/rules/luart"
@@ -26,50 +25,48 @@ func loadLuaScript(name string, cfg ScriptConfig, fs *embed.FS) (luaScript, erro
 }
 
 func (l luaScript) pushHomeState(homeState HomeState) {
-	luaObject := map[string]any{
+	luart.LuaObject{
 		"Overlay": homeState.Overlay,
 		"Home":    homeState.Home,
-	}
-	luart.PushMap(l.State, luaObject)
+	}.Push(l.State)
 }
 
 func (l luaScript) getHomeState(index int) (HomeState, error) {
 	if !l.State.IsTable(index) {
 		return HomeState{}, &errLuaInvalidResponse{fmt.Errorf("no table found at index %d", index)}
 	}
-	// more idiomatic for TableToMap to push these on the stack and then pop them with ToBoolean?
-	obj := luart.TableToMap(l.State, l.State.AbsIndex(index))
+	// more idiomatic for GetObject to push these on the stack and then pop them with ToBoolean?
+	obj := luart.GetObject(l.State, l.State.AbsIndex(index))
 	var hs HomeState
 	var err error
-	if hs.Overlay, err = getTableAttribute[bool](obj, "Overlay"); err != nil {
+	if hs.Overlay, err = luart.GetObjectAttribute[bool](obj, "Overlay"); err != nil {
 		return HomeState{}, &errLuaInvalidResponse{fmt.Errorf("homeState.Overlay: %w", err)}
 	}
-	if hs.Home, err = getTableAttribute[bool](obj, "Home"); err != nil {
+	if hs.Home, err = luart.GetObjectAttribute[bool](obj, "Home"); err != nil {
 		return HomeState{}, &errLuaInvalidResponse{err: fmt.Errorf("homeState.Home: %w", err)}
 	}
 	return hs, nil
 }
 
 func (l luaScript) pushZoneState(zoneState ZoneState) {
-	luaObject := map[string]any{
+	luart.LuaObject{
 		"Overlay": zoneState.Overlay,
 		"Heating": zoneState.Heating,
-	}
-	luart.PushMap(l.State, luaObject)
+	}.Push(l.State)
 }
 
 func (l luaScript) getZoneState(index int) (ZoneState, error) {
 	if !l.State.IsTable(index) {
 		return ZoneState{}, &errLuaInvalidResponse{fmt.Errorf("no table found at index %d", index)}
 	}
-	// more idiomatic for TableToMap to push these on the stack and then pop them with ToBoolean?
-	obj := luart.TableToMap(l.State, l.State.AbsIndex(index))
+	// more idiomatic for GetObject to push these on the stack and then pop them with ToBoolean?
+	obj := luart.GetObject(l.State, l.State.AbsIndex(index))
 	var zs ZoneState
 	var err error
-	if zs.Overlay, err = getTableAttribute[bool](obj, "Overlay"); err != nil {
+	if zs.Overlay, err = luart.GetObjectAttribute[bool](obj, "Overlay"); err != nil {
 		return ZoneState{}, &errLuaInvalidResponse{fmt.Errorf("zoneState.Overlay: %w", err)}
 	}
-	if zs.Heating, err = getTableAttribute[bool](obj, "Heating"); err != nil {
+	if zs.Heating, err = luart.GetObjectAttribute[bool](obj, "Heating"); err != nil {
 		return ZoneState{}, &errLuaInvalidResponse{err: fmt.Errorf("zoneState.Home: %w", err)}
 	}
 	return zs, nil
@@ -89,14 +86,6 @@ func (l luaScript) pushDevices(devices iter.Seq[Device]) {
 	}
 }
 
-func getTableAttribute[T any](obj map[string]any, name string) (T, error) {
-	var v T
-	attrib, ok := obj[name]
-	if !ok {
-		return v, errors.New("not found")
-	}
-	if v, ok = attrib.(T); !ok {
-		return v, fmt.Errorf("invalid type: %T", attrib)
-	}
-	return v, nil
+func (l luaScript) pushArgs(args Args) {
+	luart.LuaObject(args).Push(l.State)
 }
