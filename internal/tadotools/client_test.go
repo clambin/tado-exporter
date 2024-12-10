@@ -2,7 +2,7 @@ package tadotools
 
 import (
 	"bytes"
-	"github.com/clambin/go-common/http/roundtripper"
+	"github.com/clambin/go-common/httputils/roundtripper"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

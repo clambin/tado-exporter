@@ -2,8 +2,8 @@ package tadotools
 
 import (
 	"context"
-	"github.com/clambin/go-common/http/metrics"
-	"github.com/clambin/go-common/http/roundtripper"
+	"github.com/clambin/go-common/httputils/metrics"
+	"github.com/clambin/go-common/httputils/roundtripper"
 	"github.com/clambin/tado/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"net/http"

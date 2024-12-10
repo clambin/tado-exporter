@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/clambin/go-common/charmer"
-	gchttp "github.com/clambin/go-common/http"
+	httputils "github.com/clambin/go-common/httputils"
 	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"
@@ -104,7 +104,7 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 
 	// exporter
 	g.Go(func() error {
-		return gchttp.RunServer(ctx, &http.Server{Addr: v.GetString("exporter.addr"), Handler: promhttp.Handler()})
+		return httputils.RunServer(ctx, &http.Server{Addr: v.GetString("exporter.addr"), Handler: promhttp.Handler()})
 	})
 
 	// health
@@ -113,7 +113,7 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 	g.Go(func() error {
 		r := http.NewServeMux()
 		r.Handle("/health", h)
-		return gchttp.RunServer(ctx, &http.Server{Addr: v.GetString("health.addr"), Handler: r})
+		return httputils.RunServer(ctx, &http.Server{Addr: v.GetString("health.addr"), Handler: r})
 	})
 
 	// Do we have zone rules?
