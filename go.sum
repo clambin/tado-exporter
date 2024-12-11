@@ -12,8 +12,8 @@ github.com/clambin/go-common/cache v0.7.1 h1:mCZN+cSt70YvF92LM9VfxQQEiOqFrTglMFo
 github.com/clambin/go-common/cache v0.7.1/go.mod h1:HqYoCaIq9ckS3xiAQ5y8n3m4GmKSCku2+p/Cli614Sk=
 github.com/clambin/go-common/charmer v0.2.0 h1:RLqdH1pRVQUBSKRPpKgDVlad6St3FyFDOikzbc//6Nk=
 github.com/clambin/go-common/charmer v0.2.0/go.mod h1:8Y/XKmTspOZ9xc0fgV8mvYS0mkXBuAidO3MCJLCMfrg=
-github.com/clambin/go-common/httputils v0.1.0 h1:Hi6GqLzEWgDlYX3l6/ZKnQDgVxgGSC5k6lPnXhD+jqg=
-github.com/clambin/go-common/httputils v0.1.0/go.mod h1:VwWEW9c1yjaXLTHJksstFFi8DLC+wTV2GGIr1d3cEbY=
+github.com/clambin/go-common/httputils v0.1.1 h1:ScY9WgW9223hBmcGldK58OguKju9cChGf0kqkNqk9js=
+github.com/clambin/go-common/httputils v0.1.1/go.mod h1:VwWEW9c1yjaXLTHJksstFFi8DLC+wTV2GGIr1d3cEbY=
 github.com/clambin/go-common/set v0.4.3 h1:Sm9lkAJsh82j40RDpfQIziHyHjwr07+KsQF6vgCVXm4=
 github.com/clambin/go-common/set v0.4.3/go.mod h1:Q5GpBoM7B7abNV2Wzys+wQMInBHMoHyh/h0Cn2OmY4A=
 github.com/clambin/go-common/testutils v0.3.0 h1:zWd00A6c1oIGRp1/OGS3jQQ56eJNtvvcLoXg6tI46YY=
