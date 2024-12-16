@@ -19,8 +19,8 @@ type TadoClient interface {
 }
 
 type Publisher[T any] interface {
-	Subscribe() chan T
-	Unsubscribe(chan T)
+	Subscribe() <-chan T
+	Unsubscribe(<-chan T)
 }
 
 // A Controller creates and runs the required home and zone evaluators for a Configuration.

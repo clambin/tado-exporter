@@ -225,13 +225,13 @@ type fakePublisher struct {
 	subscribed atomic.Bool
 }
 
-func (f *fakePublisher) Subscribe() chan poller.Update {
+func (f *fakePublisher) Subscribe() <-chan poller.Update {
 	f.ch = make(chan poller.Update)
 	f.subscribed.Store(true)
 	return f.ch
 }
 
-func (f *fakePublisher) Unsubscribe(_ chan poller.Update) {
+func (f *fakePublisher) Unsubscribe(_ <-chan poller.Update) {
 	f.subscribed.Store(false)
 	f.ch = nil
 }

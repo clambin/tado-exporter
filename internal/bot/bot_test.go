@@ -21,9 +21,9 @@ func TestBot_Run(t *testing.T) {
 	h.EXPECT().HandleDefault(mock.Anything).Once()
 	h.EXPECT().RunEventLoopContext(ctx).Return(nil).Once()
 	p := mockPoller.NewPoller(t)
-	ch := make(chan poller.Update)
-	p.EXPECT().Subscribe().Return(ch).Once()
-	p.EXPECT().Unsubscribe(ch).Once()
+	in, out := makeChannel[poller.Update]()
+	p.EXPECT().Subscribe().Return(out).Once()
+	p.EXPECT().Unsubscribe(out).Once()
 
 	b := New(nil, h, p, nil, slog.Default())
 
@@ -33,7 +33,7 @@ func TestBot_Run(t *testing.T) {
 	_, ok := b.getUpdate()
 	assert.False(t, ok)
 
-	ch <- poller.Update{}
+	in <- poller.Update{}
 
 	assert.Eventually(t, func() bool {
 		_, ok = b.getUpdate()
@@ -42,4 +42,9 @@ func TestBot_Run(t *testing.T) {
 
 	cancel()
 	assert.NoError(t, <-errCh)
+}
+
+func makeChannel[T any]() (chan<- T, <-chan T) {
+	ch := make(chan T)
+	return ch, ch
 }

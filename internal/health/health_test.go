@@ -15,9 +15,9 @@ import (
 
 func TestHealth_Handle(t *testing.T) {
 	p := mocks.NewPoller(t)
-	ch := make(chan poller.Update)
-	p.EXPECT().Subscribe().Return(ch)
-	p.EXPECT().Unsubscribe(ch).Once()
+	in, out := makeChannel[poller.Update]()
+	p.EXPECT().Subscribe().Return(out)
+	p.EXPECT().Unsubscribe(out).Once()
 	p.EXPECT().Refresh().Once()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -34,7 +34,7 @@ func TestHealth_Handle(t *testing.T) {
 	h.ServeHTTP(resp, &http.Request{})
 	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
 
-	ch <- poller.Update{}
+	in <- poller.Update{}
 
 	assert.Eventually(t, func() bool {
 		resp = httptest.NewRecorder()
@@ -44,4 +44,9 @@ func TestHealth_Handle(t *testing.T) {
 
 	cancel()
 	wg.Wait()
+}
+
+func makeChannel[T any]() (chan<- T, <-chan T) {
+	ch := make(chan T)
+	return ch, ch
 }

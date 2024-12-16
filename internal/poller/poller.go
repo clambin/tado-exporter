@@ -3,7 +3,7 @@ package poller
 import (
 	"context"
 	"fmt"
-	"github.com/clambin/tado-exporter/pkg/pubsub"
+	"github.com/clambin/go-common/pubsub"
 	"github.com/clambin/tado/v2"
 	"github.com/clambin/tado/v2/tools"
 	"log/slog"
@@ -11,8 +11,8 @@ import (
 )
 
 type Poller interface {
-	Subscribe() chan Update
-	Unsubscribe(ch chan Update)
+	Subscribe() <-chan Update
+	Unsubscribe(ch <-chan Update)
 	Refresh()
 }
 
@@ -30,7 +30,7 @@ var _ Poller = &TadoPoller{}
 
 type TadoPoller struct {
 	TadoClient
-	*pubsub.Publisher[Update]
+	pubsub.Publisher[Update]
 	logger   *slog.Logger
 	refresh  chan struct{}
 	interval time.Duration
@@ -40,7 +40,7 @@ type TadoPoller struct {
 func New(tadoClient TadoClient, interval time.Duration, logger *slog.Logger) *TadoPoller {
 	return &TadoPoller{
 		TadoClient: tadoClient,
-		Publisher:  pubsub.New[Update](logger),
+		Publisher:  pubsub.Publisher[Update]{},
 		interval:   interval,
 		logger:     logger,
 		refresh:    make(chan struct{}),

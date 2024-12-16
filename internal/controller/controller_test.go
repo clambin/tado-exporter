@@ -2,10 +2,10 @@ package controller
 
 import (
 	"context"
+	"github.com/clambin/go-common/pubsub"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/poller/testutils"
-	"github.com/clambin/tado-exporter/pkg/pubsub"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,10 +54,10 @@ func TestController_Run(t *testing.T) {
 		},
 	}
 	l := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	p := pubsub.New[poller.Update](l)
+	var p pubsub.Publisher[poller.Update]
 	n := fakeNotifier{ch: make(chan string)}
 
-	m, err := New(cfg, p, nil, &n, l)
+	m, err := New(cfg, &p, nil, &n, l)
 	require.NoError(t, err)
 	require.NotNil(t, m)
 	assert.Len(t, m.controllers, 2)
