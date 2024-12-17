@@ -83,6 +83,9 @@ func (p *TadoPoller) poll(ctx context.Context) error {
 }
 
 func (p *TadoPoller) update(ctx context.Context) (Update, error) {
+	// tools.GetHomes gives detailed tado errors on non-200 responses.
+	// So for the remaining calls, we'll just report the HTTP status on failure
+	// (as they're unlikely to happen if GetHomes succeeded).
 	homes, err := tools.GetHomes(ctx, p.TadoClient)
 	if err != nil {
 		return Update{}, fmt.Errorf("GetHomes: %w", err)

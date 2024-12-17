@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado/v2"
+	"github.com/clambin/tado/v2/tools"
 	"log/slog"
 	"net/http"
 	"time"
@@ -154,7 +155,10 @@ func (z *zoneAction) Do(ctx context.Context, client TadoClient, l *slog.Logger) 
 		l.Debug("removing overlay")
 		resp, err := client.DeleteZoneOverlayWithResponse(ctx, z.HomeId, z.ZoneId)
 		if err == nil && resp.StatusCode() != http.StatusNoContent {
-			err = fmt.Errorf("unexpected status code %d", resp.StatusCode())
+			err = tools.HandleErrors(resp.HTTPResponse, map[int]any{
+				http.StatusUnauthorized: resp.JSON401,
+				http.StatusForbidden:    resp.JSON403,
+			})
 		}
 		return err
 	} else {
@@ -168,7 +172,11 @@ func (z *zoneAction) Do(ctx context.Context, client TadoClient, l *slog.Logger) 
 			Type: nil,
 		})
 		if err == nil && resp.StatusCode() != http.StatusOK {
-			err = fmt.Errorf("unexpected status code %d", resp.StatusCode())
+			err = tools.HandleErrors(resp.HTTPResponse, map[int]any{
+				http.StatusUnauthorized:        resp.JSON401,
+				http.StatusForbidden:           resp.JSON403,
+				http.StatusUnprocessableEntity: resp.JSON422,
+			})
 		}
 		return err
 	}
