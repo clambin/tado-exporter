@@ -90,19 +90,33 @@ func Test_runMonitor(t *testing.T) {
 
 	client := mocks.NewTadoClient(t)
 	client.EXPECT().GetMeWithResponse(ctx).
-		Return(&tado.GetMeResponse{JSON200: &tado.User{Homes: &[]tado.HomeBase{{Id: oapi.VarP[tado.HomeId](1), Name: oapi.VarP("home")}}}}, nil)
+		Return(&tado.GetMeResponse{
+			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+			JSON200:      &tado.User{Homes: &[]tado.HomeBase{{Id: oapi.VarP[tado.HomeId](1), Name: oapi.VarP("home")}}},
+		}, nil)
 	client.EXPECT().GetHomeStateWithResponse(ctx, tado.HomeId(1)).
-		Return(&tado.GetHomeStateResponse{JSON200: &tado.HomeState{Presence: oapi.VarP[tado.HomePresence](tado.HOME)}}, nil)
+		Return(&tado.GetHomeStateResponse{
+			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+			JSON200:      &tado.HomeState{Presence: oapi.VarP[tado.HomePresence](tado.HOME)},
+		}, nil)
 	client.EXPECT().GetZonesWithResponse(ctx, tado.HomeId(1)).
-		Return(&tado.GetZonesResponse{JSON200: &[]tado.Zone{}}, nil)
+		Return(&tado.GetZonesResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+			JSON200: &[]tado.Zone{},
+		}, nil)
 	client.EXPECT().GetMobileDevicesWithResponse(ctx, tado.HomeId(1)).
-		Return(&tado.GetMobileDevicesResponse{JSON200: &[]tado.MobileDevice{}}, nil)
+		Return(&tado.GetMobileDevicesResponse{
+			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+			JSON200:      &[]tado.MobileDevice{},
+		}, nil)
 	client.EXPECT().GetWeatherWithResponse(ctx, tado.HomeId(1)).
-		Return(&tado.GetWeatherResponse{JSON200: &tado.Weather{
-			OutsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP[float32](18.5)},
-			SolarIntensity:     &tado.PercentageDataPoint{Percentage: oapi.VarP[float32](25.0)},
-			WeatherState:       &tado.WeatherStateDataPoint{Value: oapi.VarP(tado.RAIN)},
-		}}, nil)
+		Return(&tado.GetWeatherResponse{
+			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+			JSON200: &tado.Weather{
+				OutsideTemperature: &tado.TemperatureDataPoint{Celsius: oapi.VarP[float32](18.5)},
+				SolarIntensity:     &tado.PercentageDataPoint{Percentage: oapi.VarP[float32](25.0)},
+				WeatherState:       &tado.WeatherStateDataPoint{Value: oapi.VarP(tado.RAIN)},
+			},
+		}, nil)
 
 	errCh := make(chan error)
 	go func() { errCh <- run(ctx, l, v, r, client, nil) }()

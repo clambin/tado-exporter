@@ -7,6 +7,7 @@ import (
 	"github.com/clambin/tado/v2"
 	"github.com/clambin/tado/v2/tools"
 	"log/slog"
+	"net/http"
 	"time"
 )
 
@@ -110,12 +111,18 @@ func (p *TadoPoller) getZones(ctx context.Context, homeId tado.HomeId) ([]Zone, 
 	if err != nil {
 		return nil, fmt.Errorf("GetZonesWithResponse: %w", err)
 	}
+	if zones.StatusCode() != http.StatusOK {
+		return nil, fmt.Errorf("GetZonesWithResponse: %d - %s", zones.StatusCode(), zones.Status())
+	}
 	zoneUpdates := make([]Zone, 0, len(*zones.JSON200))
 
 	for _, zone := range *zones.JSON200 {
 		resp, err := p.TadoClient.GetZoneStateWithResponse(ctx, homeId, *zone.Id)
 		if err != nil {
 			return nil, fmt.Errorf("GetZoneStateWithResponse: %w", err)
+		}
+		if resp.StatusCode() != http.StatusOK {
+			return nil, fmt.Errorf("GetZoneStateWithResponse: %d - %s", resp.StatusCode(), resp.Status())
 		}
 		zoneUpdates = append(zoneUpdates, Zone{Zone: zone, ZoneState: *resp.JSON200})
 	}
@@ -127,6 +134,9 @@ func (p *TadoPoller) getMobileDevices(ctx context.Context, homeId tado.HomeId) (
 	if err != nil {
 		return nil, fmt.Errorf("GetMobileDevicesWithResponse: %w", err)
 	}
+	if resp.StatusCode() != http.StatusOK {
+		return nil, fmt.Errorf("GetMobileDevicesWithResponse: %d - %s", resp.StatusCode(), resp.Status())
+	}
 	return *resp.JSON200, nil
 }
 
@@ -135,6 +145,9 @@ func (p *TadoPoller) getWeather(ctx context.Context, homeId tado.HomeId) (tado.W
 	if err != nil {
 		return tado.Weather{}, fmt.Errorf("GetWeatherWithResponse: %w", err)
 	}
+	if resp.StatusCode() != http.StatusOK {
+		return tado.Weather{}, fmt.Errorf("GetWeatherWithResponse: %d - %s", resp.StatusCode(), resp.Status())
+	}
 	return *resp.JSON200, nil
 }
 
@@ -142,6 +155,9 @@ func (p *TadoPoller) getHomeState(ctx context.Context, homeId tado.HomeId) (tado
 	resp, err := p.TadoClient.GetHomeStateWithResponse(ctx, homeId)
 	if err != nil {
 		return tado.HomeState{}, fmt.Errorf("GetHomeStateWithResponse: %w", err)
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return tado.HomeState{}, fmt.Errorf("GetHomeStateWithResponse: %d - %s", resp.StatusCode(), resp.Status())
 	}
 	return *resp.JSON200, err
 }
