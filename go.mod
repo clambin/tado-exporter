@@ -8,7 +8,7 @@ require (
 	github.com/clambin/go-common/httputils v0.1.2
 	github.com/clambin/go-common/pubsub v0.2.1
 	github.com/clambin/go-common/set v0.4.3
-	github.com/clambin/tado/v2 v2.3.1
+	github.com/clambin/tado/v2 v2.4.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/slack-go/slack v0.15.0
 	github.com/spf13/cobra v1.8.1

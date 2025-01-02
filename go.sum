@@ -20,8 +20,8 @@ github.com/clambin/go-common/set v0.4.3 h1:Sm9lkAJsh82j40RDpfQIziHyHjwr07+KsQF6v
 github.com/clambin/go-common/set v0.4.3/go.mod h1:Q5GpBoM7B7abNV2Wzys+wQMInBHMoHyh/h0Cn2OmY4A=
 github.com/clambin/go-common/testutils v0.4.1 h1:cEmGbP/o4sEUWTKZMJ0UjVFgqRzNEiBMEaTHw93r+n4=
 github.com/clambin/go-common/testutils v0.4.1/go.mod h1:bV0j8D4zhNkleCeluFKLBeLQ0L/dqkxbaR/joLn8kzg=
-github.com/clambin/tado/v2 v2.3.1 h1:dRvRPZDf1Ll6OC/BtboPGDhaO4zzkjoO9tqrLBCaoTk=
-github.com/clambin/tado/v2 v2.3.1/go.mod h1:oBre3Dk7lffgFi4yflgiqsIqjuojXCZoKvpzqdrEC+Y=
+github.com/clambin/tado/v2 v2.4.0 h1:mOo/SdQWkoZ1E6zq//elymR9t/LuLfT22fEB5nfCQbM=
+github.com/clambin/tado/v2 v2.4.0/go.mod h1:oBre3Dk7lffgFi4yflgiqsIqjuojXCZoKvpzqdrEC+Y=
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
