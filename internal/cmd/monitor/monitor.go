@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/clambin/go-common/charmer"
-	httputils "github.com/clambin/go-common/httputils"
+	"github.com/clambin/go-common/httputils"
 	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/health"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado-exporter/internal/tadotools"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/slack-go/slack"
@@ -39,19 +38,16 @@ var (
 )
 
 func monitor(cmd *cobra.Command, _ []string) error {
-	l := charmer.GetLogger(cmd)
-
-	tadoHTTPClientMetrics := tadotools.NewTadoCallMetrics("tado", "monitor", nil)
-	prometheus.MustRegister(tadoHTTPClientMetrics)
-
-	api, err := tadotools.GetInstrumentedTadoClient(
+	api, err := instrumentedTadoClient(
 		cmd.Context(),
 		viper.GetString("tado.username"), viper.GetString("tado.password"),
-		tadoHTTPClientMetrics,
+		requestCounter,
+		requestDuration,
 	)
 	if err != nil {
 		return fmt.Errorf("tado: %w", err)
 	}
+	prometheus.MustRegister(requestCounter, requestDuration)
 
 	var sc *slack.Client
 	token := viper.GetString("slack.token")
@@ -63,6 +59,7 @@ func monitor(cmd *cobra.Command, _ []string) error {
 	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	l := charmer.GetLogger(cmd)
 	l.Info("tado monitor starting", "version", cmd.Root().Version)
 	defer l.Info("tado monitor stopped")
 

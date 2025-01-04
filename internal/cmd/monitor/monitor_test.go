@@ -89,26 +89,31 @@ func Test_runMonitor(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	client := mocks.NewTadoClient(t)
-	client.EXPECT().GetMeWithResponse(ctx).
+	client.EXPECT().
+		GetMeWithResponse(ctx).
 		Return(&tado.GetMeResponse{
 			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
 			JSON200:      &tado.User{Homes: &[]tado.HomeBase{{Id: oapi.VarP[tado.HomeId](1), Name: oapi.VarP("home")}}},
 		}, nil)
-	client.EXPECT().GetHomeStateWithResponse(ctx, tado.HomeId(1)).
+	client.EXPECT().
+		GetHomeStateWithResponse(ctx, tado.HomeId(1)).
 		Return(&tado.GetHomeStateResponse{
 			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
 			JSON200:      &tado.HomeState{Presence: oapi.VarP[tado.HomePresence](tado.HOME)},
 		}, nil)
-	client.EXPECT().GetZonesWithResponse(ctx, tado.HomeId(1)).
+	client.EXPECT().
+		GetZonesWithResponse(ctx, tado.HomeId(1)).
 		Return(&tado.GetZonesResponse{HTTPResponse: &http.Response{StatusCode: http.StatusOK},
 			JSON200: &[]tado.Zone{},
 		}, nil)
-	client.EXPECT().GetMobileDevicesWithResponse(ctx, tado.HomeId(1)).
+	client.EXPECT().
+		GetMobileDevicesWithResponse(ctx, tado.HomeId(1)).
 		Return(&tado.GetMobileDevicesResponse{
 			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
 			JSON200:      &[]tado.MobileDevice{},
 		}, nil)
-	client.EXPECT().GetWeatherWithResponse(ctx, tado.HomeId(1)).
+	client.EXPECT().
+		GetWeatherWithResponse(ctx, tado.HomeId(1)).
 		Return(&tado.GetWeatherResponse{
 			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
 			JSON200: &tado.Weather{
