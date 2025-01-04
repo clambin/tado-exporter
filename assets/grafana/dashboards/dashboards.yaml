@@ -33,12 +33,15 @@ spec:
       "graphTooltip": 0,
       "id": 5911,
       "links": [],
-      "liveNow": false,
       "panels": [
         {
           "datasource": {
             "type": "loki",
             "uid": "JrYhCWHnk"
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
@@ -57,6 +60,7 @@ spec:
             "sortOrder": "Descending",
             "wrapLogMessage": false
           },
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": {
@@ -89,6 +93,7 @@ spec:
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
+                "barWidthFactor": 0.6,
                 "drawStyle": "line",
                 "fillOpacity": 0,
                 "gradientMode": "none",
@@ -152,6 +157,7 @@ spec:
               "sort": "none"
             }
           },
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": {
@@ -185,6 +191,7 @@ spec:
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
+                "barWidthFactor": 0.6,
                 "drawStyle": "line",
                 "fillOpacity": 0,
                 "gradientMode": "none",
@@ -248,6 +255,7 @@ spec:
               "sort": "none"
             }
           },
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": {
@@ -255,8 +263,8 @@ spec:
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "avg by (path) (tado_monitor_http_request_duration_seconds_sum / tado_monitor_http_request_duration_seconds_count)",
-              "legendFormat": "__auto",
+              "expr": "sum by (code) (tado_monitor_http_request_duration_seconds_sum / tado_monitor_http_request_duration_seconds_count)",
+              "legendFormat": "{{code}}",
               "range": true,
               "refId": "A"
             }
@@ -268,6 +276,10 @@ spec:
           "datasource": {
             "type": "loki",
             "uid": "JrYhCWHnk"
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
@@ -286,6 +298,7 @@ spec:
             "sortOrder": "Descending",
             "wrapLogMessage": false
           },
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": {
@@ -306,6 +319,10 @@ spec:
             "type": "loki",
             "uid": "JrYhCWHnk"
           },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
           "gridPos": {
             "h": 8,
             "w": 24,
@@ -323,6 +340,7 @@ spec:
             "sortOrder": "Descending",
             "wrapLogMessage": false
           },
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": {
@@ -339,14 +357,14 @@ spec:
           "type": "logs"
         }
       ],
+      "preload": false,
       "refresh": "1m",
-      "schemaVersion": 39,
+      "schemaVersion": 40,
       "tags": [],
       "templating": {
         "list": [
           {
             "current": {
-              "selected": true,
               "text": "All",
               "value": "$__all"
             },
@@ -355,9 +373,7 @@ spec:
               "uid": "PBFA97CFB590B2093"
             },
             "definition": "label_values(tado_zone_heating_percentage,zone_name)",
-            "hide": 0,
             "includeAll": true,
-            "multi": false,
             "name": "zone",
             "options": [],
             "query": {
@@ -367,7 +383,6 @@ spec:
             },
             "refresh": 1,
             "regex": "",
-            "skipUrlSync": false,
             "sort": 1,
             "type": "query"
           }
@@ -377,12 +392,11 @@ spec:
         "from": "now-1h",
         "to": "now"
       },
-      "timeRangeUpdatedDuringEditOrView": false,
       "timepicker": {},
       "timezone": "",
       "title": "tado metrics",
       "uid": "a3c29cd7-2ffd-4085-8635-e284a1c3377a",
-      "version": 1,
+      "version": 2,
       "weekStart": ""
     }
 ---
@@ -1959,6 +1973,6 @@ spec:
       "timezone": "",
       "title": "tadoº overview",
       "uid": "jIGk6cWRk",
-      "version": 5,
+      "version": 6,
       "weekStart": ""
     }

@@ -4,8 +4,7 @@ on:
   push:
     branches-ignore:
       - master
-      - lua
-      - refactor
+      - instrumentation
   pull_request_target:
 
 jobs:

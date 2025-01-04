@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - master
-      - lua
-      - refactor
+      - instrumentation
 
 jobs:
   test:
