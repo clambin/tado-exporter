@@ -40,12 +40,12 @@ func evalHomeRuleScript(path string, actionOnly bool) (r results, err error) {
 	return r, err
 }
 
-func loadHomeRule(path string) (rules.Rule, error) {
-	cfg, err := getRuleConfig(path)
-	if err != nil {
-		return nil, err
+func loadHomeRule(path string) (r rules.Rule, err error) {
+	var cfg rules.RuleConfiguration
+	if cfg, err = getRuleConfig(path); err == nil {
+		r, err = rules.LoadHomeRule(cfg)
 	}
-	return rules.LoadHomeRule(cfg)
+	return r, err
 }
 
 func homeRuleInput() iter.Seq2[rules.State, string] {

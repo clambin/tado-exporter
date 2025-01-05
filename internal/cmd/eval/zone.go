@@ -40,12 +40,12 @@ func evalZoneRuleScript(path string, actionOnly bool) (r results, err error) {
 	return r, err
 }
 
-func loadZoneRule(filename string) (rules.Rule, error) {
-	cfg, err := getRuleConfig(filename)
-	if err != nil {
-		return nil, err
+func loadZoneRule(filename string) (r rules.Rule, err error) {
+	var cfg rules.RuleConfiguration
+	if cfg, err = getRuleConfig(filename); err == nil {
+		r, err = rules.LoadZoneRule("zone", cfg)
 	}
-	return rules.LoadZoneRule("zone", cfg)
+	return r, err
 }
 
 func zoneRuleInput() iter.Seq2[rules.State, string] {

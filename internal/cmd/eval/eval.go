@@ -18,7 +18,7 @@ var (
 	}
 
 	args = charmer.Arguments{
-		"action-only": {false, "only print states that results in an action"},
+		"action-only": {Default: false, Help: "only print states that results in an action"},
 	}
 )
 
