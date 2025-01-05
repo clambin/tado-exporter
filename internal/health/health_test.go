@@ -8,14 +8,15 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 )
 
 func TestHealth_Handle(t *testing.T) {
 	p := mocks.NewPoller(t)
-	in, out := makeChannel[poller.Update]()
+	ch := make(chan poller.Update)
+	var in chan<- poller.Update = ch
+	var out <-chan poller.Update = ch
 	p.EXPECT().Subscribe().Return(out)
 	p.EXPECT().Unsubscribe(out).Once()
 	p.EXPECT().Refresh().Once()
@@ -23,11 +24,10 @@ func TestHealth_Handle(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	h := New(p, slog.Default())
-	var wg sync.WaitGroup
-	wg.Add(1)
+	done := make(chan struct{})
 	go func() {
-		defer wg.Done()
 		h.Run(ctx)
+		done <- struct{}{}
 	}()
 
 	resp := httptest.NewRecorder()
@@ -43,10 +43,5 @@ func TestHealth_Handle(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 
 	cancel()
-	wg.Wait()
-}
-
-func makeChannel[T any]() (chan<- T, <-chan T) {
-	ch := make(chan T)
-	return ch, ch
+	<-done
 }

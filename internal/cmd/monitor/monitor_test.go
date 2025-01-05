@@ -65,7 +65,7 @@ zones:
 				_, err := f.Write([]byte(tt.content))
 				require.NoError(t, err)
 				_ = f.Close()
-				defer func() { _ = os.Remove(f.Name()) }()
+				t.Cleanup(func() { _ = os.Remove(f.Name()) })
 			} else {
 				_ = f.Close()
 				_ = os.Remove(f.Name())
