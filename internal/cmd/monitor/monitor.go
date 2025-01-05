@@ -122,18 +122,12 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 	// Controller
 	var c *controller.Controller
 	if len(rules.Home) > 0 || len(rules.Zones) > 0 {
-		n := notifier.Notifiers{
-			notifier.SLogNotifier{
-				Logger: l.With("component", "notifier", "type", "slog"),
-			},
-		}
+		var n notifier.Notifier
 		if sc != nil {
-			n = append(n, &notifier.SlackNotifier{
-				SlackSender: sc,
-				Logger:      l.With("component", "notifier", "type", "slack"),
-			})
+			n = &notifier.SlackNotifier{SlackSender: sc, Logger: l.With("component", "notifier", "type", "slack")}
+		} else {
+			n = notifier.SLogNotifier{Logger: l.With("component", "notifier", "type", "slog")}
 		}
-
 		if c, err = controller.New(rules, p, api, n, l.With("component", "controller")); err != nil {
 			return fmt.Errorf("controller: %w", err)
 		}

@@ -12,12 +12,11 @@ import (
 
 func TestNotifiers_Notify(t *testing.T) {
 	b := mocks.NewSlackSender(t)
-	discardLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	l := Notifiers{
-		&SLogNotifier{Logger: discardLogger},
-		&SlackNotifier{SlackSender: b, Logger: discardLogger},
+	l := slog.New(slog.NewTextHandler(io.Discard, nil))
+	n := Notifiers{
+		&SLogNotifier{Logger: l},
+		&SlackNotifier{SlackSender: b, Logger: l},
 	}
-
 	channels := []slack.Channel{
 		{IsMember: true, GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "1"}}},
 		{IsMember: false, GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "2"}}},
@@ -37,5 +36,5 @@ func TestNotifiers_Notify(t *testing.T) {
 		}).
 		Once()
 
-	l.Notify("foo")
+	n.Notify("foo")
 }
