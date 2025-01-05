@@ -22,54 +22,30 @@ func evalZoneRule(w io.Writer, v *viper.Viper) func(cmd *cobra.Command, args []s
 			args = []string{"-"}
 		}
 		for _, arg := range args {
-			if err := evalZoneRuleScript(w, arg, v.GetBool("action-only")); err != nil {
+			r, err := evalZoneRuleScript(arg, v.GetBool("action-only"))
+			if err != nil {
 				return err
 			}
+			r.writeTo(w)
 		}
 		return nil
 	}
 }
 
-func evalZoneRuleScript(w io.Writer, path string, actionOnly bool) error {
-	r, err := getScript(path)
-	if err != nil {
-		return err
+func evalZoneRuleScript(path string, actionOnly bool) (r results, err error) {
+	var rule rules.Rule
+	if rule, err = loadZoneRule(path); err == nil {
+		r, err = evalRule(rule, actionOnly, zoneRuleInput())
 	}
-
-	var headerPrinted bool
-	for s, description := range zoneRuleInput() {
-		a, err := r.Evaluate(s)
-		if err != nil {
-			return err
-		}
-		if actionOnly && a.IsState(s) {
-			continue
-		}
-
-		const formatString = "%-90s %-6v %-40s %s\n"
-
-		if !headerPrinted {
-			_, _ = fmt.Fprintf(w, formatString, "INPUT", "CHANGE", "REASON", "ACTION")
-			headerPrinted = true
-		}
-
-		_, _ = fmt.Fprintf(w, formatString, description, !a.IsState(s), a.Reason(), a.Description(true))
-	}
-	return nil
+	return r, err
 }
 
-func getScript(filename string) (rules.Rule, error) {
+func loadZoneRule(filename string) (r rules.Rule, err error) {
 	var cfg rules.RuleConfiguration
-	if filename == "-" {
-		s, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return nil, err
-		}
-		cfg = rules.RuleConfiguration{Script: rules.ScriptConfig{Text: string(s)}}
-	} else {
-		cfg = rules.RuleConfiguration{Script: rules.ScriptConfig{Path: filename}}
+	if cfg, err = getRuleConfig(filename); err == nil {
+		r, err = rules.LoadZoneRule("zone", cfg)
 	}
-	return rules.LoadZoneRule("zone", cfg)
+	return r, err
 }
 
 func zoneRuleInput() iter.Seq2[rules.State, string] {
