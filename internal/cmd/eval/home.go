@@ -22,52 +22,28 @@ func evalHomeRule(w io.Writer, v *viper.Viper) func(cmd *cobra.Command, args []s
 			args = []string{"-"}
 		}
 		for _, arg := range args {
-			if err := evalHomeRuleScript(w, arg, v.GetBool("action-only")); err != nil {
+			r, err := evalHomeRuleScript(arg, v.GetBool("action-only"))
+			if err != nil {
 				return err
 			}
+			r.writeTo(w)
 		}
 		return nil
 	}
 }
 
-func evalHomeRuleScript(w io.Writer, path string, actionOnly bool) error {
-	r, err := getHomeScript(path)
-	if err != nil {
-		return err
+func evalHomeRuleScript(path string, actionOnly bool) (r results, err error) {
+	var rule rules.Rule
+	if rule, err = loadHomeRule(path); err == nil {
+		r, err = evalRule(rule, actionOnly, homeRuleInput())
 	}
-
-	var headerPrinted bool
-	for s, description := range homeRuleInput() {
-		a, err := r.Evaluate(s)
-		if err != nil {
-			return err
-		}
-		if actionOnly && a.IsState(s) {
-			continue
-		}
-
-		const formatString = "%-90s %-6v %-40s %s\n"
-
-		if !headerPrinted {
-			_, _ = fmt.Fprintf(w, formatString, "INPUT", "CHANGE", "REASON", "ACTION")
-			headerPrinted = true
-		}
-
-		_, _ = fmt.Fprintf(w, formatString, description, !a.IsState(s), a.Reason(), a.Description(true))
-	}
-	return nil
+	return r, err
 }
 
-func getHomeScript(filename string) (rules.Rule, error) {
-	var cfg rules.RuleConfiguration
-	if filename == "-" {
-		s, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return nil, err
-		}
-		cfg = rules.RuleConfiguration{Script: rules.ScriptConfig{Text: string(s)}}
-	} else {
-		cfg = rules.RuleConfiguration{Script: rules.ScriptConfig{Path: filename}}
+func loadHomeRule(path string) (rules.Rule, error) {
+	cfg, err := getRuleConfig(path)
+	if err != nil {
+		return nil, err
 	}
 	return rules.LoadHomeRule(cfg)
 }
