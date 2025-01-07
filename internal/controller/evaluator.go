@@ -98,7 +98,7 @@ func (g *groupEvaluator) shouldSchedule(newAction rules.Action) bool {
 	// check any action that is currently queued. if no action is queued, or it is for a different state,
 	// then we need to queue the new action.
 	queued, ok := g.getQueuedAction()
-	if !ok || !queued.action.IsAction(newAction) {
+	if !ok || !queued.IsAction(newAction) {
 		return true
 	}
 	// truncate old & new due times up to a minute and only start a new job (canceling the old one) if newDue is after due.
@@ -114,12 +114,12 @@ func (g *groupEvaluator) scheduleJob(action rules.Action) {
 	// cancel any previously queued action
 	queued, ok := g.getQueuedAction()
 	if ok {
-		g.cancelJob(queued.action)
+		g.cancelJob(queued.Action)
 	}
 
 	// queued action
 	queued = queuedAction{
-		action: action,
+		Action: action,
 		due:    time.Now().Add(action.Delay().Truncate(time.Minute)),
 	}
 	g.queuedAction.Store(queued)
@@ -134,7 +134,7 @@ func (g *groupEvaluator) cancelJob(a rules.Action) {
 		queued.due = time.Time{}
 		g.queuedAction.Store(queued)
 		if g.Notifier != nil {
-			g.Notifier.Notify(queued.action.Description(false) + " canceled\nReason: " + a.Reason())
+			g.Notifier.Notify(queued.Description(false) + " canceled\nReason: " + a.Reason())
 		}
 	}
 }
@@ -147,8 +147,8 @@ func (g *groupEvaluator) processQueuedAction(ctx context.Context) {
 		return
 	}
 	// perform the action
-	if err := queued.action.Do(ctx, g.TadoClient, g.logger); err != nil {
-		g.logger.Error("failed to execute action", "action", queued.action, "err", err)
+	if err := queued.Do(ctx, g.TadoClient, g.logger); err != nil {
+		g.logger.Error("failed to execute action", "action", queued.Action, "err", err)
 		return
 	}
 	// clear the queued action
@@ -156,14 +156,14 @@ func (g *groupEvaluator) processQueuedAction(ctx context.Context) {
 	g.queuedAction.Store(queued)
 	// notify that the action has been run.
 	if g.Notifier != nil {
-		g.Notifier.Notify(queued.action.Description(false) + "\nReason: " + queued.action.Reason())
+		g.Notifier.Notify(queued.Description(false) + "\nReason: " + queued.Reason())
 	}
 
 }
 
 func (g *groupEvaluator) ReportTask() string {
 	if queued, ok := g.getQueuedAction(); ok {
-		return queued.action.Description(false) + " in " + queued.action.Delay().Round(time.Second).String() + "\nReason: " + queued.action.Reason()
+		return queued.Description(false) + " in " + time.Until(queued.due).Round(time.Second).String() + "\nReason: " + queued.Reason()
 	}
 	return ""
 }
@@ -180,6 +180,6 @@ func (g *groupEvaluator) getQueuedAction() (queuedAction, bool) {
 
 // queuedAction indicates a action waiting to be run. if due is zero, then no action is queued.
 type queuedAction struct {
-	action rules.Action
-	due    time.Time
+	rules.Action
+	due time.Time
 }
