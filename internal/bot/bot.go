@@ -112,8 +112,8 @@ func (r *Bot) runCommand(cmd func(command slack.SlashCommand, sender SlackSender
 	}
 }
 
-// runCommand receives a shortcut request from slack and calls the function that implements it.  Having this as a dedicated
-// function decouples Slack from the business logic (i.e. ack'ing the request), plus it translated a *slack.Client to a
+// runCommand receives a shortcut request from Slack and calls the function that implements it.  Having this as a dedicated
+// function decouples Slack from the business logic (i.e. ack'ing the request), plus it translates a *slack.Client to a
 // SlackSender interface, which makes testing the business logic easier.
 func (r *Bot) runShortcut(shortcut func(data slack.InteractionCallback, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {
 	return func(event *socketmode.Event, client *socketmode.Client) {

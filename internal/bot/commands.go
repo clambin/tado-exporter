@@ -9,7 +9,6 @@ import (
 	"github.com/slack-go/slack"
 	"log/slog"
 	"slices"
-	"sync"
 	"time"
 )
 
@@ -23,7 +22,6 @@ type commandRunner struct {
 	Controller
 	logger *slog.Logger
 	updateStore
-	lock sync.RWMutex
 }
 
 func (r *commandRunner) dispatch(command slack.SlashCommand, client SlackSender) error {
@@ -112,8 +110,6 @@ func (r *commandRunner) listUsers() (slacktools.Attachment, error) {
 }
 
 func (r *commandRunner) listRules() (slacktools.Attachment, error) {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
 	if r.Controller == nil {
 		return slacktools.Attachment{}, errors.New("controller isn't running")
 	}
