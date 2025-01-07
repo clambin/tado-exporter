@@ -160,50 +160,6 @@ func TestGroupEvaluator(t *testing.T) {
 	assert.NoError(t, <-errCh)
 }
 
-/*
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func Test_shouldSchedule(t *testing.T) {
-	tests := []struct {
-		name    string
-		action  rules.Action
-		job     scheduledJob
-		isNewer assert.BoolAssertionFunc
-	}{
-		{
-			name:    "action is different: schedule",
-			action:  &rules.homeAction{rules.coreAction{rules.homeState{true, false}, "", time.Hour}, 1},
-			job:     fakeScheduledJob{state: rules.homeState{false, true}, due: time.Now()},
-			isNewer: assert.True,
-		},
-		{
-			name:    "action is earlier: schedule",
-			action:  &rules.homeAction{rules.coreAction{rules.homeState{true, false}, "", 0}, 1},
-			job:     fakeScheduledJob{state: rules.homeState{true, false}, due: time.Now().Add(time.Hour)},
-			isNewer: assert.True,
-		},
-		{
-			name:    "action is later: don't schedule",
-			action:  &rules.homeAction{rules.coreAction{rules.homeState{true, false}, "", time.Hour}, 1},
-			job:     fakeScheduledJob{state: rules.homeState{true, false}, due: time.Now()},
-			isNewer: assert.False,
-		},
-		{
-			name:    "due time is rounded to minutes",
-			action:  &rules.homeAction{rules.coreAction{rules.homeState{true, false}, "", 15 * time.Second}, 1},
-			job:     fakeScheduledJob{state: rules.homeState{true, false}, due: time.Now()},
-			isNewer: assert.False,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.isNewer(t, shouldSchedule(tt.job, tt.action))
-		})
-	}
-}
-*/
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var _ notifier.Notifier = &fakeNotifier{}

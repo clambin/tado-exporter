@@ -9,15 +9,15 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
 	"log/slog"
-	"sync"
+	"sync/atomic"
 )
 
 type Bot struct {
-	commandRunner
-	shortcuts
 	SocketModeHandler
 	poller poller.Poller
+	shortcuts
 	logger *slog.Logger
+	commandRunner
 }
 
 type TadoClient interface {
@@ -112,8 +112,8 @@ func (r *Bot) runCommand(cmd func(command slack.SlashCommand, sender SlackSender
 	}
 }
 
-// runCommand receives a shortcut request from slack and calls the function that implements it.  Having this as a dedicated
-// function decouples Slack from the business logic (i.e. ack'ing the request), plus it translated a *slack.Client to a
+// runCommand receives a shortcut request from Slack and calls the function that implements it.  Having this as a dedicated
+// function decouples Slack from the business logic (i.e. ack'ing the request), plus it translates a *slack.Client to a
 // SlackSender interface, which makes testing the business logic easier.
 func (r *Bot) runShortcut(shortcut func(data slack.InteractionCallback, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {
 	return func(event *socketmode.Event, client *socketmode.Client) {
@@ -130,21 +130,16 @@ func (r *Bot) runShortcut(shortcut func(data slack.InteractionCallback, sender S
 
 // updateStore contains the latest update received from a Poller.
 type updateStore struct {
-	update *poller.Update
-	lock   sync.RWMutex
+	update atomic.Pointer[poller.Update]
 }
 
 func (r *updateStore) setUpdate(u poller.Update) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-	r.update = &u
+	r.update.Store(&u)
 }
 
 func (r *updateStore) getUpdate() (poller.Update, bool) {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
-	if r.update == nil {
-		return poller.Update{}, false
+	if u := r.update.Load(); u != nil {
+		return *u, true
 	}
-	return *r.update, true
+	return poller.Update{}, false
 }

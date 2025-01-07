@@ -64,8 +64,8 @@ var _ shortcutHandler = &setRoomShortcut{}
 
 type setRoomShortcut struct {
 	TadoClient
-	updateStore
 	logger *slog.Logger
+	updateStore
 }
 
 func (s *setRoomShortcut) HandleShortcut(event slack.InteractionCallback, client SlackSender) error {
@@ -205,8 +205,8 @@ var _ shortcutHandler = &setHomeShortcut{}
 
 type setHomeShortcut struct {
 	TadoClient
-	updateStore
 	logger *slog.Logger
+	updateStore
 }
 
 func (s *setHomeShortcut) HandleShortcut(event slack.InteractionCallback, client SlackSender) error {

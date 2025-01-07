@@ -260,12 +260,11 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 			u := testutils.Update(
 				testutils.WithZone(10, "foo", tado.PowerON, 18, 18),
 			)
-
 			h := setRoomShortcut{
-				TadoClient:  tadoClient,
-				updateStore: updateStore{update: &u},
-				logger:      slog.New(slog.NewTextHandler(io.Discard, nil)),
+				TadoClient: tadoClient,
+				logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
 			}
+			h.update.Store(&u)
 			if tt.setupTado != nil {
 				tt.setupTado(tadoClient)
 			}
@@ -393,10 +392,10 @@ func Test_setHomeShortcut_setHome(t *testing.T) {
 			tadoClient := mocks.NewTadoClient(t)
 			u := testutils.Update()
 			h := setHomeShortcut{
-				TadoClient:  tadoClient,
-				updateStore: updateStore{update: &u},
-				logger:      slog.New(slog.NewTextHandler(io.Discard, nil)),
+				TadoClient: tadoClient,
+				logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
 			}
+			h.update.Store(&u)
 			if tt.setupTado != nil {
 				tt.setupTado(tadoClient)
 			}

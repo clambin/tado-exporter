@@ -96,13 +96,3 @@ tado_zone_open_window_remaining{zone_name="Living room"} 150
 tado_zone_target_manual_mode{zone_name="Living room"} 0
 `)))
 }
-
-func BenchmarkCollector_process(b *testing.B) {
-	m := NewMetrics()
-	c := Collector{Poller: nil, Metrics: m, Logger: slog.Default()}
-	u := MustUpdate()
-	b.ResetTimer()
-	for range b.N {
-		c.process(u)
-	}
-}

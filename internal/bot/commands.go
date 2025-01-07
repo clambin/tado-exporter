@@ -18,10 +18,10 @@ var (
 
 type commandRunner struct {
 	TadoClient
-	updateStore
 	poller.Poller
 	Controller
 	logger *slog.Logger
+	updateStore
 }
 
 func (r *commandRunner) dispatch(command slack.SlashCommand, client SlackSender) error {
@@ -110,8 +110,6 @@ func (r *commandRunner) listUsers() (slacktools.Attachment, error) {
 }
 
 func (r *commandRunner) listRules() (slacktools.Attachment, error) {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
 	if r.Controller == nil {
 		return slacktools.Attachment{}, errors.New("controller isn't running")
 	}

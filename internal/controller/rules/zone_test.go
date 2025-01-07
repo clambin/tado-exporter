@@ -392,6 +392,8 @@ func BenchmarkZoneRule_Evaluate_NightTime(b *testing.B) {
 		ZoneState: ZoneState{true, true},
 	}
 
+	b.ReportAllocs()
+	b.ResetTimer()
 	for range b.N {
 		a, err := r.Evaluate(s)
 		if err != nil {
