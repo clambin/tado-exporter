@@ -2,11 +2,9 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado-exporter/pkg/scheduler"
 	"log/slog"
 	"sync/atomic"
 	"time"
@@ -21,8 +19,7 @@ type groupEvaluator struct {
 	TadoClient
 	notifier.Notifier
 	logger       *slog.Logger
-	jobCompleted chan struct{}
-	scheduledJob atomic.Pointer[job]
+	queuedAction atomic.Value
 	rules.Rules
 }
 
@@ -35,12 +32,11 @@ func newGroupEvaluator(
 	l *slog.Logger,
 ) *groupEvaluator {
 	return &groupEvaluator{
-		Publisher:    p,
-		TadoClient:   client,
-		Notifier:     notifier,
-		logger:       l,
-		jobCompleted: make(chan struct{}),
-		Rules:        rules,
+		Publisher:  p,
+		TadoClient: client,
+		Notifier:   notifier,
+		logger:     l,
+		Rules:      rules,
 	}
 }
 
@@ -52,141 +48,137 @@ func (g *groupEvaluator) Run(ctx context.Context) error {
 	g.logger.Debug("group controller starting")
 	defer g.logger.Debug("group controller stopping")
 
+	queuedActionTicker := time.NewTicker(5 * time.Second)
+	defer queuedActionTicker.Stop()
+
 	for {
+		g.processQueuedAction(ctx)
 		select {
 		case <-ctx.Done():
 			return nil
 		case u := <-ch:
-			if a, ok := g.processUpdate(u); ok {
-				g.scheduleJob(ctx, a)
-			} else {
-				g.cancelJob(a)
-			}
-		case <-g.jobCompleted:
-			g.processCompletedJob()
+			g.processUpdate(u)
+		case <-queuedActionTicker.C:
 		}
 	}
 }
 
-// processUpdate processes the update, evaluating its rules. If the outcome differs from the current state
-// (as determined by the update), it returns the action and true. Otherwise, it returns false.
-func (g *groupEvaluator) processUpdate(update poller.Update) (rules.Action, bool) {
+// processUpdate processes the update, evaluating its rules and determining the required action.
+// If the required action differs from the current state, or it needs to run before any currently queued action, it queues the action.
+// Otherwise, any queued Action is canceled.
+func (g *groupEvaluator) processUpdate(update poller.Update) {
 	if g.Rules.Count() == 0 {
-		return nil, false
 	}
 
-	currentState, err := g.Rules.GetState(update)
+	newState, err := g.Rules.GetState(update)
 	if err != nil {
 		g.logger.Error("failed to parse update", "err", err)
-		return nil, false
-	}
-
-	action, err := g.Rules.Evaluate(currentState)
-	if err != nil {
-		g.logger.Error("failed to evaluate zone rules", "err", err)
-		return nil, false
-	}
-
-	return action, !action.IsState(currentState)
-}
-
-// scheduleJob is called when processUpdate returns a new action. It executes (or schedules) the required action.
-func (g *groupEvaluator) scheduleJob(ctx context.Context, action rules.Action) {
-	// if a job is scheduled with the same action, but an earlier scheduled time, don't schedule a new job
-	j := g.scheduledJob.Load()
-	if j != nil {
-		if !shouldSchedule(j, action) {
-			return
-		}
-		// scheduling a new job. cancel any old one.
-		g.cancelJob(action)
-	}
-
-	// immediate action
-	if action.Delay() == 0 {
-		_ = g.doAction(ctx, action)
 		return
 	}
 
-	// deferred action
-	j = &job{
-		TadoClient: g.TadoClient,
-		Action:     action,
-		Job: scheduler.Schedule(ctx, scheduler.RunFunc(func(ctx context.Context) error {
-			return g.doAction(ctx, action)
-		}), action.Delay(), g.jobCompleted),
-		logger: g.logger,
+	action, err := g.Rules.Evaluate(newState)
+	if err != nil {
+		g.logger.Error("failed to evaluate zone rules", "err", err)
+		return
 	}
-	g.scheduledJob.Store(j)
-	if g.Notifier != nil {
-		g.Notifier.Notify(action.Description(true) + "\nReason: " + action.Reason())
+
+	if !action.IsState(newState) {
+		if g.shouldSchedule(action) {
+			g.scheduleJob(action)
+		}
+	} else {
+		g.cancelJob(action)
 	}
 }
 
-// shouldSchedule returns true if the newAction should be scheduled, i.e. either the action is different from the scheduled action,
+// shouldSchedule returns true if the newAction should be scheduled, i.e. either the action is different from the queued action,
 // or newAction should run before the scheduled action.
-func shouldSchedule(currentJob *job, newAction rules.Action) bool {
-	if !currentJob.IsAction(newAction) {
+func (g *groupEvaluator) shouldSchedule(newAction rules.Action) bool {
+	// check any action that is currently queued. if no action is queued, or it is for a different state,
+	// then we need to queue the new action.
+	queued, ok := g.getQueuedAction()
+	if !ok || !queued.action.IsAction(newAction) {
 		return true
 	}
 	// truncate old & new due times up to a minute and only start a new job (canceling the old one) if newDue is after due.
 	// this avoids canceling the current job & immediately scheduling a new one if the old & new due times are very close
 	// (e.g. in case of a rule like nighttime, which targets a specific time of day.
-	due := currentJob.Due().Truncate(time.Minute)
-	newDue := newAction.Delay().Truncate(time.Minute)
-	return newDue < due
+	due := queued.due.Truncate(time.Minute)
+	newDue := time.Now().Add(newAction.Delay().Truncate(time.Minute))
+	return newDue.Before(due)
 }
 
-// doAction executes the action and reports the result to the user through a Notifier.
-// This is called either directly from scheduleJob, or from the scheduler once the Delay has passed.
-func (g *groupEvaluator) doAction(ctx context.Context, action rules.Action) error {
-	if err := action.Do(ctx, g.TadoClient, g.logger); err != nil {
-		g.logger.Error("failed to execute action", "action", action, "err", err)
-		return err
+// scheduleJob is called when processUpdate returns a new action. It executes (or schedules) the required action.
+func (g *groupEvaluator) scheduleJob(action rules.Action) {
+	// cancel any previously queued action
+	queued, ok := g.getQueuedAction()
+	if ok {
+		g.cancelJob(queued.action)
 	}
-	if g.Notifier != nil {
-		g.Notifier.Notify(action.Description(false) + "\nReason: " + action.Reason())
+
+	// queued action
+	queued = queuedAction{
+		action: action,
+		due:    time.Now().Add(action.Delay().Truncate(time.Minute)),
 	}
-	return nil
+	g.queuedAction.Store(queued)
+	if g.Notifier != nil && action.Delay() != 0 {
+		g.Notifier.Notify(action.Description(true) + "\nReason: " + action.Reason())
+	}
 }
 
 // cancelJob cancels any scheduled job.
 func (g *groupEvaluator) cancelJob(a rules.Action) {
-	if j := g.scheduledJob.Load(); j != nil {
-		j.Cancel()
+	if queued, ok := g.getQueuedAction(); ok {
+		queued.due = time.Time{}
+		g.queuedAction.Store(queued)
 		if g.Notifier != nil {
-			g.Notifier.Notify(j.Description(false) + " canceled\nReason: " + a.Reason())
+			g.Notifier.Notify(queued.action.Description(false) + " canceled\nReason: " + a.Reason())
 		}
 	}
 }
 
-// processCompletedJob is notified by the scheduler once the job has completed and informs the user through a Notifier.
-func (g *groupEvaluator) processCompletedJob() {
-	if j := g.scheduledJob.Load(); j != nil {
-		defer g.scheduledJob.Store(nil)
-		if _, err := j.Result(); err != nil && !errors.Is(err, context.Canceled) {
-			g.logger.Error("scheduled job failed", "err", err)
-		}
+// processQueuedAction runs the queued action at the required time.
+func (g *groupEvaluator) processQueuedAction(ctx context.Context) {
+	queued, ok := g.getQueuedAction()
+	// if no action is queued, or it's not due yet, do nothing
+	if !ok || queued.due.After(time.Now()) {
+		return
 	}
+	// perform the action
+	if err := queued.action.Do(ctx, g.TadoClient, g.logger); err != nil {
+		g.logger.Error("failed to execute action", "action", queued.action, "err", err)
+		return
+	}
+	// clear the queued action
+	queued.due = time.Time{}
+	g.queuedAction.Store(queued)
+	// notify that the action has been run.
+	if g.Notifier != nil {
+		g.Notifier.Notify(queued.action.Description(false) + "\nReason: " + queued.action.Reason())
+	}
+
 }
 
 func (g *groupEvaluator) ReportTask() string {
-	if j := g.scheduledJob.Load(); j != nil {
-		return j.Description(false) + " in " + j.Delay().Round(time.Second).String() + "\nReason: " + j.Reason()
+	if queued, ok := g.getQueuedAction(); ok {
+		return queued.action.Description(false) + " in " + queued.action.Delay().Round(time.Second).String() + "\nReason: " + queued.action.Reason()
 	}
 	return ""
 }
 
-// //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-var _ scheduler.Runnable = &job{}
-
-type job struct {
-	rules.Action
-	TadoClient
-	*scheduler.Job
-	logger *slog.Logger
+func (g *groupEvaluator) getQueuedAction() (queuedAction, bool) {
+	queued := g.queuedAction.Load()
+	if queued == nil {
+		return queuedAction{}, false
+	}
+	return queued.(queuedAction), !queued.(queuedAction).due.IsZero()
 }
 
-func (j job) Run(_ context.Context) error {
-	return j.Action.Do(context.Background(), j.TadoClient, j.logger)
+// //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// queuedAction indicates a action waiting to be run. if due is zero, then no action is queued.
+type queuedAction struct {
+	action rules.Action
+	due    time.Time
 }
