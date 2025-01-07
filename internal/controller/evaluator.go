@@ -68,6 +68,7 @@ func (g *groupEvaluator) Run(ctx context.Context) error {
 // Otherwise, any queued Action is canceled.
 func (g *groupEvaluator) processUpdate(update poller.Update) {
 	if g.Rules.Count() == 0 {
+		return
 	}
 
 	newState, err := g.Rules.GetState(update)
