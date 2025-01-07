@@ -61,7 +61,7 @@ func evalRule(rule rules.Rule, actionOnly bool, input iter.Seq2[rules.State, str
 		if a.IsState(s) && actionOnly {
 			continue
 		}
-		r = append(r, result{description, !a.IsState(s), a})
+		r = append(r, result{action: a, description: description, change: !a.IsState(s)})
 	}
 	return r, nil
 }
@@ -76,9 +76,9 @@ func (r results) writeTo(w io.Writer) {
 }
 
 type result struct {
+	action      rules.Action
 	description string
 	change      bool
-	action      rules.Action
 }
 
 func (r result) writeTo(w io.Writer) {

@@ -31,9 +31,9 @@ var _ Poller = &TadoPoller{}
 
 type TadoPoller struct {
 	TadoClient
+	logger  *slog.Logger
+	refresh chan struct{}
 	pubsub.Publisher[Update]
-	logger   *slog.Logger
-	refresh  chan struct{}
 	interval time.Duration
 	HomeId   tado.HomeId
 }

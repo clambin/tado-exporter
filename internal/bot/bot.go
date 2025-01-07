@@ -9,15 +9,15 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
 	"log/slog"
-	"sync"
+	"sync/atomic"
 )
 
 type Bot struct {
-	commandRunner
-	shortcuts
 	SocketModeHandler
 	poller poller.Poller
+	shortcuts
 	logger *slog.Logger
+	commandRunner
 }
 
 type TadoClient interface {
@@ -130,21 +130,16 @@ func (r *Bot) runShortcut(shortcut func(data slack.InteractionCallback, sender S
 
 // updateStore contains the latest update received from a Poller.
 type updateStore struct {
-	update *poller.Update
-	lock   sync.RWMutex
+	update atomic.Pointer[poller.Update]
 }
 
 func (r *updateStore) setUpdate(u poller.Update) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-	r.update = &u
+	r.update.Store(&u)
 }
 
 func (r *updateStore) getUpdate() (poller.Update, bool) {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
-	if r.update == nil {
-		return poller.Update{}, false
+	if u := r.update.Load(); u != nil {
+		return *u, true
 	}
-	return *r.update, true
+	return poller.Update{}, false
 }

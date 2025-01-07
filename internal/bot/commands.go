@@ -9,6 +9,7 @@ import (
 	"github.com/slack-go/slack"
 	"log/slog"
 	"slices"
+	"sync"
 	"time"
 )
 
@@ -18,10 +19,11 @@ var (
 
 type commandRunner struct {
 	TadoClient
-	updateStore
 	poller.Poller
 	Controller
 	logger *slog.Logger
+	updateStore
+	lock sync.RWMutex
 }
 
 func (r *commandRunner) dispatch(command slack.SlashCommand, client SlackSender) error {
