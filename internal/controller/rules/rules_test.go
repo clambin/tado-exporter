@@ -76,3 +76,47 @@ func TestRules_zoneRules(t *testing.T) {
 		})
 	}
 }
+
+// Current:
+// BenchmarkRules_Evaluate/action-16         	  131992	      9088 ns/op	    6760 B/op	     119 allocs/op
+// BenchmarkRules_Evaluate/no_action-16      	  159128	      7513 ns/op	    6336 B/op	     111 allocs/op
+func BenchmarkRules_Evaluate(b *testing.B) {
+	r, err := LoadZoneRules("zone", []RuleConfiguration{
+		{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway"}, Users: []string{"user"}},
+		{Name: "limitOverlay", Script: ScriptConfig{Packaged: "limitoverlay"}},
+		{Name: "nightTime", Script: ScriptConfig{Packaged: "nighttime"}, Args: map[string]any{"StartHour": 23, "StartMin": 0, "EndHour": 6, "EndMin": 0}},
+	})
+	require.NoError(b, err)
+	var a Action
+	b.ResetTimer()
+	b.Run("action", func(b *testing.B) {
+		b.ReportAllocs()
+		s := State{
+			ZoneState: ZoneState{true, true},
+		}
+		for range b.N {
+			a, err = r.Evaluate(s)
+			if err != nil {
+				b.Fatal(err)
+			}
+			if !a.IsState(State{ZoneState: ZoneState{false, true}}) {
+				b.Fatal("unexpected result")
+			}
+		}
+	})
+	b.Run("no action", func(b *testing.B) {
+		b.ReportAllocs()
+		s := State{
+			ZoneState: ZoneState{false, true},
+		}
+		for range b.N {
+			a, err = r.Evaluate(s)
+			if err != nil {
+				b.Fatal(err)
+			}
+			if !a.IsState(State{ZoneState: ZoneState{false, true}}) {
+				b.Fatal("unexpected result")
+			}
+		}
+	})
+}
