@@ -4,6 +4,7 @@ dir: "{{.InterfaceDir}}/mocks"
 mockname: "{{.InterfaceName}}"
 outpkg: "mocks"
 issue-845-fix: true
+resolve-type-alias: False
 packages:
   github.com/clambin/tado-exporter/cmd/monitor:
     interfaces:
