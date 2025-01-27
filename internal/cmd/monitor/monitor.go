@@ -155,7 +155,7 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 		g.Go(func() error { return b.Run(ctx) })
 	}
 
-	// now that all dependencies have started, start the poller
+	// Now that all dependencies have started, start the poller
 	g.Go(func() error { return p.Run(ctx) })
 
 	return g.Wait()
