@@ -56,11 +56,14 @@ func (r Rules) Evaluate(currentState State) (Action, error) {
 		slices.SortFunc(actions, func(a, b Action) int { return cmp.Compare(a.Delay(), b.Delay()) })
 		return actions[0], nil
 	}
-	reasons := set.New[string]()
-	for _, a := range noActions {
-		reasons.Add(a.Reason())
+	// join all unique reasons
+	reasons := make([]string, len(noActions))
+	for i := range noActions {
+		reasons[i] = noActions[i].Reason()
 	}
-	noActions[0].setReason(strings.Join(reasons.ListOrdered(), ", "))
+	slices.Sort(reasons)
+	reasons = slices.Compact(reasons)
+	noActions[0].setReason(strings.Join(reasons, ", "))
 	return noActions[0], nil
 }
 

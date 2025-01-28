@@ -2,7 +2,6 @@ package rules
 
 import (
 	"context"
-	"fmt"
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado/v2"
 	"github.com/clambin/tado/v2/tools"
@@ -19,6 +18,7 @@ type Action interface {
 	setReason(reason string)
 	Description(includeDelay bool) string
 	Do(context.Context, TadoClient, *slog.Logger) error
+	slog.LogValuer
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,36 +59,53 @@ var homePresences = map[bool]tado.HomePresence{
 }
 
 func (h *homeAction) Description(includeDelay bool) string {
-	text := "setting home to " + string(homePresences[h.HomeState.Home]) + " mode"
+	text := h.actionString()
 	if includeDelay {
 		text += " in " + h.delay.String()
 	}
 	return text
 }
 
+func (h *homeAction) actionString() string {
+	return "setting home to " + string(homePresences[h.HomeState.Home]) + " mode"
+}
+
+func (h *homeAction) LogValue() slog.Value {
+	return slog.StringValue(h.actionString())
+}
+
 func (h *homeAction) Do(ctx context.Context, client TadoClient, l *slog.Logger) error {
-	if !h.HomeState.Overlay {
-		l.Debug("removing presenceLock")
-		resp, err := client.DeletePresenceLockWithResponse(ctx, h.HomeId)
-		if err != nil {
-			return err
-		}
-		if resp.StatusCode() != http.StatusNoContent {
-			return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-		}
-		return nil
-	} else {
-		homePresence := homePresences[h.HomeState.Home]
-		l.Debug("setting presenceLock", "lock", string(homePresence))
-		resp, err := client.SetPresenceLockWithResponse(ctx, h.HomeId, tado.SetPresenceLockJSONRequestBody{HomePresence: &homePresence})
-		if err != nil {
-			return err
-		}
-		if resp.StatusCode() != http.StatusNoContent {
-			return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-		}
-		return nil
+	if h.HomeState.Overlay {
+		return h.setOverlay(ctx, client, l)
 	}
+	return h.removeOverlay(ctx, client, l)
+}
+
+func (h *homeAction) setOverlay(ctx context.Context, client TadoClient, l *slog.Logger) error {
+	homePresence := homePresences[h.HomeState.Home]
+	l.Debug("setting presenceLock", "lock", string(homePresence))
+	resp, err := client.SetPresenceLockWithResponse(ctx, h.HomeId, tado.SetPresenceLockJSONRequestBody{HomePresence: &homePresence})
+	if err == nil && resp.StatusCode() != http.StatusNoContent {
+		err = tools.HandleErrors(resp.HTTPResponse, map[int]any{
+			http.StatusUnauthorized:        resp.JSON401,
+			http.StatusForbidden:           resp.JSON403,
+			http.StatusUnprocessableEntity: resp.JSON422,
+		})
+	}
+	return err
+}
+
+func (h *homeAction) removeOverlay(ctx context.Context, client TadoClient, l *slog.Logger) error {
+	l.Debug("removing presenceLock")
+	resp, err := client.DeletePresenceLockWithResponse(ctx, h.HomeId)
+	if err == nil && resp.StatusCode() != http.StatusNoContent {
+		err = tools.HandleErrors(resp.HTTPResponse, map[int]any{
+			http.StatusUnauthorized:        resp.JSON401,
+			http.StatusForbidden:           resp.JSON403,
+			http.StatusUnprocessableEntity: resp.JSON422,
+		})
+	}
+	return err
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,14 +148,7 @@ var zoneStateString = map[bool]string{
 }
 
 func (z *zoneAction) Description(includeDelay bool) string {
-	description := "*" + z.zoneName + "*: switching heating "
-	switch z.ZoneState.Overlay {
-	case false:
-		description += "to auto mode"
-	case true:
-		description += zoneStateString[z.ZoneState.Heating]
-
-	}
+	description := "*" + z.zoneName + "*: " + z.actionString()
 	if includeDelay {
 		description += " in " + z.delay.String()
 	}
@@ -150,34 +160,56 @@ var powerMode = map[bool]tado.Power{
 	false: tado.PowerOFF,
 }
 
-func (z *zoneAction) Do(ctx context.Context, client TadoClient, l *slog.Logger) error {
-	if !z.ZoneState.Overlay {
-		l.Debug("removing overlay")
-		resp, err := client.DeleteZoneOverlayWithResponse(ctx, z.HomeId, z.ZoneId)
-		if err == nil && resp.StatusCode() != http.StatusNoContent {
-			err = tools.HandleErrors(resp.HTTPResponse, map[int]any{
-				http.StatusUnauthorized: resp.JSON401,
-				http.StatusForbidden:    resp.JSON403,
-			})
-		}
-		return err
-	} else {
-		mode := powerMode[z.ZoneState.Heating]
-		l.Debug("setting overlay", "mode", string(mode))
-		resp, err := client.SetZoneOverlayWithResponse(ctx, z.HomeId, z.ZoneId, tado.SetZoneOverlayJSONRequestBody{
-			Setting: &tado.ZoneSetting{Type: oapi.VarP(tado.HEATING), Power: &mode},
-			Termination: &tado.ZoneOverlayTermination{
-				Type: oapi.VarP(tado.ZoneOverlayTerminationTypeMANUAL),
-			},
-			Type: nil,
-		})
-		if err == nil && resp.StatusCode() != http.StatusOK {
-			err = tools.HandleErrors(resp.HTTPResponse, map[int]any{
-				http.StatusUnauthorized:        resp.JSON401,
-				http.StatusForbidden:           resp.JSON403,
-				http.StatusUnprocessableEntity: resp.JSON422,
-			})
-		}
-		return err
+func (z *zoneAction) actionString() string {
+	description := "switching heating "
+	switch z.ZoneState.Overlay {
+	case false:
+		description += "to auto mode"
+	case true:
+		description += zoneStateString[z.ZoneState.Heating]
 	}
+	return description
+}
+
+func (z *zoneAction) LogValue() slog.Value {
+	return slog.StringValue(z.actionString())
+}
+
+func (z *zoneAction) Do(ctx context.Context, client TadoClient, l *slog.Logger) error {
+	if z.ZoneState.Overlay {
+		return z.setOverlay(ctx, client, l)
+	}
+	return z.removeOverlay(ctx, client, l)
+}
+
+func (z *zoneAction) setOverlay(ctx context.Context, client TadoClient, l *slog.Logger) error {
+	mode := powerMode[z.ZoneState.Heating]
+	l.Debug("setting overlay", "mode", string(mode))
+	resp, err := client.SetZoneOverlayWithResponse(ctx, z.HomeId, z.ZoneId, tado.SetZoneOverlayJSONRequestBody{
+		Setting: &tado.ZoneSetting{Type: oapi.VarP(tado.HEATING), Power: &mode},
+		Termination: &tado.ZoneOverlayTermination{
+			Type: oapi.VarP(tado.ZoneOverlayTerminationTypeMANUAL),
+		},
+		Type: nil,
+	})
+	if err == nil && resp.StatusCode() != http.StatusOK {
+		err = tools.HandleErrors(resp.HTTPResponse, map[int]any{
+			http.StatusUnauthorized:        resp.JSON401,
+			http.StatusForbidden:           resp.JSON403,
+			http.StatusUnprocessableEntity: resp.JSON422,
+		})
+	}
+	return err
+}
+
+func (z *zoneAction) removeOverlay(ctx context.Context, client TadoClient, l *slog.Logger) error {
+	l.Debug("removing overlay")
+	resp, err := client.DeleteZoneOverlayWithResponse(ctx, z.HomeId, z.ZoneId)
+	if err == nil && resp.StatusCode() != http.StatusNoContent {
+		err = tools.HandleErrors(resp.HTTPResponse, map[int]any{
+			http.StatusUnauthorized: resp.JSON401,
+			http.StatusForbidden:    resp.JSON403,
+		})
+	}
+	return err
 }

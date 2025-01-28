@@ -19,6 +19,7 @@ func TestAction(t *testing.T) {
 		reason           string
 		shortDescription string
 		longDescription  string
+		logValue         string
 	}
 	tests := []struct {
 		name   string
@@ -38,6 +39,7 @@ func TestAction(t *testing.T) {
 				reason:           "manual setting detected",
 				shortDescription: "setting home to HOME mode",
 				longDescription:  "setting home to HOME mode in 1h0m0s",
+				logValue:         "setting home to HOME mode",
 			},
 		},
 		{
@@ -54,6 +56,7 @@ func TestAction(t *testing.T) {
 				reason:           "manual setting detected",
 				shortDescription: "*zone*: switching heating to auto mode",
 				longDescription:  "*zone*: switching heating to auto mode in 1h0m0s",
+				logValue:         "switching heating to auto mode",
 			},
 		},
 	}
@@ -64,6 +67,7 @@ func TestAction(t *testing.T) {
 			assert.Equal(t, tt.want.reason, tt.action.Reason())
 			assert.Equal(t, tt.want.shortDescription, tt.action.Description(false))
 			assert.Equal(t, tt.want.longDescription, tt.action.Description(true))
+			assert.Equal(t, tt.want.logValue, tt.action.LogValue().String())
 		})
 	}
 }
