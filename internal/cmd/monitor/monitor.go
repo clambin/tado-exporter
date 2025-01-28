@@ -23,6 +23,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -90,6 +91,13 @@ type TadoClient interface {
 func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheus.Registerer, api TadoClient, sc *slack.Client) error {
 	var g errgroup.Group
 
+	// pprof
+	if pprofAddr := v.GetString("pprof"); pprofAddr != "" {
+		go func() {
+			_ = http.ListenAndServe(pprofAddr, nil)
+		}()
+	}
+
 	// poller
 	p := poller.New(api, v.GetDuration("poller.interval"), l.With("component", "poller"))
 
@@ -147,7 +155,7 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 		g.Go(func() error { return b.Run(ctx) })
 	}
 
-	// now that all dependencies have started, start the poller
+	// Now that all dependencies have started, start the poller
 	g.Go(func() error { return p.Run(ctx) })
 
 	return g.Wait()

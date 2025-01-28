@@ -32,13 +32,14 @@ func init() {
 }
 
 var args = charmer.Arguments{
-	"debug":           charmer.Argument{Default: false},
-	"tado.username":   charmer.Argument{Default: ""},
-	"tado.password":   charmer.Argument{Default: ""},
-	"exporter.addr":   charmer.Argument{Default: ":9090"},
-	"poller.interval": charmer.Argument{Default: 30 * time.Second},
-	"health.addr":     charmer.Argument{Default: ":8080"},
-	"slack.token":     charmer.Argument{Default: ""},
+	"debug":           charmer.Argument{Default: false, Help: "Log debug messages"},
+	"pprof":           charmer.Argument{Default: "", Help: "Enable pprof"},
+	"tado.username":   charmer.Argument{Default: "", Help: "Tadoº username"},
+	"tado.password":   charmer.Argument{Default: "", Help: "Tadoº password"},
+	"exporter.addr":   charmer.Argument{Default: ":9090", Help: "Address of Prometheus exporter"},
+	"poller.interval": charmer.Argument{Default: 30 * time.Second, Help: "Poller interval"},
+	"health.addr":     charmer.Argument{Default: ":8080", Help: "Address of /health endpoint"},
+	"slack.token":     charmer.Argument{Default: "", Help: "Slack token"},
 }
 
 func initConfig() {
