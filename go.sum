@@ -14,8 +14,8 @@ github.com/clambin/go-common/httputils v0.1.2 h1:x06nP/M/SgYqtVtU5998kOmEQppCAmb
 github.com/clambin/go-common/httputils v0.1.2/go.mod h1:Wf2E3PpcGVqDTOp+7eOCAePzvzCSk/1FHC4MQVKsRIo=
 github.com/clambin/go-common/pubsub v0.2.1 h1:+L8/3JCG95NglPu4w59i3afvn1SbeBz27kbyTK3vc0M=
 github.com/clambin/go-common/pubsub v0.2.1/go.mod h1:0/dx43STTMk+soDoTEG5f5QvfKhl60Bq/TpXztyBKvk=
-github.com/clambin/go-common/set v0.4.3 h1:Sm9lkAJsh82j40RDpfQIziHyHjwr07+KsQF6vgCVXm4=
-github.com/clambin/go-common/set v0.4.3/go.mod h1:Q5GpBoM7B7abNV2Wzys+wQMInBHMoHyh/h0Cn2OmY4A=
+github.com/clambin/go-common/set v0.5.0 h1:BIisdR8LMje4ts+hKUmjgfvEbiK1741mbPCz4P7q72o=
+github.com/clambin/go-common/set v0.5.0/go.mod h1:u7nCKTzg7K2cMgXYvBOExhF2aNjP674wCs6B6z+mNHU=
 github.com/clambin/go-common/testutils v0.4.1 h1:cEmGbP/o4sEUWTKZMJ0UjVFgqRzNEiBMEaTHw93r+n4=
 github.com/clambin/go-common/testutils v0.4.1/go.mod h1:bV0j8D4zhNkleCeluFKLBeLQ0L/dqkxbaR/joLn8kzg=
 github.com/clambin/tado/v2 v2.5.1 h1:fPt+AHOSJQ/M9PdzSoYsdfhtQqYGY7UxAVpNGObeNpg=
