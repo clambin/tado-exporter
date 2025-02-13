@@ -1,7 +1,6 @@
 package monitor
 
 import (
-	"context"
 	"github.com/clambin/tado-exporter/internal/cmd/monitor/mocks"
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
@@ -84,10 +83,8 @@ func Test_runMonitor(t *testing.T) {
 	v.Set("poller.interval", "1m")
 	v.Set("exporter.addr", ":9090")
 	v.Set("health.addr", ":8080")
-	l := slog.Default()
 
-	ctx, cancel := context.WithCancel(context.Background())
-
+	ctx := t.Context()
 	client := mocks.NewTadoClient(t)
 	client.EXPECT().
 		GetMeWithResponse(ctx).
@@ -123,8 +120,8 @@ func Test_runMonitor(t *testing.T) {
 			},
 		}, nil)
 
-	errCh := make(chan error)
-	go func() { errCh <- run(ctx, l, v, r, client, nil) }()
+	l := slog.New(slog.DiscardHandler)
+	go func() { assert.NoError(t, run(ctx, l, v, r, client, nil)) }()
 
 	assert.Eventually(t, func() bool {
 		resp, err := http.Get("http://localhost:9090/metrics")
@@ -135,7 +132,4 @@ func Test_runMonitor(t *testing.T) {
 		resp, err := http.Get("http://localhost:8080/health")
 		return err == nil && resp.StatusCode == http.StatusOK
 	}, time.Second, 50*time.Millisecond)
-
-	cancel()
-	assert.NoError(t, <-errCh)
 }

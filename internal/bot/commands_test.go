@@ -3,7 +3,7 @@ package bot
 import (
 	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
-	mocks2 "github.com/clambin/tado-exporter/internal/poller/mocks"
+	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado-exporter/internal/poller/testutils"
 	"github.com/clambin/tado-exporter/internal/slacktools"
 	"github.com/clambin/tado/v2"
@@ -159,7 +159,7 @@ func Test_commandRunner_listRules(t *testing.T) {
 }
 
 func Test_commandRunner_refresh(t *testing.T) {
-	p := mocks2.NewPoller(t)
+	p := mockPoller.NewPoller(t)
 	p.EXPECT().Refresh().Once()
 	r := commandRunner{Poller: p}
 	_, err := r.refresh()

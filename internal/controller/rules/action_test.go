@@ -8,6 +8,7 @@ import (
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"log/slog"
 	"net/http"
 	"testing"
 	"time"
@@ -254,7 +255,7 @@ func TestAction_Do_HomeAction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.err(t, tt.action.Do(context.Background(), tt.tadoClient(t), discardLogger))
+			tt.err(t, tt.action.Do(context.Background(), tt.tadoClient(t), slog.New(slog.DiscardHandler)))
 		})
 	}
 }
@@ -362,7 +363,7 @@ func TestAction_Do_ZoneAction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.err(t, tt.action.Do(context.Background(), tt.tadoClient(t), discardLogger))
+			tt.err(t, tt.action.Do(context.Background(), tt.tadoClient(t), slog.New(slog.DiscardHandler)))
 		})
 	}
 }

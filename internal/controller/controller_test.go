@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"context"
 	"github.com/clambin/go-common/pubsub"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -11,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -53,7 +51,8 @@ func TestController_Run(t *testing.T) {
 			},
 		},
 	}
-	l := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	//l := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	l := slog.New(slog.DiscardHandler)
 	var p pubsub.Publisher[poller.Update]
 	n := fakeNotifier{ch: make(chan string)}
 
@@ -62,9 +61,7 @@ func TestController_Run(t *testing.T) {
 	require.NotNil(t, m)
 	assert.Len(t, m.controllers, 2)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	errCh := make(chan error)
-	go func() { errCh <- m.Run(ctx) }()
+	go func() { assert.NoError(t, m.Run(t.Context())) }()
 
 	require.Eventually(t, func() bool {
 		return p.Subscribers() > 0
@@ -80,7 +77,4 @@ func TestController_Run(t *testing.T) {
 	msg := <-n.ch
 	assert.Equal(t, want, msg)
 	assert.Equal(t, want, strings.Join(m.ReportTasks(), ", "))
-
-	cancel()
-	assert.NoError(t, <-errCh)
 }

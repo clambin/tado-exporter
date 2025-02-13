@@ -30,9 +30,7 @@ func TestGroupEvaluator_ScheduleAndCancel(t *testing.T) {
 	n := fakeNotifier{ch: make(chan string)}
 	e := newGroupEvaluator(r, &p, nil, &n, discardLogger)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	errCh := make(chan error)
-	go func() { errCh <- e.Run(ctx) }()
+	go func() { assert.NoError(t, e.Run(t.Context())) }()
 
 	// wait for the group rule to subscribe to the publishes
 	assert.Eventually(t, func() bool { return p.subscribed.Load() }, time.Second, time.Millisecond)
@@ -60,9 +58,6 @@ func TestGroupEvaluator_ScheduleAndCancel(t *testing.T) {
 	}()
 	assert.Equal(t, "*zone*: switching heating to auto mode canceled\nReason: no manual setting detected", <-n.ch)
 	assert.Eventually(t, func() bool { return e.ReportTask() == "" }, time.Second, time.Millisecond)
-
-	cancel()
-	assert.NoError(t, <-errCh)
 }
 
 func TestGroupEvaluator_Do(t *testing.T) {
@@ -74,7 +69,7 @@ func TestGroupEvaluator_Do(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := t.Context()
 
 	var p fakePublisher
 	tadoClient := mocks.NewTadoClient(t)
@@ -85,8 +80,7 @@ func TestGroupEvaluator_Do(t *testing.T) {
 	n := fakeNotifier{ch: make(chan string)}
 	e := newGroupEvaluator(r, &p, tadoClient, &n, discardLogger)
 
-	errCh := make(chan error)
-	go func() { errCh <- e.Run(ctx) }()
+	go func() { assert.NoError(t, e.Run(ctx)) }()
 
 	// wait for the group rule to subscribe to the publishes
 	assert.Eventually(t, func() bool { return p.subscribed.Load() }, time.Second, time.Millisecond)
@@ -99,9 +93,6 @@ func TestGroupEvaluator_Do(t *testing.T) {
 		)
 	}()
 	assert.Equal(t, "*zone*: switching heating to auto mode\nReason: one or more users are home: user", <-n.ch)
-
-	cancel()
-	assert.NoError(t, <-errCh)
 }
 
 func TestGroupEvaluator(t *testing.T) {
@@ -115,9 +106,8 @@ func TestGroupEvaluator(t *testing.T) {
 
 	e := newGroupEvaluator(r, &p, tadoClient, nil, discardLogger)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	errCh := make(chan error)
-	go func() { errCh <- e.Run(ctx) }()
+	ctx := t.Context()
+	go func() { assert.NoError(t, e.Run(ctx)) }()
 
 	// wait for the group rule to subscribe to the publishes
 	assert.Eventually(t, func() bool { return p.subscribed.Load() }, time.Second, time.Millisecond)
@@ -155,9 +145,6 @@ func TestGroupEvaluator(t *testing.T) {
 	)
 
 	assert.Eventually(t, func() bool { return done.Load() }, time.Second, time.Millisecond)
-
-	cancel()
-	assert.NoError(t, <-errCh)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

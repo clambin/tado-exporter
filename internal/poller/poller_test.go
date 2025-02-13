@@ -17,12 +17,9 @@ func TestTadoPoller_Run(t *testing.T) {
 	var client fakeClient
 
 	p := poller.New(client, time.Minute, slog.Default())
-	ctx, cancel := context.WithCancel(context.Background())
-
 	ch := p.Subscribe()
-	errCh := make(chan error)
 	go func() {
-		errCh <- p.Run(ctx)
+		assert.NoError(t, p.Run(t.Context()))
 	}()
 
 	update := <-ch
@@ -42,9 +39,6 @@ func TestTadoPoller_Run(t *testing.T) {
 	assert.Equal(t, []string{}, away)
 
 	p.Unsubscribe(ch)
-
-	cancel()
-	assert.NoError(t, <-errCh)
 }
 
 var _ poller.TadoClient = fakeClient{}

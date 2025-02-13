@@ -384,7 +384,7 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 }
 
 // With shopify/go-lua:
-// BenchmarkZoneRule_Evaluate_NightTime-16           320155              3559 ns/op            2408 B/op         41 allocs/op
+// BenchmarkZoneRule_Evaluate_NightTime-16    	  332133	      3388 ns/op	    2408 B/op	      41 allocs/op
 func BenchmarkZoneRule_Evaluate_NightTime(b *testing.B) {
 	r, err := LoadZoneRule("zone", RuleConfiguration{Name: "nighttime", Script: ScriptConfig{Packaged: "nighttime"}})
 	require.NoError(b, err)
@@ -394,7 +394,7 @@ func BenchmarkZoneRule_Evaluate_NightTime(b *testing.B) {
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		a, err := r.Evaluate(s)
 		if err != nil {
 			b.Fatal(err)

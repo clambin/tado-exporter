@@ -7,13 +7,9 @@ import (
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io"
-	"log/slog"
 	"testing"
 	"time"
 )
-
-var discardLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 func TestRules_zoneRules(t *testing.T) {
 	r, err := LoadZoneRules("zone", []RuleConfiguration{
@@ -78,8 +74,8 @@ func TestRules_zoneRules(t *testing.T) {
 }
 
 // Current:
-// BenchmarkRules_Evaluate/action-16         	  131992	      9088 ns/op	    6760 B/op	     119 allocs/op
-// BenchmarkRules_Evaluate/no_action-16      	  159128	      7513 ns/op	    6336 B/op	     111 allocs/op
+// BenchmarkRules_Evaluate/action-16         	  137366	      8526 ns/op	    6760 B/op	     119 allocs/op
+// BenchmarkRules_Evaluate/no_action-16      	  170823	      6967 ns/op	    6336 B/op	     111 allocs/op
 func BenchmarkRules_Evaluate(b *testing.B) {
 	r, err := LoadZoneRules("zone", []RuleConfiguration{
 		{Name: "autoAway", Script: ScriptConfig{Packaged: "autoaway"}, Users: []string{"user"}},
@@ -91,10 +87,8 @@ func BenchmarkRules_Evaluate(b *testing.B) {
 	b.ResetTimer()
 	b.Run("action", func(b *testing.B) {
 		b.ReportAllocs()
-		s := State{
-			ZoneState: ZoneState{true, true},
-		}
-		for range b.N {
+		s := State{ZoneState: ZoneState{true, true}}
+		for b.Loop() {
 			a, err = r.Evaluate(s)
 			if err != nil {
 				b.Fatal(err)
@@ -106,10 +100,8 @@ func BenchmarkRules_Evaluate(b *testing.B) {
 	})
 	b.Run("no action", func(b *testing.B) {
 		b.ReportAllocs()
-		s := State{
-			ZoneState: ZoneState{false, true},
-		}
-		for range b.N {
+		s := State{ZoneState: ZoneState{false, true}}
+		for b.Loop() {
 			a, err = r.Evaluate(s)
 			if err != nil {
 				b.Fatal(err)

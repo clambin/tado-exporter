@@ -10,7 +10,6 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -122,7 +121,7 @@ func Test_setRoomShortcut_makeView(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := setRoomShortcut{logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+			h := setRoomShortcut{logger: slog.New(slog.DiscardHandler)}
 
 			req := h.makeView(tt.mode, tt.update)
 
@@ -262,7 +261,7 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 			)
 			h := setRoomShortcut{
 				TadoClient: tadoClient,
-				logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
+				logger:     slog.New(slog.DiscardHandler),
 			}
 			h.update.Store(&u)
 			if tt.setupTado != nil {
@@ -280,7 +279,7 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func Test_setHomeShortcut_makeView(t *testing.T) {
-	h := setHomeShortcut{logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	h := setHomeShortcut{logger: slog.New(slog.DiscardHandler)}
 
 	req := h.makeView()
 
@@ -393,7 +392,7 @@ func Test_setHomeShortcut_setHome(t *testing.T) {
 			u := testutils.Update()
 			h := setHomeShortcut{
 				TadoClient: tadoClient,
-				logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
+				logger:     slog.New(slog.DiscardHandler),
 			}
 			h.update.Store(&u)
 			if tt.setupTado != nil {

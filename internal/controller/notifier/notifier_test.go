@@ -5,14 +5,13 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"io"
 	"log/slog"
 	"testing"
 )
 
 func TestNotifiers_Notify(t *testing.T) {
 	b := mocks.NewSlackSender(t)
-	l := slog.New(slog.NewTextHandler(io.Discard, nil))
+	l := slog.New(slog.DiscardHandler)
 	n := Notifiers{
 		&SLogNotifier{Logger: l},
 		&SlackNotifier{SlackSender: b, Logger: l},
