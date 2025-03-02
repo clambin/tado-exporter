@@ -180,10 +180,10 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 func makeTadoClient(ctx context.Context, v *viper.Viper, counter *prometheus.CounterVec, obs prometheus.ObserverVec) (*tado.ClientWithResponses, error) {
 	httpClient, err := tado.NewOAuth2Client(
 		ctx,
-		cmp.Or(v.GetString("tado.auth.path"), "/tmp"),
+		cmp.Or(v.GetString("tado.auth.path"), "/tmp/tado-token.enc"),
 		v.GetString("tado.auth.passphrase"),
 		func(response *oauth2.DeviceAuthResponse) {
-			fmt.Printf("no token found. Visit %s and log in ...\n", response.VerificationURIComplete)
+			fmt.Printf("No token found. Visit %s and log in ...\n", response.VerificationURIComplete)
 
 		})
 	if err != nil {

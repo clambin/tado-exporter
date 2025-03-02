@@ -24,6 +24,8 @@ github.com/clambin/tado/v2 v2.5.2-0.20250302192923-c941635ae05e h1:NnmnPZ80VnQaJ
 github.com/clambin/tado/v2 v2.5.2-0.20250302192923-c941635ae05e/go.mod h1:853dKGietJsvtuEMb1+ZsAmNw41mkQ1LdlUrGXmRc1U=
 github.com/clambin/tado/v2 v2.5.2-0.20250302212229-ba420398e5ad h1:CPx0Zh1bzAz4OvHHm0f06sPb/Dw6Ma1JZExzRInjpfc=
 github.com/clambin/tado/v2 v2.5.2-0.20250302212229-ba420398e5ad/go.mod h1:853dKGietJsvtuEMb1+ZsAmNw41mkQ1LdlUrGXmRc1U=
+github.com/clambin/tado/v2 v2.6.0 h1:bX0Hn3hD6BA66mbhTflWgCotzfS+qLt5PmRk8rvkWvc=
+github.com/clambin/tado/v2 v2.6.0/go.mod h1:853dKGietJsvtuEMb1+ZsAmNw41mkQ1LdlUrGXmRc1U=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

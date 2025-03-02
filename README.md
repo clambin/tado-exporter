@@ -7,6 +7,10 @@
 
 Monitor & control utility Tadoº Smart Thermostat devices.
 
+## :warning: Breaking changes
+v0.16.0 changes the way tado authenticates itself with the Tado API.  This will require user intervention. 
+See [Tadoº credentials](#tadoº-credentials) for details.
+
 ## Features
 
 tado retrieves all metrics from your Tadoº devices and makes them available to Prometheus. Additionally, tado can run:
@@ -56,10 +60,13 @@ poller:
 health:
     # Listener address for the /health endpoint
   addr: :8080
-# Section containing Tado credentials
+# Section containing Tado configuration
 tado:
-    username: ""
-    password: ""
+    auth:
+        # location to store the authentication token
+        path: /tmp/tado-token.enc
+        # passphrase to encrypt the stored authentication token
+        passphrase: ""
 slack:
     # Slack token. If added, rule events are sent to Slack 
     token: xoxb-token
@@ -82,6 +89,23 @@ s
 export TADO_MONITOR_TADO.USERNAME="username@example.com"
 export TADO_MONITOR_TADO.PASSWORD="your-password"
 ```
+
+## Tadoº credentials
+In previous releases, tado used the user's username and password to access the Tadoº API. However, as announced [here](https://github.com/home-assistant/core/issues/138518),
+Tadoº are decommissioning this flow on 15 March 2025 and applications need to be modified to use device codes for authentication.
+
+While more secure, this does require manual action from the user.  When tado first starts up, you will see the following prompt:
+
+```aiignore
+No token found. Visit https://login.tado.com/oauth2/device?user_code=<device-code> and log in ...
+```
+
+After opening this link and confirming the login request, tado will be issued a token and will operate as per normal.
+
+To avoid user action on every startup, tado stores the active token to a file, as specified by tado.auth.path in the configuration file,
+using tado.auth.passphrase as the encryption passphrase.
+
+Note: tokens have a lifetime of 10 minutes, meaning if tado is not running for 10 minutes, you will need to confirm the login again.
 
 ## Prometheus
 
