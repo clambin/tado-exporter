@@ -22,6 +22,8 @@ github.com/clambin/tado/v2 v2.5.1 h1:fPt+AHOSJQ/M9PdzSoYsdfhtQqYGY7UxAVpNGObeNpg
 github.com/clambin/tado/v2 v2.5.1/go.mod h1:le2BSHMj3l/sSqjGSJj3WnYJ694RhoblOvucBqvg3KQ=
 github.com/clambin/tado/v2 v2.5.2-0.20250302192923-c941635ae05e h1:NnmnPZ80VnQaJbK5IfYONbL8v4fEUE3KF8nwy/A3crA=
 github.com/clambin/tado/v2 v2.5.2-0.20250302192923-c941635ae05e/go.mod h1:853dKGietJsvtuEMb1+ZsAmNw41mkQ1LdlUrGXmRc1U=
+github.com/clambin/tado/v2 v2.5.2-0.20250302212229-ba420398e5ad h1:CPx0Zh1bzAz4OvHHm0f06sPb/Dw6Ma1JZExzRInjpfc=
+github.com/clambin/tado/v2 v2.5.2-0.20250302212229-ba420398e5ad/go.mod h1:853dKGietJsvtuEMb1+ZsAmNw41mkQ1LdlUrGXmRc1U=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
