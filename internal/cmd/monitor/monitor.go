@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -12,12 +13,14 @@ import (
 	"github.com/clambin/tado-exporter/internal/controller/notifier"
 	"github.com/clambin/tado-exporter/internal/health"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 	"log"
@@ -36,15 +39,28 @@ var (
 		Short: "Monitor Tado thermostats",
 		RunE:  monitor,
 	}
+
+	requestCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "tado",
+		Subsystem: "monitor",
+		Name:      "http_requests_total",
+		Help:      "total number of http requests",
+	},
+		[]string{"code", "method"},
+	)
+
+	requestDuration = prometheus.NewSummaryVec(prometheus.SummaryOpts{
+		Namespace: "tado",
+		Subsystem: "monitor",
+		Name:      "http_request_duration_seconds",
+		Help:      "duration of http requests",
+	},
+		[]string{"code", "method"},
+	)
 )
 
 func monitor(cmd *cobra.Command, _ []string) error {
-	api, err := instrumentedTadoClient(
-		cmd.Context(),
-		viper.GetString("tado.username"), viper.GetString("tado.password"),
-		requestCounter,
-		requestDuration,
-	)
+	api, err := makeTadoClient(cmd.Context(), viper.GetViper(), requestCounter, requestDuration)
 	if err != nil {
 		return fmt.Errorf("tado: %w", err)
 	}
@@ -159,4 +175,29 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 	g.Go(func() error { return p.Run(ctx) })
 
 	return g.Wait()
+}
+
+func makeTadoClient(ctx context.Context, v *viper.Viper, counter *prometheus.CounterVec, obs prometheus.ObserverVec) (*tado.ClientWithResponses, error) {
+	httpClient, err := tado.NewOAuth2Client(
+		ctx,
+		cmp.Or(v.GetString("tado.auth.path"), "/tmp/tado-token.enc"),
+		v.GetString("tado.auth.passphrase"),
+		func(response *oauth2.DeviceAuthResponse) {
+			fmt.Printf("No token found. Visit %s and log in ...\n", response.VerificationURIComplete)
+
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	httpClient.Transport = promhttp.InstrumentRoundTripperCounter(counter,
+		promhttp.InstrumentRoundTripperDuration(obs,
+			httpClient.Transport,
+		),
+	)
+
+	return tado.NewClientWithResponses(
+		tado.ServerURL,
+		tado.WithHTTPClient(httpClient),
+	)
 }
