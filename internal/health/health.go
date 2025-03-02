@@ -48,5 +48,4 @@ func (h *Health) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "no update yet", http.StatusServiceUnavailable)
 		h.Poller.Refresh()
 	}
-	return
 }
