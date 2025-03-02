@@ -8,7 +8,7 @@
 Monitor & control utility Tadoº Smart Thermostat devices.
 
 ## :warning: Breaking changes
-v0.16.0 changes the way tado authenticates itself with the Tado API.  This will require user intervention. 
+v0.18.0 changes the way tado authenticates itself with the Tado API. This requires user intervention. 
 See [Tadoº credentials](#tadoº-credentials) for details.
 
 ## Features
