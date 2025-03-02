@@ -1,8 +1,6 @@
 module github.com/clambin/tado-exporter
 
-go 1.24
-
-toolchain go1.24.0
+go 1.24.0
 
 require (
 	github.com/Shopify/go-lua v0.0.0-20240527182111-9ab1540f3f5f
@@ -10,7 +8,7 @@ require (
 	github.com/clambin/go-common/httputils v0.2.0
 	github.com/clambin/go-common/pubsub v0.2.1
 	github.com/clambin/go-common/set v0.5.0
-	github.com/clambin/tado/v2 v2.5.1
+	github.com/clambin/tado/v2 v2.5.2-0.20250302192923-c941635ae05e
 	github.com/prometheus/client_golang v1.21.0
 	github.com/slack-go/slack v0.16.0
 	github.com/spf13/cobra v1.9.1
