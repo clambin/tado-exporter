@@ -113,7 +113,7 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 	})
 
 	// health
-	h := health.New(p, l.With("component", "health"))
+	h := health.New(p, v.GetDuration("poller.interval"), l.With("component", "health"))
 	g.Go(func() error { h.Run(ctx); return nil })
 	g.Go(func() error {
 		r := http.NewServeMux()
