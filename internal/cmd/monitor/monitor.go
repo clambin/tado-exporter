@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -128,7 +129,7 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 	})
 
 	// health
-	h := health.New(p, l.With("component", "health"))
+	h := health.New(p, v.GetDuration("poller.interval"), l.With("component", "health"))
 	g.Go(func() error { h.Run(ctx); return nil })
 	g.Go(func() error {
 		r := http.NewServeMux()
@@ -177,13 +178,14 @@ func run(ctx context.Context, l *slog.Logger, v *viper.Viper, registry prometheu
 }
 
 func makeTadoClient(ctx context.Context, v *viper.Viper, counter *prometheus.CounterVec, obs prometheus.ObserverVec) (*tado.ClientWithResponses, error) {
-	tokenStorePath := "tado-token.enc"                  //v.GetString("tado-token-store")
-	tokenStorePassphrase := "my-very-secret-passphrase" //v.GetString("tado-token-store-passphrase")
+	httpClient, err := tado.NewOAuth2Client(
+		ctx,
+		cmp.Or(v.GetString("tado.auth.path"), "/tmp"),
+		v.GetString("tado.auth.passphrase"),
+		func(response *oauth2.DeviceAuthResponse) {
+			fmt.Printf("no token found. Visit %s and log in ...\n", response.VerificationURIComplete)
 
-	httpClient, err := tado.NewOAuth2Client(ctx, tokenStorePath, tokenStorePassphrase, func(response *oauth2.DeviceAuthResponse) {
-		fmt.Printf("no token found. Visit %s and log in ...\n", response.VerificationURIComplete)
-
-	})
+		})
 	if err != nil {
 		return nil, err
 	}

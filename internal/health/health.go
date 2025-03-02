@@ -6,18 +6,21 @@ import (
 	"log/slog"
 	"net/http"
 	"sync/atomic"
+	"time"
 )
 
 type Health struct {
 	poller.Poller
-	logger  *slog.Logger
-	updated atomic.Bool
+	interval time.Duration
+	logger   *slog.Logger
+	updated  atomic.Value
 }
 
-func New(p poller.Poller, logger *slog.Logger) *Health {
+func New(p poller.Poller, interval time.Duration, logger *slog.Logger) *Health {
 	return &Health{
-		Poller: p,
-		logger: logger,
+		Poller:   p,
+		interval: interval,
+		logger:   logger,
 	}
 }
 
@@ -33,15 +36,17 @@ func (h *Health) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ch:
-			h.updated.Store(true)
+			h.updated.Store(time.Now())
 		}
 	}
 }
 
 func (h *Health) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
-	if !h.updated.Load() {
+	const maxMissedUpdates = 5
+	lastUpdate := h.updated.Load()
+	if lastUpdate == nil || time.Since(lastUpdate.(time.Time)) > maxMissedUpdates*h.interval {
 		http.Error(w, "no update yet", http.StatusServiceUnavailable)
 		h.Poller.Refresh()
-		return
 	}
+	return
 }

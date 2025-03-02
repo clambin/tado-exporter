@@ -2,7 +2,6 @@ package health
 
 import (
 	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"net/http"
@@ -13,34 +12,48 @@ import (
 )
 
 func TestHealth_Handle(t *testing.T) {
-	var subscribed atomic.Bool
-
-	ch := make(chan poller.Update)
-	p := mocks.NewPoller(t)
-	p.EXPECT().Subscribe().RunAndReturn(func() <-chan poller.Update {
-		subscribed.Store(true)
-		return ch
-	}).Once()
-	p.EXPECT().Unsubscribe((<-chan poller.Update)(ch)).Run(func(_ <-chan poller.Update) {
-		subscribed.Store(false)
-	}).Maybe()
-	p.EXPECT().Refresh().Once()
-
-	h := New(p, slog.New(slog.DiscardHandler))
+	p := fakePoller{ch: make(chan poller.Update)}
+	h := New(&p, 30*time.Second, slog.New(slog.DiscardHandler))
 	go func() {
 		h.Run(t.Context())
-		assert.False(t, subscribed.Load())
+		assert.Zero(t, p.subscribed.Load())
 	}()
 
+	// no update yet: not up
+	assert.False(t, isUp(h))
+
+	// receive update: eventually we're marked as up
+	go p.Refresh()
+	assert.Eventually(t, func() bool { return isUp(h) }, time.Second, time.Millisecond)
+
+	// no update after 5*interval: not up
+	h.updated.Store(time.Time{})
+	assert.False(t, isUp(h))
+}
+
+func isUp(h http.Handler) bool {
 	resp := httptest.NewRecorder()
 	h.ServeHTTP(resp, &http.Request{})
-	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
+	return resp.Code == http.StatusOK
+}
 
-	ch <- poller.Update{}
+var _ poller.Poller = &fakePoller{}
 
-	assert.Eventually(t, func() bool {
-		resp = httptest.NewRecorder()
-		h.ServeHTTP(resp, &http.Request{})
-		return resp.Code == http.StatusOK
-	}, time.Second, 10*time.Millisecond)
+type fakePoller struct {
+	ch         chan poller.Update
+	subscribed atomic.Int32
+	refreshed  atomic.Int32
+}
+
+func (f *fakePoller) Subscribe() <-chan poller.Update {
+	f.subscribed.Add(1)
+	return f.ch
+}
+
+func (f *fakePoller) Unsubscribe(_ <-chan poller.Update) {
+	f.subscribed.Add(-1)
+}
+
+func (f *fakePoller) Refresh() {
+	f.ch <- poller.Update{}
 }
