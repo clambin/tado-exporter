@@ -11,9 +11,9 @@ import (
 
 type Health struct {
 	poller.Poller
-	interval time.Duration
-	logger   *slog.Logger
 	updated  atomic.Value
+	logger   *slog.Logger
+	interval time.Duration
 }
 
 func New(p poller.Poller, interval time.Duration, logger *slog.Logger) *Health {
