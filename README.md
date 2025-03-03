@@ -105,7 +105,7 @@ After opening this link and confirming the login request, tado will be issued a 
 To avoid user action on every startup, tado stores the active token to a file, as specified by tado.auth.path in the configuration file,
 using tado.auth.passphrase as the encryption passphrase.
 
-Note: tokens have a lifetime of 10 minutes, meaning if tado is not running for 10 minutes, you will need to confirm the login again.
+Note: tokens can be refreshed for up to 30 days, meaning if tado is not running for that amount of time, you will need to confirm the login again.
 
 ## Prometheus
 
