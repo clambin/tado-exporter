@@ -16,8 +16,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 
 FROM alpine
 
-RUN apk update && \
-    apk add --no-cache tzdata
+RUN apk add --no-cache tzdata
 
 WORKDIR /app
 COPY --from=builder /app/tado /app/tado
