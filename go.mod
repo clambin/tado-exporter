@@ -2,10 +2,12 @@ module github.com/clambin/tado-exporter
 
 go 1.24.0
 
+toolchain go1.24.1
+
 require (
 	github.com/Shopify/go-lua v0.0.0-20240527182111-9ab1540f3f5f
 	github.com/clambin/go-common/charmer v0.2.0
-	github.com/clambin/go-common/httputils v0.2.0
+	github.com/clambin/go-common/httputils v0.3.0
 	github.com/clambin/go-common/pubsub v0.2.1
 	github.com/clambin/go-common/set v0.5.0
 	github.com/clambin/tado/v2 v2.6.2

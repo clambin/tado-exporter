@@ -10,8 +10,8 @@ github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UF
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/clambin/go-common/charmer v0.2.0 h1:RLqdH1pRVQUBSKRPpKgDVlad6St3FyFDOikzbc//6Nk=
 github.com/clambin/go-common/charmer v0.2.0/go.mod h1:8Y/XKmTspOZ9xc0fgV8mvYS0mkXBuAidO3MCJLCMfrg=
-github.com/clambin/go-common/httputils v0.2.0 h1:KlpB3DpzMJZqzDc11FsKeA60vEsHJyQk82IaniatNWY=
-github.com/clambin/go-common/httputils v0.2.0/go.mod h1:wyBTLa017563geWBogq7ZYtIyzgxWks3cktdJReax1E=
+github.com/clambin/go-common/httputils v0.3.0 h1:xb3e6//Y7EhQsmcfwcv/bwgsdXY2n/ztkivP0ePkbkg=
+github.com/clambin/go-common/httputils v0.3.0/go.mod h1:iYADavBTV6JOoDpUXNOLooRxdUM5TcA7UjNJ/uBEqXw=
 github.com/clambin/go-common/pubsub v0.2.1 h1:+L8/3JCG95NglPu4w59i3afvn1SbeBz27kbyTK3vc0M=
 github.com/clambin/go-common/pubsub v0.2.1/go.mod h1:0/dx43STTMk+soDoTEG5f5QvfKhl60Bq/TpXztyBKvk=
 github.com/clambin/go-common/set v0.5.0 h1:BIisdR8LMje4ts+hKUmjgfvEbiK1741mbPCz4P7q72o=
