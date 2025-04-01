@@ -2,9 +2,9 @@ package rules
 
 import (
 	"cmp"
+	"codeberg.org/clambin/go-common/set"
 	"context"
 	"fmt"
-	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
 	"iter"

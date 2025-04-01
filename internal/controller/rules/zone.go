@@ -1,9 +1,9 @@
 package rules
 
 import (
+	"codeberg.org/clambin/go-common/set"
 	"errors"
 	"fmt"
-	"github.com/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/controller/rules/zonerules"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"

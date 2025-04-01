@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/clambin/go-common/pubsub"
+	"codeberg.org/clambin/go-common/pubsub"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/poller/testutils"
