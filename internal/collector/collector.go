@@ -218,13 +218,13 @@ func (c *Collector) collectUsers(update poller.Update) {
 }
 
 func (c *Collector) collectWeather(update poller.Update) {
-	var weatherStates set.Set[tado.WeatherState]
-	if p := c.WeatherStates.Load(); p == nil {
+	weatherStates, ok := c.WeatherStates.Load().(set.Set[tado.WeatherState])
+	if !ok {
 		weatherStates = make(set.Set[tado.WeatherState])
-	} else {
-		weatherStates = p.(set.Set[tado.WeatherState])
 	}
 	weatherStates.Add(*update.WeatherState.Value)
+	c.WeatherStates.Store(weatherStates)
+
 	for weatherState := range weatherStates {
 		var value float64
 		if weatherState == *update.WeatherState.Value {
@@ -232,7 +232,6 @@ func (c *Collector) collectWeather(update poller.Update) {
 		}
 		c.Metrics.tadoOutsideWeather.WithLabelValues(string(weatherState)).Set(value)
 	}
-	c.WeatherStates.Store(weatherStates)
 
 	c.Metrics.tadoOutsideSolarIntensity.WithLabelValues().Set(float64(*update.SolarIntensity.Percentage))
 	c.Metrics.tadoOutsideTemperature.WithLabelValues().Set(float64(*update.OutsideTemperature.Celsius))
