@@ -1,7 +1,7 @@
 package poller
 
 import (
-	"github.com/clambin/go-common/set"
+	"codeberg.org/clambin/go-common/set"
 	"github.com/clambin/tado/v2"
 	"iter"
 	"log/slog"

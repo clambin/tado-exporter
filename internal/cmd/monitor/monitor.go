@@ -2,11 +2,11 @@ package monitor
 
 import (
 	"cmp"
+	"codeberg.org/clambin/go-common/charmer"
+	"codeberg.org/clambin/go-common/httputils"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/clambin/go-common/charmer"
-	"github.com/clambin/go-common/httputils"
 	"github.com/clambin/tado-exporter/internal/bot"
 	"github.com/clambin/tado-exporter/internal/collector"
 	"github.com/clambin/tado-exporter/internal/controller"

@@ -1,8 +1,8 @@
 package eval
 
 import (
+	"codeberg.org/clambin/go-common/charmer"
 	"fmt"
-	"github.com/clambin/go-common/charmer"
 	"github.com/clambin/tado-exporter/internal/controller/rules"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
