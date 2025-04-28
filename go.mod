@@ -3,11 +3,11 @@ module github.com/clambin/tado-exporter
 go 1.24.0
 
 require (
+	codeberg.org/clambin/go-common/charmer v0.3.0
+	codeberg.org/clambin/go-common/httputils v0.3.1
+	codeberg.org/clambin/go-common/pubsub v0.3.0
+	codeberg.org/clambin/go-common/set v0.6.0
 	github.com/Shopify/go-lua v0.0.0-20240527182111-9ab1540f3f5f
-	github.com/clambin/go-common/charmer v0.2.0
-	github.com/clambin/go-common/httputils v0.2.0
-	github.com/clambin/go-common/pubsub v0.2.1
-	github.com/clambin/go-common/set v0.5.0
 	github.com/clambin/tado/v2 v2.6.2
 	github.com/prometheus/client_golang v1.21.1
 	github.com/slack-go/slack v0.16.0

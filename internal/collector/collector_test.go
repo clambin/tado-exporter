@@ -4,7 +4,9 @@ import (
 	"embed"
 	"encoding/json"
 	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/clambin/tado/v2"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"log/slog"
 	"strings"
@@ -49,7 +51,7 @@ tado_outside_temp_celsius 13.0
 # TYPE tado_solar_intensity_percentage gauge
 tado_solar_intensity_percentage 0
 
-# HELP tado_weather Current weather. Always one. See label 'tado_weather'
+# HELP tado_weather Current weather, if the value is one. See label 'tado_weather'
 # TYPE tado_weather gauge
 tado_weather{tado_weather="DRIZZLE"} 1
 
@@ -95,4 +97,23 @@ tado_zone_open_window_remaining{zone_name="Living room"} 150
 # TYPE tado_zone_target_manual_mode gauge
 tado_zone_target_manual_mode{zone_name="Living room"} 0
 `)))
+}
+
+func TestCollector_Weather(t *testing.T) {
+	m := NewMetrics()
+	c := Collector{Poller: nil, Metrics: m, Logger: slog.Default()}
+
+	update := MustUpdate()
+	for _, weather := range []string{"SUN", "CLOUDY", "SNOW"} {
+		*update.Weather.WeatherState.Value = tado.WeatherState(weather)
+		c.process(update)
+	}
+
+	assert.NoError(t, testutil.CollectAndCompare(*m, strings.NewReader(`
+# HELP tado_weather Current weather, if the value is one. See label 'tado_weather'
+# TYPE tado_weather gauge
+tado_weather{tado_weather="CLOUDY"} 0
+tado_weather{tado_weather="SNOW"} 1
+tado_weather{tado_weather="SUN"} 0
+`), "tado_weather"))
 }

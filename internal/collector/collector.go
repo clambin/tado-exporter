@@ -1,11 +1,13 @@
 package collector
 
 import (
+	"codeberg.org/clambin/go-common/set"
 	"context"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
+	"sync/atomic"
 )
 
 var _ prometheus.Collector = &Metrics{}
@@ -147,7 +149,7 @@ func NewMetrics() *Metrics {
 			Namespace:   "tado",
 			Subsystem:   "",
 			Name:        "weather",
-			Help:        "Current weather. Always one. See label 'tado_weather'",
+			Help:        "Current weather, if the value is one. See label 'tado_weather'",
 			ConstLabels: nil,
 		}, []string{"tado_weather"}),
 		tadoZoneOpenWindowDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -175,9 +177,10 @@ func NewMetrics() *Metrics {
 }
 
 type Collector struct {
-	Poller  poller.Poller
-	Metrics *Metrics
-	Logger  *slog.Logger
+	Poller        poller.Poller
+	Metrics       *Metrics
+	Logger        *slog.Logger
+	WeatherStates atomic.Value
 }
 
 func (c *Collector) Run(ctx context.Context) error {
@@ -215,9 +218,24 @@ func (c *Collector) collectUsers(update poller.Update) {
 }
 
 func (c *Collector) collectWeather(update poller.Update) {
+	var weatherStates set.Set[tado.WeatherState]
+	if p := c.WeatherStates.Load(); p == nil {
+		weatherStates = make(set.Set[tado.WeatherState])
+	} else {
+		weatherStates = p.(set.Set[tado.WeatherState])
+	}
+	weatherStates.Add(*update.WeatherState.Value)
+	for weatherState := range weatherStates {
+		var value float64
+		if weatherState == *update.WeatherState.Value {
+			value = 1
+		}
+		c.Metrics.tadoOutsideWeather.WithLabelValues(string(weatherState)).Set(value)
+	}
+	c.WeatherStates.Store(weatherStates)
+
 	c.Metrics.tadoOutsideSolarIntensity.WithLabelValues().Set(float64(*update.SolarIntensity.Percentage))
 	c.Metrics.tadoOutsideTemperature.WithLabelValues().Set(float64(*update.OutsideTemperature.Celsius))
-	c.Metrics.tadoOutsideWeather.WithLabelValues(string(*update.WeatherState.Value)).Set(1)
 }
 
 func (c *Collector) collectHomeState(home poller.Update) {
