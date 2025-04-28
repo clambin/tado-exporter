@@ -35,7 +35,7 @@ func TestCollector(t *testing.T) {
 	c.process(MustUpdate())
 
 	require.NoError(t, testutil.CollectAndCompare(m, strings.NewReader(`
-# HELP tado_home_state State of the home. Always 1. Label home_state specifies the state
+# HELP tado_home_state State of the home, if the value is 1. Label home_state specifies the state
 # TYPE tado_home_state gauge
 tado_home_state{home_state="HOME"} 1
 
@@ -116,4 +116,22 @@ tado_weather{tado_weather="CLOUDY"} 0
 tado_weather{tado_weather="SNOW"} 1
 tado_weather{tado_weather="SUN"} 0
 `), "tado_weather"))
+}
+
+func TestCollector_HomeState(t *testing.T) {
+	m := NewMetrics()
+	c := Collector{Poller: nil, Metrics: m, Logger: slog.Default()}
+
+	update := MustUpdate()
+	for _, homeState := range []tado.HomePresence{tado.HOME, tado.AWAY} {
+		*update.HomeState.Presence = homeState
+		c.process(update)
+	}
+
+	assert.NoError(t, testutil.CollectAndCompare(*m, strings.NewReader(`
+# HELP tado_home_state State of the home, if the value is 1. Label home_state specifies the state
+# TYPE tado_home_state gauge
+tado_home_state{home_state="AWAY"} 1
+tado_home_state{home_state="HOME"} 0
+`), "tado_home_state"))
 }

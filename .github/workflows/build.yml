@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - master
-      - weather
+      - homestate
 permissions:
   contents: read
   packages: write
