@@ -170,7 +170,7 @@ func NewMetrics() *Metrics {
 			Namespace:   "tado",
 			Subsystem:   "home",
 			Name:        "state",
-			Help:        "State of the home. Always 1. Label home_state specifies the state",
+			Help:        "State of the home, if the value is 1. Label home_state specifies the state",
 			ConstLabels: nil,
 		}, []string{"home_state"}),
 	}
@@ -180,7 +180,8 @@ type Collector struct {
 	Poller        poller.Poller
 	Metrics       *Metrics
 	Logger        *slog.Logger
-	WeatherStates atomic.Value
+	weatherStates atomic.Value
+	homeStates    atomic.Value
 }
 
 func (c *Collector) Run(ctx context.Context) error {
@@ -218,12 +219,12 @@ func (c *Collector) collectUsers(update poller.Update) {
 }
 
 func (c *Collector) collectWeather(update poller.Update) {
-	weatherStates, ok := c.WeatherStates.Load().(set.Set[tado.WeatherState])
+	weatherStates, ok := c.weatherStates.Load().(set.Set[tado.WeatherState])
 	if !ok {
 		weatherStates = make(set.Set[tado.WeatherState])
 	}
 	weatherStates.Add(*update.WeatherState.Value)
-	c.WeatherStates.Store(weatherStates)
+	c.weatherStates.Store(weatherStates)
 
 	for weatherState := range weatherStates {
 		var value float64
@@ -239,6 +240,21 @@ func (c *Collector) collectWeather(update poller.Update) {
 
 func (c *Collector) collectHomeState(home poller.Update) {
 	c.Metrics.tadoHomeState.WithLabelValues(string(*home.HomeState.Presence)).Set(1)
+
+	homeStates, ok := c.homeStates.Load().(set.Set[tado.HomePresence])
+	if !ok {
+		homeStates = make(set.Set[tado.HomePresence])
+	}
+	homeStates.Add(*home.HomeState.Presence)
+	c.homeStates.Store(homeStates)
+
+	for homeState := range homeStates {
+		var value float64
+		if homeState == *home.HomeState.Presence {
+			value = 1
+		}
+		c.Metrics.tadoHomeState.WithLabelValues(string(homeState)).Set(value)
+	}
 }
 
 func (c *Collector) collectZones(update poller.Update) {
