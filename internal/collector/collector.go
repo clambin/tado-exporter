@@ -1,11 +1,13 @@
 package collector
 
 import (
+	"codeberg.org/clambin/go-common/set"
 	"context"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
+	"sync/atomic"
 )
 
 var _ prometheus.Collector = &Metrics{}
@@ -147,7 +149,7 @@ func NewMetrics() *Metrics {
 			Namespace:   "tado",
 			Subsystem:   "",
 			Name:        "weather",
-			Help:        "Current weather. Always one. See label 'tado_weather'",
+			Help:        "Current weather, if the value is one. See label 'tado_weather'",
 			ConstLabels: nil,
 		}, []string{"tado_weather"}),
 		tadoZoneOpenWindowDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -168,16 +170,18 @@ func NewMetrics() *Metrics {
 			Namespace:   "tado",
 			Subsystem:   "home",
 			Name:        "state",
-			Help:        "State of the home. Always 1. Label home_state specifies the state",
+			Help:        "State of the home, if the value is 1. Label home_state specifies the state",
 			ConstLabels: nil,
 		}, []string{"home_state"}),
 	}
 }
 
 type Collector struct {
-	Poller  poller.Poller
-	Metrics *Metrics
-	Logger  *slog.Logger
+	Poller        poller.Poller
+	Metrics       *Metrics
+	Logger        *slog.Logger
+	weatherStates atomic.Value
+	homeStates    atomic.Value
 }
 
 func (c *Collector) Run(ctx context.Context) error {
@@ -215,13 +219,42 @@ func (c *Collector) collectUsers(update poller.Update) {
 }
 
 func (c *Collector) collectWeather(update poller.Update) {
-	c.Metrics.tadoOutsideSolarIntensity.WithLabelValues().Set(float64(*update.SolarIntensity.Percentage))
-	c.Metrics.tadoOutsideTemperature.WithLabelValues().Set(float64(*update.OutsideTemperature.Celsius))
-	c.Metrics.tadoOutsideWeather.WithLabelValues(string(*update.WeatherState.Value)).Set(1)
+	weatherStates, ok := c.weatherStates.Load().(set.Set[tado.WeatherState])
+	if !ok {
+		weatherStates = make(set.Set[tado.WeatherState])
+	}
+	weatherStates.Add(*update.Weather.WeatherState.Value)
+	c.weatherStates.Store(weatherStates)
+
+	for weatherState := range weatherStates {
+		var value float64
+		if weatherState == *update.Weather.WeatherState.Value {
+			value = 1
+		}
+		c.Metrics.tadoOutsideWeather.WithLabelValues(string(weatherState)).Set(value)
+	}
+
+	c.Metrics.tadoOutsideSolarIntensity.WithLabelValues().Set(float64(*update.Weather.SolarIntensity.Percentage))
+	c.Metrics.tadoOutsideTemperature.WithLabelValues().Set(float64(*update.Weather.OutsideTemperature.Celsius))
 }
 
 func (c *Collector) collectHomeState(home poller.Update) {
 	c.Metrics.tadoHomeState.WithLabelValues(string(*home.HomeState.Presence)).Set(1)
+
+	homeStates, ok := c.homeStates.Load().(set.Set[tado.HomePresence])
+	if !ok {
+		homeStates = make(set.Set[tado.HomePresence])
+	}
+	homeStates.Add(*home.HomeState.Presence)
+	c.homeStates.Store(homeStates)
+
+	for homeState := range homeStates {
+		var value float64
+		if homeState == *home.HomeState.Presence {
+			value = 1
+		}
+		c.Metrics.tadoHomeState.WithLabelValues(string(homeState)).Set(value)
+	}
 }
 
 func (c *Collector) collectZones(update poller.Update) {
@@ -232,8 +265,8 @@ func (c *Collector) collectZones(update poller.Update) {
 }
 
 func (c *Collector) collectZoneDevices(zone poller.Zone) {
-	for _, device := range *zone.Devices {
-		zoneName := *zone.Name
+	for _, device := range *zone.Zone.Devices {
+		zoneName := *zone.Zone.Name
 		deviceType := *device.DeviceType
 		id := zoneName + "_" + *device.SerialNo
 
@@ -252,27 +285,27 @@ func (c *Collector) collectZoneDevices(zone poller.Zone) {
 }
 
 func (c *Collector) collectZoneInfo(zone poller.Zone) {
-	zoneName := *zone.Name
-	if zone.SensorDataPoints.InsideTemperature != nil {
-		c.Metrics.tadoZoneTemperatureCelsius.WithLabelValues(zoneName).Set(float64(*zone.SensorDataPoints.InsideTemperature.Celsius))
+	zoneName := *zone.Zone.Name
+	if zone.ZoneState.SensorDataPoints.InsideTemperature != nil {
+		c.Metrics.tadoZoneTemperatureCelsius.WithLabelValues(zoneName).Set(float64(*zone.ZoneState.SensorDataPoints.InsideTemperature.Celsius))
 	}
 	c.Metrics.tadoZoneTargetTempCelsius.WithLabelValues(zoneName).Set(float64(zone.GetTargetTemperature()))
-	if zone.ActivityDataPoints.HeatingPower != nil {
-		c.Metrics.tadoZoneHeatingPercentage.WithLabelValues(zoneName).Set(float64(*zone.ActivityDataPoints.HeatingPower.Percentage))
+	if zone.ZoneState.ActivityDataPoints.HeatingPower != nil {
+		c.Metrics.tadoZoneHeatingPercentage.WithLabelValues(zoneName).Set(float64(*zone.ZoneState.ActivityDataPoints.HeatingPower.Percentage))
 	}
-	if zone.SensorDataPoints.Humidity != nil {
-		c.Metrics.tadoZoneHumidityPercentage.WithLabelValues(zoneName).Set(float64(*zone.SensorDataPoints.Humidity.Percentage))
+	if zone.ZoneState.SensorDataPoints.Humidity != nil {
+		c.Metrics.tadoZoneHumidityPercentage.WithLabelValues(zoneName).Set(float64(*zone.ZoneState.SensorDataPoints.Humidity.Percentage))
 	}
 	var duration, remaining float64
-	if zone.OpenWindow != nil {
-		duration = float64(*zone.OpenWindow.DurationInSeconds)
-		remaining = float64(*zone.OpenWindow.RemainingTimeInSeconds)
+	if zone.ZoneState.OpenWindow != nil {
+		duration = float64(*zone.ZoneState.OpenWindow.DurationInSeconds)
+		remaining = float64(*zone.ZoneState.OpenWindow.RemainingTimeInSeconds)
 	}
 	c.Metrics.tadoZoneOpenWindowDuration.WithLabelValues(zoneName).Set(duration)
 	c.Metrics.tadoZoneOpenWindowRemaining.WithLabelValues(zoneName).Set(remaining)
 
 	var value float64
-	if *zone.Setting.Power == tado.PowerON {
+	if *zone.ZoneState.Setting.Power == tado.PowerON {
 		value = 1.0
 	}
 	c.Metrics.tadoZonePowerState.WithLabelValues(zoneName).Set(value)

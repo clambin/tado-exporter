@@ -8,10 +8,10 @@ import (
 )
 
 type SlackNotifier struct {
-	Logger *slog.Logger
-	SlackSender
-	userID string
-	lock   sync.Mutex
+	Logger      *slog.Logger
+	SlackSender SlackSender
+	userID      string
+	lock        sync.Mutex
 }
 
 type SlackSender interface {

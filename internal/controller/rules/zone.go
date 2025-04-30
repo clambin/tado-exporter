@@ -28,7 +28,7 @@ func LoadZoneRules(zoneName string, config []RuleConfiguration) (Rules, error) {
 // GetZoneState returns a function that returns the State of a zone, named zoneName, from a poller.Update.
 func GetZoneState(zoneName string) func(u poller.Update) (State, error) {
 	return func(u poller.Update) (State, error) {
-		zone, ok := u.GetZone(zoneName)
+		zone, ok := u.Zones.GetZone(zoneName)
 		if !ok {
 			return State{}, fmt.Errorf("zone %q not found in update", zoneName)
 		}
@@ -42,9 +42,9 @@ func GetZoneState(zoneName string) func(u poller.Update) (State, error) {
 				Heating: zone.ZoneState.Setting != nil && *zone.ZoneState.Setting.Power == tado.PowerON,
 			},
 			HomeId: *u.HomeBase.Id,
-			ZoneId: *zone.Id,
+			ZoneId: *zone.Zone.Id,
 		}
-		for dev := range u.GeoTrackedDevices() {
+		for dev := range u.MobileDevices.GeoTrackedDevices() {
 			s.Devices = append(s.Devices, Device{Name: *dev.Name, Home: dev.Location != nil && *dev.Location.AtHome})
 		}
 		return s, nil
@@ -70,16 +70,16 @@ func LoadZoneRule(zoneName string, cfg RuleConfiguration) (Rule, error) {
 
 func (r zoneRule) Evaluate(currentState State) (Action, error) {
 	// set up evaluation call
-	r.luaScript.State.Global("Evaluate")
-	if r.luaScript.State.IsNil(-1) {
+	r.Global("Evaluate")
+	if r.IsNil(-1) {
 		return nil, &errLua{err: errors.New("script does not contain an Evaluate function")}
 	}
 
 	// push arguments
-	r.luaScript.pushHomeState(currentState.HomeState)
-	r.luaScript.pushZoneState(currentState.ZoneState)
-	r.luaScript.pushDevices(currentState.Devices.filter(r.devices))
-	r.luaScript.pushArgs(r.args)
+	r.pushHomeState(currentState.HomeState)
+	r.pushZoneState(currentState.ZoneState)
+	r.pushDevices(currentState.Devices.filter(r.devices))
+	r.pushArgs(r.args)
 
 	// execute the script
 	if err := r.ProtectedCall(4, 3, 0); err != nil {
@@ -87,12 +87,12 @@ func (r zoneRule) Evaluate(currentState State) (Action, error) {
 	}
 
 	// set up action
-	desiredAction := zoneAction{HomeId: currentState.HomeId, ZoneId: currentState.ZoneId, zoneName: r.zoneName}
+	desiredAction := zoneAction{homeId: currentState.HomeId, zoneId: currentState.ZoneId, zoneName: r.zoneName}
 	var err error
 
 	// pop the values
 	defer r.Pop(3)
-	desiredAction.ZoneState, err = r.luaScript.getZoneState(-3)
+	desiredAction.zoneState, err = r.getZoneState(-3)
 	if err != nil {
 		return nil, err
 	}

@@ -27,14 +27,14 @@ func TestTadoPoller_Run(t *testing.T) {
 	assert.Equal(t, tado.HomeId(1), *update.HomeBase.Id)
 	assert.True(t, update.Home())
 
-	zone, ok := update.GetZone("room")
+	zone, ok := update.Zones.GetZone("room")
 	require.True(t, ok)
-	assert.Equal(t, 10, *zone.Id)
+	assert.Equal(t, 10, *zone.Zone.Id)
 
-	device, ok := update.GetMobileDevice("A")
+	device, ok := update.MobileDevices.GetMobileDevice("A")
 	assert.True(t, ok)
 	assert.Equal(t, tado.MobileDeviceId(100), *device.Id)
-	home, away := update.GetDeviceState(*device.Id)
+	home, away := update.MobileDevices.GetDeviceState(*device.Id)
 	assert.Equal(t, []string{"A"}, home)
 	assert.Equal(t, []string{}, away)
 

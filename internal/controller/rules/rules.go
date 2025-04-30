@@ -72,11 +72,11 @@ func (r Rules) Evaluate(currentState State) (Action, error) {
 // State is the input argument for Evaluate() functions.  It summarizes the state of a Tadoº installation, i.e.
 // the state of the house, its registered mobile devices and its zones.
 type State struct {
-	Devices
-	tado.HomeId
-	tado.ZoneId
-	HomeState
-	ZoneState
+	Devices   Devices
+	HomeId    tado.HomeId
+	ZoneId    tado.ZoneId
+	HomeState HomeState
+	ZoneState ZoneState
 }
 
 type HomeState struct {

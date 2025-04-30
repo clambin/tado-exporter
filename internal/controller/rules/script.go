@@ -32,11 +32,11 @@ func (l luaScript) pushHomeState(homeState HomeState) {
 }
 
 func (l luaScript) getHomeState(index int) (HomeState, error) {
-	if !l.State.IsTable(index) {
+	if !l.IsTable(index) {
 		return HomeState{}, &errLuaInvalidResponse{fmt.Errorf("no table found at index %d", index)}
 	}
 	// more idiomatic for GetObject to push these on the stack and then pop them with ToBoolean?
-	obj := luart.GetObject(l.State, l.State.AbsIndex(index))
+	obj := luart.GetObject(l.State, l.AbsIndex(index))
 	var hs HomeState
 	var err error
 	if hs.Overlay, err = luart.GetObjectAttribute[bool](obj, "Overlay"); err != nil {
@@ -56,11 +56,11 @@ func (l luaScript) pushZoneState(zoneState ZoneState) {
 }
 
 func (l luaScript) getZoneState(index int) (ZoneState, error) {
-	if !l.State.IsTable(index) {
+	if !l.IsTable(index) {
 		return ZoneState{}, &errLuaInvalidResponse{fmt.Errorf("no table found at index %d", index)}
 	}
 	// more idiomatic for GetObject to push these on the stack and then pop them with ToBoolean?
-	obj := luart.GetObject(l.State, l.State.AbsIndex(index))
+	obj := luart.GetObject(l.State, l.AbsIndex(index))
 	var zs ZoneState
 	var err error
 	if zs.Overlay, err = luart.GetObjectAttribute[bool](obj, "Overlay"); err != nil {
@@ -73,16 +73,16 @@ func (l luaScript) getZoneState(index int) (ZoneState, error) {
 }
 
 func (l luaScript) pushDevices(devices iter.Seq[Device]) {
-	l.State.NewTable()
+	l.NewTable()
 	var count int
 	for d := range devices {
 		count++
-		l.State.NewTable()
-		l.State.PushString(d.Name) // Push the value for "Name"
-		l.State.SetField(-2, "Name")
-		l.State.PushBoolean(d.Home) // Push the value for "AtHome"
-		l.State.SetField(-2, "Home")
-		l.State.RawSetInt(-2, count)
+		l.NewTable()
+		l.PushString(d.Name) // Push the value for "Name"
+		l.SetField(-2, "Name")
+		l.PushBoolean(d.Home) // Push the value for "AtHome"
+		l.SetField(-2, "Home")
+		l.RawSetInt(-2, count)
 	}
 }
 

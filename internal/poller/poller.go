@@ -76,7 +76,7 @@ func (p *TadoPoller) poll(ctx context.Context) error {
 	//start := time.Now()
 	update, err := p.update(ctx)
 	if err == nil {
-		p.Publisher.Publish(update)
+		p.Publish(update)
 		//p.logger.Debug("poll completed", slog.Duration("duration", time.Since(start)))
 	}
 	return err
@@ -84,7 +84,7 @@ func (p *TadoPoller) poll(ctx context.Context) error {
 
 func (p *TadoPoller) update(ctx context.Context) (Update, error) {
 	// tools.GetHomes gives detailed tado errors on non-200 responses.
-	// So for the remaining calls, we'll just report the HTTP status on failure
+	// For the remaining calls, we'll just report the HTTP status on failure
 	// (as they're unlikely to happen if GetHomes succeeded).
 	homes, err := tools.GetHomes(ctx, p.TadoClient)
 	if err != nil {
@@ -110,7 +110,7 @@ func (p *TadoPoller) update(ctx context.Context) (Update, error) {
 }
 
 func (p *TadoPoller) getZones(ctx context.Context, homeId tado.HomeId) ([]Zone, error) {
-	zones, err := p.TadoClient.GetZonesWithResponse(ctx, homeId)
+	zones, err := p.GetZonesWithResponse(ctx, homeId)
 	if err != nil {
 		return nil, fmt.Errorf("GetZonesWithResponse: %w", err)
 	}
@@ -120,7 +120,7 @@ func (p *TadoPoller) getZones(ctx context.Context, homeId tado.HomeId) ([]Zone, 
 	zoneUpdates := make([]Zone, 0, len(*zones.JSON200))
 
 	for _, zone := range *zones.JSON200 {
-		resp, err := p.TadoClient.GetZoneStateWithResponse(ctx, homeId, *zone.Id)
+		resp, err := p.GetZoneStateWithResponse(ctx, homeId, *zone.Id)
 		if err != nil {
 			return nil, fmt.Errorf("GetZoneStateWithResponse: %w", err)
 		}
@@ -133,7 +133,7 @@ func (p *TadoPoller) getZones(ctx context.Context, homeId tado.HomeId) ([]Zone, 
 }
 
 func (p *TadoPoller) getMobileDevices(ctx context.Context, homeId tado.HomeId) ([]tado.MobileDevice, error) {
-	resp, err := p.TadoClient.GetMobileDevicesWithResponse(ctx, homeId)
+	resp, err := p.GetMobileDevicesWithResponse(ctx, homeId)
 	if err != nil {
 		return nil, fmt.Errorf("GetMobileDevicesWithResponse: %w", err)
 	}
@@ -144,7 +144,7 @@ func (p *TadoPoller) getMobileDevices(ctx context.Context, homeId tado.HomeId) (
 }
 
 func (p *TadoPoller) getWeather(ctx context.Context, homeId tado.HomeId) (tado.Weather, error) {
-	resp, err := p.TadoClient.GetWeatherWithResponse(ctx, homeId)
+	resp, err := p.GetWeatherWithResponse(ctx, homeId)
 	if err != nil {
 		return tado.Weather{}, fmt.Errorf("GetWeatherWithResponse: %w", err)
 	}
@@ -155,7 +155,7 @@ func (p *TadoPoller) getWeather(ctx context.Context, homeId tado.HomeId) (tado.W
 }
 
 func (p *TadoPoller) getHomeState(ctx context.Context, homeId tado.HomeId) (tado.HomeState, error) {
-	resp, err := p.TadoClient.GetHomeStateWithResponse(ctx, homeId)
+	resp, err := p.GetHomeStateWithResponse(ctx, homeId)
 	if err != nil {
 		return tado.HomeState{}, fmt.Errorf("GetHomeStateWithResponse: %w", err)
 	}

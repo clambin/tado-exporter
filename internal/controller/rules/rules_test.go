@@ -23,7 +23,7 @@ func TestRules_zoneRules(t *testing.T) {
 	require.True(t, ok)
 	luart.LoadTadoModule(func() time.Time {
 		return time.Date(2024, time.December, 6, 13, 0, 0, 0, time.Local)
-	})(zr.luaScript.State)
+	})(zr.State)
 
 	tests := []struct {
 		name            string

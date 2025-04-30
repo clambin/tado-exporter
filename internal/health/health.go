@@ -10,7 +10,7 @@ import (
 )
 
 type Health struct {
-	poller.Poller
+	poller   poller.Poller
 	updated  atomic.Value
 	logger   *slog.Logger
 	interval time.Duration
@@ -18,7 +18,7 @@ type Health struct {
 
 func New(p poller.Poller, interval time.Duration, logger *slog.Logger) *Health {
 	return &Health{
-		Poller:   p,
+		poller:   p,
 		interval: interval,
 		logger:   logger,
 	}
@@ -28,8 +28,8 @@ func (h *Health) Run(ctx context.Context) {
 	h.logger.Debug("started")
 	defer h.logger.Debug("stopped")
 
-	ch := h.Poller.Subscribe()
-	defer h.Poller.Unsubscribe(ch)
+	ch := h.poller.Subscribe()
+	defer h.poller.Unsubscribe(ch)
 
 	for {
 		select {
@@ -46,6 +46,6 @@ func (h *Health) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	lastUpdate := h.updated.Load()
 	if lastUpdate == nil || time.Since(lastUpdate.(time.Time)) > maxMissedUpdates*h.interval {
 		http.Error(w, "no update yet", http.StatusServiceUnavailable)
-		h.Poller.Refresh()
+		h.poller.Refresh()
 	}
 }

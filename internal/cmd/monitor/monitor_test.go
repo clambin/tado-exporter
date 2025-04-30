@@ -125,11 +125,19 @@ func Test_runMonitor(t *testing.T) {
 
 	assert.Eventually(t, func() bool {
 		resp, err := http.Get("http://localhost:9090/metrics")
+		if err != nil {
+			return false
+		}
+		_ = resp.Body.Close()
 		return err == nil && resp.StatusCode == http.StatusOK
 	}, time.Second, 50*time.Millisecond)
 
 	assert.Eventually(t, func() bool {
 		resp, err := http.Get("http://localhost:8080/health")
+		if err != nil {
+			return false
+		}
+		_ = resp.Body.Close()
 		return err == nil && resp.StatusCode == http.StatusOK
 	}, time.Second, 50*time.Millisecond)
 }

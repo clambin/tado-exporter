@@ -8,11 +8,11 @@ import (
 )
 
 type Update struct {
-	tado.HomeBase
-	tado.HomeState
-	tado.Weather
-	Zones
-	MobileDevices
+	HomeBase      tado.HomeBase
+	HomeState     tado.HomeState
+	Weather       tado.Weather
+	Zones         Zones
+	MobileDevices MobileDevices
 }
 
 func (u Update) Home() bool {
@@ -20,15 +20,15 @@ func (u Update) Home() bool {
 }
 
 type Zone struct {
-	tado.Zone
-	tado.ZoneState
+	Zone      tado.Zone
+	ZoneState tado.ZoneState
 }
 
 type Zones []Zone
 
 func (z Zones) GetZone(name string) (Zone, bool) {
 	for _, zone := range z {
-		if *zone.Name == name {
+		if *zone.Zone.Name == name {
 			return zone, true
 		}
 	}

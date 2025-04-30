@@ -154,7 +154,7 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 		name      string
 		data      slack.InteractionCallback
 		setupTado func(t *mocks.TadoClient)
-		want
+		want      want
 	}{
 		{
 			name: "room to auto",
@@ -260,7 +260,7 @@ func Test_setRoomShortcut_setRoom(t *testing.T) {
 				testutils.WithZone(10, "foo", tado.PowerON, 18, 18),
 			)
 			h := setRoomShortcut{
-				TadoClient: tadoClient,
+				tadoClient: tadoClient,
 				logger:     slog.New(slog.DiscardHandler),
 			}
 			h.update.Store(&u)
@@ -302,7 +302,7 @@ func Test_setHomeShortcut_setHome(t *testing.T) {
 		name      string
 		data      slack.InteractionCallback
 		setupTado func(t *mocks.TadoClient)
-		want
+		want      want
 	}{
 		{
 			name: "home to auto",
@@ -391,7 +391,7 @@ func Test_setHomeShortcut_setHome(t *testing.T) {
 			tadoClient := mocks.NewTadoClient(t)
 			u := testutils.Update()
 			h := setHomeShortcut{
-				TadoClient: tadoClient,
+				tadoClient: tadoClient,
 				logger:     slog.New(slog.DiscardHandler),
 			}
 			h.update.Store(&u)

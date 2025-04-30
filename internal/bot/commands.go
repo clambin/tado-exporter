@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"github.com/clambin/tado-exporter/internal/poller"
@@ -17,10 +18,10 @@ var (
 )
 
 type commandRunner struct {
-	TadoClient
-	poller.Poller
-	Controller
-	logger *slog.Logger
+	tadoClient TadoClient
+	poller     poller.Poller
+	controller Controller
+	logger     *slog.Logger
 	updateStore
 }
 
@@ -54,13 +55,13 @@ func (r *commandRunner) listRooms() (slacktools.Attachment, error) {
 		return slacktools.Attachment{}, ErrNoUpdates
 	}
 
-	lines := make([]string, len(u.Zones))
-	for i, zone := range u.Zones {
-		lines[i] = fmt.Sprintf("*%s*: %.1fºC (%s)",
-			*zone.Name,
-			*zone.SensorDataPoints.InsideTemperature.Celsius,
+	lines := make([]string, 0, cmp.Or(len(u.Zones), 1))
+	for _, zone := range u.Zones {
+		lines = append(lines, fmt.Sprintf("*%s*: %.1fºC (%s)",
+			*zone.Zone.Name,
+			*zone.ZoneState.SensorDataPoints.InsideTemperature.Celsius,
 			zoneState(zone),
-		)
+		))
 	}
 	slices.Sort(lines)
 
@@ -77,14 +78,14 @@ func zoneState(zone poller.Zone) string {
 		return "off"
 	}
 
-	if zone.Overlay == nil {
+	if zone.ZoneState.Overlay == nil {
 		return fmt.Sprintf("target: %.1f", targetTemperature)
 	}
-	switch *zone.Overlay.Termination.Type {
+	switch *zone.ZoneState.Overlay.Termination.Type {
 	case tado.ZoneOverlayTerminationTypeMANUAL:
 		return fmt.Sprintf("target: %.1f, MANUAL", targetTemperature)
 	default:
-		return fmt.Sprintf("target: %.1f, MANUAL for %s", targetTemperature, (time.Duration(*zone.Overlay.Termination.RemainingTimeInSeconds) * time.Second).String())
+		return fmt.Sprintf("target: %.1f, MANUAL for %s", targetTemperature, (time.Duration(*zone.ZoneState.Overlay.Termination.RemainingTimeInSeconds) * time.Second).String())
 	}
 }
 
@@ -110,10 +111,10 @@ func (r *commandRunner) listUsers() (slacktools.Attachment, error) {
 }
 
 func (r *commandRunner) listRules() (slacktools.Attachment, error) {
-	if r.Controller == nil {
+	if r.controller == nil {
 		return slacktools.Attachment{}, errors.New("controller isn't running")
 	}
-	rules := r.Controller.ReportTasks()
+	rules := r.controller.ReportTasks()
 	if len(rules) == 0 {
 		rules = []string{"no rules have been triggered"}
 	} else {
@@ -123,7 +124,7 @@ func (r *commandRunner) listRules() (slacktools.Attachment, error) {
 }
 
 func (r *commandRunner) refresh() (slacktools.Attachment, error) {
-	r.Poller.Refresh()
+	r.poller.Refresh()
 	return slacktools.Attachment{}, nil
 }
 

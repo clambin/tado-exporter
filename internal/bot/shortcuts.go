@@ -63,8 +63,8 @@ func (s shortcuts) setUpdate(u poller.Update) {
 var _ shortcutHandler = &setRoomShortcut{}
 
 type setRoomShortcut struct {
-	TadoClient
-	logger *slog.Logger
+	tadoClient TadoClient
+	logger     *slog.Logger
 	updateStore
 }
 
@@ -118,7 +118,7 @@ func (s *setRoomShortcut) setRoom(data slack.InteractionCallback) (string, strin
 
 	u, _ := s.getUpdate()
 	homeId := *u.HomeBase.Id
-	zone, _ := u.GetZone(zoneName)
+	zone, _ := u.Zones.GetZone(zoneName)
 
 	var err error
 	var action string
@@ -134,10 +134,10 @@ func (s *setRoomShortcut) setRoom(data slack.InteractionCallback) (string, strin
 			}
 			action += " for " + duration.Round(time.Minute).String()
 		}
-		err = tadotools.SetOverlay(ctx, s.TadoClient, homeId, *zone.Id, float32(temp), duration)
+		err = tadotools.SetOverlay(ctx, s.tadoClient, homeId, *zone.Zone.Id, float32(temp), duration)
 	case "auto":
 		action = "set *" + zoneName + "* to auto mode"
-		_, err = s.TadoClient.DeleteZoneOverlayWithResponse(ctx, homeId, *zone.Id)
+		_, err = s.tadoClient.DeleteZoneOverlayWithResponse(ctx, homeId, *zone.Zone.Id)
 	default:
 	}
 
@@ -147,7 +147,7 @@ func (s *setRoomShortcut) setRoom(data slack.InteractionCallback) (string, strin
 func (s *setRoomShortcut) makeView(mode string, u poller.Update) slack.ModalViewRequest {
 	zones := make([]string, len(u.Zones))
 	for i, z := range u.Zones {
-		zones[i] = *z.Name
+		zones[i] = *z.Zone.Name
 	}
 
 	blocks := slack.Blocks{BlockSet: make([]slack.Block, 2, 4)}
@@ -204,8 +204,8 @@ func (s *setRoomShortcut) makeView(mode string, u poller.Update) slack.ModalView
 var _ shortcutHandler = &setHomeShortcut{}
 
 type setHomeShortcut struct {
-	TadoClient
-	logger *slog.Logger
+	tadoClient TadoClient
+	logger     *slog.Logger
 	updateStore
 }
 
@@ -248,11 +248,11 @@ func (s *setHomeShortcut) setHome(data slack.InteractionCallback) (string, strin
 	ctx := context.Background()
 	switch mode {
 	case "auto":
-		_, err = s.TadoClient.DeletePresenceLockWithResponse(ctx, homeId)
+		_, err = s.tadoClient.DeletePresenceLockWithResponse(ctx, homeId)
 	case "home":
-		_, err = s.TadoClient.SetPresenceLockWithResponse(ctx, homeId, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.HOME)})
+		_, err = s.tadoClient.SetPresenceLockWithResponse(ctx, homeId, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.HOME)})
 	case "away":
-		_, err = s.TadoClient.SetPresenceLockWithResponse(ctx, homeId, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.AWAY)})
+		_, err = s.tadoClient.SetPresenceLockWithResponse(ctx, homeId, tado.SetPresenceLockJSONRequestBody{HomePresence: oapi.VarP(tado.AWAY)})
 	}
 	return channel, action, err
 }

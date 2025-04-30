@@ -25,15 +25,15 @@ func TestAction(t *testing.T) {
 	tests := []struct {
 		name   string
 		action Action
-		want
+		want   want
 	}{
 		{
 			name: "home",
 			action: &homeAction{
 				reason:    "manual setting detected",
 				delay:     time.Hour,
-				HomeId:    1,
-				HomeState: HomeState{Overlay: false, Home: true},
+				homeId:    1,
+				homeState: HomeState{Overlay: false, Home: true},
 			},
 			want: want{
 				due:              time.Hour,
@@ -49,8 +49,8 @@ func TestAction(t *testing.T) {
 				reason:    "manual setting detected",
 				zoneName:  "zone",
 				delay:     time.Hour,
-				HomeId:    1,
-				ZoneState: ZoneState{Overlay: false, Heating: true},
+				homeId:    1,
+				zoneState: ZoneState{Overlay: false, Heating: true},
 			},
 			want: want{
 				due:              time.Hour,
@@ -82,25 +82,25 @@ func TestAction_IsState(t *testing.T) {
 	}{
 		{
 			name:    "home equal",
-			action:  &homeAction{HomeState: HomeState{Overlay: false, Home: true}},
+			action:  &homeAction{homeState: HomeState{Overlay: false, Home: true}},
 			state:   State{HomeState: HomeState{Overlay: false, Home: true}},
 			isEqual: assert.True,
 		},
 		{
 			name:    "home not equal",
-			action:  &homeAction{HomeState: HomeState{Overlay: false, Home: true}},
+			action:  &homeAction{homeState: HomeState{Overlay: false, Home: true}},
 			state:   State{},
 			isEqual: assert.False,
 		},
 		{
 			name:    "zone equal",
-			action:  &zoneAction{ZoneState: ZoneState{Overlay: false, Heating: true}},
+			action:  &zoneAction{zoneState: ZoneState{Overlay: false, Heating: true}},
 			state:   State{ZoneState: ZoneState{Overlay: false, Heating: true}},
 			isEqual: assert.True,
 		},
 		{
 			name:    "zone not equal",
-			action:  &zoneAction{ZoneState: ZoneState{Overlay: false, Heating: true}},
+			action:  &zoneAction{zoneState: ZoneState{Overlay: false, Heating: true}},
 			state:   State{},
 			isEqual: assert.False,
 		},
@@ -122,26 +122,26 @@ func TestAction_IsActionState(t *testing.T) {
 	}{
 		{
 			name:    "home equal",
-			action:  &homeAction{HomeState: HomeState{Overlay: false, Home: true}},
-			other:   &homeAction{HomeState: HomeState{Overlay: false, Home: true}},
+			action:  &homeAction{homeState: HomeState{Overlay: false, Home: true}},
+			other:   &homeAction{homeState: HomeState{Overlay: false, Home: true}},
 			isEqual: assert.True,
 		},
 		{
 			name:    "home not equal",
-			action:  &homeAction{HomeState: HomeState{Overlay: false, Home: true}},
-			other:   &homeAction{HomeState: HomeState{Overlay: true, Home: true}},
+			action:  &homeAction{homeState: HomeState{Overlay: false, Home: true}},
+			other:   &homeAction{homeState: HomeState{Overlay: true, Home: true}},
 			isEqual: assert.False,
 		},
 		{
 			name:    "zone equal",
-			action:  &zoneAction{ZoneState: ZoneState{Overlay: false, Heating: true}},
-			other:   &zoneAction{ZoneState: ZoneState{Overlay: false, Heating: true}},
+			action:  &zoneAction{zoneState: ZoneState{Overlay: false, Heating: true}},
+			other:   &zoneAction{zoneState: ZoneState{Overlay: false, Heating: true}},
 			isEqual: assert.True,
 		},
 		{
 			name:    "zone not equal",
-			action:  &zoneAction{ZoneState: ZoneState{Overlay: false, Heating: true}},
-			other:   &zoneAction{ZoneState: ZoneState{Overlay: true, Heating: true}},
+			action:  &zoneAction{zoneState: ZoneState{Overlay: false, Heating: true}},
+			other:   &zoneAction{zoneState: ZoneState{Overlay: true, Heating: true}},
 			isEqual: assert.False,
 		},
 	}
