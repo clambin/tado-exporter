@@ -17,10 +17,10 @@ func TestZone_GetTargetTemperature(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, float32(21), zone.GetTargetTemperature())
+	assert.Equal(t, 21, int(zone.GetTargetTemperature()))
 	zone.ZoneState.Setting.Power = oapi.VarP(tado.PowerOFF)
 	zone.ZoneState.Setting.Temperature = nil
-	assert.Equal(t, float32(0), zone.GetTargetTemperature())
+	assert.Equal(t, 0, int(zone.GetTargetTemperature()))
 }
 
 func TestZone_GetZoneOverlayTerminationType(t *testing.T) {

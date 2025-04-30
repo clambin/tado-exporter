@@ -13,11 +13,11 @@ import (
 )
 
 type Bot struct {
-	SocketModeHandler
-	poller poller.Poller
-	shortcuts
-	logger *slog.Logger
-	commandRunner
+	socketModeHandler SocketModeHandler
+	poller            poller.Poller
+	shortcuts         shortcuts
+	logger            *slog.Logger
+	commandRunner     commandRunner
 }
 
 type TadoClient interface {
@@ -47,25 +47,25 @@ type Controller interface {
 func New(tadoClient TadoClient, handler SocketModeHandler, p poller.Poller, c Controller, logger *slog.Logger) *Bot {
 	b := Bot{
 		commandRunner: commandRunner{
-			TadoClient: tadoClient,
-			Poller:     p,
-			Controller: c,
+			tadoClient: tadoClient,
+			poller:     p,
+			controller: c,
 			logger:     logger,
 		},
 		shortcuts: shortcuts{
-			setRoomCallbackID: &setRoomShortcut{TadoClient: tadoClient, logger: logger.With("shortcut", "setRoom")},
-			setHomeCallbackID: &setHomeShortcut{TadoClient: tadoClient, logger: logger.With("shortcut", "setHome")},
+			setRoomCallbackID: &setRoomShortcut{tadoClient: tadoClient, logger: logger.With("shortcut", "setRoom")},
+			setHomeCallbackID: &setHomeShortcut{tadoClient: tadoClient, logger: logger.With("shortcut", "setHome")},
 		},
-		SocketModeHandler: handler,
+		socketModeHandler: handler,
 		poller:            p,
 		logger:            logger,
 	}
 
-	b.SocketModeHandler.HandleSlashCommand("/tado", b.runCommand(b.commandRunner.dispatch))
-	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeShortcut, b.runShortcut(b.shortcuts.dispatch))
-	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeBlockActions, b.runShortcut(b.shortcuts.dispatch))
-	b.SocketModeHandler.HandleInteraction(slack.InteractionTypeViewSubmission, b.runShortcut(b.shortcuts.dispatch))
-	b.SocketModeHandler.HandleDefault(func(event *socketmode.Event, _ *socketmode.Client) {
+	b.socketModeHandler.HandleSlashCommand("/tado", b.runCommand(b.commandRunner.dispatch))
+	b.socketModeHandler.HandleInteraction(slack.InteractionTypeShortcut, b.runShortcut(b.shortcuts.dispatch))
+	b.socketModeHandler.HandleInteraction(slack.InteractionTypeBlockActions, b.runShortcut(b.shortcuts.dispatch))
+	b.socketModeHandler.HandleInteraction(slack.InteractionTypeViewSubmission, b.runShortcut(b.shortcuts.dispatch))
+	b.socketModeHandler.HandleDefault(func(event *socketmode.Event, _ *socketmode.Client) {
 		logger.Debug("unhandled event received", "type", event.Type, "data", fmt.Sprintf("%T", event.Data))
 	})
 
@@ -77,7 +77,7 @@ func (r *Bot) Run(ctx context.Context) error {
 	r.logger.Debug("bot started")
 	defer r.logger.Debug("bot stopped")
 	errCh := make(chan error)
-	go func() { errCh <- r.SocketModeHandler.RunEventLoopContext(ctx) }()
+	go func() { errCh <- r.socketModeHandler.RunEventLoopContext(ctx) }()
 
 	ch := r.poller.Subscribe()
 	defer r.poller.Unsubscribe(ch)
@@ -97,7 +97,7 @@ func (r *Bot) Run(ctx context.Context) error {
 	}
 }
 
-// runCommand receives a slackCommand from slack and calls the function that implements it.  Having this as a dedicated
+// runCommand receives a slackCommand from Slack and calls the function that implements it.  Having this as a dedicated
 // function decouples Slack from the business logic (i.e. ack'ing the request), plus it translates a *slack.Client to a
 // SlackSender interface, which makes testing the business logic easier.
 func (r *Bot) runCommand(cmd func(command slack.SlashCommand, sender SlackSender) error) socketmode.SocketmodeHandlerFunc {

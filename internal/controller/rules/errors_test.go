@@ -15,9 +15,9 @@ func TestErrLuaInvalidResponse_Error(t *testing.T) {
 
 	assert.Equal(t, "lua: invalid response: test error", err.Error())
 	wrappedErr := fmt.Errorf("wrapped: %w", err)
+	assert.ErrorIs(t, wrappedErr, &errLuaInvalidResponse{})
 	var err2 *errLuaInvalidResponse
-	assert.True(t, errors.Is(wrappedErr, &errLuaInvalidResponse{}))
-	require.True(t, errors.As(wrappedErr, &err2))
+	require.ErrorAs(t, wrappedErr, &err2)
 	assert.Equal(t, "lua: invalid response: test error", err2.Error())
 }
 
@@ -28,8 +28,8 @@ func TestErrLua(t *testing.T) {
 
 	assert.Equal(t, "lua: test error", err.Error())
 	wrappedErr := fmt.Errorf("wrapped: %w", err)
+	assert.ErrorIs(t, wrappedErr, &errLua{})
 	var err2 *errLua
-	assert.True(t, errors.Is(wrappedErr, &errLua{}))
-	require.True(t, errors.As(wrappedErr, &err2))
+	require.ErrorAs(t, wrappedErr, &err2)
 	assert.Equal(t, "lua: test error", err2.Error())
 }

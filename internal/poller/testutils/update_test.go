@@ -24,11 +24,11 @@ func TestWithHome(t *testing.T) {
 func TestWithZone(t *testing.T) {
 	u := Update(WithZone(10, "my room", tado.PowerON, 18, 19))
 	require.Len(t, u.Zones, 1)
-	assert.Equal(t, 10, *u.Zones[0].Id)
-	assert.Equal(t, "my room", *u.Zones[0].Name)
+	assert.Equal(t, 10, *u.Zones[0].Zone.Id)
+	assert.Equal(t, "my room", *u.Zones[0].Zone.Name)
 	assert.Equal(t, tado.PowerON, *u.Zones[0].ZoneState.Setting.Power)
-	assert.Equal(t, float32(18), *u.Zones[0].ZoneState.Setting.Temperature.Celsius)
-	assert.Equal(t, float32(19), *u.Zones[0].ZoneState.SensorDataPoints.InsideTemperature.Celsius)
+	assert.Equal(t, 18, int(*u.Zones[0].ZoneState.Setting.Temperature.Celsius))
+	assert.Equal(t, 19, int(*u.Zones[0].ZoneState.SensorDataPoints.InsideTemperature.Celsius))
 }
 
 func TestWithZoneOverlay(t *testing.T) {

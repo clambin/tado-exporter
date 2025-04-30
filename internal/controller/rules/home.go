@@ -33,7 +33,7 @@ func GetHomeState(u poller.Update) (State, error) {
 		},
 		HomeId: *u.HomeBase.Id,
 	}
-	for dev := range u.GeoTrackedDevices() {
+	for dev := range u.MobileDevices.GeoTrackedDevices() {
 		s.Devices = append(s.Devices, Device{Name: *dev.Name, Home: dev.Location != nil && *dev.Location.AtHome})
 	}
 	return s, nil
@@ -55,15 +55,15 @@ func LoadHomeRule(cfg RuleConfiguration) (Rule, error) {
 
 func (r homeRule) Evaluate(currentState State) (Action, error) {
 	// set up evaluation call
-	r.luaScript.State.Global("Evaluate")
-	if r.luaScript.State.IsNil(-1) {
+	r.Global("Evaluate")
+	if r.IsNil(-1) {
 		return nil, &errLua{err: errors.New("script does not contain an Evaluate function")}
 	}
 
 	// push arguments
-	r.luaScript.pushHomeState(currentState.HomeState)
-	r.luaScript.pushDevices(currentState.Devices.filter(r.devices))
-	r.luaScript.pushArgs(r.args)
+	r.pushHomeState(currentState.HomeState)
+	r.pushDevices(currentState.Devices.filter(r.devices))
+	r.pushArgs(r.args)
 
 	// call the script
 	if err := r.ProtectedCall(3, 3, 0); err != nil {
@@ -71,16 +71,16 @@ func (r homeRule) Evaluate(currentState State) (Action, error) {
 	}
 
 	// set up action
-	desiredAction := homeAction{HomeId: currentState.HomeId}
+	desiredAction := homeAction{homeId: currentState.HomeId}
 	var err error
 
 	// pop the values
 	defer r.Pop(3)
-	desiredAction.HomeState, err = r.luaScript.getHomeState(-3)
+	desiredAction.homeState, err = r.getHomeState(-3)
 	if err != nil {
 		return nil, err
 	}
-	delay, ok := r.luaScript.State.ToNumber(-2)
+	delay, ok := r.ToNumber(-2)
 	if !ok {
 		return nil, &errLuaInvalidResponse{err: errors.New("invalid type: delay")}
 	}

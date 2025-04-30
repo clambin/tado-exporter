@@ -60,8 +60,8 @@ type postResponse struct {
 }
 
 func TestAttachment_Format(t *testing.T) {
-	var lastReceived atomic.Value
-	s := httptest.NewServer(fakeServerHandler(t, &lastReceived))
+	var h fakeServerHandler
+	s := httptest.NewServer(&h)
 	t.Cleanup(s.Close)
 
 	c := slack.New("12345678", slack.OptionAPIURL(s.URL+"/"))
@@ -72,7 +72,7 @@ func TestAttachment_Format(t *testing.T) {
 	}
 
 	_, err := c.PostEphemeral("channel", "UFAKE123", attachment.Format())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	want := url.Values{
 		"blocks":  []string{`[{"type":"section","text":{"type":"mrkdwn","text":"*title*"},"fields":[{"type":"mrkdwn","text":"line 1"},{"type":"mrkdwn","text":"line 2"}]}]`},
 		"channel": []string{"channel"},
@@ -80,23 +80,33 @@ func TestAttachment_Format(t *testing.T) {
 		"user":    []string{"UFAKE123"},
 	}
 
-	assert.Equal(t, want, lastReceived.Load().(url.Values))
+	assert.Equal(t, want, h.lastReceived.Load().(url.Values))
 }
 
-func fakeServerHandler(t *testing.T, lastReceived *atomic.Value) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
-		body, _ := io.ReadAll(r.Body)
-		values, err := url.ParseQuery(string(body))
-		require.NoError(t, err)
-		lastReceived.Store(values)
+var _ http.Handler = &fakeServerHandler{}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(postResponse{
-			Ok:      true,
-			Channel: "CFAKE123",
-			Ts:      "1714220000.123456",
-		})
+type fakeServerHandler struct {
+	lastReceived atomic.Value
+}
+
+func (f *fakeServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
+		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
+		return
+	}
+	body, _ := io.ReadAll(r.Body)
+	values, err := url.ParseQuery(string(body))
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	f.lastReceived.Store(values)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(postResponse{
+		Ok:      true,
+		Channel: "CFAKE123",
+		Ts:      "1714220000.123456",
 	})
 }

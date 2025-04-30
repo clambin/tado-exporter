@@ -48,9 +48,9 @@ end
 				reason:    "test",
 				zoneName:  "foo",
 				delay:     5 * time.Minute,
-				HomeId:    1,
-				ZoneId:    10,
-				ZoneState: ZoneState{true, true},
+				homeId:    1,
+				zoneId:    10,
+				zoneState: ZoneState{true, true},
 			},
 			err: assert.NoError,
 		},
@@ -113,7 +113,7 @@ func testZoneRule(t *testing.T, script string, tt zoneTest) {
 	if !tt.now.IsZero() {
 		luart.LoadTadoModule(func() time.Time {
 			return tt.now
-		})(r.(zoneRule).luaScript.State)
+		})(r.(zoneRule).State)
 	}
 	s, err := GetZoneState(tt.zoneName)(tt.update)
 	require.NoError(t, err)
@@ -289,12 +289,12 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				ZoneId:    10,
 			},
 			want: &zoneAction{
-				ZoneState: ZoneState{false, true},
+				zoneState: ZoneState{false, true},
 				reason:    "no manual setting detected, one or more users are home: user",
 				delay:     0,
 				zoneName:  "zone",
-				HomeId:    1,
-				ZoneId:    10,
+				homeId:    1,
+				zoneId:    10,
 			},
 		},
 		{
@@ -307,12 +307,12 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				ZoneId:    10,
 			},
 			want: &zoneAction{
-				ZoneState: ZoneState{true, false},
+				zoneState: ZoneState{true, false},
 				delay:     15 * time.Minute,
 				reason:    "all users are away: user",
 				zoneName:  "zone",
-				HomeId:    1,
-				ZoneId:    10,
+				homeId:    1,
+				zoneId:    10,
 			},
 		},
 		{
@@ -325,12 +325,12 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				ZoneId:    10,
 			},
 			want: &zoneAction{
-				ZoneState: ZoneState{true, false},
+				zoneState: ZoneState{true, false},
 				delay:     0,
 				reason:    "all users are away: user, heating is off",
 				zoneName:  "zone",
-				HomeId:    1,
-				ZoneId:    10,
+				homeId:    1,
+				zoneId:    10,
 			},
 		},
 		{
@@ -343,12 +343,12 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				ZoneId:    10,
 			},
 			want: &zoneAction{
-				ZoneState: ZoneState{false, true},
+				zoneState: ZoneState{false, true},
 				delay:     0,
 				reason:    "one or more users are home: user",
 				zoneName:  "zone",
-				HomeId:    1,
-				ZoneId:    10,
+				homeId:    1,
+				zoneId:    10,
 			},
 		},
 		{
@@ -361,12 +361,12 @@ func TestGroupController_ZoneRules_AutoAway_vs_LimitOverlay(t *testing.T) {
 				ZoneId:    10,
 			},
 			want: &zoneAction{
-				ZoneState: ZoneState{false, true},
+				zoneState: ZoneState{false, true},
 				delay:     time.Hour,
 				reason:    "manual setting detected",
 				zoneName:  "zone",
-				HomeId:    1,
-				ZoneId:    10,
+				homeId:    1,
+				zoneId:    10,
 			},
 		},
 	}

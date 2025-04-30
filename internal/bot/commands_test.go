@@ -8,6 +8,7 @@ import (
 	"github.com/clambin/tado-exporter/internal/slacktools"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -148,7 +149,7 @@ func Test_commandRunner_listRules(t *testing.T) {
 			if tt.setup != nil {
 				c := mocks.NewController(t)
 				tt.setup(c)
-				r.Controller = c
+				r.controller = c
 			}
 
 			got, err := r.listRules()
@@ -161,7 +162,7 @@ func Test_commandRunner_listRules(t *testing.T) {
 func Test_commandRunner_refresh(t *testing.T) {
 	p := mockPoller.NewPoller(t)
 	p.EXPECT().Refresh().Once()
-	r := commandRunner{Poller: p}
+	r := commandRunner{poller: p}
 	_, err := r.refresh()
 	assert.NoError(t, err)
 }
@@ -169,6 +170,6 @@ func Test_commandRunner_refresh(t *testing.T) {
 func Test_commandRunner_help(t *testing.T) {
 	var r commandRunner
 	resp, err := r.help()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, slacktools.Attachment{Header: "Supported commands:", Body: []string{"users, rooms, rules, help"}}, resp)
 }

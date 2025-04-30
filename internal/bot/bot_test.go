@@ -30,13 +30,13 @@ func TestBot_Run(t *testing.T) {
 	errCh := make(chan error)
 	go func() { errCh <- b.Run(ctx) }()
 
-	_, ok := b.getUpdate()
+	_, ok := b.commandRunner.getUpdate()
 	assert.False(t, ok)
 
 	in <- poller.Update{}
 
 	assert.Eventually(t, func() bool {
-		_, ok = b.getUpdate()
+		_, ok = b.commandRunner.getUpdate()
 		return ok
 	}, time.Second, time.Millisecond)
 

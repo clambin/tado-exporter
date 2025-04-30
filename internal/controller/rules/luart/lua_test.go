@@ -36,19 +36,19 @@ end
 	assert.Equal(t, []any{true, o, true}, values)
 
 	name, err := GetObjectAttribute[string](o, "Name")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "foo", name)
 	age, err := GetObjectAttribute[int](o, "Age")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 24, age)
 	home, err := GetObjectAttribute[bool](o, "Home")
-	assert.NoError(t, err)
-	assert.Equal(t, true, home)
+	require.NoError(t, err)
+	assert.True(t, home)
 
 	_, err = GetObjectAttribute[string](o, "Missing")
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = GetObjectAttribute[int](o, "Name")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 }
 
