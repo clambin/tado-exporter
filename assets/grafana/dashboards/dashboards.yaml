@@ -31,13 +31,13 @@ spec:
       "editable": true,
       "fiscalYearStartMonth": 0,
       "graphTooltip": 0,
-      "id": 5911,
+      "id": 17,
       "links": [],
       "panels": [
         {
           "datasource": {
             "type": "loki",
-            "uid": "JrYhCWHnk"
+            "uid": "dedx8669b0074d"
           },
           "fieldConfig": {
             "defaults": {},
@@ -52,6 +52,7 @@ spec:
           "id": 1,
           "options": {
             "dedupStrategy": "none",
+            "enableInfiniteScrolling": false,
             "enableLogDetails": true,
             "prettifyLogMessage": false,
             "showCommonLabels": false,
@@ -60,15 +61,16 @@ spec:
             "sortOrder": "Descending",
             "wrapLogMessage": false
           },
-          "pluginVersion": "11.4.0",
+          "pluginVersion": "11.5.2",
           "targets": [
             {
               "datasource": {
                 "type": "loki",
-                "uid": "JrYhCWHnk"
+                "uid": "dedx8669b0074d"
               },
-              "editorMode": "builder",
-              "expr": "{app=\"tado-monitor\"} |= `` | json",
+              "direction": "backward",
+              "editorMode": "code",
+              "expr": "{app=\"tado-monitor\"}",
               "queryType": "range",
               "refId": "A"
             }
@@ -152,12 +154,13 @@ spec:
               "showLegend": true
             },
             "tooltip": {
+              "hideZeros": false,
               "maxHeight": 600,
               "mode": "single",
               "sort": "none"
             }
           },
-          "pluginVersion": "11.4.0",
+          "pluginVersion": "11.5.2",
           "targets": [
             {
               "datasource": {
@@ -250,12 +253,13 @@ spec:
               "showLegend": true
             },
             "tooltip": {
+              "hideZeros": false,
               "maxHeight": 600,
               "mode": "single",
               "sort": "none"
             }
           },
-          "pluginVersion": "11.4.0",
+          "pluginVersion": "11.5.2",
           "targets": [
             {
               "datasource": {
@@ -275,7 +279,7 @@ spec:
         {
           "datasource": {
             "type": "loki",
-            "uid": "JrYhCWHnk"
+            "uid": "dedx8669b0074d"
           },
           "fieldConfig": {
             "defaults": {},
@@ -290,6 +294,7 @@ spec:
           "id": 2,
           "options": {
             "dedupStrategy": "none",
+            "enableInfiniteScrolling": false,
             "enableLogDetails": true,
             "prettifyLogMessage": false,
             "showCommonLabels": false,
@@ -298,14 +303,15 @@ spec:
             "sortOrder": "Descending",
             "wrapLogMessage": false
           },
-          "pluginVersion": "11.4.0",
+          "pluginVersion": "11.5.2",
           "targets": [
             {
               "datasource": {
                 "type": "loki",
-                "uid": "JrYhCWHnk"
+                "uid": "dedx8669b0074d"
               },
-              "editorMode": "builder",
+              "direction": "backward",
+              "editorMode": "code",
               "expr": "{app=\"tado-monitor\"} |= `` | json | type = `home`",
               "queryType": "range",
               "refId": "A"
@@ -317,7 +323,7 @@ spec:
         {
           "datasource": {
             "type": "loki",
-            "uid": "JrYhCWHnk"
+            "uid": "dedx8669b0074d"
           },
           "fieldConfig": {
             "defaults": {},
@@ -332,6 +338,7 @@ spec:
           "id": 3,
           "options": {
             "dedupStrategy": "none",
+            "enableInfiniteScrolling": false,
             "enableLogDetails": true,
             "prettifyLogMessage": false,
             "showCommonLabels": false,
@@ -340,14 +347,15 @@ spec:
             "sortOrder": "Descending",
             "wrapLogMessage": false
           },
-          "pluginVersion": "11.4.0",
+          "pluginVersion": "11.5.2",
           "targets": [
             {
               "datasource": {
                 "type": "loki",
-                "uid": "JrYhCWHnk"
+                "uid": "dedx8669b0074d"
               },
-              "editorMode": "builder",
+              "direction": "backward",
+              "editorMode": "code",
               "expr": "{app=\"tado-monitor\"} |= `` | json | zone =~ `^$zone$`",
               "queryType": "range",
               "refId": "A"
@@ -360,7 +368,9 @@ spec:
       "preload": false,
       "refresh": "1m",
       "schemaVersion": 40,
-      "tags": [],
+      "tags": [
+        "grope"
+      ],
       "templating": {
         "list": [
           {
@@ -404,7 +414,7 @@ apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
   name: tadoo-overview
-  namespace: development
+  namespace: home-automation
 spec:
   allowCrossNamespaceImport: true
   folder: Home Automation
@@ -438,7 +448,7 @@ spec:
       "editable": true,
       "fiscalYearStartMonth": 0,
       "graphTooltip": 0,
-      "id": 5912,
+      "id": 22,
       "links": [],
       "liveNow": false,
       "panels": [
@@ -1187,7 +1197,7 @@ spec:
                 "type": "prometheus",
                 "uid": "PBFA97CFB590B2093"
               },
-              "expr": "avg by (tado_weather) (tado_weather)",
+              "expr": "avg by (tado_weather) (tado_weather == 1)",
               "interval": "",
               "legendFormat": "{{tado_weather}}",
               "queryType": "randomWalk",
@@ -1521,7 +1531,7 @@ spec:
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "avg by (home_state) (tado_home_state)",
+              "expr": "avg by (home_state) (tado_home_state == 1)",
               "interval": "",
               "legendFormat": "{{tado_weather}}",
               "queryType": "randomWalk",
@@ -1931,7 +1941,9 @@ spec:
       "refresh": "1m",
       "revision": 1,
       "schemaVersion": 39,
-      "tags": [],
+      "tags": [
+        "grope"
+      ],
       "templating": {
         "list": [
           {
@@ -1973,6 +1985,6 @@ spec:
       "timezone": "",
       "title": "tadoº overview",
       "uid": "jIGk6cWRk",
-      "version": 6,
+      "version": 1,
       "weekStart": ""
     }
