@@ -2,7 +2,7 @@ module github.com/clambin/tado-exporter
 
 go 1.24.0
 
-toolchain go1.24.1
+toolchain go1.24.3
 
 require (
 	codeberg.org/clambin/go-common/charmer v0.3.0
@@ -12,7 +12,7 @@ require (
 	github.com/Shopify/go-lua v0.0.0-20240527182111-9ab1540f3f5f
 	github.com/clambin/tado/v2 v2.6.2
 	github.com/prometheus/client_golang v1.22.0
-	github.com/slack-go/slack v0.17.0-rc4
+	github.com/slack-go/slack v0.17.0-rc5
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
