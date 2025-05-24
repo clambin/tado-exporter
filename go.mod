@@ -12,7 +12,7 @@ require (
 	github.com/Shopify/go-lua v0.0.0-20240527182111-9ab1540f3f5f
 	github.com/clambin/tado/v2 v2.6.2
 	github.com/prometheus/client_golang v1.22.0
-	github.com/slack-go/slack v0.17.0-rc5
+	github.com/slack-go/slack v0.17.0-rc6
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
