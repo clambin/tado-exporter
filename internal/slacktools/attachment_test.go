@@ -81,6 +81,11 @@ func TestAttachment_Format(t *testing.T) {
 	}
 
 	assert.Equal(t, want, h.lastReceived.Load().(url.Values))
+	/*
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", " ")
+		_ = enc.Encode(h.lastReceived.Load().(url.Values))
+	*/
 }
 
 var _ http.Handler = &fakeServerHandler{}

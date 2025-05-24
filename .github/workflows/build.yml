@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - master
-      - homestate
+      - slack
 permissions:
   contents: read
   packages: write
