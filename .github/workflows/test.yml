@@ -3,7 +3,7 @@ on:
   push:
     branches-ignore:
       - master
-      - homestate
+      - slack
   pull_request_target:
 permissions:
   contents: read
