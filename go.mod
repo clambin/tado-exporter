@@ -6,7 +6,7 @@ toolchain go1.24.3
 
 require (
 	codeberg.org/clambin/go-common/charmer v0.3.0
-	codeberg.org/clambin/go-common/httputils v0.3.1
+	codeberg.org/clambin/go-common/httputils v0.3.2
 	codeberg.org/clambin/go-common/pubsub v0.3.0
 	codeberg.org/clambin/go-common/set v0.6.0
 	github.com/Shopify/go-lua v0.0.0-20240527182111-9ab1540f3f5f
@@ -17,7 +17,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/oauth2 v0.30.0
-	golang.org/x/sync v0.14.0
+	golang.org/x/sync v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
