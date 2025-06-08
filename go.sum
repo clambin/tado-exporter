@@ -7,8 +7,8 @@ codeberg.org/clambin/go-common/pubsub v0.3.0/go.mod h1:yAbikPYOOZ8uigRdPbnrCAccs
 codeberg.org/clambin/go-common/set v0.6.0 h1:R+Pe98XsmW3sdMtBZ/G/FKsgeeynhbqoCTrL+pGApUQ=
 codeberg.org/clambin/go-common/set v0.6.0/go.mod h1:PRd4gka5V+Tn3BmUkXkEjUGlEsLjCqKOFjG1inc+Zpc=
 github.com/RaveNoX/go-jsoncommentstrip v1.0.0/go.mod h1:78ihd09MekBnJnxpICcwzCMzGrKSKYe4AqU6PDYYpjk=
-github.com/Shopify/go-lua v0.0.0-20240527182111-9ab1540f3f5f h1:XZtTrbBgkw5jgNeaulUVleb/IqTOKgR8x0+uTMzmOjs=
-github.com/Shopify/go-lua v0.0.0-20240527182111-9ab1540f3f5f/go.mod h1:M4CxjVc/1Nwka5atBv7G/sb7Ac2BDe3+FxbiT9iVNIQ=
+github.com/Shopify/go-lua v0.0.0-20250605195627-15bbeb73041e h1:zT/Iq/ow1l/J45IMajZ487dGbtjO9CfATa1O0T0aA9U=
+github.com/Shopify/go-lua v0.0.0-20250605195627-15bbeb73041e/go.mod h1:M4CxjVc/1Nwka5atBv7G/sb7Ac2BDe3+FxbiT9iVNIQ=
 github.com/apapsch/go-jsonmerge/v2 v2.0.0 h1:axGnT1gRIfimI7gJifB699GoE/oq+F2MU7Dml6nw9rQ=
 github.com/apapsch/go-jsonmerge/v2 v2.0.0/go.mod h1:lvDnEdqiQrp0O42VQGgmlKpxL1AP2+08jFMw88y4klk=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=

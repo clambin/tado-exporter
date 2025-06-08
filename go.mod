@@ -9,7 +9,7 @@ require (
 	codeberg.org/clambin/go-common/httputils v0.3.2
 	codeberg.org/clambin/go-common/pubsub v0.3.0
 	codeberg.org/clambin/go-common/set v0.6.0
-	github.com/Shopify/go-lua v0.0.0-20240527182111-9ab1540f3f5f
+	github.com/Shopify/go-lua v0.0.0-20250605195627-15bbeb73041e
 	github.com/clambin/tado/v2 v2.6.2
 	github.com/prometheus/client_golang v1.22.0
 	github.com/slack-go/slack v0.17.0
