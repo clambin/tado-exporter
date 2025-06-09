@@ -3,18 +3,19 @@ package bot
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"sync/atomic"
+
 	"github.com/clambin/tado-exporter/internal/controller"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
-	"log/slog"
-	"sync/atomic"
 )
 
 type Bot struct {
 	socketModeHandler SocketModeHandler
-	poller            poller.Poller
+	poller            Poller
 	shortcuts         shortcuts
 	logger            *slog.Logger
 	commandRunner     commandRunner
@@ -44,7 +45,13 @@ type Controller interface {
 	ReportTasks() []string
 }
 
-func New(tadoClient TadoClient, handler SocketModeHandler, p poller.Poller, c Controller, logger *slog.Logger) *Bot {
+type Poller interface {
+	Subscribe() <-chan poller.Update
+	Unsubscribe(<-chan poller.Update)
+	Refresh()
+}
+
+func New(tadoClient TadoClient, handler SocketModeHandler, p Poller, c Controller, logger *slog.Logger) *Bot {
 	b := Bot{
 		commandRunner: commandRunner{
 			tadoClient: tadoClient,

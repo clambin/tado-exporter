@@ -3,6 +3,12 @@ package bot
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/poller/testutils"
@@ -10,11 +16,6 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"log/slog"
-	"net/http"
-	"strings"
-	"testing"
-	"time"
 )
 
 func Test_shortcuts_dispatch(t *testing.T) {

@@ -4,13 +4,14 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"log/slog"
+	"slices"
+	"time"
+
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado-exporter/internal/slacktools"
 	"github.com/clambin/tado/v2"
 	"github.com/slack-go/slack"
-	"log/slog"
-	"slices"
-	"time"
 )
 
 var (
@@ -19,7 +20,7 @@ var (
 
 type commandRunner struct {
 	tadoClient TadoClient
-	poller     poller.Poller
+	poller     Poller
 	controller Controller
 	logger     *slog.Logger
 	updateStore

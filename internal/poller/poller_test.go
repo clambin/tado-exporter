@@ -2,15 +2,16 @@ package poller_test
 
 import (
 	"context"
+	"log/slog"
+	"net/http"
+	"testing"
+	"time"
+
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"log/slog"
-	"net/http"
-	"testing"
-	"time"
 )
 
 func TestTadoPoller_Run(t *testing.T) {

@@ -2,21 +2,28 @@ package health
 
 import (
 	"context"
-	"github.com/clambin/tado-exporter/internal/poller"
 	"log/slog"
 	"net/http"
 	"sync/atomic"
 	"time"
+
+	"github.com/clambin/tado-exporter/internal/poller"
 )
 
 type Health struct {
-	poller   poller.Poller
+	poller   Poller
 	updated  atomic.Value
 	logger   *slog.Logger
 	interval time.Duration
 }
 
-func New(p poller.Poller, interval time.Duration, logger *slog.Logger) *Health {
+type Poller interface {
+	Subscribe() <-chan poller.Update
+	Unsubscribe(<-chan poller.Update)
+	Refresh()
+}
+
+func New(p Poller, interval time.Duration, logger *slog.Logger) *Health {
 	return &Health{
 		poller:   p,
 		interval: interval,

@@ -1,10 +1,11 @@
 package poller
 
 import (
-	"codeberg.org/clambin/go-common/set"
-	"github.com/clambin/tado/v2"
 	"iter"
 	"log/slog"
+
+	"codeberg.org/clambin/go-common/set"
+	"github.com/clambin/tado/v2"
 )
 
 type Update struct {

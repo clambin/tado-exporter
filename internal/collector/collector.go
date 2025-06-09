@@ -1,13 +1,14 @@
 package collector
 
 import (
-	"codeberg.org/clambin/go-common/set"
 	"context"
+	"log/slog"
+	"sync/atomic"
+
+	"codeberg.org/clambin/go-common/set"
 	"github.com/clambin/tado-exporter/internal/poller"
 	"github.com/clambin/tado/v2"
 	"github.com/prometheus/client_golang/prometheus"
-	"log/slog"
-	"sync/atomic"
 )
 
 var _ prometheus.Collector = &Metrics{}
@@ -177,7 +178,7 @@ func NewMetrics() *Metrics {
 }
 
 type Collector struct {
-	Poller        poller.Poller
+	Poller        *poller.Poller
 	Metrics       *Metrics
 	Logger        *slog.Logger
 	weatherStates atomic.Value
@@ -214,6 +215,7 @@ func (c *Collector) collectUsers(update poller.Update) {
 		if *userInfo.Location.AtHome {
 			value = 1.0
 		}
+		//goland:noinspection GoMaybeNil
 		c.Metrics.tadoMobileDeviceStatus.WithLabelValues(*userInfo.Name).Set(value)
 	}
 }
@@ -231,14 +233,18 @@ func (c *Collector) collectWeather(update poller.Update) {
 		if weatherState == *update.Weather.WeatherState.Value {
 			value = 1
 		}
+		//goland:noinspection GoMaybeNil
 		c.Metrics.tadoOutsideWeather.WithLabelValues(string(weatherState)).Set(value)
 	}
 
+	//goland:noinspection GoMaybeNil
 	c.Metrics.tadoOutsideSolarIntensity.WithLabelValues().Set(float64(*update.Weather.SolarIntensity.Percentage))
+	//goland:noinspection GoMaybeNil
 	c.Metrics.tadoOutsideTemperature.WithLabelValues().Set(float64(*update.Weather.OutsideTemperature.Celsius))
 }
 
 func (c *Collector) collectHomeState(home poller.Update) {
+	//goland:noinspection GoMaybeNil
 	c.Metrics.tadoHomeState.WithLabelValues(string(*home.HomeState.Presence)).Set(1)
 
 	homeStates, ok := c.homeStates.Load().(set.Set[tado.HomePresence])
@@ -253,6 +259,7 @@ func (c *Collector) collectHomeState(home poller.Update) {
 		if homeState == *home.HomeState.Presence {
 			value = 1
 		}
+		//goland:noinspection GoMaybeNil
 		c.Metrics.tadoHomeState.WithLabelValues(string(homeState)).Set(value)
 	}
 }
@@ -274,12 +281,14 @@ func (c *Collector) collectZoneDevices(zone poller.Zone) {
 		if *device.ConnectionState.Value {
 			value = 1.0
 		}
+		//goland:noinspection GoMaybeNil
 		c.Metrics.tadoZoneDeviceConnectionStatus.WithLabelValues(zoneName, id, deviceType, *device.CurrentFwVersion).Set(value)
 
 		value = 0.0
 		if device.BatteryState != nil && *device.BatteryState == tado.BatteryStateNORMAL {
 			value = 1.0
 		}
+		//goland:noinspection GoMaybeNil
 		c.Metrics.tadoZoneDeviceBatteryStatus.WithLabelValues(zoneName, id, deviceType).Set(value)
 	}
 }
@@ -287,13 +296,17 @@ func (c *Collector) collectZoneDevices(zone poller.Zone) {
 func (c *Collector) collectZoneInfo(zone poller.Zone) {
 	zoneName := *zone.Zone.Name
 	if zone.ZoneState.SensorDataPoints.InsideTemperature != nil {
+		//goland:noinspection GoMaybeNil
 		c.Metrics.tadoZoneTemperatureCelsius.WithLabelValues(zoneName).Set(float64(*zone.ZoneState.SensorDataPoints.InsideTemperature.Celsius))
 	}
+	//goland:noinspection GoMaybeNil
 	c.Metrics.tadoZoneTargetTempCelsius.WithLabelValues(zoneName).Set(float64(zone.GetTargetTemperature()))
 	if zone.ZoneState.ActivityDataPoints.HeatingPower != nil {
+		//goland:noinspection GoMaybeNil
 		c.Metrics.tadoZoneHeatingPercentage.WithLabelValues(zoneName).Set(float64(*zone.ZoneState.ActivityDataPoints.HeatingPower.Percentage))
 	}
 	if zone.ZoneState.SensorDataPoints.Humidity != nil {
+		//goland:noinspection GoMaybeNil
 		c.Metrics.tadoZoneHumidityPercentage.WithLabelValues(zoneName).Set(float64(*zone.ZoneState.SensorDataPoints.Humidity.Percentage))
 	}
 	var duration, remaining float64
@@ -301,17 +314,21 @@ func (c *Collector) collectZoneInfo(zone poller.Zone) {
 		duration = float64(*zone.ZoneState.OpenWindow.DurationInSeconds)
 		remaining = float64(*zone.ZoneState.OpenWindow.RemainingTimeInSeconds)
 	}
+	//goland:noinspection GoMaybeNil
 	c.Metrics.tadoZoneOpenWindowDuration.WithLabelValues(zoneName).Set(duration)
+	//goland:noinspection GoMaybeNil
 	c.Metrics.tadoZoneOpenWindowRemaining.WithLabelValues(zoneName).Set(remaining)
 
 	var value float64
 	if *zone.ZoneState.Setting.Power == tado.PowerON {
 		value = 1.0
 	}
+	//goland:noinspection GoMaybeNil
 	c.Metrics.tadoZonePowerState.WithLabelValues(zoneName).Set(value)
 	value = 0
 	if zone.ZoneState.Overlay != nil {
 		value = 1
 	}
+	//goland:noinspection GoMaybeNil
 	c.Metrics.tadoZoneTargetManualMode.WithLabelValues(zoneName).Set(value)
 }

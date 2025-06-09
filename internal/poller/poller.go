@@ -1,21 +1,16 @@
 package poller
 
 import (
-	"codeberg.org/clambin/go-common/pubsub"
 	"context"
 	"fmt"
-	"github.com/clambin/tado/v2"
-	"github.com/clambin/tado/v2/tools"
 	"log/slog"
 	"net/http"
 	"time"
-)
 
-type Poller interface {
-	Subscribe() <-chan Update
-	Unsubscribe(ch <-chan Update)
-	Refresh()
-}
+	"codeberg.org/clambin/go-common/pubsub"
+	"github.com/clambin/tado/v2"
+	"github.com/clambin/tado/v2/tools"
+)
 
 type TadoClient interface {
 	GetMeWithResponse(ctx context.Context, reqEditors ...tado.RequestEditorFn) (*tado.GetMeResponse, error)
@@ -27,9 +22,7 @@ type TadoClient interface {
 	//tado.ClientWithResponsesInterface
 }
 
-var _ Poller = &TadoPoller{}
-
-type TadoPoller struct {
+type Poller struct {
 	TadoClient
 	logger  *slog.Logger
 	refresh chan struct{}
@@ -38,8 +31,8 @@ type TadoPoller struct {
 	HomeId   tado.HomeId
 }
 
-func New(tadoClient TadoClient, interval time.Duration, logger *slog.Logger) *TadoPoller {
-	return &TadoPoller{
+func New(tadoClient TadoClient, interval time.Duration, logger *slog.Logger) *Poller {
+	return &Poller{
 		TadoClient: tadoClient,
 		Publisher:  pubsub.Publisher[Update]{},
 		interval:   interval,
@@ -48,7 +41,7 @@ func New(tadoClient TadoClient, interval time.Duration, logger *slog.Logger) *Ta
 	}
 }
 
-func (p *TadoPoller) Run(ctx context.Context) error {
+func (p *Poller) Run(ctx context.Context) error {
 	p.logger.Debug("started", slog.Duration("interval", p.interval))
 	defer p.logger.Debug("stopped")
 
@@ -68,11 +61,11 @@ func (p *TadoPoller) Run(ctx context.Context) error {
 	}
 }
 
-func (p *TadoPoller) Refresh() {
+func (p *Poller) Refresh() {
 	p.refresh <- struct{}{}
 }
 
-func (p *TadoPoller) poll(ctx context.Context) error {
+func (p *Poller) poll(ctx context.Context) error {
 	//start := time.Now()
 	update, err := p.update(ctx)
 	if err == nil {
@@ -82,7 +75,7 @@ func (p *TadoPoller) poll(ctx context.Context) error {
 	return err
 }
 
-func (p *TadoPoller) update(ctx context.Context) (Update, error) {
+func (p *Poller) update(ctx context.Context) (Update, error) {
 	// tools.GetHomes gives detailed tado errors on non-200 responses.
 	// For the remaining calls, we'll just report the HTTP status on failure
 	// (as they're unlikely to happen if GetHomes succeeded).
@@ -109,7 +102,7 @@ func (p *TadoPoller) update(ctx context.Context) (Update, error) {
 	return update, err
 }
 
-func (p *TadoPoller) getZones(ctx context.Context, homeId tado.HomeId) ([]Zone, error) {
+func (p *Poller) getZones(ctx context.Context, homeId tado.HomeId) ([]Zone, error) {
 	zones, err := p.GetZonesWithResponse(ctx, homeId)
 	if err != nil {
 		return nil, fmt.Errorf("GetZonesWithResponse: %w", err)
@@ -132,7 +125,7 @@ func (p *TadoPoller) getZones(ctx context.Context, homeId tado.HomeId) ([]Zone, 
 	return zoneUpdates, nil
 }
 
-func (p *TadoPoller) getMobileDevices(ctx context.Context, homeId tado.HomeId) ([]tado.MobileDevice, error) {
+func (p *Poller) getMobileDevices(ctx context.Context, homeId tado.HomeId) ([]tado.MobileDevice, error) {
 	resp, err := p.GetMobileDevicesWithResponse(ctx, homeId)
 	if err != nil {
 		return nil, fmt.Errorf("GetMobileDevicesWithResponse: %w", err)
@@ -143,7 +136,7 @@ func (p *TadoPoller) getMobileDevices(ctx context.Context, homeId tado.HomeId) (
 	return *resp.JSON200, nil
 }
 
-func (p *TadoPoller) getWeather(ctx context.Context, homeId tado.HomeId) (tado.Weather, error) {
+func (p *Poller) getWeather(ctx context.Context, homeId tado.HomeId) (tado.Weather, error) {
 	resp, err := p.GetWeatherWithResponse(ctx, homeId)
 	if err != nil {
 		return tado.Weather{}, fmt.Errorf("GetWeatherWithResponse: %w", err)
@@ -154,7 +147,7 @@ func (p *TadoPoller) getWeather(ctx context.Context, homeId tado.HomeId) (tado.W
 	return *resp.JSON200, nil
 }
 
-func (p *TadoPoller) getHomeState(ctx context.Context, homeId tado.HomeId) (tado.HomeState, error) {
+func (p *Poller) getHomeState(ctx context.Context, homeId tado.HomeId) (tado.HomeState, error) {
 	resp, err := p.GetHomeStateWithResponse(ctx, homeId)
 	if err != nil {
 		return tado.HomeState{}, fmt.Errorf("GetHomeStateWithResponse: %w", err)

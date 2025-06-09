@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - master
-      - slack
+      - refactor
 permissions:
   contents: read
   packages: write

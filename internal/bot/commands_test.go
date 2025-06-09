@@ -1,15 +1,15 @@
 package bot
 
 import (
+	"testing"
+
 	"github.com/clambin/tado-exporter/internal/bot/mocks"
 	"github.com/clambin/tado-exporter/internal/poller"
-	mockPoller "github.com/clambin/tado-exporter/internal/poller/mocks"
 	"github.com/clambin/tado-exporter/internal/poller/testutils"
 	"github.com/clambin/tado-exporter/internal/slacktools"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func Test_commandRunner_listRooms(t *testing.T) {
@@ -160,7 +160,7 @@ func Test_commandRunner_listRules(t *testing.T) {
 }
 
 func Test_commandRunner_refresh(t *testing.T) {
-	p := mockPoller.NewPoller(t)
+	p := mocks.NewPoller(t)
 	p.EXPECT().Refresh().Once()
 	r := commandRunner{poller: p}
 	_, err := r.refresh()

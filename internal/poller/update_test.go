@@ -1,10 +1,11 @@
 package poller
 
 import (
+	"testing"
+
 	"github.com/clambin/tado-exporter/internal/oapi"
 	"github.com/clambin/tado/v2"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestZone_GetTargetTemperature(t *testing.T) {

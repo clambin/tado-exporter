@@ -1,13 +1,14 @@
 package health
 
 import (
-	"github.com/clambin/tado-exporter/internal/poller"
-	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/clambin/tado-exporter/internal/poller"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHealth_Handle(t *testing.T) {
@@ -35,7 +36,7 @@ func isUp(h http.Handler) bool {
 	return resp.Code == http.StatusOK
 }
 
-var _ poller.Poller = &fakePoller{}
+var _ Poller = &fakePoller{}
 
 type fakePoller struct {
 	ch chan poller.Update

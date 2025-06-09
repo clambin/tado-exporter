@@ -1,26 +1,24 @@
-with-expecter: true
-filename: "{{.InterfaceName}}.go"
-dir: "{{.InterfaceDir}}/mocks"
-mockname: "{{.InterfaceName}}"
-outpkg: "mocks"
-issue-845-fix: true
-resolve-type-alias: False
+dir: '{{.InterfaceDir}}/mocks'
+structname: '{{.InterfaceName}}'
+pkgname: mocks
+filename: 'mocks.go'
+template: testify
+template-data:
+  unroll-variadic: true
 packages:
-  github.com/clambin/tado-exporter/cmd/monitor:
+  github.com/clambin/tado-exporter/internal/cmd/monitor:
     interfaces:
-      TadoClient:
+      TadoClient: {}
   github.com/clambin/tado-exporter/internal/bot:
     interfaces:
-      TadoClient:
-      Controller:
-      SocketModeHandler:
-      SlackSender:
+      Controller: {}
+      SlackSender: {}
+      SocketModeHandler: {}
+      TadoClient: {}
+      Poller: {}
   github.com/clambin/tado-exporter/internal/controller/notifier:
     interfaces:
-      SlackSender:
-  github.com/clambin/tado-exporter/internal/poller:
+      SlackSender: {}
+  github.com/clambin/tado-exporter/internal/controller/rules:
     interfaces:
-      Poller:
-  github.com/clambin/tado-exporter/rules:
-    interfaces:
-      TadoClient:
+      TadoClient: {}
