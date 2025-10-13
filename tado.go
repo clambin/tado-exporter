@@ -1,9 +1,18 @@
 package main
 
 import (
-	"github.com/clambin/tado-exporter/internal/cmd"
-	"log/slog"
+	"context"
+	"flag"
+	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
+
+	"codeberg.org/clambin/go-common/flagger"
+	"codeberg.org/clambin/proteus/tado/collector"
+	"github.com/clambin/tado/v2"
+	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/oauth2"
 )
 
 var (
@@ -11,10 +20,67 @@ var (
 	version = "change-me"
 )
 
+type configuration struct {
+	flagger.Log
+	flagger.Prom
+	Token
+}
+
+type Token struct {
+	Path       string `flagger.usage:"path to store the (encrypted) token"`
+	Passphrase string `flagger.usage:"passphrase to encrypt the token"`
+}
+
 func main() {
-	cmd.RootCmd.Version = version
-	if err := cmd.RootCmd.Execute(); err != nil {
-		slog.Error("failed to start", "err", err)
+	cfg := configuration{
+		Log:  flagger.DefaultLog,
+		Prom: flagger.DefaultProm,
+	}
+	flagger.SetFlags(flag.CommandLine, &cfg)
+	flag.Parse()
+	logger := cfg.Logger(os.Stderr, nil)
+	if cfg.Token.Path == "" {
+		logger.Error("token path is required")
 		os.Exit(1)
 	}
+	if cfg.Passphrase == "" {
+		logger.Error("token passphrase is required")
+		os.Exit(1)
+	}
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	client, err := makeTadoClient(ctx, cfg.Token.Path, cfg.Passphrase)
+	if err != nil {
+		logger.Error("failed to create Tado client", "err", err)
+		os.Exit(1)
+	}
+
+	logger.Debug("created Tado client", "tokenPath", cfg.Token.Path)
+
+	poller := collector.Poller{Client: client, Logger: logger}
+	coll := collector.NewCollector(nil, &poller, "", logger)
+	prometheus.MustRegister(coll)
+
+	logger.Info("tado exporter starting", "version", version)
+
+	if err := cfg.Serve(ctx); err != nil {
+		logger.Error("error starting prometheus agent", "err", err)
+	}
+}
+
+func makeTadoClient(
+	ctx context.Context,
+	path string,
+	passphrase string,
+) (*tado.ClientWithResponses, error) {
+	// create an oauth2 http client that uses the device auth flow
+	httpClient, err := tado.NewOAuth2Client(ctx, path, passphrase, func(response *oauth2.DeviceAuthResponse) {
+		fmt.Printf("No token found. Visit %s and log in ...\n", response.VerificationURIComplete)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create oauth2 client: %w", err)
+	}
+	// create the tado client using the oauth2 http client
+	return tado.NewClientWithResponses(tado.ServerURL, tado.WithHTTPClient(httpClient))
 }

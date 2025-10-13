@@ -1,6 +1,5 @@
 name: vulnerabilities
 on:
-  push:
   schedule:
     - cron: '23 3 * * 6'
 permissions:

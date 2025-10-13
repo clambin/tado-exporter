@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:1.24 AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:1.25 AS builder
 
 ARG BUILDPLATFORM
 ARG TARGETOS
@@ -25,5 +25,5 @@ RUN /usr/sbin/addgroup app
 RUN /usr/sbin/adduser app -G app -D
 USER app
 
-ENTRYPOINT ["/app/tado", "monitor"]
+ENTRYPOINT ["/app/tado"]
 CMD []
