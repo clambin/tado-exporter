@@ -1,13 +1,13 @@
 module github.com/clambin/tado-exporter
 
-go 1.25
+go 1.25.0
 
 require (
 	codeberg.org/clambin/go-common/flagger v0.3.0
 	codeberg.org/clambin/proteus v0.6.0
 	github.com/clambin/tado/v2 v2.6.2
 	github.com/prometheus/client_golang v1.23.2
-	golang.org/x/oauth2 v0.34.0
+	golang.org/x/oauth2 v0.36.0
 )
 
 require (
