@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"codeberg.org/clambin/go-common/flagger"
+	"codeberg.org/clambin/proteus/collector"
 	"codeberg.org/clambin/proteus/integrations/climate"
 	"codeberg.org/clambin/proteus/integrations/climate/tado"
 	tado2 "github.com/clambin/tado/v2"
@@ -59,12 +60,25 @@ func main() {
 
 	logger.Debug("created Tado client", "tokenPath", cfg.Token.Path)
 
-	c := collector{
-		scraper: &tado.Scraper{
-			Client:      client,
-			Logger:      logger,
-			Descriptors: climate.NewMetricDescriptors("tado"),
-		},
+	/*
+		c := collector{
+			scraper: &tado.Scraper{
+				Client:      client,
+				Logger:      logger,
+				Descriptors: climate.NewMetricDescriptors("tado"),
+			},
+		}
+	*/
+
+	scraper := tado.Scraper{
+		Client: client,
+		Logger: logger,
+	}
+	metrics := climate.NewMetricDescriptors("tado")
+
+	c := collector.Collector[climate.Metrics, *climate.MetricDescriptors]{
+		Scraper:           &scraper,
+		MetricDescriptors: metrics,
 	}
 
 	prometheus.MustRegister(c)
@@ -90,23 +104,4 @@ func makeTadoClient(
 	}
 	// create the tado client using the oauth2 http client
 	return tado2.NewClientWithResponses(tado2.ServerURL, tado2.WithHTTPClient(httpClient))
-}
-
-var _ prometheus.Collector = collector{}
-
-type collector struct {
-	scraper *tado.Scraper
-}
-
-func (c collector) Describe(ch chan<- *prometheus.Desc) {
-	c.scraper.Descriptors.Describe(ch)
-}
-
-func (c collector) Collect(ch chan<- prometheus.Metric) {
-	metrics, err := c.scraper.Scrape(context.Background())
-	if err != nil {
-		ch <- prometheus.NewInvalidMetric(prometheus.NewDesc("tado_scrape_error", "error scraping tado", nil, nil), err)
-		return
-	}
-	metrics.Collect(ch)
 }
