@@ -7,7 +7,7 @@ require (
 	codeberg.org/clambin/proteus v0.9.3
 	github.com/clambin/tado/v2 v2.8.0
 	github.com/prometheus/client_golang v1.25.0
-	golang.org/x/oauth2 v0.37.0
+	golang.org/x/oauth2 v0.38.0
 )
 
 require (
